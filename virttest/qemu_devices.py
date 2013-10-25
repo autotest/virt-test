@@ -1039,6 +1039,16 @@ class QSparseBus(object):
             if device.get_param(self.addr_items[i]) is not None:
                 device.set_param(self.addr_items[i], addr[i])
 
+    def reserve(self, addr):
+        """
+        Reserve the slot
+        :param addr: Desired address
+        :type addr: internal [addr1, addr2, ..] or stor format "addr1-addr2-.."
+        """
+        if not isinstance(addr, str):
+            addr = self._addr2stor(addr)
+        self.bus[addr] = "reserved"
+
     def insert(self, device, strict_mode=False):
         """
         Insert device into this bus representation.
