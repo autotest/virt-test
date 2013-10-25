@@ -614,8 +614,6 @@ class BaseVM(object):
         :raise VMAddressVerificationError: If the MAC-IP address mapping cannot
                 be verified (using arping)
         """
-        if self.virtnet < index:
-            raise VMInterfaceIndexError()
         nic = self.virtnet[index]
         # TODO: Determine port redirection in use w/o checking nettype
         if nic.nettype not in ['bridge', 'macvtap']:
