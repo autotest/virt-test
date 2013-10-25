@@ -48,7 +48,7 @@ last_subtest = {'qemu': ['shutdown'],
                 'libguestfs': ['shutdown'],
                 'lvsb': []}
 
-test_filter = ['__init__', 'cfg']
+test_filter = ['__init__', 'cfg', 'dropin.py']
 config_filter = ['__init__', ]
 
 
@@ -240,6 +240,7 @@ def create_subtests_cfg(t_type):
     last_subtest_file = []
     non_dropin_tests = []
     tmp = []
+
     for shared_file in shared_file_list:
         shared_file_obj = open(shared_file, 'r')
         for line in shared_file_obj.readlines():
@@ -305,6 +306,7 @@ def create_subtests_cfg(t_type):
     tmp_dir = data_dir.get_tmp_dir()
     if not os.path.isdir(tmp_dir):
         os.makedirs(tmp_dir)
+    logging.critical(dropin_tests)
     for dropin_test in dropin_tests:
         autogen_cfg_path = os.path.join(tmp_dir,
                                         '%s.cfg' % dropin_test)
@@ -316,6 +318,24 @@ def create_subtests_cfg(t_type):
         autogen_cfg_file.close()
         dropin_file_list.append(autogen_cfg_path)
 
+    dropin_file_list_2 = []
+    dropin_tests = os.listdir(os.path.join(data_dir.get_root_dir(), "dropin"))
+    dropin_cfg_path = os.path.join(tmp_dir, 'dropin.cfg')
+    dropin_cfg_file = open(dropin_cfg_path, 'w')
+    dropin_cfg_file.write("# Auto generated snippet for dropin tests\n")
+    dropin_cfg_file.write("- dropin:\n")
+    dropin_cfg_file.write("    variants:\n")
+    for dropin_test in dropin_tests:
+        if dropin_test == "README":
+            continue
+        dropin_cfg_file.write("        - %s:\n" % dropin_test)
+        dropin_cfg_file.write("            virt_test_type = %s\n" % t_type)
+        dropin_cfg_file.write("            type = dropin\n")
+        dropin_cfg_file.write("            start_vm = no\n")
+        dropin_cfg_file.write("            dropin_path = %s\n" % dropin_test)
+    dropin_cfg_file.close()
+    dropin_file_list_2.append(dropin_cfg_path)
+
     subtests_cfg = os.path.join(root_dir, t_type, 'cfg', 'subtests.cfg')
     subtests_file = open(subtests_cfg, 'w')
     subtests_file.write(
@@ -325,6 +345,7 @@ def create_subtests_cfg(t_type):
     write_subtests_files(specific_file_list, subtests_file, t_type)
     write_subtests_files(shared_file_list, subtests_file)
     write_subtests_files(dropin_file_list, subtests_file)
+    write_subtests_files(dropin_file_list_2, subtests_file)
     write_subtests_files(last_subtest_file, subtests_file)
 
     subtests_file.close()
