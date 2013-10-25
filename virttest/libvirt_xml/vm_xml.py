@@ -649,7 +649,7 @@ class VMXML(VMXMLBase):
         """
         Set cpu's mode of VM.
 
-        :param vm_name: Name of defined vm to set primary serial.
+        :param vm_name: Name of defined vm to set cpu mode.
         :param mode: the mode of cpu:'host-model'...
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
