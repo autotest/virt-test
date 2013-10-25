@@ -522,7 +522,7 @@ class Node(object):
                 child.dump(indent + 3, recurse)
 
 
-match_subtitute = re.compile("\$\{(.+)\}")
+match_subtitute = re.compile("\$\{(.+?)\}")
 
 
 def _subtitution(value, d):
