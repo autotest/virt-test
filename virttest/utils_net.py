@@ -192,6 +192,17 @@ class HwAddrGetError(NetError):
         return "Can not get mac of interface %s" % self.ifname
 
 
+class HwOperstarteGetError(NetError):
+
+    def __init__(self, ifname, details=None):
+        NetError.__init__(self, ifname)
+        self.ifname = ifname
+        self.details = details
+
+    def __str__(self):
+        return "Get nic %s operstate error, %s" % (self.ifname, self.details)
+
+
 class VlanError(NetError):
 
     def __init__(self, ifname, details):
@@ -827,6 +838,30 @@ def set_net_if_ip(if_name, ip_addr, runner=None):
         runner(cmd)
     except error.CmdError, e:
         raise IfChangeAddrError(if_name, ip_addr, e)
+
+
+def get_net_if_operstate(ifname, runner=None):
+    """
+    Get linux host/guest network device operstate.
+
+    :param if_name: Name of the interface.
+    :raise: HwOperstarteGetError.
+    """
+    if runner is None:
+        runner = local_runner
+    cmd = "cat /sys/class/net/%s/operstate" % ifname
+    try:
+        operstate = runner(cmd)
+        if "up" in operstate:
+            return "up"
+        elif "down" in operstate:
+            return  "down"
+        elif "unknown" in operstate:
+            return "unknown"
+        else:
+            raise HwOperstarteGetError(ifname, "operstate is not known.")
+    except error.CmdError:
+        raise HwOperstarteGetError(ifname, "run operstate cmd error.")
 
 
 def ipv6_from_mac_addr(mac_addr):
