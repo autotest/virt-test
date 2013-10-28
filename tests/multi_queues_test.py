@@ -19,9 +19,9 @@ def run_multi_queues_test(test, params, env):
     5) check vhost threads on host, if vhost is enable
     6) check cpu affinity if smp == queues
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def run_netperf(vm_session, n_instance, host_ip, client_path, test_time,
                     ext_args, taskset_cpu=[]):
