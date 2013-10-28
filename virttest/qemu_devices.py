@@ -2412,6 +2412,16 @@ class DevContainer(object):
                 logging.warn("Unable to find the default machine type, using"
                              "i440FX.")
                 devices = machine_i440FX(False)
+
+        # reserve pci.0 addresses
+        pci_params = params.object_params('pci.0')
+        reserved = pci_params.get('reserved_slots', '').split()
+        if reserved:
+            for bus in self.__buses:
+                if bus.aobject == "pci.0":
+                    for addr in reserved:
+                        bus.reserve(hex(int(addr)))
+                    break
         return devices
 
     # USB Controller related methods
@@ -3019,6 +3029,8 @@ class DevContainer(object):
                 bus_length = 32
                 bus_first_port = 0
             bus = QPCIBus(name, bus_type, name, bus_length, bus_first_port)
+        for addr in params.get('reserved_slots', '').split():
+            bus.reserve(addr)
         return QDevice(driver, {'id': name}, aobject=name,
                        parent_bus=parent_bus,
                        child_bus=bus)
