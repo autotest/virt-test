@@ -2465,23 +2465,18 @@ class DevContainer(object):
         usb.set_param('addr', pci_addr)
 
         if usb_type == "ich9-usb-ehci1":
-            # this slot is composed in PCI so it won't go to internal repr
-            usb.parent_bus = ()
             usb.set_param('addr', '1d.7')
             usb.set_param('multifunction', 'on')
             for i in xrange(3):
                 new_usbs.append(QDevice('ich9-usb-uhci%d' % (i + 1), {},
                                         usb_id))
+                new_usbs[-1].parent_bus = {'aobject': pci_bus}
                 new_usbs[-1].set_param('id', '%s.%d' % (usb_id, i))
                 new_usbs[-1].set_param('multifunction', 'on')
                 new_usbs[-1].set_param('masterbus', '%s.0' % usb_id)
                 # current qemu_devices doesn't support x.y addr. Plug only
                 # the 0th one into this representation.
-                if i == 0:
-                    new_usbs[-1].parent_bus = {'aobject': pci_bus}
-                    new_usbs[-1].set_param('addr', '0x1d')
-                else:
-                    new_usbs[-1].set_param('addr', '1d.%d' % i)
+                new_usbs[-1].set_param('addr', '1d.%d' % (2 * i))
                 new_usbs[-1].set_param('firstport', 2 * i)
         return new_usbs
 
