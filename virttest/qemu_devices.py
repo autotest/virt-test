@@ -811,7 +811,7 @@ class QSparseBus(object):
         self.addr_lengths = addr_spec[1]
         self.atype = atype
         self.__device = None
-        self.first_port = 0
+        self.first_port = [0] * len(addr_spec[0])
 
     def __str__(self):
         """ default string representation """
@@ -976,7 +976,7 @@ class QSparseBus(object):
             use_reserved = False    # Use only free address
             for i in xrange(len(last_addr)):
                 if last_addr[i] is None:
-                    last_addr[i] = self.first_port
+                    last_addr[i] = self.first_port[i]
         return last_addr, use_reserved
 
     def get_free_slot(self, addr_pattern):
@@ -991,7 +991,7 @@ class QSparseBus(object):
         last_addr, use_reserved = self._set_first_addr(addr_pattern)
         # Check the addr_pattern ranges
         for i in xrange(len(self.addr_lengths)):
-            if (last_addr[i] < self.first_port or
+            if (last_addr[i] < self.first_port[i] or
                     last_addr[i] >= self.addr_lengths[i]):
                 return False
         # Increment addr until free match is found
@@ -1149,10 +1149,11 @@ class QStrictCustomBus(QSparseBus):
     Similar to QSparseBus. The address starts with 1 and addr is always set
     """
     def __init__(self, bus_item, addr_spec, busid, bus_type=None, aobject=None,
-                 atype=None, first_port=0):
+                 atype=None, first_port=None):
         super(QStrictCustomBus, self).__init__(bus_item, addr_spec, busid,
                                                bus_type, aobject, atype)
-        self.first_port = first_port
+        if first_port:
+            self.first_port = first_port
 
     def _update_device_props(self, device, addr):
         """ in case this is usb-hub update the child port_prefix """
@@ -1181,7 +1182,7 @@ class QUSBBus(QSparseBus):
                                       bus_type, aobject)
         self.__port_prefix = port_prefix
         self.__length = length
-        self.first_port = 1
+        self.first_port = [1]
 
     def _check_bus(self, device):
         """ Check port prefix in order to match addresses in usb-hubs """
