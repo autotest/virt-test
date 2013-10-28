@@ -34,6 +34,22 @@ QEMU_MACHINE = open(
     os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__machine_help")).read()
 
 
+class ParamsDict(dict):
+
+    """ params like dictionary """
+
+    def objects(self, item):
+        if self.get(item):
+            return self.get(item).split(' ')
+
+    def object_params(self, obj):
+        ret = self.copy()
+        for (param, value) in self.iteritems():
+            if param.endswith('_%s' % obj):
+                ret[param[:-len('_%s' % obj)]] = value
+        return ret
+
+
 class MockHMPMonitor(qemu_monitor.HumanMonitor):
 
     """ Dummy class inherited from qemu_monitor.HumanMonitor """
@@ -351,10 +367,7 @@ Slots:
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         # Compare short repr
-        exp = ("pci.0(pci): [a'dev1',None,None,None,None,None,None,None,None,"
-               "None,a'dev2',None,None,None,None,None,None,None,None,None,"
-               "None,None,None,None,None,None,None,None,None,None,None,"
-               "a'dev3']")
+        exp = ("pci.0(pci): {00-00:a'dev1',0a-00:a'dev2',1f-00:a'dev3'}")
         out = str(bus.str_short())
         self.assertEqual(out, exp, "Short representation corrupted:\n%s\n%s"
                          "\n\n%s" % (out, exp, bus.str_long()))
@@ -377,10 +390,7 @@ Slots:
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         # Compare short repr
-        exp = ("pci.0(pci): [a'dev1',None,None,None,None,None,None,None,None,"
-               "None,a'dev2',None,None,None,None,None,None,None,None,None,"
-               "None,None,None,None,None,None,None,None,None,None,None,"
-               "a'dev3']")
+        exp = ("pci.0(pci): {00-00:a'dev1',0a-00:a'dev2',1f-00:a'dev3'}")
         out = str(bus.str_short())
         self.assertEqual(out, exp, "Short representation corrupted:\n%s\n%s"
                          "\n\n%s" % (out, exp, bus.str_long()))
@@ -404,27 +414,17 @@ Slots:
         # All devices will have 'addr' set as we are in the strict mode
         exp = """Bus pci.0, type=pci
 Slots:
----------------<  0x0 >---------------
+---------------< 1e-00 >---------------
   device
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
     child_bus = []
     params:
+      addr = 1e
       driver = dev1
       bus = pci.0
-      addr = 0x0
----------------<  0x1 >---------------
-  device
-    aid = None
-    aobject = None
-    parent_bus = {'type': 'pci'}
-    child_bus = []
-    params:
-      driver = dev2
-      bus = pci.0
-      addr = 0x1
----------------<  0x2 >---------------
+---------------< 02-00 >---------------
   device
     aid = None
     aobject = None
@@ -433,93 +433,51 @@ Slots:
     params:
       driver = dev3
       bus = pci.0
-      addr = 0x2
----------------<  0x3 >---------------
-  None
----------------<  0x4 >---------------
-  None
----------------<  0x5 >---------------
-  None
----------------<  0x6 >---------------
-  None
----------------<  0x7 >---------------
-  None
----------------<  0x8 >---------------
-  None
----------------<  0x9 >---------------
-  None
----------------<  0xa >---------------
-  None
----------------<  0xb >---------------
-  None
----------------<  0xc >---------------
+      addr = 02
+---------------< 1f-00 >---------------
   device
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
     child_bus = []
     params:
-      addr = 0xc
+      addr = 1f
       driver = dev1
       bus = pci.0
----------------<  0xd >---------------
-  None
----------------<  0xe >---------------
-  None
----------------<  0xf >---------------
-  None
----------------< 0x10 >---------------
-  None
----------------< 0x11 >---------------
-  None
----------------< 0x12 >---------------
-  None
----------------< 0x13 >---------------
-  None
----------------< 0x14 >---------------
-  None
----------------< 0x15 >---------------
-  None
----------------< 0x16 >---------------
-  None
----------------< 0x17 >---------------
-  None
----------------< 0x18 >---------------
-  None
----------------< 0x19 >---------------
-  None
----------------< 0x1a >---------------
-  None
----------------< 0x1b >---------------
-  None
----------------< 0x1c >---------------
-  None
----------------< 0x1d >---------------
-  None
----------------< 0x1e >---------------
+---------------< 00-00 >---------------
   device
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
     child_bus = []
     params:
-      addr = 0x1e
       driver = dev1
       bus = pci.0
----------------< 0x1f >---------------
+      addr = 00
+---------------< 0c-00 >---------------
   device
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
     child_bus = []
     params:
-      addr = 0x1f
+      addr = 0c
       driver = dev1
       bus = pci.0
+---------------< 01-00 >---------------
+  device
+    aid = None
+    aobject = None
+    parent_bus = {'type': 'pci'}
+    child_bus = []
+    params:
+      driver = dev2
+      bus = pci.0
+      addr = 01
 """
         out = str(bus.str_long())
         self.assertEqual(out, exp, "Long representation corrupted:\n%s\n%s"
-                         % (repr(out), exp))
+                         % (out, exp))
 
     def test_usb_bus(self):
         """ Tests the specific handlings of QUSBBus """
@@ -646,47 +604,62 @@ class Container(unittest.TestCase):
         qdev = self.create_qdev('vm1')
 
         # Add basic 'pc' devices
-        out = qdev.insert(qdev.machine_by_params({'machine_type': 'pc'}))
+        out = qdev.insert(qdev.machine_by_params(ParamsDict({'machine_type':
+                                                             'pc'})))
         assert isinstance(out, list)
-        assert len(out) == 5, len(out)
+        assert len(out) == 6, len(out)
 
         exp = r"""Devices of vm1:
 machine
   aid = __0
-  aobject = pci\.0
-  parent_bus = \(\)
-  child_bus = \[.*QPCIBus.*\]
+  aobject = pci.0
+  parent_bus = ()
+  child_bus = \[.*QPCIBus.*, .*QStrictCustomBus.*\]
   params:
 i440FX
   aid = __1
   aobject = None
-  parent_bus = \({'aobject': 'pci.0'},\)
+  parent_bus = ({'aobject': 'pci.0'},)
   child_bus = \[\]
   params:
-    addr = 0x0
+    driver = i440FX
+    addr = 00
     bus = pci.0
-PIIX3
+PIIX4_PM
   aid = __2
   aobject = None
-  parent_bus = \({'aobject': 'pci.0'},\)
+  parent_bus = ({'aobject': 'pci.0'},)
   child_bus = \[\]
   params:
-    addr = 0x1
+    driver = PIIX4_PM
+    addr = 01.3
     bus = pci.0
-ide
+PIIX3
   aid = __3
   aobject = None
-  parent_bus = \(\)
+  parent_bus = ({'aobject': 'pci.0'},)
+  child_bus = \[\]
+  params:
+    driver = PIIX3
+    addr = 01
+    bus = pci.0
+piix3-ide
+  aid = __4
+  aobject = None
+  parent_bus = ({'aobject': 'pci.0'},)
   child_bus = \[.*QIDEBus.*\]
   params:
+    driver = piix3-ide
+    addr = 01.1
+    bus = pci.0
 fdc
-  aid = __4
+  aid = __5
   aobject = None
   parent_bus = \(\)
   child_bus = \[.*QFloppyBus.*\]
   params:"""
         out = qdev.str_long()
-        self.assertNotEqual(re.match(exp, out), None, 'Long representation is'
+        self.assertNotEqual(re.findall(exp, out), None, 'Long representation is'
                             'corrupted:\n%s\n%s' % (out, exp))
 
         exp = ("Buses of vm1\n"
@@ -694,8 +667,8 @@ fdc
                "  ide(ide): [None,None,None,None]\n"
                "  _PCI_CHASSIS_NR(None): {}\n"
                "  _PCI_CHASSIS(None): {}\n"
-               "  pci.0(PCI): [t'i440FX',t'PIIX3'%s]"
-               % (',None' * 30))
+               "  pci.0(PCI): {00-00:t'i440FX',01-00:t'PIIX3',"
+               "01-01:t'piix3-ide',01-03:t'PIIX4_PM'}")
         out = qdev.str_bus_short()
         assert out == exp, "Bus representation is ocrrupted:\n%s\n%s" % (out,
                                                                          exp)
@@ -731,8 +704,8 @@ fdc
         assert len(out) == 1, len(out)
 
         # Check the representation
-        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
-               "hba1,a'dev',a'dev',a'dev']")
+        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX4_PM',t'PIIX3',"
+               "t'piix3-ide',t'fdc',hba1,a'dev',a'dev',a'dev']")
         out = qdev.str_short()
         self.assertEqual(out, exp, "Short representation is corrupted:\n%s\n%s"
                          % (out, exp))
@@ -742,17 +715,15 @@ fdc
                "  ide(ide): [None,None,None,None]\n"
                "  _PCI_CHASSIS_NR(None): {}\n"
                "  _PCI_CHASSIS(None): {}\n"
-               "  pci.0(PCI): [t'i440FX',t'PIIX3',None,None,None,None,None,"
-               "None,None,None,hba1,None,None,None,None,None,None,None,None,"
-               "None,None,None,None,None,None,None,None,None,None,None,None,"
-               "None]")
+               "  pci.0(PCI): {00-00:t'i440FX',01-00:t'PIIX3',"
+               "01-01:t'piix3-ide',01-03:t'PIIX4_PM',0a-00:hba1}")
         out = qdev.str_bus_short()
         assert out == exp, 'Bus representation iscorrupted:\n%s\n%s' % (out,
                                                                         exp)
 
         # Check the representation
-        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
-               "hba1,a'dev',a'dev',a'dev']")
+        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX4_PM',t'PIIX3',"
+               "t'piix3-ide',t'fdc',hba1,a'dev',a'dev',a'dev']")
         out = qdev.str_short()
         assert out == exp, "Short representation is corrupted:\n%s\n%s" % (out,
                                                                            exp)
@@ -762,10 +733,8 @@ fdc
                "  ide(ide): [None,None,None,None]\n"
                "  _PCI_CHASSIS_NR(None): {}\n"
                "  _PCI_CHASSIS(None): {}\n"
-               "  pci.0(PCI): [t'i440FX',t'PIIX3',None,None,None,None,"
-               "None,None,None,None,hba1,None,None,None,None,None,None,None,"
-               "None,None,None,None,None,None,None,None,None,None,None,None,"
-               "None,None]")
+               "  pci.0(PCI): {00-00:t'i440FX',01-00:t'PIIX3',"
+               "01-01:t'piix3-ide',01-03:t'PIIX4_PM',0a-00:hba1}")
         out = qdev.str_bus_short()
         assert out == exp, 'Bus representation is corrupted:\n%s\n%s' % (out,
                                                                          exp)
@@ -773,7 +742,7 @@ fdc
         # Now representation contains some devices, play with it a bit
         # length
         out = len(qdev)
-        assert out == 9, "Length of qdev is incorrect: %s != %s" % (out, 9)
+        assert out == 10, "Length of qdev is incorrect: %s != %s" % (out, 10)
 
         # compare
         qdev2 = self.create_qdev('vm1')
@@ -787,9 +756,8 @@ fdc
                             "\n%s\n%s" % (qdev, qdev2))
         self.assertNotEqual(qdev2, qdev, "Other qdev matches this one:\n%s\n%s"
                             % (qdev, qdev2))
-
         # cmdline
-        exp = ("-M pc -device HBA,id=hba1,addr=0xa,bus=pci.0 -device dev "
+        exp = ("-M pc -device HBA,id=hba1,addr=0a,bus=pci.0 -device dev "
                "-device dev -device dev")
         out = qdev.cmdline()
         self.assertEqual(out, exp, 'Corrupted qdev.cmdline() output:\n%s\n%s'
@@ -802,7 +770,7 @@ fdc
 
         # Remove some devices
         # Remove based on aid
-        out = qdev.remove('__5')
+        out = qdev.remove('__6')
         self.assertEqual(out, None, 'Failed to remove device:\n%s\nRepr:\n%s'
                          % ('hba1__0', qdev.str_long()))
 
@@ -816,7 +784,8 @@ fdc
                          % ('hba1', qdev.str_long()))
 
         # Check the representation
-        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc']")
+        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX4_PM',t'PIIX3',"
+               "t'piix3-ide',t'fdc']")
         out = qdev.str_short()
         assert out == exp, "Short representation is corrupted:\n%s\n%s" % (out,
                                                                            exp)
@@ -825,10 +794,8 @@ fdc
                "  ide(ide): [None,None,None,None]\n"
                "  _PCI_CHASSIS_NR(None): {}\n"
                "  _PCI_CHASSIS(None): {}\n"
-               "  pci.0(PCI): [t'i440FX',t'PIIX3',None,None,None,None,"
-               "None,None,None,None,None,None,None,None,None,None,None,None,"
-               "None,None,None,None,None,None,None,None,None,None,None,None,"
-               "None,None]")
+               "  pci.0(PCI): {00-00:t'i440FX',01-00:t'PIIX3',"
+               "01-01:t'piix3-ide',01-03:t'PIIX4_PM'}")
         out = qdev.str_bus_short()
         assert out == exp, 'Bus representation is corrupted:\n%s\n%s' % (out,
                                                                          exp)
@@ -836,7 +803,7 @@ fdc
     def test_qdev_hotplug(self):
         """ Test the hotplug/unplug functionality """
         qdev = self.create_qdev('vm1', False, True)
-        devs = qdev.machine_by_params({'machine_type': 'pc'})
+        devs = qdev.machine_by_params(ParamsDict({'machine_type': 'pc'}))
         for dev in devs:
             qdev.insert(dev)
         monitor = MockHMPMonitor()
@@ -845,7 +812,7 @@ fdc
         assert out == -1, ("Status after init is not -1"
                            " (%s)" % out)
         out = len(qdev)
-        assert out == 5, "Number of devices of this VM is not 5 (%s)" % out
+        assert out == 6, "Number of devices of this VM is not 5 (%s)" % out
 
         dev1, dev2 = qdev.images_define_by_variables('disk', '/tmp/a',
                                                      fmt="virtio")
@@ -879,10 +846,13 @@ fdc
                                " not "" (%s)" % ver_out)
         assert out == "", 'Return value of hotplug is not "" (%s)' % out
         out = qdev.get_state()
+        assert out == 1, ("Status after verified hotplug is not 1 (%s)" % out)
+        qdev.hotplug_verified()
+        out = qdev.get_state()
         assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
 
         out = len(qdev)
-        assert out == 7, "Number of devices of this VM is not 7 (%s)" % out
+        assert out == 8, "Number of devices of this VM is not 8 (%s)" % out
 
         # Hotplug is expected to pass but monitor reports failure
         dev3 = qemu_devices.QDrive('a_dev1')
@@ -904,8 +874,10 @@ fdc
         assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
 
         # Hotplug is expected to fail, qdev should stay unaffected
+        dev4 = qemu_devices.QBaseDevice("bad_dev", parent_bus={'type': "XXX"})
+        dev4.hotplug = lambda _monitor: ("")
         self.assertRaises(qemu_devices.DeviceHotplugError, qdev.simple_hotplug,
-                          dev2)
+                          dev4, True)
         out = qdev.get_state()
         assert out == 0, "Status after impossible hotplug is not 0 (%s)" % out
 
@@ -923,7 +895,7 @@ fdc
         out = qdev.get_state()
         assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
         out = len(qdev)
-        assert out == 6, "Number of devices of this VM is not 6 (%s)" % out
+        assert out == 7, "Number of devices of this VM is not 7 (%s)" % out
         # Removal of drive should also set drive of the disk device to None
         out = dev2.get_param('drive')
         assert out is None, "Drive was not removed from disk device"
@@ -1015,7 +987,7 @@ fdc
                          'returned %s instead:\n%s' % (len(out), out))
 
         # get_first_free_bus (last added bus of this type)
-        out = qdev.get_first_free_bus({'type': 'pci'}, [None])
+        out = qdev.get_first_free_bus({'type': 'pci'}, [None, None])
         self.assertEqual(bus3, out)
 
         # fill the first pci bus
@@ -1023,7 +995,7 @@ fdc
             qdev.insert(qemu_devices.QDevice(parent_bus={'type': 'pci'}))
 
         # get_first_free_bus (last one is full, return the previous one)
-        out = qdev.get_first_free_bus({'type': 'pci'}, [None])
+        out = qdev.get_first_free_bus({'type': 'pci'}, [None, None])
         self.assertEqual(bus2, out)
 
         # list_named_buses
@@ -1101,7 +1073,7 @@ fdc
 
     def test_pci(self):
         qdev = self.create_qdev('vm1')
-        devs = qdev.machine_by_params({'machine_type': 'pc'})
+        devs = qdev.machine_by_params(ParamsDict({'machine_type': 'pc'}))
         for dev in devs:
             qdev.insert(dev)
         # machine creates main pci (pci.0)
@@ -1142,18 +1114,21 @@ fdc
                                          parent_bus={'type': ('PCI', 'PCIE'),
                                                      'aobject': 'pci.0'}))
 
-        exp = ("-M pc -device ioh3420,id=root.1,bus=pci.0,addr=0x2 "
-               "-device x3130-upstream,id=pci_switch,bus=root.1,addr=0x0 "
-               "-device pci-bridge,id=pci_bridge,bus=root.1,addr=0x1,"
-               "chassis_nr=1 -device ahci,id=in_bridge,bus=pci_bridge,addr=0x1"
+        exp = ("-M pc -device ioh3420,id=root.1,bus=pci.0,addr=02 "
+               "-device x3130-upstream,id=pci_switch,bus=root.1,addr=00 "
+               "-device pci-bridge,id=pci_bridge,bus=root.1,addr=01,"
+               "chassis_nr=1 -device ahci,id=in_bridge,bus=pci_bridge,addr=01"
                " -device xio3130-downstream,bus=pci_switch,id=pci_switch.0,"
-               "chassis=1 -device ahci,id=in_switch1,bus=pci_switch.0 "
+               "addr=00,chassis=1 -device ahci,id=in_switch1,bus=pci_switch.0"
+               ",addr=00 "
                "-device xio3130-downstream,bus=pci_switch,id=pci_switch.1,"
-               "chassis=2 -device ahci,id=in_switch2,bus=pci_switch.1 "
+               "addr=01,chassis=2 -device ahci,id=in_switch2,bus=pci_switch.1"
+               ",addr=00 "
                "-device xio3130-downstream,bus=pci_switch,id=pci_switch.2,"
-               "chassis=3 -device ahci,id=in_switch3,bus=pci_switch.2 "
-               "-device ahci,id=in_root1,bus=root.1,addr=0x2 "
-               "-device ahci,id=in_pci.0,bus=pci.0,addr=0x3")
+               "addr=02,chassis=3 -device ahci,id=in_switch3,bus=pci_switch.2"
+               ",addr=00 "
+               "-device ahci,id=in_root1,bus=root.1,addr=02 "
+               "-device ahci,id=in_pci.0,bus=pci.0,addr=03")
         out = qdev.cmdline()
         assert out == exp, (out, exp)
 
