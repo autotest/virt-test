@@ -1378,30 +1378,50 @@ class QPCISwitchBus(QPCIBus):
     """
     def __init__(self, busid, bus_type, downstream_type, aobject=None):
         super(QPCISwitchBus, self).__init__(busid, bus_type, aobject)
-        self.__downstream_ports = []
+        self.__downstream_ports = {}
         self.__downstream_type = downstream_type
 
-    def _insert(self, device, addr):
-        added_devices = []
+    def add_downstream_port(self, addr):
+        """
+        Add downstream port of the certain address
+        """
         if addr not in self.__downstream_ports:
-            add_port = True
-        else:
-            add_port = False
-        added_devices.extend(super(QPCISwitchBus, self)._insert(device, addr))
-        if add_port:
-            self.__downstream_ports.append('addr')
-            added_devices.append(QDevice(self.__downstream_type,
-                                         {'id': "%s.%s" % (self.busid,
-                                                           int(addr, 16)),
+            bus_id = "%s.%s" % (self.busid, int(addr, 16))
+            bus = QPCIBus(bus_id, 'PCIE', bus_id)
+            self.__downstream_ports[addr] = bus
+            downstream = QDevice(self.__downstream_type,
+                                         {'id': bus_id,
                                           'bus': self.busid,
                                           'addr': addr},
                                          aobject=self.aobject,
-                                         parent_bus={'busid': '_PCI_CHASSIS'}))
+                                         parent_bus={'busid': '_PCI_CHASSIS'},
+                                         child_bus=bus)
+            return downstream
+
+    def _insert(self, device, addr):
+        """
+        Instead of the device inserts the downstream port. The device is
+        inserted later during _set_device_props into this downstream port.
+        """
+        _addr = addr.split('-')[0]
+        added_devices = []
+        downstream = self.add_downstream_port(_addr)
+        if downstream is not None:
+            added_devices.append(downstream)
+            added_devices.extend(super(QPCISwitchBus, self)._insert(downstream,
+                                                                    addr))
+
+        bus_id = "%s.%s" % (self.busid, int(_addr, 16))
+        device['bus'] = bus_id
+
         return added_devices
 
     def _set_device_props(self, device, addr):
-        device[self.bus_item] = "%s.%s" % (self.busid, int(addr[0]))
-        device['addr'] = '0x0'
+        """
+        Instead of setting the addr this insert the device into the
+        downstream port.
+        """
+        self.__downstream_ports['%02x' % addr[0]].insert(device)
 
 
 class QSCSIBus(QSparseBus):
