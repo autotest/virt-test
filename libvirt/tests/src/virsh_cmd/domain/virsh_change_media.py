@@ -23,8 +23,8 @@ def run_virsh_change_media(test, params, env):
         """
         Prepare ISO image for test
 
-        @param: old_iso: sourse file for insert
-        @param: new_iso: sourse file for update
+        :param old_iso: sourse file for insert
+        :param new_iso: sourse file for update
         """
         error.context("Preparing ISO images")
         utils.run("dd if=/dev/urandom of=%s/old bs=1M count=1" % iso_dir)
@@ -37,9 +37,9 @@ def run_virsh_change_media(test, params, env):
         """
         Check guest cdrom/floppy files
 
-        @param: session: guest session
-        @param: target_file: the expected files
-        @action: action: test case action
+        :param session: guest session
+        :param target_file: the expected files
+        :param action: test case action
         """
         if action != "--eject ":
             error.context("Checking guest %s files" % target_device)
@@ -66,8 +66,8 @@ def run_virsh_change_media(test, params, env):
         """
         Add device for test vm
 
-        @param: vm_name: guest name
-        @param: init_source: source file
+        :param vm_name: guest name
+        :param init_source: source file
         """
         if vm.is_alive():
             virsh.destroy(vm_name)
@@ -81,10 +81,10 @@ def run_virsh_change_media(test, params, env):
         """
         Update device iso file for test case
 
-        @param: vm_name: guest name
-        @param: init_iso: source file
-        @param: options: update-device option
-        @param: start_vm: guest start flag
+        :param vm_name: guest name
+        :param init_iso: source file
+        :param options: update-device option
+        :param start_vm: guest start flag
         """
         snippet = """
 <disk type='file' device='%s'>
