@@ -1669,6 +1669,23 @@ class DevContainer(object):
         if item in self:
             return self[item]
 
+    def get_by_properties(self, filt):
+        """
+        Return list of matching devices
+        :param filt: filter {'property': 'value', ...}
+        :type filt: dict
+        """
+        out = []
+        for device in self.__devices:
+            for key, value in filt.iteritems():
+                if not hasattr(device, key):
+                    break
+                if getattr(device, key) != value:
+                    break
+            else:
+                out.append(device)
+        return out
+
     def __delitem__(self, item):
         """
         Delete specified item from devices list
