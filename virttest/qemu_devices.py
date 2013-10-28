@@ -1311,7 +1311,7 @@ class QDenseBus(QSparseBus):
         return out + ']'
 
 
-class QPCIBus(QDenseBus):
+class QPCIBus(QSparseBus):
 
     """
     PCI Bus representation (bus&addr, uses hex digits)
@@ -1319,9 +1319,9 @@ class QPCIBus(QDenseBus):
 
     def __init__(self, busid, bus_type, aobject=None, length=32, first_port=0):
         """ bus&addr, 32 slots """
-        super(QPCIBus, self).__init__('bus', [['addr'], [length]], busid,
-                                      bus_type, aobject)
-        self.first_port = first_port
+        super(QPCIBus, self).__init__('bus', [['addr', 'func'], [length, 8]],
+                                      busid, bus_type, aobject)
+        self.first_port = (first_port, 0)
 
     @staticmethod
     def _addr2stor(addr):
@@ -1331,7 +1331,7 @@ class QPCIBus(QDenseBus):
             if value is None:
                 out += '*-'
             else:
-                out += '%s-' % hex(value)
+                out += '%02x-' % value
         if out:
             return out[:-1]
         else:
@@ -1339,25 +1339,36 @@ class QPCIBus(QDenseBus):
 
     def _dev2addr(self, device):
         """ Read the values in base of 16 (hex) """
-        addr = []
-        for key in self.addr_items:
-            value = device.get_param(key)
-            if value is None:
-                addr.append(None)
-            elif isinstance(value, int):
-                addr.append(value)
-            else:
-                addr.append(int(value, 16))
+        addr = device.get_param('addr')
+        if isinstance(addr, int):     # only addr
+            return [addr, 0]
+        elif not addr:    # not defined
+            return [None, 0]
+        elif isinstance(addr, str):     # addr or addr.func
+            addr = [int(_, 16) for _ in addr.split('.', 1)]
+            if len(addr) < 2:   # only addr
+                addr.append(0)
         return addr
 
     def _set_device_props(self, device, addr):
-        """ Convert addr to hex """
-        addr = [hex(_) for _ in addr]
-        super(QPCIBus, self)._set_device_props(device, addr)
+        """ Convert addr to the format used by qtree """
+        device.set_param(self.bus_item, self.busid)
+        orig_addr = device.get_param('addr')
+        if addr[1] or (isinstance(orig_addr, str) and
+                       orig_addr.find('.') != -1):
+            device.set_param('addr', '%02x.%x' % (addr[0], addr[1]))
+        else:
+            device.set_param('addr', '%02x' % (addr[0]))
 
     def _update_device_props(self, device, addr):
         """ Always set properties """
         self._set_device_props(device, addr)
+
+    def _increment_addr(self, addr, last_addr=None):
+        """ Don't use multifunction address by default """
+        if addr[1] is None:
+            addr[1] = 0
+        return super(QPCIBus, self)._increment_addr(addr, last_addr=last_addr)
 
 
 class QPCISwitchBus(QPCIBus):
