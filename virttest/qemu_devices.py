@@ -2305,15 +2305,22 @@ class DevContainer(object):
             devices = []
             bus = (QPCIBus('pcie.0', 'PCIE', 'pci.0'),
                    QStrictCustomBus(None, [['chassis'], [256]], '_PCI_CHASSIS',
-                                    first_port=1),
+                                    first_port=[1]),
                    QStrictCustomBus(None, [['chassis_nr'], [256]],
-                                    '_PCI_CHASSIS_NR', first_port=1))
+                                    '_PCI_CHASSIS_NR', first_port=[1]))
             devices.append(QStringDevice('machine', cmdline=cmd,
                                          child_bus=bus,
                                          aobject="pci.0"))
-            devices.append(QStringDevice('mch', {'addr': 0},
+            devices.append(QStringDevice('mch', {'addr': 0, 'driver': 'mch'},
                                          parent_bus={'aobject': 'pci.0'}))
-            devices.append(QStringDevice('ICH9-ahci', {'addr': '0x1f'},
+            devices.append(QStringDevice('ICH9 LPC', {'addr': '1f.0',
+                                                      'driver': 'ICH9 LPC'},
+                                         parent_bus={'aobject': 'pci.0'}))
+            devices.append(QStringDevice('ICH9 SMB', {'addr': '1f.3',
+                                                      'driver': 'ICH9 SMB'},
+                                         parent_bus={'aobject': 'pci.0'}))
+            devices.append(QStringDevice('ICH9-ahci', {'addr': '1f.2',
+                                                       'driver': 'ich9-ahci'},
                                          parent_bus={'aobject': 'pci.0'},
                                          child_bus=QAHCIBus('ide')))
             if self.has_option('device') and self.has_option("global"):
@@ -2338,17 +2345,25 @@ class DevContainer(object):
                 pci_bus = "pci.0"
             bus = (QPCIBus(pci_bus, 'PCI', 'pci.0'),
                    QStrictCustomBus(None, [['chassis'], [256]], '_PCI_CHASSIS',
-                                    first_port=1),
+                                    first_port=[1]),
                    QStrictCustomBus(None, [['chassis_nr'], [256]],
-                                    '_PCI_CHASSIS_NR', first_port=1))
+                                    '_PCI_CHASSIS_NR', first_port=[1]))
             devices.append(QStringDevice('machine', cmdline=cmd,
                                          child_bus=bus,
                                          aobject="pci.0"))
-            devices.append(QStringDevice('i440FX', {'addr': 0},
+            devices.append(QStringDevice('i440FX',
+                                         {'addr': 0, 'driver': 'i440FX'},
                                          parent_bus={'aobject': 'pci.0'}))
-            devices.append(QStringDevice('PIIX3', {'addr': 1},
+            devices.append(QStringDevice('PIIX4_PM', {'addr': '01.3',
+                                                      'driver': 'PIIX4_PM'},
                                          parent_bus={'aobject': 'pci.0'}))
-            devices.append(QStringDevice('ide', child_bus=QIDEBus('ide')))
+            devices.append(QStringDevice('PIIX3',
+                                         {'addr': 1, 'driver': 'PIIX3'},
+                                         parent_bus={'aobject': 'pci.0'}))
+            devices.append(QStringDevice('piix3-ide', {'addr': '01.1',
+                                                       'driver': 'piix3-ide'},
+                                         parent_bus={'aobject': 'pci.0'},
+                                         child_bus=QIDEBus('ide')))
             if self.has_option('device') and self.has_option("global"):
                 devices.append(QStringDevice('fdc',
                                              child_bus=QFloppyBus('floppy')))
