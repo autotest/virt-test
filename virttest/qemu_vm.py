@@ -1708,7 +1708,7 @@ class VM(virt_vm.BaseVM):
                     for i in nic.tapfds.split(':'):
                         os.close(int(i))
                 if nic.vhostfds:
-                    for i in nic.tapfds.split(':'):
+                    for i in nic.vhostfds.split(':'):
                         os.close(int(i))
         except TypeError:
             pass
