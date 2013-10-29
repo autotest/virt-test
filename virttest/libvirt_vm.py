@@ -1619,3 +1619,15 @@ class VM(virt_vm.BaseVM):
             logging.debug(result)
             return False
         return True
+
+    def dump(self, path, option=""):
+        """
+        Dump self to path.
+
+        :raise: error.TestFail if dump fail.
+        """
+        cmd_result = virsh.dump(self.name, path=path, option=option,
+                                uri=self.connect_uri)
+        if cmd_result.exit_status:
+            raise error.TestFail("Failed to dump %s to %s.\n"
+                                 "Detail: %s." % (self.name, path, cmd_result))
