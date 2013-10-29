@@ -123,7 +123,8 @@ def handle_prompts(session, username, password, prompt, timeout=10,
     while True:
         try:
             match, text = session.read_until_last_line_matches(
-                [r"[Aa]re you sure", r"[Pp]assword:\s*", r"[Ll]ogin:\s*",
+                [r"[Aa]re you sure", r"[Pp]assword:\s*",
+                 r"(?<![Ll]ast).*[Ll]ogin:\s*$",  # Don't match "Last Login:"
                  r"[Cc]onnection.*closed", r"[Cc]onnection.*refused",
                  r"[Pp]lease wait", r"[Ww]arning", r"[Ee]nter.*username",
                  r"[Ee]nter.*password", prompt],
