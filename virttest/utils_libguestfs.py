@@ -691,6 +691,111 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("rm %s" % path)
 
+    def part_init(self, device, parttype):
+        """
+        part-init - create an empty partition table
+
+        This creates an empty partition table on "device" of one of the
+        partition types listed below. Usually "parttype" should be either
+        "msdos" or "gpt" (for large disks).
+        """
+        return self.inner_cmd("part-init %s %s" % (device, parttype))
+
+    def part_list(self, device):
+        """
+        part-list - list partitions on a device
+
+        This command parses the partition table on "device" and
+        returns the list of partitions found.
+        """
+        return self.inner_cmd("part-list %s" % device)
+
+    def mkfs(self, fstype, device):
+        """
+        mkfs - make a filesystem
+
+        This creates a filesystem on "device" (usually a partition or LVM
+        logical volume). The filesystem type is "fstype", for example "ext3".
+        """
+        return self.inner_cmd("mkfs %s %s" % (fstype, device))
+
+    def part_disk(self, device, parttype):
+        """
+        part-disk - partition whole disk with a single primary partition
+
+        This command is simply a combination of "part_init" followed by
+        "part_add" to create a single primary partition covering
+        the whole disk.
+        """
+        return self.inner_cmd("part-disk %s %s" % (device, parttype))
+
+    def blockdev_getss(self, device):
+        """
+        blockdev-getss - get sectorsize of block device
+
+        This returns the size of sectors on a block device. Usually 512,
+        but can be larger for modern devices.
+        """
+        return self.inner_cmd("blockdev-getss %s" % device)
+
+    def blockdev_getsz(self, device):
+        """
+        blockdev-getsz - get total size of device in 512-byte sectors
+
+        This returns the size of the device in units of 512-byte sectors
+        (even if the sectorsize isn't 512 bytes ... weird).
+        """
+        return self.inner_cmd("blockdev-getsz %s" % device)
+
+    def blockdev_getbsz(self, device):
+        """
+        blockdev-getbsz - get blocksize of block device
+
+        This returns the block size of a device.
+        """
+        return self.inner_cmd("blockdev-getbsz %s" % device)
+
+    def blockdev_getsize64(self, device):
+        """
+        blockdev-getsize64 - get total size of device in bytes
+
+        This returns the size of the device in bytes
+        """
+        return self.inner_cmd("blockdev-getsize64 %s" % device)
+
+    def blockdev_setbsz(self, device, blocksize):
+        """
+        blockdev-setbsz - set blocksize of block device
+
+        This sets the block size of a device.
+        """
+        return self.inner_cmd("blockdev-setbsz %s %s" % (device, blocksize))
+
+    def blockdev_getro(self, device):
+        """
+        blockdev-getro - is block device set to read-only
+
+        Returns a boolean indicating if the block device is read-only
+        (true if read-only, false if not).
+        """
+        return self.inner_cmd("blockdev-getro %s" % device)
+
+    def blockdev_setro(self, device):
+        """
+        blockdev-setro - set block device to read-only
+
+        Sets the block device named "device" to read-only.
+        """
+        return self.inner_cmd("blockdev-setro %s" % device)
+
+    def blockdev_setrw(self, device):
+        """
+        blockdev-setrw - set block device to read-write
+
+        Sets the block device named "device" to read-write.
+        """
+        return self.inner_cmd("blockdev-setrw %s" % device)
+
 
 # libguestfs module functions follow #####
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
