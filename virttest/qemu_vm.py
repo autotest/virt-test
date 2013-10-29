@@ -1676,7 +1676,7 @@ class VM(virt_vm.BaseVM):
         if option_roms:
             cmd = ""
             for opt_rom in option_roms.split():
-                cmd += add_option_rom(help, opt_rom)
+                cmd += add_option_rom(devices, opt_rom)
             if cmd:
                 devices.insert(StrDev('ROM', cmdline=cmd))
 
