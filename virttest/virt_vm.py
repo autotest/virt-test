@@ -524,6 +524,13 @@ class BaseVM(object):
             if not glob.glob("/tmp/*%s" % self.instance):
                 break
 
+    def update_vm_id(self):
+        """
+        Update vm identifier, we need do that when force reboot vm, since vm
+        virnet params may be changed.
+        """
+        self._generate_unique_id()
+
     @staticmethod
     def lookup_vm_class(vm_type, target):
         if vm_type == 'qemu':
