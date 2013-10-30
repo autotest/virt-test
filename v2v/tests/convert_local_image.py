@@ -83,7 +83,7 @@ def create_disk_pool(spool, pool_name, block_device,
 
 
 def create_lvm_pool(spool, pool_name, block_device, vg_name="vg_v2v",
-                    target_path="/dev/v2v_test"):
+                    target_path="/dev/vg_v2v"):
     """
     Create a persistent lvm pool.
     """
@@ -178,8 +178,8 @@ def run_convert_local_image(test, params, env):
 
     # Remote host parameters
     remote_hostname = params.get("remote_hostname")
-    username = params.get("username", "root")
-    password = params.get("password")
+    username = params.get("remote_username", "root")
+    password = params.get("remote_passwd")
     remote_hypervisor = params.get("remote_hypervisor")
 
     # Local pool parameters
