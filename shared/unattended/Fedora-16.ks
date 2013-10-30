@@ -22,6 +22,7 @@ autopart
 @base
 @development-libs
 @development-tools
+scsi-target-utils
 %end
 
 %post
