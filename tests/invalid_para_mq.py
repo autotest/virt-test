@@ -11,9 +11,9 @@ def run_invalid_para_mq(test, params, env):
     1) Boot up VM with wrong queues number
     2) check the qemu can report the error.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     params["start_vm"] = "yes"
     error.context("Boot the vm using queues %s'" % params.get("queues"), logging.info)

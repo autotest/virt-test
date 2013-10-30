@@ -3227,7 +3227,7 @@ class VM(virt_vm.BaseVM):
         :param p_dict: Dictionary that contains parameters and its value used
                        to define specified block device.
 
-        @blocks_info: the results of monitor command 'info block'
+        :param blocks_info: the results of monitor command 'info block'
 
         :return: Matched block device name, None when not find any device.
         """
