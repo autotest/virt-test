@@ -3,7 +3,8 @@ import logging
 import re
 from autotest.client import lv_utils
 from autotest.client.shared import ssh_key, error
-from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh, remote
+from virttest import utils_v2v, libvirt_storage, libvirt_vm
+from virttest import virt_vm, virsh, remote, data_dir
 
 
 def create_dir_pool(spool, pool_name, target_path):
@@ -127,7 +128,8 @@ def get_remote_vm_disk(rvm):
     return target_path
 
 
-def copy_remote_vm(rvm, local_path, remote_host, username, password, timeout=1200):
+def copy_remote_vm(rvm, local_path, remote_host,
+                   username, password, timeout=1200):
     """
     Copy remote vm's disk to local path.
 
@@ -191,10 +193,10 @@ def run_convert_local_image(test, params, env):
     pool_name = params.get("pool_name", "v2v_test")
     target_path = params.get("target_path", "pool_path")
     vg_name = params.get("volume_group_name", "vg_v2v")
-    local_tmp_path = params.get("local_tmp_path", test.tmpdir)
-    # If target_path is not an abs path, join it to test.tmpdir
+    local_tmp_path = params.get("local_tmp_path", data_dir.get_tmp_dir())
+    # If target_path is not an abs path, join it to data_dir.TMPDIR
     if os.path.dirname(target_path) is "":
-        target_path = os.path.join(test.tmpdir, target_path)
+        target_path = os.path.join(data_dir.get_tmp_dir(), target_path)
 
     # dir pool need an exist path
     if pool_type == "dir":
@@ -260,8 +262,9 @@ def run_convert_local_image(test, params, env):
                       "input": input, "files": files}
         try:
             result = utils_v2v.v2v_cmd(v2v_params)
-        except error.CmdError:
-            raise error.TestFail("Virt v2v failed.")
+            logging.debug(result)
+        except error.CmdError, detail:
+            raise error.TestFail("Virt v2v failed:\n%s" % str(detail))
 
         # v2v may be successful, but devices' driver may be not virtio
         error_info = []
@@ -270,10 +273,15 @@ def run_convert_local_image(test, params, env):
         params['vms'] = vm_name
         params['target'] = "libvirt"
         vm_check = utils_v2v.LinuxVMCheck(test, params, env)
-        if not vm_check.is_disk_virtio():
-            error_info.append("Error:disk type was not converted to virtio.")
-        if not vm_check.is_net_virtio():
-            error_info.append("Error:nic type was not converted to virtio.")
+        try:
+            if not vm_check.is_disk_virtio():
+                error_info.append("Error:disk type was not converted to "
+                                  "virtio.")
+            if not vm_check.is_net_virtio():
+                error_info.append("Error:nic type was not converted to "
+                                  "virtio.")
+        except (remote.LoginError, virt_vm.VMError), detail:
+            error_info.append(str(detail))
 
         # Close vm for cleanup
         if vm_check.vm is not None and vm_check.vm.is_alive():
