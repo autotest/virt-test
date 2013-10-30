@@ -177,7 +177,10 @@ class NodedevXMLBase(base.LibvirtXMLBase):
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'parent',
                                                  'cap_type', 'cap',
-                                                 'sysfs_main_path')
+                                                 'sysfs_main_path',
+                                                 'host', 'fc_type',
+                                                 'wwnn', 'wwpn',
+                                                 'fabric_wwn')
 
     __schema_name__ = "nodedev"
 
@@ -199,6 +202,19 @@ class NodedevXMLBase(base.LibvirtXMLBase):
                                  tag_name='parent')
         accessors.XMLAttribute('cap_type', self, parent_xpath='/',
                                tag_name='capability', attribute='type')
+        accessors.XMLElementText('host', self, parent_xpath='/capability',
+                                 tag_name='host')
+        accessors.XMLAttribute('fc_type', self, parent_xpath='/capability',
+                                 tag_name='capability', attribute='type')
+        accessors.XMLElementText('wwnn', self,
+                                 parent_xpath='/capability/capability',
+                                 tag_name='wwnn')
+        accessors.XMLElementText('wwpn', self,
+                                 parent_xpath='/capability/capability',
+                                 tag_name='wwpn')
+        accessors.XMLElementText('fabric_wwn', self,
+                                 parent_xpath='/capability/capability',
+                                 tag_name='fabric_wwn')
         super(NodedevXMLBase, self).__init__(virsh_instance=virsh_instance)
         self.xml = '<device></device>'
 
