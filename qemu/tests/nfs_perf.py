@@ -111,8 +111,22 @@ def run_nfs_perf(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     guest_ver = session.cmd_output("uname -r").strip()
     host_ver = os.uname()[2]
-    kvm_ver = utils.system_output(
-        params.get('kvm_userspace_ver_cmd', "rpm -q qemu-kvm"))
+
+    kvm_userspace_ver_cmd = params.get("kvm_userspace_ver_cmd", "")
+    if kvm_userspace_ver_cmd:
+        try:
+            cmd_result = utils.run(kvm_userspace_ver_cmd)
+            qemu_version = cmd_result.stdout.strip()
+        except error.CmdError:
+            qemu_version = "Unknown"
+    else:
+        qemu_path = utils_misc.get_qemu_binary(params)
+        version_line = utils.system_output("%s -help | head -n 1" % qemu_path)
+        matches = re.findall("version .*?,", version_line, re.I)
+        if matches:
+            qemu_version = " ".join(matches[0].split()[1:]).strip(",")
+        else:
+            qemu_version = "Unknown"
     # After STEP 1
 
     try:
@@ -163,7 +177,7 @@ def run_nfs_perf(test, params, env):
 
     # Record mount command in result file.
     try:
-        result_file.write("### kvm-userspace-ver : %s\n" % kvm_ver)
+        result_file.write("### kvm-userspace-ver : %s\n" % qemu_version)
         result_file.write("### kvm_version : %s\n" % host_ver)
         result_file.write("### guest-kernel-ver : %s\n" % guest_ver)
         result_file.write("### %s\n" % mnt_cmd_out)
