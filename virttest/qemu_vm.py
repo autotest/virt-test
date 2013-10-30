@@ -1676,7 +1676,7 @@ class VM(virt_vm.BaseVM):
         if option_roms:
             cmd = ""
             for opt_rom in option_roms.split():
-                cmd += add_option_rom(help, opt_rom)
+                cmd += add_option_rom(devices, opt_rom)
             if cmd:
                 devices.insert(StrDev('ROM', cmdline=cmd))
 
@@ -1708,7 +1708,7 @@ class VM(virt_vm.BaseVM):
                     for i in nic.tapfds.split(':'):
                         os.close(int(i))
                 if nic.vhostfds:
-                    for i in nic.tapfds.split(':'):
+                    for i in nic.vhostfds.split(':'):
                         os.close(int(i))
         except TypeError:
             pass
