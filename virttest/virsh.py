@@ -1098,7 +1098,9 @@ def domain_exists(name, **dargs):
         command("domstate %s" % name, **dargs)
         return True
     except error.CmdError, detail:
-        logging.warning("VM %s does not exist:\n%s", name, detail)
+        logging.warning("VM %s does not exist", name)
+        if dargs.get('debug', False):
+            logging.warning(str(detail))
         return False
 
 
