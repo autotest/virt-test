@@ -2,7 +2,7 @@ import re
 import os
 import logging
 import commands
-from autotest.client.shared import error
+from autotest.client.shared import error, utils
 from virttest import remote, virsh, libvirt_xml
 from xml.dom.minidom import parse
 
@@ -21,16 +21,12 @@ def run_virsh_setvcpus(test, params, env):
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
     xml_file = params.get("setvcpus_xml_file", "vm.xml")
-    virsh.dumpxml(vm_name, extra="", to_file=xml_file)
     tmp_file = params.get("setvcpus_tmp_file", "tmp.xml")
     pre_vm_state = params.get("setvcpus_pre_vm_state")
     command = params.get("setvcpus_command", "setvcpus")
-    options = params.get("setvcpus_options")
-    domain = params.get("setvcpus_domain")
-    count = params.get("setvcpus_count")
-    extra_param = params.get("setvcpus_extra_param")
-    count_option = "%s %s" % (count, extra_param)
-    status_error = params.get("status_error")
+    options = params.get("setvcpus_options", "")
+    count = params.get("setvcpus_count", "equal")
+    status_error = params.get("status_error", "no")
 
     def get_current_vcpus():
         """
@@ -42,89 +38,119 @@ def run_virsh_setvcpus(test, params, env):
         root = dom.documentElement
         vcpus_2 = root.getElementsByTagName("vcpu")
         for n in vcpus_2:
-            vcpus_set += n.getAttribute("current")
-            vcpus_set = int(vcpus_set)
+            if n.hasAttribute("current"):
+                vcpus_set = int(n.getAttribute("current"))
+        if vcpus_set == "":
+            vcpus_set = int(vcpus_2[0].firstChild.data)
         dom.unlink()
         return vcpus_set
 
-    if vm.is_alive():
-        vm.destroy()
-    vm_xml = libvirt_xml.VMXML()
-    vm_xml.set_vm_vcpus(vm_name, 2)
-    vm.start()
-    vm.wait_for_login()
+    def get_max_vcpus():
+        """
+        Get max vcpu number.
+        """
+        virsh.dumpxml(vm_name, extra="--inactive", to_file=tmp_file)
+        dom = parse(tmp_file)
+        root = dom.documentElement
+        vcpus_2 = root.getElementsByTagName("vcpu")
+        vcpus_set = int(vcpus_2[0].firstChild.data)
+        dom.unlink()
+        return vcpus_set
 
-    if status_error == "no":
-        vcpus_new = len(vm.vcpuinfo())
-    domid = vm.get_id()
-    domuuid = vm.get_uuid()
+    def get_host_vcpus():
+        """
+        Get host vcpus.
+        """
+        result = utils.run("cat /proc/cpuinfo | grep \"processor\" | wc -l",
+                           ignore_status=True)
+        if result.exit_status:
+            raise error.TestError("Failed to get host vcpus '%s'",
+                                  result.stderr)
+        return int(result.stdout)
+
+    virsh.dumpxml(vm_name, extra="", to_file=xml_file)
+
+    is_plug = False
+    is_max = False
+    current_vcpu_count = get_current_vcpus()
+    host_vcpus = get_host_vcpus()
+
+    if count == "add":
+        is_plug = True
+        new_vcpu_count = current_vcpu_count + 1
+    elif count == "sub":
+        new_vcpu_count = current_vcpu_count - 1
+    elif count == "equal":
+        new_vcpu_count = current_vcpu_count
+    elif count == "guest":
+        is_max = True
+        new_vcpu_count = current_vcpu_count
+    elif count == "host":
+        is_max = True
+        new_vcpu_count = host_vcpus
+    else:
+        raise error.TestError("Unknown setvcpus_count option '%s'", count)
+
+
+    if is_plug:
+        vm.destroy()
+        vm_xml = libvirt_xml.VMXML()
+        vm_xml.set_vm_vcpus(vm_name, new_vcpu_count)
+
+    is_online = ((options.count("--live") or options.count("--current"))
+                 and pre_vm_state != "shut off")
+
+    if not vm.is_alive():
+        vm.start()
+
+    if is_online:
+        if not is_plug and vm.driver_type != "xen":
+            raise error.TestNAError("Vcpu hot unplug is available "
+                                    "only with Xen.")
+        else:
+            if vm.driver_type == "qemu":
+                status = virsh.qemu_monitor_command(vm.name,
+                    "{ \"execute\": \"cpu-add\", \"arguments\": "
+                    "{ \"id\": 0 } }", qmp=True)
+                if status.exit_status:
+                    raise error.TestNAError("Vcpu hot plug is not available "
+                                            "with actual qemu version.")
+
+    if is_max:
+        options = "%s --maximum" % options
+
+    session = None
+    if pre_vm_state == "shut off":
+        vm.destroy()
+    else:
+        session = vm.wait_for_login()
+
     if pre_vm_state == "paused":
         vm.pause()
-    elif pre_vm_state == "shut off":
-        vm.destroy()
 
-    if domain == "remote_name":
-        remote_ssh_addr = params.get("remote_ip", None)
-        remote_addr = params.get("local_ip", None)
-        remote_password = params.get("remote_password", None)
-        host_type = virsh.driver()
-        if host_type == "qemu":
-            remote_string = "qemu+ssh://%s/system" % remote_addr
-        elif host_type == "xen":
-            remote_string = "xen+ssh://%s" % remote_addr
-        command = "virsh -c %s setvcpus %s 1 --live" % (remote_string, vm_name)
-        if virsh.has_command_help_match(command, "--live") is None:
-            status_error = "yes"
-        session = remote.remote_login(
-            "ssh", remote_ssh_addr, "22", "root", remote_password, "#")
-        session.cmd_output('LANG=C')
-        status, output = session.cmd_status_output(command, internal_timeout=5)
-        session.close()
-        vcpus_current = len(vm.vcpuinfo())
-    else:
-        if domain == "name":
-            dom_option = vm_name
-        elif domain == "id":
-            dom_option = domid
-            if params.get("setvcpus_hex_id") is not None:
-                dom_option = hex(int(domid))
-            elif params.get("setvcpus_invalid_id") is not None:
-                dom_option = params.get("setvcpus_invalid_id")
-        elif domain == "uuid":
-            dom_option = domuuid
-            if params.get("setvcpus_invalid_uuid") is not None:
-                dom_option = params.get("setvcpus_invalid_uuid")
+    status = virsh.setvcpus(vm.name, new_vcpu_count, options,
+                            ignore_status=True, debug=True)
+
+    if pre_vm_state == "paused":
+        virsh.resume(vm_name, ignore_status=True)
+
+    fail_msg = None
+    if is_online:
+        s, o = session.cmd_status_output(
+            "cat /proc/cpuinfo | grep \"processor\" | wc -l")
+        if s:
+            fail_msg = "Unexpected error '%s'" % o
         else:
-            dom_option = domain
-        option_list = options.split(" ")
-        for item in option_list:
-            if virsh.has_command_help_match(command, item) is None:
-                status_error = "yes"
-                break
-        status = virsh.setvcpus(
-            dom_option, count_option, options, ignore_status=True).exit_status
-        if pre_vm_state == "paused":
-            virsh.resume(vm_name, ignore_status=True)
-        if status_error == "no":
-            if status == 0:
-                if pre_vm_state == "shut off":
-                    if options == "--config":
-                        vcpus_set = len(vm.vcpuinfo())
-                    elif options == "--current":
-                        vcpus_set = get_current_vcpus()
-                    elif options == "--maximum --config":
-                        vcpus_set = ""
-                        dom = parse("/etc/libvirt/qemu/%s.xml" % vm_name)
-                        vcpus_set = dom.getElementsByTagName(
-                            "vcpu")[0].firstChild.data
-                        vcpus_set = int(vcpus_set)
-                        dom.unlink()
-                else:
-                    vcpus_set = len(vm.vcpuinfo())
-                if domain == "id":
-                    cmd_chk = "cat /etc/libvirt/qemu/%s.xml" % vm_name
-                    output1 = commands.getoutput(cmd_chk)
-                    logging.info("guest-info:\n%s" % output1)
+            if int(o) != new_vcpu_count:
+                fail_msg = ("The vcpu count in guest '%s' is different than "
+                            "requested count '%s'" % (o, new_vcpu_count))
+
+    if is_max:
+        guest_max_vcpus = get_max_vcpus()
+        if new_vcpu_count != guest_max_vcpus:
+            fail_msg = ("The maximum count in guest '%s' is different than "
+                        "requested count '%s'" % (new_vcpu_count,
+                        guest_max_vcpus))
 
     virsh.destroy(vm_name)
     virsh.undefine(vm_name)
@@ -135,26 +161,13 @@ def run_virsh_setvcpus(test, params, env):
         os.remove(tmp_file)
 
     # check status_error
+    requested_status = 0
     if status_error == "yes":
-        if status == 0:
-            raise error.TestFail("Run successfully with wrong command!")
-    else:
-        if status != 0:
-            raise error.TestFail("Run failed with right command")
-        else:
-            if options == "--maximum --config":
-                if vcpus_set != 4:
-                    raise error.TestFail("Run failed with right command1")
-            elif domain == "id":
-                if options == "--config":
-                    if vcpus_set != vcpus_new or not re.search('<vcpu current=\'1\'>%s</vcpu>' % vcpus_new, output1):
-                        raise error.TestFail("Run failed with right command2")
-                elif options == "--config --live":
-                    if vcpus_set != 1 or not re.search('<vcpu current=\'1\'>%s</vcpu>' % vcpus_new, output1):
-                        raise error.TestFail("Run failed with right command3")
-                else:
-                    if vcpus_set != 1 or re.search('<vcpu current=\'1\'>%s</vcpu>' % vcpus_new, output1):
-                        raise error.TestFail("Run failed with right command4")
-            else:
-                if vcpus_set != 1:
-                    raise error.TestFail("Run failed with right command5")
+        requested_status = 1
+    if status.exit_status != requested_status:
+        logging.debug("requested status: %d\nexit status: %d",
+            requested_status, status.exit_status)
+        raise error.TestFail("Run failed with error message '%s'",
+            status.stderr)
+    if fail_msg:
+        raise error.TestFail(fail_msg)
