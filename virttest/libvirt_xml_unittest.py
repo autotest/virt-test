@@ -45,6 +45,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
                       '    <name>%s</name>'
                       '    <uuid>%s</uuid>'
                       '    <devices>'  # Tests below depend on device order
+
                       '       <serial type="pty">'
                       '           <target port="0"/>'
                       '       </serial>'
@@ -65,6 +66,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
                                                         service="5442"/>'
                       '         <target port="3"/>'
                       '       </serial>'
+
                       '       <channel type="foo1">'
                       '         <source mode="foo2" path="foo3" />'
                       '         <target name="foo4" type="foo5" />'
@@ -73,14 +75,25 @@ class LibvirtXMLTestBase(unittest.TestCase):
                       '         <source mode="bar2" path="bar3" />'
                       '         <target name="bar4" type="bar5" />'
                       '       </channel>'
+
                       '       <graphics type="vnc" port="-1" autoport="yes"/>'
+
+                      '       <disk type="file" device="disk">'
+                      '         <driver name="qemu" type="qcow2"/>'
+                      '         <source file="/foo/bar/baz.qcow2"/>'
+                      '         <target dev="vda" bus="virtio"/>'
+                      '         <address type="pci" domain="0x0000"'
+                      '               bus="0x00" slot="0x04" function="0x0"/>'
+                      '       </disk>'
+
                       '    </devices>'
-                      '    <seclabel type="sec_type" model="sec_model"\
-                                                    relabel="sec_relabel">'
+
+                      '    <seclabel type="sec_type" model="sec_model">'
                       '       <label>sec_label</label>'
                       '       <baselabel>sec_baselabel</baselabel>'
                       '       <imagelabel>sec_imagelabel</imagelabel>'
                       '    </seclabel>'
+
                       '</domain>')
 
     __doms_dir__ = None
@@ -155,6 +168,52 @@ class LibvirtXMLTestBase(unittest.TestCase):
         librarian.DEVICE_TYPES = list(ORIGINAL_DEVICE_TYPES)
         if os.path.isdir(self.__doms_dir__):
             shutil.rmtree(self.__doms_dir__)
+
+
+# AccessorsTest.test_XMLElementNest is namespace sensitive
+class Baz(base.LibvirtXMLBase):
+    __slots__ = base.LibvirtXMLBase.__slots__ + ('foobar',)
+    def __init__(self, parent, virsh_instance):
+        accessors.XMLElementText('foobar', self, ['set', 'del'],
+                                 '/', 'baz')
+        super(Baz, self).__init__(virsh_instance=virsh_instance)
+        # must setup some basic XML inside for this element
+        self.xml = """<baz></baz>"""
+        # Test nested argument passing
+        parent.assertTrue(isinstance(parent, AccessorsTest))
+        parent.assertTrue(self.foobar is None)
+        # Forbidden should still catch these
+        parent.assertRaises(xcepts.LibvirtXMLForbiddenError,
+                            self.__setattr__, 'foobar', None)
+        parent.assertRaises(xcepts.LibvirtXMLForbiddenError,
+                            self.__setitem__, 'foobar', None)
+        parent.assertRaises(xcepts.LibvirtXMLForbiddenError,
+                            self.__delattr__, 'foobar')
+        parent.assertRaises(xcepts.LibvirtXMLForbiddenError,
+                            self.__delitem__, 'foobar')
+
+
+# AccessorsTest.test_XMLElementNest is namespace sensitive
+class Bar(base.LibvirtXMLBase):
+    __slots__ = base.LibvirtXMLBase.__slots__ + ('baz',)
+    def __init__(self, parent, virsh_instance):
+        subclass_dargs = {'parent':parent,
+                          'virsh_instance':virsh_instance}
+        accessors.XMLElementNest('baz', self, None,
+                                 '/', 'baz', Baz, subclass_dargs)
+        super(Bar, self).__init__(virsh_instance=virsh_instance)
+        # must setup some basic XML inside for this element
+        self.xml = """<bar></bar>"""
+        parent.assertTrue(isinstance(parent, AccessorsTest))
+        parent.assertRaises(xcepts.LibvirtXMLNotFoundError,
+                            self.__getattr__, 'baz')
+        parent.assertRaises(xcepts.LibvirtXMLNotFoundError,
+                            self.__getitem__, 'baz')
+        # Built-in type-checking
+        parent.assertRaises(ValueError, self.__setattr__,
+                            'baz', True) # bool() is not a Bar()
+        parent.assertRaises(ValueError, self.__setitem__,
+                            'baz', None)
 
 
 class AccessorsTest(LibvirtXMLTestBase):
@@ -279,6 +338,146 @@ class AccessorsTest(LibvirtXMLTestBase):
         self.assertEqual(test_dict, element_dict)
 
 
+    def test_XMLElementNest(self):
+        class Foo(base.LibvirtXMLBase):
+            __slots__ = base.LibvirtXMLBase.__slots__ + ('bar',)
+            def __init__(self, parent, virsh_instance):
+                subclass_dargs = {'parent':parent,
+                                  'virsh_instance':virsh_instance}
+                accessors.XMLElementNest('bar', self, None,
+                                         '/', 'bar', Bar, subclass_dargs)
+                super(Foo, self).__init__(virsh_instance=virsh_instance)
+                parent.assertTrue(isinstance(parent, AccessorsTest))
+                self.set_xml("""
+                    <foo>
+                        <bar>
+                            <baz>foobar</baz>
+                        </bar>
+                     </foo>""")
+                parent.assertTrue(isinstance(self.bar, Bar))
+                parent.assertTrue(isinstance(self.bar.baz, Baz))
+                parent.assertEqual(self.bar.baz.foobar, 'foobar')
+                parent.assertRaises(ValueError, self.bar.__setattr__,
+                                    'baz', Bar) # Baz is not a Bar()
+
+        foo = Foo(parent=self, virsh_instance=self.dummy_virsh)
+        self.assertEqual(foo.bar.baz.foobar, 'foobar')
+        baz = Baz(parent=self, virsh_instance=self.dummy_virsh)
+        # setting foobar is forbidden, have to go the long way around
+        baz.xml = """<baz>test value</baz>"""
+        bar = foo.bar # Creates new Bar instance
+        bar.baz = baz
+        foo.bar = bar # Point at new Bar instance
+        # TODO: Make 'foo.bar.baz = baz' work
+        self.assertEqual(foo.bar.baz.foobar, 'test value')
+        self.assertTrue(isinstance(foo.bar.baz, Baz))
+
+
+    def test_XMLElementBool_simple(self):
+        class Foo(base.LibvirtXMLBase):
+            __slots__ = base.LibvirtXMLBase.__slots__ + ('bar','baz')
+            def __init__(self, virsh_instance):
+                accessors.XMLElementBool('bar', self,
+                                         parent_xpath='/', tag_name='bar')
+                accessors.XMLElementBool('baz', self,
+                                         parent_xpath='/', tag_name='bar')
+                super(Foo, self).__init__(virsh_instance=virsh_instance)
+                self.xml = '<foo/>'
+        foo = Foo(self.dummy_virsh)
+        self.assertFalse(foo.bar)
+        self.assertFalse(foo['bar'])
+        self.assertFalse(foo.baz)
+        self.assertFalse(foo['baz'])
+        foo.bar = True
+        self.assertTrue(foo.bar)
+        self.assertTrue(foo['bar'])
+        self.assertTrue(foo.baz)
+        self.assertTrue(foo['baz'])
+        del foo.baz
+        self.assertFalse(foo.bar)
+        self.assertFalse(foo['bar'])
+        self.assertFalse(foo.baz)
+        self.assertFalse(foo['baz'])
+
+
+    def test_XMLElementBool_deep(self):
+        class Foo(base.LibvirtXMLBase):
+            __slots__ = base.LibvirtXMLBase.__slots__ + ('bar', 'baz', 'foo')
+            def __init__(self, virsh_instance):
+                accessors.XMLElementBool('foo', self,
+                                         parent_xpath='/l1', tag_name='foo')
+                accessors.XMLElementBool('bar', self,
+                                         parent_xpath='/l1/l2/l3', tag_name='bar')
+                accessors.XMLElementBool('baz', self,
+                                         parent_xpath='/l1/l2', tag_name='baz')
+                super(Foo, self).__init__(virsh_instance=virsh_instance)
+                self.xml = '<root/>'
+        foo = Foo(self.dummy_virsh)
+        for attr in "foo bar baz".split():
+            self.assertFalse(getattr(foo, attr))
+        del foo.foo
+        for attr in "bar baz".split():
+            self.assertFalse(getattr(foo, attr))
+        self.assertFalse(foo.foo)
+        foo.bar = True
+        for attr in "foo baz".split():
+            self.assertFalse(getattr(foo, attr))
+        self.assertTrue(foo.bar)
+        for attr in "foo bar baz".split():
+            foo[attr] = True
+            self.assertTrue(getattr(foo, attr))
+        foo.del_baz()
+        for attr in "foo bar".split():
+            self.assertTrue(getattr(foo, attr))
+        self.assertFalse(foo.baz)
+
+
+    def test_XMLElementList(self):
+        class Whatchamacallit(object):
+            def __init__(self, secret_sauce):
+                self.secret_sauce = str(secret_sauce)
+            @staticmethod
+            def from_it(item, index, lvxml):
+                if not isinstance(item, Whatchamacallit):
+                    raise ValueError
+                return ('whatchamacallit',
+                        {'secret_sauce':str(item.secret_sauce)})
+            @staticmethod
+            def to_it(tag, attrs, index, lvxml):
+                if not tag.startswith('whatchamacallit'):
+                    return None
+                else:
+                    return Whatchamacallit(attrs.get('secret_sauce'))
+        class Foo(base.LibvirtXMLBase):
+            __slots__ = base.LibvirtXMLBase.__slots__ + ('bar',)
+            def __init__(self, virsh_instance):
+                accessors.XMLElementList('bar', self, parent_xpath='/bar',
+                                         marshal_from=Whatchamacallit.from_it,
+                                         marshal_to=Whatchamacallit.to_it)
+                super(Foo, self).__init__(virsh_instance=virsh_instance)
+                self.xml = """<foo><bar>
+                                  <notone secret_sauce='snafu'/>
+                                  <whatchamacallit secret_sauce='foobar'/>
+                                  <whatchamacallit secret_sauce='5'/>
+                              </bar></foo>"""
+        foo = Foo(self.dummy_virsh)
+        existing = foo.bar
+        self.assertEqual(len(existing), 2)
+        self.assertEqual(existing[0].secret_sauce, 'foobar')
+        self.assertEqual(existing[1].secret_sauce, '5')
+        foo.bar = existing
+        existing[0].secret_sauce = existing[1].secret_sauce = None
+        # No value change
+        self.assertEqual(foo.bar[0].secret_sauce, 'foobar')
+        self.assertEqual(foo.bar[1].secret_sauce, '5')
+        existing.append(Whatchamacallit('None'))
+        foo.bar = existing # values changed
+        test = foo.bar
+        self.assertEqual(test[0].secret_sauce, 'None')
+        self.assertEqual(test[1].secret_sauce, 'None')
+        self.assertEqual(test[2].secret_sauce, 'None')
+
+
 class TestLibvirtXML(LibvirtXMLTestBase):
 
     def _from_scratch(self):
@@ -342,6 +541,20 @@ class TestVMXML(LibvirtXMLTestBase):
         self.assertEqual(vmxml.vm_name, 'foobar')
         self.assertEqual(vmxml.uuid, self._domuuid(None))
         self.assertEqual(vmxml.hypervisor_type, 'kvm')
+
+
+    def test_restore(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
+        vmxml.vm_name = 'test name'
+        vmxml.uuid = 'test uuid'
+        vmxml.hypervisor_type = 'atari'
+        # Changes verified in test_new_from_dumpxml() above
+        vmxml.restore()
+        self.assertEqual(vmxml.vm_name, 'foobar')
+        self.assertEqual(vmxml.uuid, self._domuuid(None))
+        self.assertEqual(vmxml.hypervisor_type, 'kvm')
+
 
     def test_seclabel(self):
         vmxml = self._from_scratch()
@@ -551,6 +764,50 @@ class testSerialXML(LibvirtXMLTestBase):
         self.assertEqual(source_connect['service'], '5442')
 
 
+class testDiskXML(LibvirtXMLTestBase):
+
+
+    def _check_disk(self, disk):
+        self.assertEqual(disk.type_name, "file")
+        self.assertEqual(disk.device, "disk")
+        for propname in ('rawio', 'sgio', 'snapshot', 'iotune'):
+            self.assertRaises(xcepts.LibvirtXMLNotFoundError,
+                              disk.__getitem__, propname)
+            self.assertRaises(xcepts.LibvirtXMLNotFoundError,
+                              disk.__getattr__, propname)
+            self.assertRaises(xcepts.LibvirtXMLNotFoundError,
+                              getattr(disk, 'get_' + propname))
+        self.assertEqual(disk.driver, {'name':'qemu', 'type':'qcow2'})
+        self.assertEqual(disk.target['dev'], 'vda')
+        self.assertEqual(disk.target['bus'], 'virtio')
+        source = disk.source
+        self.assertEqual(source.attrs, {'file':'/foo/bar/baz.qcow2'})
+        self.assertEqual(source.seclabels, [])
+        self.assertEqual(source.hosts, [])
+        self.assertEqual(disk.address.attrs, {"domain":"0x0000",
+                                              "bus":"0x00", "slot":"0x04",
+                                              "function":"0x0", "type":"pci"})
+
+
+    def test_vm_get(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
+        for device in vmxml.devices:
+            if device.device_tag is 'disk':
+                self._check_disk(device)
+            else:
+                continue
+
+
+    def test_vm_get_by_class(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
+        disk_devices = vmxml.get_devices(device_type='disk')
+        self.assertEqual(len(disk_devices), 1)
+        self._check_disk(disk_devices[0])
+
+
+
 class testAddressXML(LibvirtXMLTestBase):
 
     def test_required(self):
@@ -584,7 +841,6 @@ class testVMXMLDevices(LibvirtXMLTestBase):
         one = channels.pop()
         two = channels.pop()
         self.assertEqual(len(channels), 0)
-        self.assertFalse(one == two)
 
     def test_graphics(self):
         logging.disable(logging.WARNING)
@@ -610,7 +866,6 @@ class testVMXMLDevices(LibvirtXMLTestBase):
         # Check result
         self.assertEqual(vmxml.devices[-1].passwd, 'foobar')
 
-
 class testCAPXML(LibvirtXMLTestBase):
 
     def test_capxmlbase(self):
@@ -632,10 +887,12 @@ class testNodedevXMLBase(LibvirtXMLTestBase):
 
         return nodedevxml
 
+
     def test_getter(self):
         nodedevxml = self._from_scratch()
         self.assertEqual(nodedevxml.name, 'name_test')
         self.assertEqual(nodedevxml.parent, 'parent_test')
+
 
     def test_static(self):
         base = nodedev_xml.NodedevXMLBase

@@ -1122,19 +1122,6 @@ class VM(virt_vm.BaseVM):
             self.connect_uri = dest_uri
         return result
 
-    def attach_device(self, xml_file, extra=""):
-        """
-        Attach a device to VM.
-        """
-        return virsh.attach_device(self.name, xml_file, extra,
-                                   uri=self.connect_uri)
-
-    def detach_device(self, xml_file, extra=""):
-        """
-        Detach a device from VM.
-        """
-        return virsh.detach_device(self.name, xml_file, extra,
-                                   uri=self.connect_uri)
 
     def attach_interface(self, option="", ignore_status=False,
                          debug=False):
@@ -1361,7 +1348,7 @@ class VM(virt_vm.BaseVM):
         """
         error.base_context("rebooting '%s'" % self.name, logging.info)
         error.context("before reboot")
-        session = session or self.login()
+        session = session or self.login(timeout=timeout)
         error.context()
 
         if method == "shell":

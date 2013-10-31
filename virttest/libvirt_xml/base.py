@@ -169,6 +169,12 @@ class LibvirtXMLBase(propcan.PropCanBase):
         """
         raise xcepts.LibvirtXMLError("Read only property")
 
+    def restore(self):
+        """
+        Restore current xml content to original source content
+        """
+        self.xmltreefile.restore()
+
     @staticmethod
     def virt_xml_validate(filename, schema_name=None):
         """
