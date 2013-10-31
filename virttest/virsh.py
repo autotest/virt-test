@@ -549,24 +549,19 @@ def setvcpus(name, count, extra="", **dargs):
     return command(cmd, **dargs)
 
 
-def vcpupin(name, vcpu, cpu, **dargs):
+def vcpupin(name, vcpu, cpu_list, options="", **dargs):
     """
     Changes the cpu affinity for respective vcpu.
 
     :param name: name of domain
     :param vcpu: virtual CPU to modify
-    :param cpu: physical CPU specification (string)
+    :param cpu_list: physical CPU specification (string)
     :param dargs: standardized virsh function API keywords
-    :return: True operation was successful
+    :param options: --live, --current or --config.
+    :return: CmdResult object.
     """
-    dargs['ignore_status'] = False
-    try:
-        cmd_vcpupin = "vcpupin %s %s %s" % (name, vcpu, cpu)
-        command(cmd_vcpupin, **dargs)
-
-    except error.CmdError, detail:
-        logging.error("Virsh vcpupin VM %s failed:\n%s", name, detail)
-        return False
+    cmd_vcpupin = "vcpupin %s %s %s %s" % (name, vcpu, cpu_list, options)
+    return command(cmd_vcpupin, **dargs)
 
 
 def vcpuinfo(name, **dargs):
