@@ -1880,6 +1880,7 @@ def run_autotest(vm, session, control_path, timeout,
     cmd += " --exclude=*.pyc"
     cmd += " --exclude=*.svn"
     cmd += " --exclude=*.git"
+    cmd += " --exclude=%s/tests/virt/*" % autotest_basename
     utils.run(cmd)
 
     # Copy autotest.tar.bz2
