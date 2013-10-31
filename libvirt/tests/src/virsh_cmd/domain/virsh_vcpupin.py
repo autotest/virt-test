@@ -48,10 +48,10 @@ def run_virsh_vcpupin(test, params, env):
             logging.info("successfully pinned cpu_list: %s --> vcpu: %s",
                          cpu_list, vcpu)
         else:
-            raise error.TestFail("Command 'virsh vcpupin %s %s %s'not succeeded"
-                                 ", cpu pinning details not updated properly in"
-                                 " virsh vcpuinfo command output"
-                                 % (vm_name, vcpu, cpu_list))
+            raise error.TestFail("Command 'virsh vcpupin %s %s %s'not "
+                                 "succeeded, cpu pinning details not "
+                                 "updated properly in virsh vcpuinfo "
+                                 "command output" % (vm_name, vcpu, cpu_list))
 
         if pid is None:
             return
@@ -67,9 +67,9 @@ def run_virsh_vcpupin(test, params, env):
             logging.info("successfully pinned cpu: %s --> vcpu: %s"
                          " in respective proc entry", cpu_list, vcpu)
         else:
-            raise error.TestFail("Command 'virsh vcpupin %s %s %s'not succeeded"
-                                 " cpu pinning details not updated properly in"
-                                 " /proc/%s/task/%s/status"
+            raise error.TestFail("Command 'virsh vcpupin %s %s %s'not "
+                                 "succeeded cpu pinning details not "
+                                 "updated properly in /proc/%s/task/%s/status"
                                  % (vm_name, vcpu, cpu_list, pid, vcpu_pid))
 
     def run_and_check_vcpupin(vm_name, vcpu, cpu_list, options, pid):
@@ -121,9 +121,10 @@ def run_virsh_vcpupin(test, params, env):
     # Get the host cpu count
     host_cpu_count = utils.count_cpus()
     if (int(host_cpu_count) < 2) and (not cpu_list == "x"):
-        raise error.TestNAError("We need more cpus on host in this case for "
-                           "the cpu_list=%s. But current number of cpu on"
-                           "host is %s." % (cpu_list, host_cpu_count))
+        raise error.TestNAError("We need more cpus on host in this case "
+                                "for the cpu_list=%s. But current number of "
+                                "cpu on host is %s."
+                                % (cpu_list, host_cpu_count))
 
     # Get the guest vcpu count
     guest_vcpu_count = virsh.vcpucount(vm_name,
@@ -150,5 +151,5 @@ def run_virsh_vcpupin(test, params, env):
                 cpus = str(cpu_max + 1)
             else:
                 raise error.TestNAError("Cpu_list=%s is not recognized."
-                                       % cpu_list)
+                                        % cpu_list)
             run_and_check_vcpupin(args, vcpu, cpus, options, pid)
