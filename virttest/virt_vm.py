@@ -519,7 +519,8 @@ class BaseVM(object):
         Generate a unique identifier for this VM
         """
         while True:
-            self.instance = (time.strftime("%Y%m%d-%H%M%S-") +
+            self.instance = (self.name + "-" +
+                             time.strftime("%Y%m%d-%H%M%S-") +
                              utils_misc.generate_random_string(8))
             if not glob.glob("/tmp/*%s" % self.instance):
                 break
