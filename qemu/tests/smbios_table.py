@@ -76,8 +76,8 @@ def run_smbios_table(test, params, env):
             for key in dmidecode_key:
                 cmd = (dmidecode_exp % (smbios_type_number, key))
                 smbios_get_para = session.cmd(cmd).strip()
+                default_key_para = utils.system_output(cmd).strip()
                 if params.get("smbios_type_disable", "no") == "no":
-                    default_key_para = utils.system_output(cmd).strip()
                     smbios_set_para = params.object_params(sm_type).get(key,
                                                                         default_key_para)
                 else:
@@ -85,7 +85,7 @@ def run_smbios_table(test, params, env):
                     smbios_set_para = expect_system_versions[key_index]
 
                 if smbios_get_para == notset_output:
-                    smbios_get_para = ""
+                    smbios_get_para = default_key_para
 
                 if (smbios_get_para != smbios_set_para):
                     e_msg = ("%s.%s mismatch, Set '%s' but guest is : '%s'"
