@@ -1054,8 +1054,6 @@ def run_unattended_install(test, params, env):
         serial_name = vm.serial_ports[0]
     except IndexError:
         raise virt_vm.VMConfigMissingError(vm.name, "isa_serial")
-    except AttributeError:
-        serial_name = "libvirt"
 
     log_file = utils_misc.get_path(test.debugdir,
                                    "serial-%s-%s.log" % (serial_name,
