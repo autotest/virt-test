@@ -1058,8 +1058,10 @@ def run_unattended_install(test, params, env):
     log_file = utils_misc.get_path(test.debugdir,
                                    "serial-%s-%s.log" % (serial_name,
                                                          vm.name))
+    logging.debug("Monitoring serial console log for completion message: %s",
+                  log_file)
     serial_log_msg = ""
-    serial_log_file = None
+    serial_read_fails = 0
 
     # As the the install process start. We may need collect informations from
     # the image. So use the test case instead this simple function in the
@@ -1090,22 +1092,13 @@ def run_unattended_install(test, params, env):
 
         # To ignore the try:except:finally problem in old version of python
         try:
-            try:
-                serial_log_file = open(log_file, 'r')
-                serial_log_msg = serial_log_file.read()
-            except Exception, e:
-                if e.errno == errno.ENOENT:
-                    logging.warn("Log file '%s' doesn't exist,"
-                                 " just create it.", log_file)
-                    try:
-                        open(log_file, 'w').close()
-                    except Exception:
-                        pass
-                else:
-                    logging.warn("Can not read from serail log file: %s", e)
-        finally:
-            if serial_log_file and not serial_log_file.closed:
-                serial_log_file.close()
+            serial_log_msg = open(log_file, 'r').read()
+        except IOError:
+            # Only make noise after several failed reads
+            serial_read_fails += 1
+            if serial_read_fails > 10:
+                logging.warn("Can not read from serial log file after %d tries",
+                             serial_read_fails)
 
         if (params.get("wait_no_ack", "no") == "no" and
                 (post_finish_str in serial_log_msg)):
