@@ -2955,15 +2955,21 @@ class DevContainer(object):
         iso = image_params.get('cdrom')
         if iso:
             image_params['image_name'] = os.path.join(data_dir.get_data_dir(),
-                                                      image_params.get('cdrom'))
-        image_params['image_format'] = None
+                                                      image_params.get('cdrom')
+                                                      )
+        cd_format = image_params.get('cd_format')
+        if cd_format is None or cd_format is 'ide':
+            if not self.get_buses({'atype': 'ide'}):
+                logging.warn("cd_format IDE not available, using AHCI "
+                             "instead.")
+                cd_format = 'ahci'
         shared_dir = os.path.join(data_dir.get_data_dir(), "shared")
         return self.images_define_by_variables(name,
                                                storage.get_image_filename(
                                                    image_params,
                                                    data_dir.get_data_dir()),
                                                index,
-                                               image_params.get('cd_format'),
+                                               cd_format,
                                                '',     # skip drive_cache
                                                image_params.get(
                                                    "drive_werror"),
