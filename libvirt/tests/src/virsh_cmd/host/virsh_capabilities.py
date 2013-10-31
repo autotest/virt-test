@@ -2,7 +2,7 @@ import logging
 import re
 from xml.dom.minidom import parseString
 from autotest.client.shared import utils, error
-from virttest import libvirt_vm, virsh, utils_libvirtd
+from virttest import libvirt_vm, virsh, utils_libvirtd, utils_misc
 
 
 def run_virsh_capabilities(test, params, env):
@@ -43,7 +43,11 @@ def run_virsh_capabilities(test, params, env):
                                  "wrong")
 
         # check the arch of guest supported.
-        cmd = "/usr/libexec/qemu-kvm  --cpu ? | grep qemu"
+        try:
+            img = utils_misc.find_command("qemu-kvm")
+        except ValueError:
+            raise error.TestNAError("Cannot find qemu-kvm")
+        cmd = img+" --cpu ? | grep qemu"
         cmd_result = utils.run(cmd, ignore_status=True)
         guest_wordsize_array = dom.getElementsByTagName('wordsize')
         length = len(guest_wordsize_array)
