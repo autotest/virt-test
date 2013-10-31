@@ -110,6 +110,7 @@ class VM(virt_vm.BaseVM):
             self.__dict__ = state
         else:
             self.process = None
+            self.serial_ports = None
             self.serial_console = None
             self.redirs = {}
             self.vnc_port = None
@@ -807,9 +808,60 @@ class VM(virt_vm.BaseVM):
 
         return virt_install_cmd
 
-    def setup_serial_console(self):
-        self.serial_console = aexpect.ShellSession(
-            "virsh console %s" % self.name, auto_close=False)
+    def get_serial_console_filename(self, name):
+        """
+        Return the serial console filename.
+
+        :param name: The serial port name.
+        """
+        return "serial-%s-%s.log" % (name, self.name)
+
+    def get_serial_console_filenames(self):
+        """
+        Return a list of all serial console filenames
+        (as specified in the VM's params).
+        """
+        return [self.get_serial_console_filename(_) for _ in
+                self.params.objects("isa_serials")]
+
+    def setup_serial_ports(self):
+        if self.serial_ports is not None:
+            return   # Assume they're already set up
+        self.serial_ports = []
+        for serial in self.params.objects("isa_serials"):
+            self.serial_ports.append(serial)
+        if self.serial_console is None:
+            # Attempt to setup serial0
+            try:
+                cmd = 'virsh'
+                if self.connect_uri:
+                    cmd += ' --uri=%s' % self.connect_uri
+                cmd += (" console %s %s" % (self.name, self.serial_ports[0]))
+            except IndexError:
+                raise virt_vm.VMConfigMissingError(self.name, "isa_serial")
+            output_func = utils_misc.log_line  # Because qemu-kvm uses this
+            # Because qemu-kvm hard-codes this
+            output_filename = self.get_serial_console_filename(self.serial_ports[0])
+            output_params = (output_filename,)
+            prompt = self.params.get("shell_prompt", "[\#\$]")
+            self.serial_console = aexpect.ShellSession(command=cmd, auto_close=False,
+                                                       output_func=output_func,
+                                                       output_params=output_params)
+            # Cause serial_console.close() to close open log file
+            self.serial_console.set_log_file(output_filename)
+
+    def cleanup_serial_console(self):
+        """
+        Close serial console and associated log file
+        """
+        if self.serial_console is not None:
+            self.serial_console.close()
+            self.serial_console = None
+        if hasattr(self, "migration_file"):
+            try:
+                os.unlink(self.migration_file)
+            except OSError:
+                pass
 
     def set_root_serial_console(self, device, remove=False):
         """
@@ -943,7 +995,6 @@ class VM(virt_vm.BaseVM):
         """
         error.context("creating '%s'" % self.name)
         self.destroy(free_mac_addresses=False)
-
         if name is not None:
             self.name = name
         if params is not None:
@@ -1038,7 +1089,7 @@ class VM(virt_vm.BaseVM):
             # Generate or copy MAC addresses for all NICs
             for nic in self.virtnet:
                 nic_params = dict(nic)
-                if mac_source:
+                if mac_source is not None:
                     # Will raise exception if source doesn't
                     # have cooresponding nic
                     logging.debug("Copying mac for nic %s from VM %s",
@@ -1092,10 +1143,8 @@ class VM(virt_vm.BaseVM):
                                       self.name))
             self.uuid = virsh.domuuid(self.name,
                                       uri=self.connect_uri).stdout.strip()
-
-            # Establish a session with the serial console
-            if autoconsole:
-                self.setup_serial_console()
+            # Create isa serial ports.
+            self.setup_serial_ports()
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
@@ -1116,10 +1165,13 @@ class VM(virt_vm.BaseVM):
                                extra, uri=self.connect_uri,
                                ignore_status=ignore_status,
                                debug=debug)
+        # Close down serial_console logging process
+        self.cleanup_serial_console()
         # On successful migration, point to guests new hypervisor.
         # Since dest_uri could be None, checking it is necessary.
         if result.exit_status == 0 and dest_uri:
             self.connect_uri = dest_uri
+        self.setup_serial_ports()
         return result
 
 
@@ -1205,18 +1257,7 @@ class VM(virt_vm.BaseVM):
                 virsh.destroy(self.name, uri=self.connect_uri)
 
         finally:
-            if self.serial_console:
-                self.serial_console.close()
-            try:
-                os.unlink(self.get_testlog_filename())
-            except OSError:
-                pass
-            if hasattr(self, "migration_file"):
-                try:
-                    os.unlink(self.migration_file)
-                except OSError:
-                    pass
-
+            self.cleanup_serial_console()
         if free_mac_addresses:
             if self.is_persistent():
                 logging.warning("Requested MAC address release from "
@@ -1412,7 +1453,7 @@ class VM(virt_vm.BaseVM):
                                       uri=self.connect_uri).stdout.strip()
             # Establish a session with the serial console
             if autoconsole:
-                self.setup_serial_console()
+                self.setup_serial_ports()
         else:
             raise virt_vm.VMStartError(self.name, "libvirt domain failed "
                                                   "to start")
@@ -1448,6 +1489,7 @@ class VM(virt_vm.BaseVM):
                 virsh.shutdown(self.name, uri=self.connect_uri)
             if self.wait_for_shutdown():
                 logging.debug("VM %s shut down", self.name)
+                self.cleanup_serial_console()
                 return True
             else:
                 logging.error("VM %s failed to shut down", self.name)
@@ -1492,6 +1534,7 @@ class VM(virt_vm.BaseVM):
                                   "Detail: %s." % (path, result.stderr))
         if self.is_alive():
             raise virt_vm.VMStatusError("VM not shut off after save")
+        self.cleanup_serial_console()
 
     def restore_from_file(self, path):
         """
@@ -1508,6 +1551,7 @@ class VM(virt_vm.BaseVM):
         if self.is_dead():
             raise virt_vm.VMStatusError(
                 "VM should not be %s after restore." % self.state())
+        self.setup_serial_ports()
 
     def vcpupin(self, vcpu, cpu_list, options=""):
         """
