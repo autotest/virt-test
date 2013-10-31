@@ -64,9 +64,12 @@ def run_virsh_dumpxml(test, params, env):
     # Run command
     logging.info("Command:virsh dumpxml %s", vm_ref)
     try:
-        output = virsh.dumpxml(vm_ref, extra=options_ref)
+        cmd_result = virsh.dumpxml(vm_ref, extra=options_ref)
+        if cmd_result.exit_status:
+            raise error.TestFail("dumpxml %s failed.\n"
+                                 "Detail: %s.\n" % (vm_ref, cmd_result))
         status = 0
-    except error.CmdError, detail:
+    except error.TestFail, detail:
         status = 1
         output = detail
     logging.debug("virsh dumpxml result:\n%s", output)

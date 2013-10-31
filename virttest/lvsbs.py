@@ -105,4 +105,4 @@ class SandboxService(object):
     # Specialized list calls can just call self.virsh.dom_list() directly
     @property  # behave like attribute for easy passing to XML handling methods
     def xmlstr(self):
-        return self.virsh.dumpxml(self.service_name)
+        return self.virsh.dumpxml(self.service_name).stdout.strip()

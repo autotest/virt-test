@@ -32,7 +32,7 @@ def check_snap_in_image(vm_name, snap_name):
     :params: snap_name: Snapshot name
     """
 
-    domxml = virsh.dumpxml(vm_name)
+    domxml = virsh.dumpxml(vm_name).stdout.strip()
     xtf_dom = xml_utils.XMLTreeFile(domxml)
 
     cmd = "qemu-img info " + xtf_dom.find("devices/disk/source").get("file")
@@ -255,7 +255,7 @@ def run_virsh_snapshot_create_as(test, params, env):
                         output_dump = virsh.snapshot_dumpxml(
                             vm_name, get_sname)
                     else:
-                        output_dump = virsh.dumpxml(vm_name)
+                        output_dump = virsh.dumpxml(vm_name).stdout.strip()
                         fdisks = "devices"
 
                     xtf = xml_utils.XMLTreeFile(output_dump)
