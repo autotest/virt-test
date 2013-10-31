@@ -1704,7 +1704,8 @@ def run_file_transfer(test, params, env):
         session.close()
 
 
-def run_autotest(vm, session, control_path, timeout, outputdir, params):
+def run_autotest(vm, session, control_path, timeout,
+                 outputdir, params, copy_only=False):
     """
     Run an autotest control file inside a guest (linux only utility).
 
@@ -1714,6 +1715,9 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     :param timeout: Timeout under which the autotest control file must complete.
     :param outputdir: Path on host where we should copy the guest autotest
             results to.
+    :param copy_only: If copy_only is True, copy the autotest to guest and
+            return the command which need to run test on guest, without
+            executing it.
 
     The following params is used by the migration
     :param params: Test params used in the migration test
@@ -1928,9 +1932,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     vm.copy_files_to(boottool_path, boottool_dest)
     session.cmd("chmod +x %s" % boottool_dest)
 
-    # Run the test
-    logging.info("Running autotest control file %s on guest, timeout %ss",
-                 os.path.basename(control_path), timeout)
+    # Clean the environment.
     session.cmd("cd %s" % destination_autotest_path)
     try:
         session.cmd("rm -f control.state")
@@ -1938,6 +1940,15 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         session.cmd("rm -rf tmp/*")
     except aexpect.ShellError:
         pass
+
+    # Check copy_only.
+    if copy_only:
+        return ("%s/autotest-local --verbose %s/control" %
+                (destination_autotest_path, destination_autotest_path))
+
+    # Run the test
+    logging.info("Running autotest control file %s on guest, timeout %ss",
+                 os.path.basename(control_path), timeout)
     try:
         bg = None
         try:
