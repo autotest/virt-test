@@ -314,3 +314,17 @@ class StoragePool(object):
             return False
         logging.info("Defined pool '%s'", name)
         return True
+
+    def define_disk_pool(self, name, block_device, target_path):
+        """
+        Define a disk type pool.
+        """
+        try:
+            extra = "--source-dev %s" % block_device
+            self.virsh_instance.pool_define_as(name, "disk", target_path,
+                                               extra, ignore_status=False)
+        except error.CmdError:
+            logging.error("Define disk pool '%s' failed.", name)
+            return False
+        logging.info("Defined pool '%s'", name)
+        return True
