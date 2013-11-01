@@ -41,12 +41,12 @@ from autotest.client.shared import error
 from autotest.client import utils, os_dep
 from autotest.client.tools import scan_results
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
-import aexpect
-import utils_misc
-import virt_vm
-import remote
-import storage
-import env_process
+from virttest import aexpect
+from virttest import utils_misc
+from virttest import virt_vm
+from virttest import remote
+from virttest import storage
+from virttest import env_process
 import virttest
 
 try:
