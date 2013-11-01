@@ -691,6 +691,108 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("rm %s" % path)
 
+    def part_init(self, device, parttype):
+        """
+        part-init - create an empty partition table
+
+        This creates an empty partition table on "device" of one of the
+        partition types listed below. Usually "parttype" should be either
+        "msdos" or "gpt" (for large disks).
+        """
+        return self.inner_cmd("part-init %s %s" % (device, parttype))
+
+
+    def part_add(self, device, prlogex, startsect, endsect):
+        """
+        part-add - add a partition to the device
+
+        This command adds a partition to "device". If there is no partition
+        table on the device, call "part_init" first.
+        """
+        cmd = "part-add %s %s %s %s" % (device, prlogex, startsect, endsect)
+        return self.inner_cmd(cmd)
+
+
+    def checksum(self, csumtype, path):
+        """
+        checksum - compute MD5, SHAx or CRC checksum of file
+
+        This call computes the MD5, SHAx or CRC checksum of the file named
+        "path".
+        """
+        return self.inner_cmd("checksum %s %s" % (csumtype, path))
+
+
+    def part_list(self, device):
+        """
+        part-list - list partitions on a device
+
+        This command parses the partition table on "device" and
+        returns the list of partitions found.
+        """
+        return self.inner_cmd("part-list %s" % device)
+
+
+    def mkfs(self, fstype, device):
+        """
+        mkfs - make a filesystem
+
+        This creates a filesystem on "device" (usually a partition or LVM
+        logical volume). The filesystem type is "fstype", for example "ext3".
+        """
+        return self.inner_cmd("mkfs %s %s" % (fstype, device))
+
+
+    def part_disk(self, device, parttype):
+        """
+        part-disk - partition whole disk with a single primary partition
+
+        This command is simply a combination of "part_init" followed by
+        "part_add" to create a single primary partition covering
+        the whole disk.
+        """
+        return self.inner_cmd("part-disk %s %s" % (device, parttype))
+
+
+    def part_get_bootable(self, device, partnum):
+        """
+        part-get-bootable - return true if a partition is bootable
+
+        This command returns true if the partition "partnum" on "device"
+        has the bootable flag set.
+        """
+        return self.inner_cmd("part-get-bootable %s %s" % (device, partnum))
+
+
+    def part_get_mbr_id(self, device, partnum):
+        """
+        part-get-mbr-id - get the MBR type byte (ID byte) from a partition
+
+        Returns the MBR type byte (also known as the ID byte) from the
+        numbered partition "partnum".
+        """
+        return self.inner_cmd("part-get-mbr-id %s %s" % (device, partnum))
+
+
+    def part_get_parttype(self, device):
+        """
+        part-get-parttype - get the partition table type
+
+        This command examines the partition table on "device" and returns the
+        partition table type (format) being used.
+        """
+        return self.inner_cmd("part-get-parttype %s" % device)
+
+
+    def fsck(self, fstype, device):
+        """
+        fsck - run the filesystem checker
+
+        This runs the filesystem checker (fsck) on "device" which should have
+        filesystem type "fstype".
+        """
+        return self.inner_cmd("fsck %s %s" % (fstype, device))
+
 
 # libguestfs module functions follow #####
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,

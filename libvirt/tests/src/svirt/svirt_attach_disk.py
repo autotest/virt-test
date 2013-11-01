@@ -58,7 +58,12 @@ def run_svirt_attach_disk(test, params, env):
     vmxml.sync()
 
     # Do the attach action.
-    vm.attach_disk(source=img_path, target="vdf", extra="--persistent")
+    try:
+        virsh.attach_disk(vm_name, source=img_path, target="vdf",
+                          extra="--persistent", ignore_status=False)
+    except error.CmdError:
+        raise error.TestFail("Attach disk %s to vdf on VM %s failed."
+                             % (img_path, vm.name))
 
     # Check result.
     try:
@@ -79,7 +84,12 @@ def run_svirt_attach_disk(test, params, env):
                                      "error: %s" % e)
     finally:
         # clean up
-        vm.detach_disk(target="vdf", extra="--persistent")
+        try:
+            virsh.detach_disk(vm_name, target="vdf", extra="--persistent",
+                              ignore_status=False)
+        except error.CmdError:
+            raise error.TestFail("Detach disk 'vdf' from VM %s failed."
+                                 % vm.name)
         image.remove()
         backup_xml.sync()
         utils_selinux.set_status(backup_sestatus)
