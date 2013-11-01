@@ -151,7 +151,7 @@ def run_convert_remote_vm(test, params, env):
 
     # Confirm parameters have been set correctly.
     if (pool_type in ['partition', 'lvm'] and
-        re.search("EXAMPLE", block_device):
+        re.search("EXAMPLE", block_device)):
         raise error.TestNAError("Please set correct block device.")
 
     # If target_path is not an abs path, join it to data_dir.tmpdir
