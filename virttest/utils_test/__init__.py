@@ -970,18 +970,6 @@ def get_readable_cdroms(params, session):
     raise error.TestFail("Could not find a cdrom device with media inserted")
 
 
-def pin_vm_threads(vm, node):
-    """
-    Pin VM threads to single cpu of a numa node
-    :param vm: VM object
-    :param node: NumaNode object
-    """
-    for i in vm.vhost_threads:
-        logging.info("pin vhost thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
-    for i in vm.vcpu_threads:
-        logging.info("pin vcpu thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
-
-
 def service_setup(vm, session, directory):
 
     params = vm.get_params()

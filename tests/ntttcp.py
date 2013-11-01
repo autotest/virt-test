@@ -45,7 +45,7 @@ def run_ntttcp(test, params, env):
     if params.get('numa_node'):
         numa_node = int(params.get('numa_node'))
         node = utils_misc.NumaNode(numa_node)
-        utils_test.pin_vm_threads(vm_sender, node)
+        utils_test.qemu.pin_vm_threads(vm_sender, node)
 
     if not receiver_addr:
         vm_receiver = env.get_vm("vm2")
@@ -58,7 +58,7 @@ def run_ntttcp(test, params, env):
                 raise error.TestError("Can't get receiver(%s) ip address" %
                                       vm_sender.name)
             if params.get('numa_node'):
-                utils_test.pin_vm_threads(vm_receiver, node)
+                utils_test.qemu.pin_vm_threads(vm_receiver, node)
         finally:
             if sess:
                 sess.close()

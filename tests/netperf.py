@@ -100,7 +100,7 @@ def run_netperf(test, params, env):
         if node:
             if not isinstance(node, utils_misc.NumaNode):
                 node = utils_misc.NumaNode(int(node))
-            utils_test.pin_vm_threads(vm, node)
+            utils_test.qemu.pin_vm_threads(vm, node)
 
         return node
 

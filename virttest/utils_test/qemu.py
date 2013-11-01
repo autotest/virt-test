@@ -79,6 +79,18 @@ def get_numa_status(numa_node_info, qemu_pid, debug=True):
     return (qemu_memory, qemu_cpu)
 
 
+def pin_vm_threads(vm, node):
+    """
+    Pin VM threads to single cpu of a numa node
+    :param vm: VM object
+    :param node: NumaNode object
+    """
+    for i in vm.vhost_threads:
+        logging.info("pin vhost thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
+    for i in vm.vcpu_threads:
+        logging.info("pin vcpu thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
+
+
 def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             mig_cancel=False, offline=False, stable_check=False,
             clean=False, save_path=None, dest_host='localhost', mig_port=None):
