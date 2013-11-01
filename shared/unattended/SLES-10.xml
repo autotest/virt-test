@@ -551,9 +551,11 @@ echo ttyS0 >> /etc/securetty]]>
         <filename>config</filename>
         <source><![CDATA[dhclient eth0
 chkconfig sshd on
+chkconfig NetworkManager on
 sed -i -e 's/\(PasswordAuthentication\s\)no/\1yes/g'  /etc/ssh/sshd_config
 service sshd restart
 service network restart
+service NetworkManager restart
 ]]></source>
       </script>
     </init-scripts>
@@ -565,6 +567,7 @@ service network restart
       <package>lsscsi</package>
       <package>libaio-devel</package>
       <package>perl-Time-HiRes</package>
+      <package>NetworkManager</package>
     </packages>
     <patterns config:type="list">
       <pattern>Basis-Devel</pattern>

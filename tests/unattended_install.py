@@ -695,7 +695,7 @@ class UnattendedInstallConfig(object):
                     boot_disk = utils_disk.CdromDisk(self.cdrom_unattended,
                                                      self.tmpdir)
                 elif self.floppy:
-                    autoyast_param = 'autoyast=floppy'
+                    autoyast_param = 'autoyast=device://fd0/autoinst.xml'
                     kernel_params = self.kernel_params
                     if 'autoyast=' in kernel_params:
                         kernel_params = re.sub('autoyast\=[\w\d\:\.\/]+',
