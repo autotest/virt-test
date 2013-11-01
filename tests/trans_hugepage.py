@@ -55,7 +55,7 @@ def run_trans_hugepage(test, params, env):
         utils.run("mount -t debugfs none %s" % debugfs_path)
 
     vm = env.get_vm(params.get("main_vm"))
-    session = utils_test.wait_for_login(vm, timeout=login_timeout)
+    session = vm.wait_for_login(timeout=login_timeout)
 
     funcatexit.register(env, params.get("type"), cleanup, debugfs_path,
                         session)

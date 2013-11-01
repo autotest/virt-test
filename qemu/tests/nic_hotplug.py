@@ -38,7 +38,7 @@ def run_nic_hotplug(test, params, env):
     netdst = params.get("netdst", "virbr0")
     guest_is_not_windows = "Win" not in params.get("guest_name", "")
 
-    session = utils_test.wait_for_login(vm, timeout=login_timeout)
+    session = vm.wait_for_login(timeout=login_timeout)
 
     if guest_is_not_windows:
         # Modprobe the module if specified in config file

@@ -58,63 +58,6 @@ except ImportError:
     settings_value = settings.get_value
 
 
-def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
-    """
-    Try logging into a VM repeatedly.  Stop on success or when timeout expires.
-
-    :param vm: VM object.
-    :param nic_index: Index of NIC to access in the VM.
-    :param timeout: Time to wait before giving up.
-    :param serial: Whether to use a serial connection instead of a remote
-            (ssh, rss) one.
-    :return: A shell session object.
-    """
-    end_time = time.time() + timeout
-    session = None
-    if serial:
-        mode = 'serial'
-        logging.info("Trying to log into guest %s using serial connection,"
-                     " timeout %ds", vm.name, timeout)
-        time.sleep(start)
-        while time.time() < end_time:
-            try:
-                session = vm.serial_login()
-                break
-            except remote.LoginError, e:
-                logging.debug(e)
-            time.sleep(step)
-    else:
-        mode = 'remote'
-        logging.info("Trying to log into guest %s using remote connection,"
-                     " timeout %ds", vm.name, timeout)
-        time.sleep(start)
-        while time.time() < end_time:
-            try:
-                session = vm.login(nic_index=nic_index)
-                break
-            except (remote.LoginError, virt_vm.VMError), e:
-                logging.debug(e)
-            time.sleep(step)
-        if not session and vm.get_params().get("try_serial_login") == "yes":
-            mode = "serial"
-            logging.info("Remote login failed, trying to login '%s' with "
-                         "serial, timeout %ds", vm.name, timeout)
-            time.sleep(start)
-            while time.time() < end_time:
-                try:
-                    session = vm.serial_login()
-                    break
-                except remote.LoginError, e:
-                    logging.debug(e)
-                time.sleep(step)
-    if not session:
-        raise error.TestFail(
-            "Could not log into guest %s using %s connection" %
-            (vm.name, mode))
-    logging.info("Logged into guest %s using %s connection", vm.name, mode)
-    return session
-
-
 @error.context_aware
 def update_boot_option(vm, args_removed=None, args_added=None,
                        need_reboot=True):
