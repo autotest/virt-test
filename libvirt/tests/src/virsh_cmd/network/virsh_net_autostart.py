@@ -1,6 +1,6 @@
 import logging
 from autotest.client.shared import error
-from virttest import virsh, libvirt_vm, xml_utils, utils_libvirtd
+from virttest import virsh, utils_libvirtd
 from virttest.libvirt_xml import network_xml, xcepts
 
 
@@ -9,27 +9,21 @@ def run_virsh_net_autostart(test, params, env):
     Test command: virsh net-autostart.
     """
     # Gather test parameters
-    uri = libvirt_vm.normalize_connect_uri(params.get("connect_uri",
-                                                      "default"))
     status_error = "yes" == params.get("status_error", "no")
     net_ref = params.get("net_autostart_net_ref", "netname")
     disable = "yes" == params.get("net_autostart_disable", "no")
     extra = params.get("net_autostart_extra", "")  # extra cmd-line params.
     net_name = params.get("net_autostart_net_name", "autotest")
 
-    # Make easy to maintain
-    virsh_dargs = {'uri': uri, 'debug': False, 'ignore_status': True}
-    virsh_instance = virsh.VirshPersistent(**virsh_dargs)
-
     # Prepare environment and record current net_state_dict
-    backup = network_xml.NetworkXML.new_all_networks_dict(virsh_instance)
-    backup_state = virsh_instance.net_state_dict()
+    backup = network_xml.NetworkXML.new_all_networks_dict()
+    backup_state = virsh.net_state_dict()
     logging.debug("Backed up network(s): %s", backup_state)
 
     # Generate our own bridge
     # First check if a bridge of this name already exists
     try:
-        check_xml = backup[net_name]
+        _ = backup[net_name]
     except (KeyError, AttributeError):
         pass  # Not found - good
     else:
@@ -50,24 +44,22 @@ def run_virsh_net_autostart(test, params, env):
    <bridge name="vir%sbr0"/>
 </network>
 """ % (net_name, net_name)
-    test_xml = xml_utils.TempXMLFile()  # temporary file
+
     try:
-        # LibvirtXMLBase.__str__ returns XML content
-        test_xml.write(temp_bridge)
-        test_xml.flush()
-    except (KeyError, AttributeError):
-        raise error.TestNAError("Test requires create temporary network file")
+        test_xml = network_xml.NetworkXML(network_name=net_name)
+        test_xml.xml = temp_bridge
+        test_xml.define()
+    except xcepts.LibvirtXMLError, detail:
+        raise error.TestNAError("Failed to define a test network.\n"
+                                "Detail: %s." % detail)
 
     # To guarantee cleanup will be executed
     try:
         # Run test case
-        define_result = virsh.net_define(test_xml.name, "", **virsh_dargs)
-        logging.debug(define_result)
-        define_status = define_result.exit_status
 
         # Get the updated list and make sure our new bridge exists
-        currents = network_xml.NetworkXML.new_all_networks_dict(virsh_instance)
-        current_state = virsh_instance.net_state_dict()
+        currents = network_xml.NetworkXML.new_all_networks_dict()
+        current_state = virsh.net_state_dict()
         logging.debug("Current network(s): %s", current_state)
         try:
             testbr_xml = currents[net_name]
@@ -99,13 +91,9 @@ def run_virsh_net_autostart(test, params, env):
 
         # Run test case
         # Use function in virsh module directly for both normal and error test
-        result = virsh.net_autostart(net_ref, extra, **virsh_dargs)
+        result = virsh.net_autostart(net_ref, extra)
         logging.debug(result)
         status = result.exit_status
-
-        # Close down persistent virsh session (including for all netxml copies)
-        if hasattr(virsh_instance, 'close_session'):
-            virsh_instance.close_session()
 
         # Check if autostart or disable is successful with libvirtd restart.
         # TODO: Since autostart is designed for host reboot,
@@ -113,30 +101,14 @@ def run_virsh_net_autostart(test, params, env):
         utils_libvirtd.libvirtd_restart()
 
         # Reopen testbr_xml
-        virsh_instance = virsh.VirshPersistent(**virsh_dargs)
-        currents = network_xml.NetworkXML.new_all_networks_dict(virsh_instance)
-        current_state = virsh_instance.net_state_dict()
+        currents = network_xml.NetworkXML.new_all_networks_dict()
+        current_state = virsh.net_state_dict()
         logging.debug("Current network(s): %s", current_state)
         testbr_xml = currents[net_name]
         is_active = testbr_xml['active']
 
     finally:
-        if is_active:
-            # Stop network for undefine test anyway
-            destroy_result = virsh.net_destroy(net_name, extra="",
-                                               **virsh_dargs)
-            logging.debug(destroy_result)
-
-        # Undefine network
-        undefine_result = virsh.net_undefine(net_name, "", **virsh_dargs)
-        logging.debug(undefine_result)
-
-        # Close down persistent virsh session (including for all netxml copies)
-        if hasattr(virsh_instance, 'close_session'):
-            virsh_instance.close_session()
-
-    # Delete temporary file
-    del test_xml
+        test_xml.undefine()
 
     # Check Result
     if status_error:
