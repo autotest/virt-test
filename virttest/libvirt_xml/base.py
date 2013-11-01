@@ -1,3 +1,4 @@
+import logging
 
 from autotest.client import utils
 from virttest import propcan, xml_utils, virsh
