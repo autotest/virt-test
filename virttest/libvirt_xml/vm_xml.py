@@ -297,7 +297,8 @@ class VMXML(VMXMLBase):
         """
         # TODO: Look up hypervisor_type on incoming XML
         vmxml = VMXML(virsh_instance=virsh_instance)
-        vmxml['xml'] = virsh_instance.dumpxml(vm_name, options=options)
+        vmxml['xml'] = virsh_instance.dumpxml(vm_name,
+                                              options=options).stdout.strip()
         return vmxml
 
     @staticmethod
@@ -699,7 +700,7 @@ class VMCPUXML(VMXML):
         # Setup some bare-bones XML to build upon
         self.set_cpu_mode(vm_name, mode)
         self['xml'] = self.dict_get('virsh').dumpxml(vm_name,
-                                                     extra="--update-cpu")
+                                                     extra="--update-cpu").stdout.strip()
 
     def get_feature_list(self):
         """
