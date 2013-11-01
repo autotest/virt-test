@@ -18,9 +18,9 @@ def connect_to_vm(vm_name, env, params):
     """
     Connects to VM and powers it on and gets session information
 
-    @param vm_name: name of VM to connect to
-    @param params: Dictionary with test parameters.
-    @param env: Test environment.
+    :param vm_name: name of VM to connect to
+    :param params: Dictionary with test parameters.
+    :param env: Test environment.
     """
 
     vm = env.get_vm(params[vm_name + "_vm"])
@@ -36,8 +36,8 @@ def install_rpms(rpms_to_install, vm_root_session):
     """
     Fetches rpm and installs it
 
-    @params rpms_to_install: List of rpms to install
-    @params vm_root_session: Session object of VM
+    :params rpms_to_install: List of rpms to install
+    :params vm_root_session: Session object of VM
     """
 
     for rpm in rpms_to_install:
@@ -49,14 +49,31 @@ def install_rpms(rpms_to_install, vm_root_session):
         if ret != 0:
             logging.debug(output)
 
+def check_for_required_pkgs(pkgsRequired, vm_root_session, params):
+    """
+    Checks to see if packages are installed and if not, gets the url to install them 
+
+    :params rpms_to_install: List of packages to check
+    :params vm_root_session: Session object of VM
+    :param params: Dictionary with test parameters.
+    """
+
+    rpms_to_install = []
+    for pkgName in pkgsRequired:
+        ret, output = vm_root_session.cmd_status_output("rpm -q %s" % pkgName)
+        if ret != 0:
+            logging.debug(output)
+            rpms_to_install.append(params.get(re.sub("-", "_", pkgName) + "_url"))
+
+    return rpms_to_install
 
 def build_install_qxl(vm_root_session, vm_script_path, params):
     """
     Build and install QXL in the VM
 
-    @param vm_root_session:  VM Session object.
-    @param vm_script_path: path where to find build_install.py script
-    @param params: Dictionary with test parameters.
+    :param vm_root_session:  VM Session object.
+    :param vm_script_path: path where to find build_install.py script
+    :param params: Dictionary with test parameters.
     """
 
     # Remove older versions of qxl driver if they exist
@@ -64,26 +81,9 @@ def build_install_qxl(vm_root_session, vm_script_path, params):
     if output:
         logging.debug(output)
 
-    rpms_to_install = []
-
     # Checking to see if required rpms exist and if not, install them
-    ret, output = vm_root_session.cmd_status_output("rpm -q libpciaccess-devel")
-    if ret != 0:
-        logging.debug(output)
-        libpciaccess_devel_url = params.get("libpciaccess_devel_url")
-        rpms_to_install.append(libpciaccess_devel_url)
-
-    ret, output = vm_root_session.cmd_status_output("rpm -q xorg-x11-util-macros")
-    if ret != 0:
-        logging.debug(output)
-        xorg_x11_util_macros_url = params.get("xorg_x11_util_macros_url")
-        rpms_to_install.append(xorg_x11_util_macros_url)
-
-    ret, output = vm_root_session.cmd_status_output("rpm -q xorg-x11-server-devel")
-    if ret != 0:
-        logging.debug(output)
-        xorg_x11_server_devel_url = params.get("xorg_x11_server_devel_url")
-        rpms_to_install.append(xorg_x11_server_devel_url)
+    pkgsRequired = ["libpciaccess-devel", "xorg-x11-util-macros", "xorg-x11-server-devel"]
+    rpms_to_install = check_for_required_pkgs(pkgsRequired, vm_root_session, params)
 
     install_rpms(rpms_to_install, vm_root_session)
 
@@ -104,9 +104,9 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     """
     Build and install spice-gtk in the VM
 
-    @param vm_root_session:  VM Session object.
-    @param vm_script_path: path where to find build_install.py script
-    @param params: Dictionary with test parameters.
+    :param vm_root_session:  VM Session object.
+    :param vm_script_path: path where to find build_install.py script
+    :param params: Dictionary with test parameters.
     """
 
     # Get version of spice-gtk before install
@@ -116,26 +116,8 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     else:
         logging.info(output)
 
-    rpms_to_install = []
-
-    # Checking to see if required rpms exist and if not, install them
-    ret, output = vm_root_session.cmd_status_output("rpm -q libogg-devel")
-    if ret != 0:
-        logging.debug(output)
-        libogg_devel_url = params.get("libogg_devel_url")
-        rpms_to_install.append(libogg_devel_url)
-
-    ret, output = vm_root_session.cmd_status_output("rpm -q celt051-devel")
-    if ret != 0:
-        logging.debug(output)
-        celt051_devel_url = params.get("celt051_devel_url")
-        rpms_to_install.append(celt051_devel_url)
-
-    ret, output = vm_root_session.cmd_status_output("rpm -q libcacard-devel")
-    if ret != 0:
-        logging.debug(output)
-        libcacard_devel_url = params.get("libcacard_devel_url")
-        rpms_to_install.append(libcacard_devel_url)
+    pkgsRequired = ["libogg-devel", "celt051-devel", "libcacard-devel"]
+    rpms_to_install = check_for_required_pkgs(pkgsRequired, vm_root_session, params)
 
     install_rpms(rpms_to_install, vm_root_session)
 
@@ -168,22 +150,17 @@ def build_install_vdagent(vm_root_session, vm_script_path, params):
     """
     Build and install spice-vdagent in the VM
 
-    @param vm_root_session:  VM Session object.
-    @param vm_script_path: path where to find build_install.py script
-    @param params: Dictionary with test parameters.
+    :param vm_root_session: VM Session object.
+    :param vm_script_path: path where to find build_install.py script
+    :param params: Dictionary with test parameters.
     """
 
     # Get current version of spice-vdagent
     output = vm_root_session.cmd_output("spice-vdagent -h")
     logging.info(output)
 
-    # Install required rpms
-    rpms_to_install = []
-    ret, output = vm_root_session.cmd_status_output("rpm -q libpciaccess-devel")
-    if ret != 0:
-        logging.debug(output)
-        libpciaccess_devel_url = params.get("libpciaccess_devel_url")
-        rpms_to_install.append(libpciaccess_devel_url)
+    pkgsRequired = ["libpciaccess-devel"]
+    rpms_to_install = check_for_required_pkgs(pkgsRequired, vm_root_session, params)
 
     install_rpms(rpms_to_install, vm_root_session)
 
@@ -216,9 +193,9 @@ def run_rv_build_install(test, params, env):
     Supported configurations:
     build_install_pkg: name of the package to get from git, build and install
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     # Collect test parameters
