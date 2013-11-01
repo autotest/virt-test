@@ -47,11 +47,11 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
         guest_path: Path where file is stored on guest.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.MultihostMigration
+    base_class = utils_test.qemu.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.MultihostMigrationFd
+        base_class = utils_test.qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
+        base_class = utils_test.qemu.MultihostMigrationExec
 
     guest_root = params.get("guest_root", "root")
     guest_pass = params.get("password", "123456")
@@ -97,7 +97,7 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
             """
             for vm in mig_data.vms:
                 vm.resume()
-                if not utils_test.guest_active(vm):
+                if not utils_test.qemu.guest_active(vm):
                     raise error.TestFail("Guest not active after migration")
 
             logging.info("Migrated guest appears to be running")

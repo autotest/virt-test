@@ -175,11 +175,11 @@ def run_floppy(test, params, env):
         def test(self):
             error.context("Preparing migration env and floppies.")
             mig_protocol = params.get("mig_protocol", "tcp")
-            self.mig_type = utils_test.MultihostMigration
+            self.mig_type = utils_test.qemu.MultihostMigration
             if mig_protocol == "fd":
-                self.mig_type = utils_test.MultihostMigrationFd
+                self.mig_type = utils_test.qemu.MultihostMigrationFd
             if mig_protocol == "exec":
-                self.mig_type = utils_test.MultihostMigrationExec
+                self.mig_type = utils_test.qemu.MultihostMigrationExec
 
             self.vms = params.get("vms").split(" ")
             self.srchost = params["hosts"][0]

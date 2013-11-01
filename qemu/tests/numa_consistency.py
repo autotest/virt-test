@@ -69,7 +69,7 @@ def run_numa_consistency(test, params, env):
     drop = 0
     for cpuid in range(len(vcpu_threads)):
         error.context("Get vcpu %s used numa node." % cpuid, logging.info)
-        memory_status, _ = utils_test.get_qemu_numa_status(host_numa_node,
+        memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,
                                                            qemu_pid)
         node_used_host = get_vcpu_used_node(host_numa_node,
                                             vcpu_threads[cpuid])
@@ -87,7 +87,7 @@ def run_numa_consistency(test, params, env):
                          " results in this round.")
             drop += 1
             continue
-        memory_status, _ = utils_test.get_qemu_numa_status(host_numa_node,
+        memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,
                                                            qemu_pid)
         memory_used_after = memory_status[node_used_host]
 
