@@ -140,6 +140,8 @@ class VM(virt_vm.BaseVM):
             self.instance = state['instance']
         self.qemu_command = ''
         self.start_time = 0.0
+        self.last_boot_index = 0
+        self.last_driver_index = 0
 
     def verify_alive(self):
         """
@@ -1015,16 +1017,16 @@ class VM(virt_vm.BaseVM):
         ide_unit = 0
         vdisk = 0
         scsi_disk = 0
-        global_image_bootindex = 0
+        self.last_boot_index = 0
         if params.get("kernel"):
-            global_image_bootindex = 1
+            self.last_boot_index = 1
 
         qemu_binary = utils_misc.get_qemu_binary(params)
 
         self.qemu_binary = qemu_binary
         support_cpu_model = commands.getoutput("%s -cpu \\?" % qemu_binary)
 
-        index_global = 0
+        self.last_driver_index = 0
         # init the dict index_in_use
         for key in params.keys():
             if 'drive_index' in key:
@@ -1213,9 +1215,9 @@ class VM(virt_vm.BaseVM):
                 if drive_index:
                     index = drive_index
                 else:
-                    index_global = get_index(index_global)
-                    index = str(index_global)
-                    index_global += 1
+                    self.last_driver_index = get_index(self.last_driver_index)
+                    index = str(self.last_driver_index)
+                    self.last_driver_index += 1
             else:
                 index = None
             image_bootindex = None
@@ -1223,16 +1225,16 @@ class VM(virt_vm.BaseVM):
             if not re.search("boot=on\|off", devices.get_help_text(),
                              re.MULTILINE):
                 if image_boot in ['yes', 'on', True]:
-                    image_bootindex = str(global_image_bootindex)
-                    global_image_bootindex += 1
+                    image_bootindex = str(self.last_boot_index)
+                    self.last_boot_index += 1
                 image_boot = "unused"
                 image_bootindex = image_params.get('bootindex',
                                                    image_bootindex)
             else:
                 if image_boot in ['yes', 'on', True]:
-                    if global_image_bootindex > 0:
+                    if self.last_boot_index > 0:
                         image_boot = False
-                    global_image_bootindex += 1
+                    self.last_boot_index += 1
             image_params = params.object_params(image_name)
             if image_params.get("boot_drive") == "no":
                 continue
@@ -1428,9 +1430,9 @@ class VM(virt_vm.BaseVM):
                 if drive_index:
                     index = drive_index
                 else:
-                    index_global = get_index(index_global)
-                    index = str(index_global)
-                    index_global += 1
+                    self.last_driver_index = get_index(self.last_driver_index)
+                    index = str(self.last_driver_index)
+                    self.last_driver_index += 1
             else:
                 index = None
             image_bootindex = None
@@ -1438,16 +1440,16 @@ class VM(virt_vm.BaseVM):
             if not re.search("boot=on\|off", devices.get_help_text(),
                              re.MULTILINE):
                 if image_boot in ['yes', 'on', True]:
-                    image_bootindex = str(global_image_bootindex)
-                    global_image_bootindex += 1
+                    image_bootindex = str(self.last_boot_index)
+                    self.last_boot_index += 1
                 image_boot = "unused"
                 image_bootindex = image_params.get(
                     'bootindex', image_bootindex)
             else:
                 if image_boot in ['yes', 'on', True]:
-                    if global_image_bootindex > 0:
+                    if self.last_boot_index > 0:
                         image_boot = False
-                    global_image_bootindex += 1
+                    self.last_boot_index += 1
             iso = image_params.get("cdrom")
             if iso or image_params.get("cdrom_without_file") == "yes":
                 devs = devices.cdroms_define_by_params(cdrom, image_params,

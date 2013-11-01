@@ -39,6 +39,7 @@ class MockHMPMonitor(qemu_monitor.HumanMonitor):
     """ Dummy class inherited from qemu_monitor.HumanMonitor """
 
     def __init__(self):     # pylint: disable=W0231
+        self.debug_log = False
         pass
 
     def __del__(self):
@@ -973,8 +974,11 @@ PIIX3
 
         # hotplug of drive will return "  OK" (pass)
         dev1.hotplug = lambda _monitor: "OK"
-        out = qdev.hotplug(dev1, monitor, True, False)
-        assert out, "Return value of hotplug is not True (%s)" % out
+        dev1.verify_hotplug = lambda _out, _monitor: True
+        out, ver_out = qdev.simple_hotplug(dev1, monitor, True)
+        assert out == "OK", "Return value of hotplug is not OK (%s)" % out
+        assert ver_out == True, ("Return value of hotplug"
+                                 " is not True (%s)" % ver_out)
         out = qdev.get_state()
         assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
 
@@ -984,13 +988,15 @@ PIIX3
         assert out == exp, ("Hotplug command of device is incorrect:\n%s\n%s"
                             % (exp, out))
         dev2.hotplug = lambda _monitor: ""
-        out = qdev.hotplug(dev2, monitor, True, False)
+        dev2.verify_hotplug = lambda _out, _monitor: ""
+        out, ver_out = qdev.simple_hotplug(dev2, monitor, True)
         # automatic verification is not supported, hotplug returns the original
         # monitor message ("")
+        assert ver_out == "", ("Return value of hotplug is"
+                               " not "" (%s)" % ver_out)
         assert out == "", 'Return value of hotplug is not "" (%s)' % out
         out = qdev.get_state()
-        assert out == 1, "Status after unverified hotplug is not 1 (%s)" % out
-        # I verified, that device was hotpluged successfully
+        assert out == 1, ("Status after verified hotplug is not 1 (%s)" % out)
         qdev.hotplug_verified()
         out = qdev.get_state()
         assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
@@ -1002,22 +1008,19 @@ PIIX3
         dev3 = qemu_devices.QDrive('a_dev1')
         dev3.hotplug = lambda _monitor: ("could not open disk image /tmp/qqq: "
                                          "No such file or directory")
-        out = qdev.hotplug(dev3, monitor, True, False)
+
+        out, ver_out = qdev.simple_hotplug(dev3, monitor, True)
         exp = "could not open disk image /tmp/qqq: No such file or directory"
         assert out, "Return value of hotplug is incorrect:\n%s\n%s" % (out,
                                                                        exp)
-        out = qdev.get_state()
-        assert out == 1, ("Status after failed hotplug is not 1 (%s)" % out)
-        # device is still in qdev, but is not in qemu, we should remove it
         qdev.remove(dev3, recursive=False)
-        # now qdev is synced, we might proclame the hotplug as verified
-        qdev.hotplug_verified()
         out = qdev.get_state()
-        assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
+        assert out == 1, ("Status after verified hotplug is not 1 (%s)" % out)
+        qdev.hotplug_verified()
 
         # Hotplug is expected to fail, qdev should stay unaffected
-        self.assertRaises(qemu_devices.DeviceHotplugError, qdev.hotplug, dev2,
-                          True, False)
+        self.assertRaises(qemu_devices.DeviceHotplugError, qdev.simple_hotplug,
+                          dev2, True)
         out = qdev.get_state()
         assert out == 0, "Status after impossible hotplug is not 0 (%s)" % out
 
@@ -1028,7 +1031,8 @@ PIIX3
         assert out == exp, ("Hotplug command of device is incorrect:\n%s\n%s"
                             % (exp, out))
         dev1.unplug = lambda _monitor: ""
-        out = qdev.unplug(dev1, monitor, True)
+        dev1.verify_unplug = lambda _monitor, _out: ""
+        out, ver_out = qdev.simple_unplug(dev1, monitor)
         # I verified, that device was unplugged successfully
         qdev.hotplug_verified()
         out = qdev.get_state()
@@ -1214,18 +1218,15 @@ PIIX3
         # Hotplug similar device to qdev3
         dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
         dev.hotplug = lambda _monitor: ""   # override the hotplug method
-        qdev3.hotplug(dev, monitor, False, False)
-        assert qdev1 != qdev3, ("Similar hotplugged qdevs match even thought "
-                                "qdev3 has different state\n%s\n%s"
-                                % (qdev1.str_long(), qdev2.str_long()))
-        qdev3.hotplug_verified()
+        dev.verify_hotplug = lambda _out, _monitor: True
+        qdev3.simple_hotplug(dev, monitor, False)
         assert qdev1 == qdev3, ("Similar hotplugged qdevs are not alike\n%s\n"
-                                "%s" % (qdev1.str_long(), qdev2.str_long()))
+                                "%s" % (qdev1.str_long(), qdev3.str_long()))
 
         # Eq. is not symmetrical, qdev1 doesn't allow hotplugged VMs.
         assert qdev3 != qdev1, ("Similar hotplugged qdevs match even thought "
                                 "qdev1 doesn't allow hotplugged VM\n%s\n%s"
-                                % (qdev1.str_long(), qdev2.str_long()))
+                                % (qdev1.str_long(), qdev3.str_long()))
 
         qdev2.__qemu_help = "I support only this :-)"  # pylint: disable=W0212
         assert qdev1 == qdev2, ("qdevs of different qemu versions match:\n%s\n"
