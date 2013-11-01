@@ -276,30 +276,6 @@ def get_time(session, time_command, time_filter_re, time_format):
     return (host_time, guest_time)
 
 
-def dump_command_output(session, command, filename, timeout=30.0,
-                        internal_timeout=1.0, print_func=None):
-    """
-    :param session: a saved communication between host and guest.
-    :param command: will running in guest side.
-    :param filename: redirect command output to the specify file
-    :param timeout: the duration (in seconds) to wait until a match is found.
-    :param internal_timeout: the timeout to pass to read_nonblocking.
-    :param print_func: a function to be used to print the data being read.
-    :return: Command output(string).
-    """
-
-    (status, output) = session.cmd_status_output(command, timeout,
-                                                 internal_timeout, print_func)
-    if status != 0:
-        raise error.TestError("Failed to run command %s in guest." % command)
-    try:
-        f = open(filename, "w")
-    except IOError:
-        raise error.TestError("Failed to open file opject: %s" % file)
-    f.write(output)
-    f.close()
-
-
 def fix_atest_cmd(atest_basedir, cmd, ip):
     """
     fixes the command "autotest/cli/atest" for the external server tests.
