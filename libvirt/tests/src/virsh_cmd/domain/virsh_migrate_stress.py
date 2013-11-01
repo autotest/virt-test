@@ -333,8 +333,8 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type,
         migration_threads = []
         for vm in vms:
             migration_threads.append(threading.Thread(
-                                               target=thread_func_migration,
-                                               args=(vm, desturi)))
+                                     target=thread_func_migration,
+                                     args=(vm, desturi)))
         # let all migration going first
         for thread in migration_threads:
             thread.start()

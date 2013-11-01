@@ -30,11 +30,11 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
     :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.MultihostMigration
+    base_class = utils_test.qemu.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.MultihostMigrationFd
+        base_class = utils_test.qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
+        base_class = utils_test.qemu.MultihostMigrationExec
 
     install_path = params.get("cpuflags_install_path", "/tmp")
 

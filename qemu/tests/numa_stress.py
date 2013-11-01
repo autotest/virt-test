@@ -11,6 +11,28 @@ except ImportError:
     from autotest.client.shared import utils_memory
 
 
+def max_mem_map_node(host_numa_node, qemu_pid):
+    """
+    Find the numa node which qemu process memory maps to it the most.
+
+    :param numa_node_info: Host numa node information
+    :type numa_node_info: NumaInfo object
+    :param qemu_pid: process id of qemu
+    :type numa_node_info: string
+    :return: The node id and how many pages are mapped to it
+    :rtype: tuple
+    """
+    node_list = host_numa_node.online_nodes
+    memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node, qemu_pid)
+    node_map_most = 0
+    memory_sz_map_most = 0
+    for index in range(len(node_list)):
+        if memory_sz_map_most < memory_status[index]:
+            memory_sz_map_most = memory_status[index]
+            node_map_most = node_list[index]
+    return (node_map_most, memory_sz_map_most)
+
+
 @error.context_aware
 def run_numa_stress(test, params, env):
     """

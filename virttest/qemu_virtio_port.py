@@ -174,7 +174,7 @@ class GuestWorker(object):
     def __init__(self, vm):
         """ Initialize worker for use (including port init on guest) """
         self.vm = vm
-        self.session = utils_test.wait_for_login(self.vm)
+        self.session = self.vm.wait_for_login()
         self.__cmd_execute_worker = None
 
         # Detect the OS version
@@ -274,7 +274,7 @@ class GuestWorker(object):
         :param vm: New VM object
         """
         self.vm = vm
-        self.session = utils_test.wait_for_login(self.vm)
+        self.session = self.vm.wait_for_login()
         self._execute_worker(timeout)
 
     def cmd(self, cmd, timeout=10, patterns=None):
@@ -384,7 +384,7 @@ class GuestWorker(object):
             logging.error("Python is stuck/FAILed after read-out:\n%s", tmp)
             try:
                 self.session.close()
-                self.session = utils_test.wait_for_login(self.vm)
+                self.session = self.vm.wait_for_login()
                 if self.os_linux:   # On windows it dies with the connection
                     self.cmd("killall -9 python "
                              "&& echo -n PASS: python killed"
@@ -414,7 +414,7 @@ class GuestWorker(object):
                 match, tmp = self._cmd("guest_exit()", 10, ('^FAIL:',
                                                             '^PASS: virtio_guest finished'))
                 self.session.close()
-                self.session = utils_test.wait_for_login(self.vm)
+                self.session = self.vm.wait_for_login()
                 # On windows it dies with the connection
                 if match is not 0 and self.os_linux:
                     logging.debug(tmp)
@@ -446,7 +446,7 @@ class GuestWorker(object):
             if match is not 0 and self.os_linux:
                 logging.warn('guest_worker stuck during cleanup:\n%s\n,'
                              ' killing python...', tmp)
-                self.session = utils_test.wait_for_login(self.vm)
+                self.session = self.vm.wait_for_login()
                 self.cmd("killall -9 python "
                          "&& echo -n PASS: python killed"
                          "|| echo -n PASS: python was already dead", 10)

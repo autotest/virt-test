@@ -916,11 +916,11 @@ def run_cpuflags(test, params, env):
 
             install_path = "/tmp"
 
-            class testMultihostMigration(utils_test.MultihostMigration):
+            class testMultihostMigration(utils_test.qemu.MultihostMigration):
 
                 def __init__(self, test, params, env):
-                    utils_test.MultihostMigration.__init__(self, test, params,
-                                                           env)
+                    utils_test.qemu.MultihostMigration.__init__(self, test, params,
+                                                                env)
 
                 def migration_scenario(self):
                     srchost = self.params.get("hosts")[0]
@@ -1018,11 +1018,11 @@ def run_cpuflags(test, params, env):
 
             install_path = "/tmp"
 
-            class testMultihostMigration(utils_test.MultihostMigration):
+            class testMultihostMigration(utils_test.qemu.MultihostMigration):
 
                 def __init__(self, test, params, env):
-                    utils_test.MultihostMigration.__init__(self, test, params,
-                                                           env)
+                    utils_test.qemu.MultihostMigration.__init__(self, test, params,
+                                                                env)
                     self.srchost = self.params.get("hosts")[0]
                     self.dsthost = self.params.get("hosts")[1]
                     self.id = {'src': self.srchost,

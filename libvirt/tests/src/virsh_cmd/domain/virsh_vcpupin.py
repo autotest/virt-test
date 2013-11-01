@@ -40,8 +40,9 @@ def run_virsh_vcpupin(test, params, env):
         :param cpu: cpu details for the affinity
         """
 
-        expected_output = utils_test.cpus_string_to_affinity_list(cpu_list,
-                               host_cpu_count)
+        expected_output = utils_test.libvirt.cpus_string_to_affinity_list(
+            cpu_list,
+            host_cpu_count)
         actual_output = affinity_from_vcpuinfo(domname, vcpu)
 
         if expected_output == actual_output:
@@ -60,8 +61,9 @@ def run_virsh_vcpupin(test, params, env):
         vcpu_pid = vcpus_pid[vcpu]
         # Get the actual cpu affinity value in the proc entry
         output = utils_test.cpu_allowed_list_by_task(pid, vcpu_pid)
-        actual_output_proc = utils_test.cpus_string_to_affinity_list(output,
-                                  host_cpu_count)
+        actual_output_proc = utils_test.libvirt.cpus_string_to_affinity_list(
+            output,
+            host_cpu_count)
 
         if expected_output == actual_output_proc:
             logging.info("successfully pinned cpu: %s --> vcpu: %s"

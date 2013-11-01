@@ -41,7 +41,7 @@ def run_numa_basic(test, params, env):
 
         error.context("Check the memory use status of qemu process",
                       logging.info)
-        memory_status, _ = utils_test.get_qemu_numa_status(host_numa_node,
+        memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,
                                                            vm.get_pid())
         node_used_most = 0
         memory_sz_used_most = 0

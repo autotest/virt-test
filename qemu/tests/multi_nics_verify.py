@@ -39,7 +39,9 @@ def run_multi_nics_verify(test, params, env):
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     # Redirect ifconfig output from guest to log file
     log_file = os.path.join(test.debugdir, "ifconfig")
-    utils_test.dump_command_output(session, "ifconfig", log_file)
+    ifconfig_output = session.cmd("ifconfig")
+    log_file_object = open(log_file, "w")
+    log_file_object.write(ifconfig_output)
 
     # Get the ethernet cards number from params
     nics_num = len(params.objects("nics"))

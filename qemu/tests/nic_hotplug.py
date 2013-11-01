@@ -29,7 +29,7 @@ def run_nic_hotplug(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
-    vm = utils_test.get_living_vm(env, params["main_vm"])
+    vm = env.get_vm(params["main_vm"])
     login_timeout = int(params.get("login_timeout", 360))
     pci_model = params.get("pci_model", "rtl8139")
     run_dhclient = params.get("run_dhclient", "no")
@@ -38,7 +38,7 @@ def run_nic_hotplug(test, params, env):
     netdst = params.get("netdst", "virbr0")
     guest_is_not_windows = "Win" not in params.get("guest_name", "")
 
-    session = utils_test.wait_for_login(vm, timeout=login_timeout)
+    session = vm.wait_for_login(timeout=login_timeout)
 
     if guest_is_not_windows:
         # Modprobe the module if specified in config file
