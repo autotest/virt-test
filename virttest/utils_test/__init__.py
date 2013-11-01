@@ -276,23 +276,6 @@ def get_time(session, time_command, time_filter_re, time_format):
     return (host_time, guest_time)
 
 
-def fix_atest_cmd(atest_basedir, cmd, ip):
-    """
-    fixes the command "autotest/cli/atest" for the external server tests.
-
-    e.g.
-    1. adding -w autotest server argument;
-    2. adding autotest/cli/atest prefix/basedir;
-    and etc..
-
-    :param atest_basedir: base dir of autotest/cli/atest
-    :param cmd: command to fix.
-    :param ip: ip of the autotest server to add to the command.
-    """
-    cmd = os.path.join(atest_basedir, cmd)
-    return ''.join([cmd, " -w ", ip])
-
-
 def get_svr_session(ip, port="22", usrname="root", passwd="123456", prompt=""):
     """
     :param ip: IP address of the server.
