@@ -76,7 +76,7 @@ def run_sr_iov_hotplug_negative(test, params, env):
     if not cmd_output:
         raise error.TestError("Unknow version of qemu")
 
-    cmd_type = utils_test.find_substring(str(cmd_output), "pci_add",
+    cmd_type = utils_misc.find_substring(str(cmd_output), "pci_add",
                                                           "device_add")
     for j in range(rp_times):
         if cmd_type == "pci_add":

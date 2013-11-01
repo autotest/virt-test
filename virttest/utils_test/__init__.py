@@ -1047,31 +1047,6 @@ def summary_up_result(result_file, ignore, row_head, column_mark):
     return average_list
 
 
-def find_substring(string, pattern1, pattern2=None):
-    """
-    Return the match of pattern1 in string. Or return the match of pattern2
-    if pattern is not matched.
-
-    @string: string
-    @pattern1: first pattern want to match in string, must set.
-    @pattern2: second pattern, it will be used if pattern1 not match, optional.
-
-    Return: Match substing or None
-    """
-    if not pattern1:
-        logging.debug("pattern1: get empty string.")
-        return None
-    pattern = pattern1
-    if pattern2:
-        pattern += "|%s" % pattern2
-    ret = re.findall(pattern, string)
-    if not ret:
-        logging.debug("Could not find matched string with pattern: %s",
-                      pattern)
-        return None
-    return ret[0]
-
-
 def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
                            storage_path="/tmp/prewhql.iso",
                            re_hw_id="(PCI.{14,50})", run_cmd=True):
