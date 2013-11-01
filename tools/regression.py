@@ -167,7 +167,7 @@ class Sample(object):
     def getSDRate(self, sds_dict):
         return self._process_files(sds_dict, self._get_rate)
 
-    def getTtestPvalue(self, fs_dict1, fs_dict2, paired=None):
+    def getTtestPvalue(self, fs_dict1, fs_dict2, paired=None, ratio=None):
         """
         scipy lib is used to compute p-value of Ttest
         scipy: http://www.scipy.org/
@@ -199,7 +199,10 @@ class Sample(object):
                     sample2 = np.array(s2[line][col])
                     warnings.simplefilter("ignore", RuntimeWarning)
                     if (paired):
-                        (_, p) = stats.ttest_rel(sample1, sample2)
+                        if (ratio):
+                            (_, p) = stats.ttest_rel(np.log(sample1), np.log(sample2))
+                        else:
+                            (_, p) = stats.ttest_rel(sample1, sample2)
                     else:
                         (_, p) = stats.ttest_ind(sample1, sample2)
                     flag = "+"
@@ -438,7 +441,7 @@ def analyze(test, sample_type, arg1, arg2, configfile):
     navg2.append(tmp2)
 
     for i in range(len(navg1)):
-        allpvalues.append(s1.getTtestPvalue(navg1[i], navg2[i], True))
+        allpvalues.append(s1.getTtestPvalue(navg1[i], navg2[i], True, True))
 
     pvalues = s1.getTtestPvalue(s1.files_dict, s2.files_dict, False)
     rlist = [avgs_rate]
