@@ -129,7 +129,7 @@ def run_trans_hugepage_defrag(test, params, env):
         change_feature_status("off", "khugepaged/defrag", test_config)
         change_feature_status("off", "defrag", test_config)
 
-        vm = utils_test.get_living_vm(env, params.get("main_vm"))
+        vm = env.get_vm(params.get("main_vm"))
         session = utils_test.wait_for_login(vm, timeout=login_timeout)
 
         fragment_host_memory(mem_path)

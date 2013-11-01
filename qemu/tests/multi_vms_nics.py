@@ -120,7 +120,7 @@ def run_multi_vms_nics(test, params, env):
     host_ip = params.get("srchost", host_ip)
     flood_minutes = float(params["flood_minutes"])
     for vm_name in vms:
-        vm = utils_test.get_living_vm(env, vm_name)
+        vm = env.get_vm(vm_name)
         vm_list.append(vm)
         session_list.append(vm.wait_for_login(timeout=timeout))
 

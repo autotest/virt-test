@@ -164,7 +164,7 @@ def run_netperf(test, params, env):
     # client session 1 for control, session 2 for data communication
     for i in range(2):
         if client in params.get("vms"):
-            vm_client = utils_test.get_living_vm(env, client)
+            vm_client = env.get_vm(client)
             tmp = vm_client.wait_for_login(timeout=login_timeout)
             client_ip = vm_client.get_address()
         elif client != "localhost":

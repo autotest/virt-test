@@ -58,23 +58,6 @@ except ImportError:
     settings_value = settings.get_value
 
 
-def get_living_vm(env, vm_name):
-    """
-    Get a VM object from the environment and make sure it's alive.
-
-    :param env: Dictionary with test environment.
-    :param vm_name: Name of the desired VM object.
-    :return: A VM object.
-    """
-    vm = env.get_vm(vm_name)
-    if not vm:
-        raise error.TestError("VM '%s' not found in environment" % vm_name)
-    if not vm.is_alive():
-        raise error.TestError("VM '%s' seems to be dead; test requires a "
-                              "living VM" % vm_name)
-    return vm
-
-
 def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
     """
     Try logging into a VM repeatedly.  Stop on success or when timeout expires.

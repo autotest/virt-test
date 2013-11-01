@@ -29,7 +29,7 @@ def run_nic_hotplug(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
-    vm = utils_test.get_living_vm(env, params["main_vm"])
+    vm = env.get_vm(params["main_vm"])
     login_timeout = int(params.get("login_timeout", 360))
     pci_model = params.get("pci_model", "rtl8139")
     run_dhclient = params.get("run_dhclient", "no")
