@@ -2552,6 +2552,8 @@ def emulatorpin(name, cpulist=None, options=None, **dargs):
     if cpulist:
         cmd += " --cpulist %s" % cpulist
 
+    return command(cmd, **dargs)
+
 
 def secret_list(options="", **dargs):
     """
