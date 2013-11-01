@@ -517,23 +517,6 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
     s_session = remote_login(c_type, src, s_port, s_name, s_passwd, c_prompt)
     d_session = remote_login(c_type, dst, s_port, d_name, d_passwd, c_prompt)
 
-    def send_cmd_safe(session, cmd, timeout=360):
-        logging.debug("Sending command: %s", cmd)
-        session.sendline(cmd)
-        output = ""
-        got_prompt = False
-        start_time = time.time()
-        # Wait for shell prompt until timeout.
-        while ((time.time() - start_time) < timeout and not got_prompt):
-            time.sleep(0.2)
-            session.sendline()
-            try:
-                output += session.read_up_to_prompt()
-                got_prompt = True
-            except aexpect.ExpectTimeoutError:
-                pass
-        return output
-
     def get_abs_path(session, filename, extension):
         """
         return file path drive+path
@@ -586,7 +569,7 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
             drive_path = get_abs_path(session, "sendfile", "exe")
             start_cmd = "start /b %ssendfile.exe %s" % (drive_path,
                                                         d_port)
-        send_cmd_safe(session, start_cmd)
+        session.cmd_output_safe(start_cmd)
         if not server_alive(session):
             raise error.TestError("Start udt server failed")
 
@@ -600,7 +583,7 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
             client_cmd = client_cmd_tmp % (drive_path, src, d_port,
                                            s_path.split("\\")[-1],
                                            d_path.split("\\")[-1])
-        send_cmd_safe(session, client_cmd, timeout)
+        session.cmd_output_safe(client_cmd, timeout)
 
     def stop_server(session):
         if c_type == "ssh":
@@ -608,7 +591,7 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
         else:
             stop_cmd = "taskkill /F /IM sendfile.exe"
         if server_alive(session):
-            send_cmd_safe(session, stop_cmd)
+            session.cmd_output_safe(stop_cmd)
 
     try:
         src_md5 = get_file_md5(s_session, s_path)

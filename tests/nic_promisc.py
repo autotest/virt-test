@@ -19,25 +19,10 @@ def run_nic_promisc(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    def send_cmd_safe(session, cmd, timeout=60):
-        logging.debug("Sending command: %s", cmd)
-        session.sendline(cmd)
-        output = ""
-        start_time = time.time()
-        # Wait for shell prompt until timeout.
-        while (time.time() - start_time) < timeout:
-            session.sendline()
-            try:
-                output += session.read_up_to_prompt(0.5)
-                break
-            except aexpect.ExpectTimeoutError:
-                pass
-        return output
-
     def set_nic_promisc_onoff(session):
         if os_type == "linux":
-            send_cmd_safe(session, "ip link set %s promisc on" % ethname)
-            send_cmd_safe(session, "ip link set %s promisc off" % ethname)
+            session.cmd_output_safe("ip link set %s promisc on" % ethname)
+            session.cmd_output_safe("ip link set %s promisc off" % ethname)
         else:
             cmd = "c:\\set_win_promisc.py"
             session.cmd(cmd)

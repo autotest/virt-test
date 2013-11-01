@@ -22,21 +22,6 @@ def run_nicdriver_unload(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    def send_cmd_safe(session, cmd, timeout=60):
-        logging.debug("Sending command: %s", cmd)
-        session.sendline(cmd)
-        output = ""
-        start_time = time.time()
-        # Wait for shell prompt until timeout.
-        while (time.time() - start_time) < timeout:
-            session.sendline()
-            try:
-                output += session.read_up_to_prompt(0.5)
-                break
-            except aexpect.ExpectTimeoutError:
-                pass
-        return output
-
     def all_threads_done(threads):
         for thread in threads:
             if thread.isAlive():
@@ -126,15 +111,15 @@ def run_nicdriver_unload(test, params, env):
         while not all_threads_done(threads):
             error.context("Shutdown the driver for NIC interface.",
                           logging.info)
-            send_cmd_safe(session_serial, "ifconfig %s down" % ethname)
+            session_serial.cmd_output_safe("ifconfig %s down" % ethname)
             error.context("Unload  NIC driver.", logging.info)
-            send_cmd_safe(session_serial, "modprobe -r %s" % driver)
+            session_serial.cmd_output_safe("modprobe -r %s" % driver)
             error.context("Load NIC driver.", logging.info)
-            send_cmd_safe(session_serial, "modprobe %s" % driver)
+            session_serial.cmd_output_safe("modprobe %s" % driver)
             error.context("Activate NIC driver.", logging.info)
-            send_cmd_safe(session_serial, "ifconfig %s up" % ethname)
-            send_cmd_safe(session_serial, "sleep %s" %
-                          random.randint(10, 60))
+            session_serial.cmd_output_safe("ifconfig %s up" % ethname)
+            session_serial.cmd_output_safe("sleep %s" % random.randint(10, 60))
+
         # files md5sums check
         error.context("File transfer finished, checking files md5sums",
                       logging.info)

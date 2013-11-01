@@ -19,20 +19,6 @@ def run_nic_bonding(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    def send_cmd_safe(session, cmd, timeout=60):
-        logging.debug("Sending command: %s", cmd)
-        session.sendline(cmd)
-        output = ""
-        start_time = time.time()
-        # Wait for shell prompt until timeout.
-        while (time.time() - start_time) < timeout:
-            session.sendline()
-            try:
-                output += session.read_up_to_prompt(0.5)
-                break
-            except aexpect.ExpectTimeoutError:
-                pass
-        return output
 
     timeout = int(params.get("login_timeout", 1200))
     vm = env.get_vm(params["main_vm"])
@@ -44,28 +30,28 @@ def run_nic_bonding(test, params, env):
 
     # get params of bonding
     nm_stop_cmd = "pidof NetworkManager && service NetworkManager stop; true"
-    send_cmd_safe(session_serial, nm_stop_cmd)
+    session_serial.cmd_output_safe(nm_stop_cmd)
     modprobe_cmd = "modprobe bonding"
     bonding_params = params.get("bonding_params")
     if bonding_params:
         modprobe_cmd += " %s" % bonding_params
-    send_cmd_safe(session_serial, modprobe_cmd)
-    send_cmd_safe(session_serial, "ifconfig bond0 up")
+    session_serial.cmd_output_safe(modprobe_cmd)
+    session_serial.cmd_output_safe("ifconfig bond0 up")
     setup_cmd = "ifenslave bond0 " + " ".join(ifnames)
-    send_cmd_safe(session_serial, setup_cmd)
+    session_serial.cmd_output_safe(setup_cmd)
     # do a pgrep to check if dhclient has already been running
     pgrep_cmd = "pgrep dhclient"
     try:
-        send_cmd_safe(session_serial, pgrep_cmd)
+        session_serial.cmd_output_safe(pgrep_cmd)
     # if dhclient is there, killl it
     except aexpect.ShellCmdError:
         logging.info("it's safe to run dhclient now")
     else:
         logging.info("dhclient already is running,kill it")
-        send_cmd_safe(session_serial, "killall -9 dhclient")
+        session_serial.cmd_output_safe("killall -9 dhclient")
         time.sleep(1)
 
-    send_cmd_safe(session_serial, "dhclient bond0")
+    session_serial.cmd_output_safe("dhclient bond0")
 
     #get_bonding_nic_mac and ip
     try:
