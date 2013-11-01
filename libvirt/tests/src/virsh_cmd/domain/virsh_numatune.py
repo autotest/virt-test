@@ -1,6 +1,6 @@
 import re
 import logging
-from virttest.utils_test import cpus_parser
+from virttest.utils_test.libvirt import cpus_parser
 from autotest.client.shared import error, utils
 from virttest import libvirt_xml, virsh, utils_libvirtd
 try:
