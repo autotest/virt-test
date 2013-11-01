@@ -64,6 +64,23 @@ def log_last_traceback(msg=None, log=logging.error):
                                            exc_traceback)))
 
 
+def aton(sr):
+    """
+    Transform a string to a number(include float and int). If the string is
+    not in the form of number, just return false.
+
+    @str: string to transfrom
+    Return: float, int or False for failed transform
+    """
+    try:
+        return int(sr)
+    except ValueError:
+        try:
+            return float(sr)
+        except ValueError:
+            return False
+
+
 def lock_file(filename, mode=fcntl.LOCK_EX):
     f = open(filename, "w")
     fcntl.lockf(f, mode)

@@ -47,7 +47,7 @@ def cmd_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout=300):
             thread_kill(m_cmd, p_file)
 
     kill_thread_flag = Queue(1)
-    session = vm.wait_for_login(timeout=300)
+    session = utils_test.wait_for_login(vm, 0, 300, 0, 2)
     tag = vm.instance
     pid_file = "/tmp/monitor_pid_%s" % tag
     result_file = "/tmp/host_monitor_result_%s" % tag
@@ -212,7 +212,7 @@ def mpstat_ana(filename):
                 vcpu = "all"
             else:
                 vcpu = "vcpu%s" % data[0]
-            cpu_use = "%20.2f" % (100 - utils_test.aton(data[index]))
+            cpu_use = "%20.2f" % (100 - utils_misc.aton(data[index]))
             result[vcpu] = cpu_use
     return result
 
@@ -376,10 +376,10 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
                 data = str(tmp_data)
             if data:
                 if mark_tag in no_table_list:
-                    no_table_results[mark_tag] = utils_test.aton(data)
+                    no_table_results[mark_tag] = utils_misc.aton(data)
                     perf_value = no_table_results[mark_tag]
                 else:
-                    tmp_dic[mark_tag] = utils_test.aton(data)
+                    tmp_dic[mark_tag] = utils_misc.aton(data)
                     perf_value = tmp_dic[mark_tag]
             else:
                 raise error.TestError("Can not get the right data from result."

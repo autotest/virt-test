@@ -985,23 +985,6 @@ def service_setup(vm, session, directory):
         session.cmd("bash /tmp/rh_perf_envsetup.sh guest %s" % rebooted)
 
 
-def aton(sr):
-    """
-    Transform a string to a number(include float and int). If the string is
-    not in the form of number, just return false.
-
-    @str: string to transfrom
-    Return: float, int or False for failed transform
-    """
-    try:
-        return int(sr)
-    except ValueError:
-        try:
-            return float(sr)
-        except ValueError:
-            return False
-
-
 def summary_up_result(result_file, ignore, row_head, column_mark):
     """
     Use to summary the monitor or other kinds of results. Now it calculates
@@ -1054,10 +1037,10 @@ def summary_up_result(result_file, ignore, row_head, column_mark):
         for j in row_list:
             average_list[column_list[i]][j] = {}
             check = result_dict[column_list[i]][j][0]
-            if aton(check) or aton(check) == 0.0:
+            if utils_misc.aton(check) or utils_misc.aton(check) == 0.0:
                 count = 0
                 for k in result_dict[column_list[i]][j]:
-                    count += aton(k)
+                    count += utils_misc.aton(k)
                 average_list[column_list[i]][j] = "%.2f" % (count /
                                                             len(result_dict[column_list[i]][j]))
 

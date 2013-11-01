@@ -5,7 +5,7 @@ import os
 import commands
 import re
 from autotest.client.shared import error
-from virttest import aexpect, utils_test, data_dir
+from virttest import aexpect, utils_test, utils_misc, data_dir
 
 
 @error.context_aware
@@ -129,9 +129,9 @@ def run_ksm_base(test, params, env):
             unit = i[-1]
             index = sharing_page.index(i)
             if unit == "g":
-                sharing_page[index] = utils_test.aton(data) * 1024
+                sharing_page[index] = utils_misc.aton(data) * 1024
             else:
-                sharing_page[index] = utils_test.aton(data)
+                sharing_page[index] = utils_misc.aton(data)
 
     fail_type = 0
     if test_type == "disable":
