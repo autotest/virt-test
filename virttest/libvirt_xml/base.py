@@ -154,6 +154,7 @@ class LibvirtXMLBase(propcan.PropCanBase):
         if ret.exit_status == 0:
             return True
         else:
+            logging.debug(ret)
             return False
 
     def set_validates(self, value):

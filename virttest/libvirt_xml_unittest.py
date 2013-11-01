@@ -140,7 +140,12 @@ class LibvirtXMLTestBase(unittest.TestCase):
                                                               LibvirtXMLTestBase._domuuid(None))
             xml_file.write(domain_xml)
         xml_file.close()
-        return domain_xml
+
+        cmd = "virsh dumpxml %s" % name
+        stdout = domain_xml
+        stderr = ""
+        exit_status = 0
+        return utils.CmdResult(cmd, stdout, stderr, exit_status)
 
     def setUp(self):
         # cause any called virsh commands to fail testing unless a mock declared
