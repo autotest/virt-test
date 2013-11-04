@@ -58,6 +58,7 @@ def launch_rv(client_vm, guest_vm, params):
     :param params
     """
     rv_binary = params.get("rv_binary", "remote-viewer")
+    rv_ld_library_path = params.get("rv_ld_library_path")
     host_ip = utils_net.get_host_ip_address(params)
     if guest_vm.get_spice_var("listening_addr") == "ipv6":
         host_ip = "[" + utils_misc.convert_ipv4_to_ipv6(host_ip) + "]"
@@ -174,11 +175,20 @@ def launch_rv(client_vm, guest_vm, params):
                           gencerts)
             cmd += " --spice-smartcard-certificates " + gencerts
 
-    cmd = "nohup " + cmd + " &> /dev/null &"  # Launch it on background
+    if rv_ld_library_path:
+        cmd = "export LD_LIBRARY_PATH=" + rv_ld_library_path + "; nohup " + cmd + " &> /dev/null &"  # Launch it on background
+    else:
+        cmd = "nohup " + cmd + " &> /dev/null &"  # Launch it on background
+        
+
 
     # Launching the actual set of commands
     try:
-        print_rv_version(client_session, rv_binary)
+        if rv_ld_library_path:
+            print_rv_version(client_session, "LD_LIBRARY_PATH=/usr/local/lib " + rv_binary)
+        else:
+            print_rv_version(client_session, rv_binary)
+  
     except ShellStatusError, ShellProcessTerminatedError:
         # Sometimes It fails with Status error, ingore it and continue.
         # It's not that important to have printed versions in the log.
