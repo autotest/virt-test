@@ -52,9 +52,8 @@ class Disk(base.TypedDeviceBase):
                                  tag_name='driver')
         accessors.XMLElementDict('target', self, parent_xpath='/',
                                  tag_name='target')
-        Address = librarian.get('address')
         accessors.XMLElementNest('address', self, parent_xpath='/',
-                                 tag_name='address', subclass=Address,
+                                 tag_name='address', subclass=self.Address,
                                  subclass_dargs={'type_name': 'drive',
                                              'virsh_instance': virsh_instance})
         accessors.XMLAttribute('boot', self, parent_xpath='/',
@@ -98,6 +97,18 @@ class Disk(base.TypedDeviceBase):
         for key, value in dargs.items():
             setattr(new_one, key, value)
         return new_one
+
+    def new_disk_address(self, type_name='drive', **dargs):
+        """
+        Return a new disk Address instance and set properties from dargs
+        """
+        new_one = self.Address(type_name=type_name, virsh_instance=self.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
+
+    # For convenience
+    Address = librarian.get('address')
 
     class DiskSource(base.base.LibvirtXMLBase):
         """
