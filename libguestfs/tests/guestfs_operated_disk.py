@@ -290,7 +290,7 @@ class GuestfishTools(lgf.GuestfishPersistent):
 
     def get_partitions_info(self, device="/dev/sda"):
         """
-        Get disk partition's infomation.
+        Get disk partition's information.
         """
         list_result = self.part_list(device)
         if list_result.exit_status:
