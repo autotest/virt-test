@@ -19,7 +19,6 @@ class Address(base.TypedDeviceBase):
         super(Address, self).__init__(device_tag='address',
                                       type_name=type_name,
                                       virsh_instance=virsh_instance)
-        self.xml = '<address/>'
 
     @classmethod
     def new_from_dict(cls, attributes, virsh_instance=base.base.virsh):

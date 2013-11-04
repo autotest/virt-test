@@ -8,7 +8,6 @@ from virttest.libvirt_xml import accessors, xcepts
 from virttest.libvirt_xml.devices import base, librarian
 
 
-
 class Disk(base.TypedDeviceBase):
     """
     Disk device XML class
@@ -53,11 +52,10 @@ class Disk(base.TypedDeviceBase):
                                  tag_name='driver')
         accessors.XMLElementDict('target', self, parent_xpath='/',
                                  tag_name='target')
-        Address = librarian.get('address')
         accessors.XMLElementNest('address', self, parent_xpath='/',
-                                 tag_name='address', subclass=Address,
-                                 subclass_dargs={'type_name':'drive',
-                                             'virsh_instance':virsh_instance})
+                                 tag_name='address', subclass=self.Address,
+                                 subclass_dargs={'type_name': 'drive',
+                                             'virsh_instance': virsh_instance})
         accessors.XMLAttribute('boot', self, parent_xpath='/',
                                tag_name='boot', attribute='order')
         accessors.XMLElementBool('readonly', self, parent_xpath='/',
@@ -69,7 +67,7 @@ class Disk(base.TypedDeviceBase):
         accessors.XMLElementNest('source', self, parent_xpath='/',
                                  tag_name='source', subclass=self.DiskSource,
                                  subclass_dargs={
-                                    'virsh_instance':virsh_instance})
+                                    'virsh_instance': virsh_instance})
         ro = ['set', 'del']
         accessors.XMLElementBool('mirror', self, forbidden=ro,
                                  parent_xpath='/', tag_name='mirror')
@@ -78,11 +76,9 @@ class Disk(base.TypedDeviceBase):
         accessors.XMLElementNest('iotune', self, parent_xpath='/',
                                  tag_name='iotune', subclass=self.IOTune,
                                  subclass_dargs={
-                                             'virsh_instance':virsh_instance})
+                                             'virsh_instance': virsh_instance})
         super(Disk, self).__init__(device_tag='disk', type_name=type_name,
                                    virsh_instance=virsh_instance)
-        self.xml = '<disk/>'
-
 
     def new_disk_source(self, **dargs):
         """
@@ -93,7 +89,6 @@ class Disk(base.TypedDeviceBase):
             setattr(new_one, key, value)
         return new_one
 
-
     def new_iotune(self, **dargs):
         """
         Return a new disk IOTune instance and set properties from dargs
@@ -103,6 +98,17 @@ class Disk(base.TypedDeviceBase):
             setattr(new_one, key, value)
         return new_one
 
+    def new_disk_address(self, type_name='drive', **dargs):
+        """
+        Return a new disk Address instance and set properties from dargs
+        """
+        new_one = self.Address(type_name=type_name, virsh_instance=self.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
+
+    # For convenience
+    Address = librarian.get('address')
 
     class DiskSource(base.base.LibvirtXMLBase):
         """
@@ -127,18 +133,14 @@ class Disk(base.TypedDeviceBase):
             accessors.XMLElementList('hosts', self, parent_xpath='/',
                                      marshal_from=self.marshal_from_host,
                                      marshal_to=self.marshal_to_host)
-            # Using super().__init__() here gives TypeError
-            # super(type, obj): obj must be an instance or subtype of type
-            # No idea why
-            base.base.LibvirtXMLBase.__init__(self, virsh_instance=virsh_instance)
+            super(Disk.DiskSource, self).__init__(virsh_instance=virsh_instance)
             self.xml = '<source/>'
-
 
         @staticmethod
         def marshal_from_seclabel(item, index, libvirtxml):
             """Convert a Seclabel instance into tag + attributes"""
-            del index # not used
-            del libvirtxml # not used
+            del index           # not used
+            del libvirtxml      # not used
             root = item.xmltreefile.getroot()
             if root.tag == 'seclabel':
                 return (root.tag, dict(root.items))
@@ -146,40 +148,36 @@ class Disk(base.TypedDeviceBase):
                 raise xcepts.LibvirtXMLError("Expected a list of seclabel "
                                              "instances, not a %s" % str(item))
 
-
         @staticmethod
         def marshal_to_seclabel(tag, attr_dict, index, libvirtxml):
             """Convert a tag + attributes into a Seclabel instance"""
-            del index # not used
+            del index           # not used
             if tag is not 'seclabel':
-                return None # Don't convert this item
+                return None     # Don't convert this item
             Seclabel = librarian.get('seclabel')
             newone = Seclabel(virsh_instance=libvirtxml.virsh)
             newone.update(attr_dict)
             return newone
 
-
         @staticmethod
         def marshal_from_host(item, index, libvirtxml):
             """Convert a dictionary into a tag + attributes"""
-            del index # not used
-            del libvirtxml # not used
+            del index           # not used
+            del libvirtxml      # not used
             if not isinstance(item, dict):
                 raise xcepts.LibvirtXMLError("Expected a dictionary of host "
-                                             "attributes, not a %s" % str(item))
-            return ('host', dict(item)) # return copy of dict, not reference
-
+                                             "attributes, not a %s"
+                                             % str(item))
+            return ('host', dict(item))  # return copy of dict, not reference
 
         @staticmethod
         def marshal_to_host(tag, attr_dict, index, libvirtxml):
             """Convert a tag + attributes into a dictionary"""
-            del index # not used
-            del libvirtxml # not used
+            del index                    # not used
+            del libvirtxml               # not used
             if tag is not 'host':
-                return None # skip this one
-            return dict(attr_dict) # return copy of dict, not reference
-
-
+                return None              # skip this one
+            return dict(attr_dict)       # return copy of dict, not reference
 
     class IOTune(base.base.LibvirtXMLBase):
         """
@@ -194,7 +192,6 @@ class Disk(base.TypedDeviceBase):
             write_iops_sec: str(int)
         """
 
-
         __slots__ = base.base.LibvirtXMLBase.__slots__ + ('total_bytes_sec',
                                                           'read_bytes_sec',
                                                           'write_bytes_sec',
@@ -205,7 +202,7 @@ class Disk(base.TypedDeviceBase):
         def __init__(self, virsh_instance=base.base.virsh):
             for slot in self.__slots__:
                 if slot in base.base.LibvirtXMLBase.__slots__:
-                    continue # don't add these
+                    continue    # don't add these
                 else:
                     accessors.XMLElementInt(slot, self, parent_xpath='/',
                                             tag_name=slot)
