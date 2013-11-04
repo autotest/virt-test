@@ -301,6 +301,20 @@ class VMXML(VMXMLBase):
         return vmxml
 
     @staticmethod
+    def new_from_inactive_dumpxml(vm_name, options="", virsh_instance=virsh):
+        """
+        Return new VMXML instance of inactive domain from virsh dumpxml command
+
+        :param vm_name: Name of VM to dumpxml
+        :param options: virsh dumpxml command's options
+        :param virsh_instance: virsh module or instance to use
+        :return: New initialized VMXML instance
+        """
+        if options.find("--inactive") == -1:
+            options += " --inactive"
+        return VMXML.new_from_dumpxml(vm_name, options, virsh_instance)
+
+    @staticmethod
     def get_device_class(type_name):
         """
         Return class that handles type_name devices, or raise exception.
