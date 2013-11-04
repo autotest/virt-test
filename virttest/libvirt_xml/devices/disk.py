@@ -133,11 +133,7 @@ class Disk(base.TypedDeviceBase):
             accessors.XMLElementList('hosts', self, parent_xpath='/',
                                      marshal_from=self.marshal_from_host,
                                      marshal_to=self.marshal_to_host)
-            # Using super().__init__() here gives TypeError
-            # super(type, obj): obj must be an instance or subtype of type
-            # No idea why
-            base.base.LibvirtXMLBase.__init__(self,
-                                              virsh_instance=virsh_instance)
+            super(Disk.DiskSource, self).__init__(virsh_instance=virsh_instance)
             self.xml = '<source/>'
 
         @staticmethod
