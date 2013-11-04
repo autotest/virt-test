@@ -3,7 +3,7 @@ import os
 import logging
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import remote, utils_misc
+from virttest import remote, utils_misc, data_dir
 
 
 @error.context_aware
@@ -52,7 +52,8 @@ def run_multi_vms_file_transfer(test, params, env):
     username = params["username"]
     password = params["password"]
     port = int(params["file_transfer_port"])
-    tmp_dir = params.get("tmp_dir", "/tmp/")
+    tmp_dir = data_dir.get_tmp_dir()
+    tmp_dir_guest = params.get("tmp_dir_guest", "/var/tmp")
     repeat_time = int(params.get("repeat_time", "10"))
     clean_cmd = params.get("clean_cmd", "rm -f")
     filesize = int(params.get("filesize", 4000))
@@ -63,8 +64,8 @@ def run_multi_vms_file_transfer(test, params, env):
     host_path = os.path.join(tmp_dir, "tmp-%s" %
                              utils_misc.generate_random_string(8))
     cmd = "dd if=/dev/zero of=%s bs=10M count=%d" % (host_path, count)
-    guest_path = (tmp_dir + "file_transfer-%s" %
-                  utils_misc.generate_random_string(8))
+    guest_path = os.path.join(tmp_dir_guest, "file_transfer-%s" %
+                              utils_misc.generate_random_string(8))
     try:
         error.context("Creating %dMB file on host" % filesize, logging.info)
         utils.run(cmd)
