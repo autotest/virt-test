@@ -12,8 +12,7 @@ def create_dir_pool(spool, pool_name, target_path):
     """
     # Check pool before creating
     if spool.pool_exists(pool_name):
-        logging.debug("Pool '%s' exists on uri '%s'", pool_name,
-                      spool.connect_uri)
+        logging.debug("Pool '%s' already exists.", pool_name)
         return False
 
     if not spool.define_dir_pool(pool_name, target_path):
@@ -37,8 +36,7 @@ def create_partition_pool(spool, pool_name, block_device,
     """
     # Check pool before creating
     if spool.pool_exists(pool_name):
-        logging.debug("Pool '%s' exists on uri '%s'", pool_name,
-                      spool.connect_uri)
+        logging.debug("Pool '%s' already exists.", pool_name)
         return False
 
     if not spool.define_fs_pool(pool_name, block_device,
@@ -63,8 +61,7 @@ def create_lvm_pool(spool, pool_name, block_device, vg_name="vg_v2v",
     """
     # Check pool before creating
     if spool.pool_exists(pool_name):
-        logging.debug("Pool '%s' exists on uri '%s'", pool_name,
-                      spool.connect_uri)
+        logging.debug("Pool '%s' already exists.", pool_name)
         return False
 
     if not spool.define_lvm_pool(pool_name, block_device, vg_name=vg_name,
@@ -190,16 +187,16 @@ def run_convert_remote_vm(test, params, env):
                     'remote_user': username, 'remote_pwd': password}
     rvirsh = virsh.VirshPersistent(**rvirsh_dargs)
     if not rvirsh.domain_exists(vm_name):
+        rvirsh.close_session()
         raise error.TestFail("Couldn't find vm '%s' to be converted "
                              "on remote uri '%s'." % (vm_name, remote_uri))
-    rvirsh.close_session()
 
     if remote_hypervisor != "esx":
         remote_vm = libvirt_vm.VM(vm_name, params, test.bindir,
                                   env.get("address_cache"))
         remote_vm.connect_uri = remote_uri
         # Remote storage pool's instance
-        rsp = libvirt_storage.StoragePool(remote_uri)
+        rsp = libvirt_storage.StoragePool(rvirsh)
         # Put remote vm's disk into a directory storage pool
         prepare_remote_sp(rsp, remote_vm, pool_name)
 
