@@ -252,13 +252,12 @@ def get_time(session, time_command, time_filter_re, time_format):
             locale.setlocale(locale.LC_TIME, loc)
     else:
         host_time = time.time()
-        s = session.cmd_output(time_command)
+        s = session.cmd_output(time_command).strip()
         n = 0.0
         reo = None
 
         try:
             reo = re.findall(time_filter_re, s)[0]
-            s = reo[0]
             if len(reo) > 1:
                 n = float(reo[1])
         except IndexError:
@@ -271,7 +270,7 @@ def get_time(session, time_command, time_filter_re, time_format):
                           time_filter_re, s)
             raise e
 
-        guest_time = time.mktime(time.strptime(s, time_format)) + n
+        guest_time = time.mktime(time.strptime(reo, time_format)) + n
 
     return (host_time, guest_time)
 
