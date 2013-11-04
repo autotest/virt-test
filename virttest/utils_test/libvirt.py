@@ -126,4 +126,3 @@ def cpu_allowed_list_by_task(pid, tid):
     if result.exit_status:
         return None
     return result.stdout.strip()
-

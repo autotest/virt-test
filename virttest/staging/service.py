@@ -659,7 +659,7 @@ class ServiceManagerFactory(object):
             """
             Init a helper to create service manager.
 
-            :param run: Funtion to run command.
+            :param run: Function to run command.
             :type: utils.run-like function.
             """
             result = run("exit 0")
