@@ -588,7 +588,7 @@ def freecell(extra="", **dargs):
     """
     Prints the available amount of memory on the machine or within a NUMA cell.
 
-    :param dargs: extra: extra argument string to pass to command
+    :param extra: extra argument string to pass to command
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
@@ -601,12 +601,27 @@ def nodeinfo(extra="", **dargs):
     Returns basic information about the node,like number and type of CPU,
     and size of the physical memory.
 
-    :param dargs: extra: extra argument string to pass to command
+    :param extra: extra argument string to pass to command
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
     cmd_nodeinfo = "nodeinfo %s" % extra
     return command(cmd_nodeinfo, **dargs)
+
+
+def nodecpumap(extra="", **dargs):
+    """
+    Displays the node's total number of CPUs, the number of online
+    CPUs and the list of online CPUs.
+
+    :param extra: extra argument string to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nodecpumap %s" % extra
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
 
 
 def canonical_uri(option='', **dargs):
