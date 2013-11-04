@@ -34,57 +34,57 @@ virbr0		8000.525400895d70	yes		virbr0-nic
 
 def run_virsh_iface_list(test, params, env):
     def check_virsh_list_all(ifa,chk_ifc_virsh):
-        if ifa.avail_net_scr() and not ifa.is_brport():
+        if ifa.avail_net_scr() and not ifa.is_brport() and not ifa.is_bonded():
             if chk_ifc_virsh['avail']:
                 if chk_ifc_virsh['isup'] != ifa.is_up():
                     raise error.TestFail("virsh list --all shows wrongly "
-                    "for the state of %s"%opt)
+                    "for the state of %s"%ifa.name)
                 if chk_ifc_virsh['mac'].upper() != ifa.get_mac():
                     raise error.TestFail("virsh list --all shows "
-                    "wrongly for the mac of %s"%opt)
+                    "wrongly for the mac of %s"%ifa.name)
             else:
                 raise error.TestFail("virsh iface-list --all does "
-                "not show iface %s"%opt)
+                "not show iface %s"%ifa.name)
         else:
             if chk_ifc_virsh['avail']:
                 raise error.TestFail("virsh iface-list --all should "
-                "not show iface %s"%opt)
+                "not show iface %s"%ifa.name)
 
 
     def check_virsh_list_active(ifa,chk_ifc_virsh):
-        if ifa.avail_net_scr() and not ifa.is_brport() and ifa.is_up():
+        if ifa.avail_net_scr() and not ifa.is_brport() and ifa.is_up()  and not ifa.is_bonded():
             if chk_ifc_virsh['avail']:
                 if not chk_ifc_virsh['isup']:
                     raise error.TestFail("virsh list shows wrongly "
-                    "for the state of %s"%opt)
+                    "for the state of %s"%ifa.name)
                 if chk_ifc_virsh['mac'].upper() != ifa.get_mac():
                     raise error.TestFail("virsh list  shows "
-                    "wrongly for the mac of %s"%opt)
+                    "wrongly for the mac of %s"%ifa.name)
             else:
                 raise error.TestFail("virsh iface-list  does "
-                "not show iface %s"%opt)
+                "not show iface %s"%ifa.name)
         else:
             if chk_ifc_virsh['avail']:
                 raise error.TestFail("virsh iface-list --active should "
-                "not show iface %s"%opt)
+                "not show iface %s"%ifa.name)
 
 
     def check_virsh_list_inactive(ifa,chk_ifc_virsh):
-        if ifa.avail_net_scr() and not ifa.is_brport() and not ifa.is_up():
+        if ifa.avail_net_scr() and not ifa.is_brport() and not ifa.is_up() and not ifa.is_bonded():
             if chk_ifc_virsh['avail']:
                 if chk_ifc_virsh['isup']:
                     raise error.TestFail("virsh list --inactive shows wrongly "
-                                         "for the state of %s"%opt)
+                                         "for the state of %s"%ifa.name)
                 if chk_ifc_virsh['mac'].upper() != ifa.get_mac():
                     raise error.TestFail("virsh list --inactive shows "
-                                         "wrongly for the mac of %s"%opt)
+                                         "wrongly for the mac of %s"%ifa.name)
             else:
                 raise error.TestFail("virsh iface-list --inactive does "
-                "not show iface %s"%opt)
+                "not show iface %s"%ifa.name)
         else:
             if chk_ifc_virsh['avail']:
                 raise error.TestFail("virsh iface-list --inactive should "
-                                    "not show iface %s"%opt)
+                                    "not show iface %s"%ifa.name)
 
 
     options_ref = params.get("iface_list_option","");
