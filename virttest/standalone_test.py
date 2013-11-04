@@ -490,7 +490,10 @@ def print_test_list(options, cartesian_parser):
                        bcolors.end + "\n")
             else:
                 out = basic_out + "\n"
-            pipe.write(out)
+            try:
+                pipe.write(out)
+            except IOError:
+                return
 
 
 def get_guest_name_parser(options):
