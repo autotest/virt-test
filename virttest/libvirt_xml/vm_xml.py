@@ -81,13 +81,19 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: returns VMXMLDevices instance for all devices
             set: Define all devices from VMXMLDevices instance
             del: remove all devices
+        emulatorpin: string, cpuset value (see man virsh: cpulist)
+            get: return text value of cputune/emulatorpin attributes
+            set: set cputune/emulatorpin attributes from string
+            del: remove cputune/emulatorpin tag
     """
 
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
                                                  'uuid', 'vcpu', 'max_mem',
                                                  'current_mem', 'numa',
-                                                 'devices', 'seclabel')
+                                                 'devices', 'seclabel',
+                                                 'cputune', 'emulatorpin',
+                                                 'cpuset', 'placement')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -115,6 +121,12 @@ class VMXMLBase(base.LibvirtXMLBase):
                                 forbidden=None,
                                 parent_xpath='/',
                                 tag_name='vcpu')
+        accessors.XMLAttribute(property_name="placement",
+                               libvirtxml=self,
+                               forbidden=None,
+                               parent_xpath='/',
+                               tag_name='vcpu',
+                               attribute='placement')
         accessors.XMLElementInt(property_name="max_mem",
                                 libvirtxml=self,
                                 forbidden=None,
@@ -130,6 +142,17 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  forbidden=None,
                                  parent_xpath='numatune',
                                  tag_name='memory')
+        accessors.XMLElementText(property_name="cputune",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='cputune')
+        accessors.XMLAttribute(property_name="emulatorpin",
+                               libvirtxml=self,
+                               forbidden=None,
+                               parent_xpath='/cputune',
+                               tag_name='emulatorpin',
+                               attribute='cpuset')
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def get_devices(self, device_type=None):
@@ -274,7 +297,8 @@ class VMXML(VMXMLBase):
         """
         # TODO: Look up hypervisor_type on incoming XML
         vmxml = VMXML(virsh_instance=virsh_instance)
-        vmxml['xml'] = virsh_instance.dumpxml(vm_name, options=options)
+        vmxml['xml'] = virsh_instance.dumpxml(vm_name,
+                                              options=options).stdout.strip()
         return vmxml
 
     @staticmethod
@@ -571,6 +595,21 @@ class VMXML(VMXMLBase):
         return None
 
     @staticmethod
+    def get_first_mac_by_name(vm_name, virsh_instance=base.virsh):
+        """
+        Convenience method for getting first mac of a defined VM
+
+        :param: vm_name: Name of defined vm to get mac
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        xmltreefile = vmxml.dict_get('xml')
+        try:
+            iface = xmltreefile.find('devices').find('interface')
+            return iface.find('mac').get('address')
+        except AttributeError:
+            return None
+
+    @staticmethod
     def get_iftune_params(vm_name, options="", virsh_instance=base.virsh):
         """
         Return VM's interface tuning setting from XML definition
@@ -626,7 +665,7 @@ class VMXML(VMXMLBase):
         """
         Set cpu's mode of VM.
 
-        :param vm_name: Name of defined vm to set primary serial.
+        :param vm_name: Name of defined vm to set cpu mode.
         :param mode: the mode of cpu:'host-model'...
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
@@ -676,7 +715,7 @@ class VMCPUXML(VMXML):
         # Setup some bare-bones XML to build upon
         self.set_cpu_mode(vm_name, mode)
         self['xml'] = self.dict_get('virsh').dumpxml(vm_name,
-                                                     extra="--update-cpu")
+                                                     extra="--update-cpu").stdout.strip()
 
     def get_feature_list(self):
         """

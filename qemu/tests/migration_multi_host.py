@@ -28,11 +28,11 @@ def run_migration_multi_host(test, params, env):
     login_before_pre_tests = params.get("login_before_pre_tests", "no")
 
     mig_protocol = params.get("mig_protocol", "tcp")
-    mig_type = utils_test.MultihostMigration
+    mig_type = utils_test.qemu.MultihostMigration
     if mig_protocol == "fd":
-        mig_type = utils_test.MultihostMigrationFd
+        mig_type = utils_test.qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        mig_type = utils_test.MultihostMigrationExec
+        mig_type = utils_test.qemu.MultihostMigrationExec
 
     vms = params.get("vms").split(" ")
     srchost = params["hosts"][0]

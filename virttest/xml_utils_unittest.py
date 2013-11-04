@@ -176,7 +176,7 @@ class test_XMLBackup(xml_test_data):
         self.assertRaises(OSError, os.unlink, filename)
 
 
-class test_XMLTreeFile(test_XMLBackup):
+class test_XMLTreeFile(xml_test_data):
 
     class_to_test = xml_utils.XMLTreeFile
 
@@ -209,13 +209,13 @@ class test_XMLTreeFile(test_XMLBackup):
     def test_restore_from_string(self):
         xmlbackup = self.class_to_test(self.XMLSTR)
         os.unlink(xmlbackup.sourcefilename)
-        xmlbackup.restore()
+        xmlbackup.backup()
         self.assertTrue(self.is_same_contents(xmlbackup.sourcefilename))
 
     def test_restore_from_file(self):
         xmlbackup = self.class_to_test(self.XMLFILE)
         os.unlink(xmlbackup.sourcefilename)
-        xmlbackup.restore()
+        xmlbackup.backup()
         self.assertTrue(self.is_same_contents(xmlbackup.name))
 
     def test_backup_backup_and_remove(self):
@@ -269,7 +269,7 @@ class test_XMLTreeFile(test_XMLBackup):
         otherfile = xml_utils.TempXMLFile()
         xmlbackup.write(otherfile)
         otherfile.close()
-        xmlbackup.backup()
+        xmlbackup.restore()
         self.assertTrue(self.is_same_contents(xmlbackup.name))
         xmlbackup.read(otherfile.name)
         self.assertFalse(self.is_same_contents(otherfile.name))

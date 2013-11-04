@@ -111,6 +111,48 @@ class IPXML(base.LibvirtXMLBase):
             xmltreefile.remove(element)
 
 
+class PortgroupXML(base.LibvirtXMLBase):
+
+    """
+    Accessor methods for PortgroupXML class in NetworkXML.
+
+    Properties:
+        name: string, operates on 'name' attribute of portgroup tag
+        default: string of yes or no, operates on 'default' attribute
+                 of portgroup tag
+        virtualport_type: string, operates on 'type' attribute of
+                          virtualport tag in portgroup.
+        bandwidth_inbound: dict, operates on inbound tag in bandwidth
+                           which is child of portgroup.
+        bandwidth_outbound: dict, operates on outbound tag in bandwidth
+                           which is child of portgroup.
+    """
+
+    __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'default',
+                                                 'virtualport_type',
+                                                 'bandwidth_inbound',
+                                                 'bandwidth_outbound')
+
+    def __init__(self, virsh_instance=base.virsh):
+        """
+        Create new PortgroupXML instance.
+        """
+        accessors.XMLAttribute('name', self, parent_xpath='/',
+                               tag_name='portgroup', attribute='name')
+        accessors.XMLAttribute('default', self, parent_xpath='/',
+                               tag_name='portgroup', attribute='default')
+        accessors.XMLAttribute('virtualport_type', self, parent_xpath='/',
+                               tag_name='virtualport', attribute='type')
+        accessors.XMLElementDict('bandwidth_inbound', self,
+                                 parent_xpath='/bandwidth',
+                                 tag_name='inbound')
+        accessors.XMLElementDict('bandwidth_outbound', self,
+                                 parent_xpath='/bandwidth',
+                                 tag_name='outbound')
+        super(PortgroupXML, self).__init__(virsh_instance=virsh_instance)
+        self.xml = u"<portgroup></portgroup>"
+
+
 class NetworkXMLBase(base.LibvirtXMLBase):
 
     """
@@ -123,6 +165,9 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         mac: string, operates on address attribute of mac tag
         ip: string operate on ip/dhcp ranges as IPXML instances
         bridge: dict, operates on bridge attributes
+        bandwidth_inbound: dict, operates on inbound under bandwidth.
+        bandwidth_outbound: dict, operates on outbound under bandwidth.
+        portgroup: PortgroupXML instance to access portgroup tag.
         defined: virtual boolean, callout to virsh methods
             get: True if libvirt knows network name
             set: True defines network, False undefines to libvirt
@@ -144,7 +189,10 @@ class NetworkXMLBase(base.LibvirtXMLBase):
     __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'uuid', 'bridge',
                                                  'defined', 'active',
                                                  'autostart', 'persistent',
-                                                 'fwd_mode', 'mac', 'ip')
+                                                 'fwd_mode', 'mac', 'ip',
+                                                 'bandwidth_inbound',
+                                                 'bandwidth_outbound',
+                                                 'portgroup')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
         'defined', 'active',
@@ -163,6 +211,12 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                tag_name='mac', attribute='address')
         accessors.XMLElementDict('bridge', self, parent_xpath='/',
                                  tag_name='bridge')
+        accessors.XMLElementDict('bandwidth_inbound', self,
+                                 parent_xpath='/bandwidth',
+                                 tag_name='inbound')
+        accessors.XMLElementDict('bandwidth_outbound', self,
+                                 parent_xpath='/bandwidth',
+                                 tag_name='outbound')
         super(NetworkXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def __check_undefined__(self, errmsg):
@@ -289,6 +343,30 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             xmltreefile.remove(element)
             xmltreefile.write()
 
+    def get_portgroup(self):
+        try:
+            portgroup_root = self.xmltreefile.reroot('/portgroup')
+        except KeyError, detail:
+            raise xcepts.LibvirtXMLError(detail)
+        portgroup_xml = PortgroupXML(virsh_instance=self.dict_get('virsh'))
+        portgroup_xml.xmltreefile = portgroup_root
+        return portgroup_xml
+
+    def set_portgroup(self, value):
+        if not issubclass(type(value), PortgroupXML):
+            raise xcepts.LibvirtXMLError("value must be a PortgroupXML"
+                                         "instance or subclass.")
+        self.del_portgroup()
+        root = self.xmltreefile.getroot()
+        root.append(value.xmltreefile.getroot())
+        self.xmltreefile.write()
+
+    def del_portgroup(self):
+        element = self.xmltreefile.find("/portgroup")
+        if element is not None:
+            self.xmltreefile.remove(element)
+            self.xmltreefile.write()
+
 
 class NetworkXML(NetworkXMLBase):
 
@@ -374,3 +452,50 @@ class NetworkXML(NetworkXMLBase):
         except xcepts.LibvirtXMLError, detail:
             # network already gone
             logging.warning(detail)
+
+    def exists(self):
+        """
+        Return True if network already exists.
+        """
+        cmd_result = self.virsh.net_uuid(self.name)
+        return (cmd_result.exit_status == 0)
+
+    def undefine(self):
+        """
+        Undefine network witch name is self.name.
+        """
+        self.virsh.net_destroy(self.name)
+        cmd_result = self.virsh.net_undefine(self.name)
+        if cmd_result.exit_status:
+            raise xcepts.LibvirtXMLError("Failed to undefine network %s.\n"
+                                         "Detail: %s" %
+                                         (self.name, cmd_result.stderr))
+
+    def define(self):
+        """
+        Define network from self.xml.
+        """
+        cmd_result = self.virsh.net_define(self.xml)
+        if cmd_result.exit_status:
+            raise xcepts.LibvirtXMLError("Failed to define network %s.\n"
+                                         "Detail: %s" %
+                                         (self.name, cmd_result.stderr))
+
+    def start(self):
+        """
+        Start network with self.virsh.
+        """
+        cmd_result = self.virsh.net_start(self.name)
+        if cmd_result.exit_status:
+            raise xcepts.LibvirtXMLError("Failed to start network %s.\n"
+                                         "Detail: %s" %
+                                         (self.name, cmd_result.stderr))
+
+    def sync(self):
+        """
+        Make the change of "self" take effect on network.
+        """
+        if self.exists():
+            self.undefine()
+        self.define()
+        self.start()

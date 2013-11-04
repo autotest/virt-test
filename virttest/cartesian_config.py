@@ -495,12 +495,14 @@ class Label(object):
 
 
 class Node(object):
-    __slots__ = ["var_name", "name", "dep", "content", "children", "labels",
-                 "append_to_shortname", "failed_cases", "default", "q_dict"]
+    __slots__ = ["var_name", "name", "filename", "dep", "content", "children",
+                 "labels", "append_to_shortname", "failed_cases", "default",
+                 "q_dict"]
 
     def __init__(self):
         self.var_name = []
         self.name = []
+        self.filename = ""
         self.dep = []
         self.content = []
         self.children = []
@@ -878,6 +880,34 @@ class LApplyPreDict(LOperators):
 
     def __repr__(self):
         return "Apply_pre_dict: %s" % self.value
+
+
+class LUpdateFileMap(LOperators):
+    __slots__ = ["shortname", "dest"]
+    identifier = "update_file_map"
+
+    def set_operands(self, filename, name, dest="_name_map_file"):
+        # pylint: disable=W0201
+        self.name = name
+        # pylint: disable=W0201
+        if filename == "<string>":
+            self.shortname = filename
+        else:
+            self.shortname = os.path.basename(filename)
+
+        self.dest = dest
+        return self
+
+    def apply_to_dict(self, d):
+        dest = self.dest
+        if not dest in d:
+            d[dest] = {}
+
+        if self.shortname in d[dest]:
+            old_name = d[dest][self.shortname]
+            d[dest][self.shortname] = "%s.%s" % (self.name, old_name)
+        else:
+            d[dest][self.shortname] = self.name
 
 
 spec_iden = "_-"
@@ -1303,6 +1333,7 @@ class Parser(object):
 
         :param filename: Path of the configuration file.
         """
+        self.node.filename = filename
         self.node = self._parse(Lexer(FileReader(filename)), self.node)
         self.filename = filename
 
@@ -1312,6 +1343,7 @@ class Parser(object):
 
         :param s: String to parse.
         """
+        self.node.filename = StrReader("").filename
         self.node = self._parse(Lexer(StrReader(s)), self.node)
 
     def only_filter(self, variant):
@@ -1532,6 +1564,8 @@ class Parser(object):
                         else:
                             node3.name = [Label(str(n)) for n in name]
 
+                        # Update mapping name to file
+
                         node3.dep = deps
 
                         if meta_with_default:
@@ -1546,6 +1580,23 @@ class Parser(object):
                             already_default = True
 
                         node3.append_to_shortname = not is_default
+
+                        op = LUpdateFileMap()
+                        op.set_operands(lexer.filename,
+                                        ".".join(str(x)
+                                        for x in node3.name))
+                        node3.content += [(lexer.filename,
+                                           lexer.linenum,
+                                           op)]
+
+                        op = LUpdateFileMap()
+                        op.set_operands(lexer.filename,
+                                        ".".join(str(x.name)
+                                        for x in node3.name),
+                                        "_short_name_map_file")
+                        node3.content += [(lexer.filename,
+                                           lexer.linenum,
+                                           op)]
 
                         if node3.default and self.defaults:
                             # Move default variant in front of rest
@@ -1800,6 +1851,7 @@ class Parser(object):
         labels = node.labels
         # Get the current name
         name = ".".join([str(label) for label in ctx])
+
         if node.name:
             self._debug("checking out %r", name)
 
@@ -1846,7 +1898,7 @@ class Parser(object):
         if not node.children:
             self._debug("    reached leaf, returning it")
             d = {"name": name, "dep": dep,
-                 "shortname": ".".join([str(sn) for sn in shortname])}
+                 "shortname": ".".join([str(sn.name) for sn in shortname])}
             for _, _, op in new_content:
                 op.apply_to_dict(d)
             yield d

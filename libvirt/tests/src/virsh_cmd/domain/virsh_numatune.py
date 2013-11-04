@@ -1,5 +1,6 @@
 import re
 import logging
+from virttest.utils_test.libvirt import cpus_parser
 from autotest.client.shared import error, utils
 from virttest import libvirt_xml, virsh, utils_libvirtd
 try:
@@ -19,53 +20,6 @@ def num_numa_nodes():
         return int(mobj.group(1))
     else:
         return 0
-
-
-def nodeset_parser(nodeset):
-    """
-    Parse a list of numa nodes, its syntax is a comma separated list,
-    with '-' for ranges and '^' for excluding a node.
-    :param nodeset: NUMA node selections to set
-    """
-    hyphens = []
-    carets = []
-    commas = []
-    others = []
-
-    if nodeset is None:
-        return None
-
-    else:
-        if "," in nodeset:
-            nodeset_list = re.split(",", nodeset)
-            for nodeset in nodeset_list:
-                if "-" in nodeset:
-                    tmp = re.split("-", nodeset)
-                    hyphens = hyphens + range(int(tmp[0]), int(tmp[-1]) + 1)
-                elif "^" in nodeset:
-                    tmp = re.split(r"\^", nodeset)[-1]
-                    carets.append(int(tmp))
-                else:
-                    try:
-                        commas.append(int(nodeset))
-                    except ValueError:
-                        logging.error("The nodeset has to be an "
-                                      "integer. (%s)", nodeset)
-        elif "-" in nodeset:
-            tmp = re.split("-", nodeset)
-            hyphens = range(int(tmp[0]), int(tmp[-1]) + 1)
-        elif "^" in nodeset:
-            tmp = re.split("^", nodeset)[-1]
-            carets.append(int(tmp))
-        else:
-            try:
-                others.append(int(nodeset))
-                return others
-            except ValueError:
-                logging.error("The nodeset has to be an "
-                              "integer. (%s)", nodeset)
-
-        return list(set(hyphens).union(set(commas)).difference(set(carets)))
 
 
 def check_numatune_xml(params):
@@ -104,8 +58,8 @@ def check_numatune_xml(params):
     # The actual nodeset value is different with guest XML configuration,
     # so need to compare them via a middle result, for example, if you
     # set nodeset is '0,1,2' then it will be a list '0-2' in guest XML
-    nodeset = nodeset_parser(nodeset)
-    nodeset_from_xml = nodeset_parser(nodeset_from_xml)
+    nodeset = cpus_parser(nodeset)
+    nodeset_from_xml = cpus_parser(nodeset_from_xml)
 
     if nodeset and nodeset != nodeset_from_xml:
         logging.error("To expect %s: %s", nodeset, nodeset_from_xml)
@@ -178,7 +132,7 @@ def set_numa_parameter(params):
             raise error.TestFail("Unexpected return code %d" % status)
     elif status_error == "no":
         if status:
-            if len(nodeset_parser(nodeset)) > num_numa_nodes():
+            if len(cpus_parser(nodeset)) > num_numa_nodes():
                 raise error.TestNAError("Host does not support requested"
                                         " nodeset")
             else:

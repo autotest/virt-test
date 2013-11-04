@@ -59,6 +59,7 @@ libaio-devel
 perl-Time-HiRes
 glibc-devel
 glibc-static
+scsi-target-utils
 
 %post
 echo "OS install is completed" > /dev/ttyS0

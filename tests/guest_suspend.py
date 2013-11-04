@@ -2,7 +2,7 @@ from autotest.client.shared import error
 from virttest import utils_test
 
 
-class GuestSuspendBaseTest(utils_test.GuestSuspend):
+class GuestSuspendBaseTest(utils_test.qemu.GuestSuspend):
 
     def do_guest_suspend(self, **args):
         suspend_type = args.get("suspend_type", self.SUSPEND_TYPE_MEM)

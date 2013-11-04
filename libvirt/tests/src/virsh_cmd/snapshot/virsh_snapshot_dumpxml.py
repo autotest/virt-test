@@ -7,6 +7,25 @@ from virttest import virsh, utils_test
 from virttest.libvirt_xml import vm_xml
 
 
+def recovery_from_snapshot(vmxml, snap_name_list):
+    """
+    Do recovery after snapshot
+
+    :param vmxml: VMXML object with recovery xml in it
+    :param snap_name_list: The list of snapshot name you want to remove
+    """
+    vmxml.undefine("--snapshots-metadata")
+    vmxml.define()
+    logging.debug("xml is %s", vmxml.dict_get('xml'))
+
+    # Delete useless disk snapshot file
+    dom_xml = vmxml.dict_get('xml')
+    disk_path = dom_xml.find('devices/disk/source').get('file')
+    for name in snap_name_list:
+        snap_disk_path = disk_path.split(".")[0] + "." + name
+        os.system('rm -f %s' % snap_disk_path)
+
+
 def add_security_info(vmxml, passwd):
     """
     Add passwd for graphic
@@ -188,4 +207,4 @@ def run_virsh_snapshot_dumpxml(test, params, env):
 
     finally:
         # Recovery from backup xml
-        utils_test.recovery_from_snapshot(vmxml_backup, snap_name.split())
+        recovery_from_snapshot(vmxml_backup, snap_name.split())

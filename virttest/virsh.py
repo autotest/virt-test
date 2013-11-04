@@ -549,24 +549,19 @@ def setvcpus(name, count, extra="", **dargs):
     return command(cmd, **dargs)
 
 
-def vcpupin(name, vcpu, cpu, **dargs):
+def vcpupin(name, vcpu, cpu_list, options="", **dargs):
     """
     Changes the cpu affinity for respective vcpu.
 
     :param name: name of domain
     :param vcpu: virtual CPU to modify
-    :param cpu: physical CPU specification (string)
+    :param cpu_list: physical CPU specification (string)
     :param dargs: standardized virsh function API keywords
-    :return: True operation was successful
+    :param options: --live, --current or --config.
+    :return: CmdResult object.
     """
-    dargs['ignore_status'] = False
-    try:
-        cmd_vcpupin = "vcpupin %s %s %s" % (name, vcpu, cpu)
-        command(cmd_vcpupin, **dargs)
-
-    except error.CmdError, detail:
-        logging.error("Virsh vcpupin VM %s failed:\n%s", name, detail)
-        return False
+    cmd_vcpupin = "vcpupin %s %s %s %s" % (name, vcpu, cpu_list, options)
+    return command(cmd_vcpupin, **dargs)
 
 
 def vcpuinfo(name, **dargs):
@@ -770,6 +765,9 @@ def screenshot(name, filename, **dargs):
     :param dargs: standardized virsh function API keywords
     :return: filename
     """
+    # Don't take screenshots of shut-off domains
+    if is_dead(name, **dargs):
+        return None
     global SCREENSHOT_ERROR_COUNT
     dargs['ignore_status'] = False
     try:
@@ -804,19 +802,15 @@ def dumpxml(name, extra="", to_file="", **dargs):
     :param name: VM name
     :param to_file: optional file to write XML output to
     :param dargs: standardized virsh function API keywords
-    :return: standard output from command
+    :return: CmdResult object.
     """
-    dargs['ignore_status'] = True
     cmd = "dumpxml %s %s" % (name, extra)
     result = command(cmd, **dargs)
     if to_file:
         result_file = open(to_file, 'w')
         result_file.write(result.stdout.strip())
         result_file.close()
-    if result.exit_status:
-        raise error.CmdError(cmd, result,
-                             "Virsh dumpxml returned non-zero exit status")
-    return result.stdout.strip()
+    return result
 
 
 def domifstat(name, interface, **dargs):
@@ -926,10 +920,12 @@ def is_dead(name, **dargs):
         state = domstate(name, **dargs).stdout.strip()
     except error.CmdError:
         return True
-    if state in ('running', 'idle', 'no state', 'paused'):
-        return False
-    else:
+    if state not in ('running', 'idle', 'paused', 'in shutdown', 'shut off',
+                     'crashed', 'pmsuspended', 'no state'):
+        logging.debug("State '%s' not known", state)
+    if state in ('shut off', 'crashed', 'no state'):
         return True
+    return False
 
 
 def suspend(name, **dargs):
@@ -1096,7 +1092,9 @@ def domain_exists(name, **dargs):
         command("domstate %s" % name, **dargs)
         return True
     except error.CmdError, detail:
-        logging.warning("VM %s does not exist:\n%s", name, detail)
+        logging.warning("VM %s does not exist", name)
+        if dargs.get('debug', False):
+            logging.warning(str(detail))
         return False
 
 
@@ -1138,44 +1136,63 @@ def migrate_setmaxdowntime(domain, downtime, extra=None, **dargs):
     return command(cmd, **dargs)
 
 
-def attach_device(name, xml_file, extra="", **dargs):
+def _adu_device(action, domainarg=None, filearg=None,
+                domain_opt=None, file_opt=None,
+                flagstr=None, **dargs):
     """
-    Attach a device to VM.
+    Private helper for attach, detach, update device commands
+    """
+    # N/B: Parameter order is significant: RH BZ 1018369
+    cmd = action
+    if domain_opt is not None:
+        cmd += " --domain %s" % domain_opt
+    if domainarg is not None:
+        cmd += " %s" % domainarg
+    if file_opt is not None:
+        cmd += " --file %s" % file_opt
+    if filearg is not None:
+        cmd += " %s" % filearg
+    if flagstr is not None:
+        cmd += " %s" % flagstr
+    return command(cmd, **dargs)
 
-    :param name: name of guest
-    :param xml_file: xml describing device to detach
-    :param extra: additional arguments to command
+
+def attach_device(domainarg=None, filearg=None,
+                  domain_opt=None, file_opt=None,
+                  flagstr=None, **dargs):
+    """
+    Attach a device using full parameter/argument set.
+
+    :param domainarg: Domain name (first pos. parameter)
+    :param filearg: File name (second pos. parameter)
+    :param domain_opt: Option to --domain parameter
+    :param file_opt: Option to --file parameter
+    :param flagstr: string of "--force, --persistent, etc."
     :param dargs: standardized virsh function API keywords
-    :return: True operation was successful
+    :return: CmdResult instance
     """
-    cmd = "attach-device --domain %s --file %s %s" % (name, xml_file, extra)
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError:
-        logging.error("Attaching device to VM %s failed.", name)
-        return False
+    return _adu_device("attach-device", domainarg=domainarg, filearg=filearg,
+                       domain_opt=domain_opt, file_opt=file_opt,
+                       flagstr=flagstr, **dargs)
 
 
-def detach_device(name, xml_file, extra="", **dargs):
+def detach_device(domainarg=None, filearg=None,
+                  domain_opt=None, file_opt=None,
+                  flagstr=None, **dargs):
     """
-    Detach a device from VM.
+    Attach a device using full parameter/argument set.
 
-    :param name: name of guest
-    :param xml_file: xml describing device to detach
-    :param extra: additional arguments to command
+    :param domainarg: Domain name (first pos. parameter)
+    :param filearg: File name (second pos. parameter)
+    :param domain_opt: Option to --domain parameter
+    :param file_opt: Option to --file parameter
+    :param flagstr: string of "--force, --persistent, etc."
     :param dargs: standardized virsh function API keywords
-    :return: True operation was successful
+    :return: CmdResult instance
     """
-    cmd = "detach-device --domain %s --file %s %s" % (name, xml_file, extra)
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError:
-        logging.error("Detaching device from VM %s failed.", name)
-        return False
+    return _adu_device("detach-device", domainarg=domainarg, filearg=filearg,
+                       domain_opt=domain_opt, file_opt=file_opt,
+                       flagstr=flagstr, **dargs)
 
 
 def update_device(domainarg=None, filearg=None,
@@ -1193,17 +1210,9 @@ def update_device(domainarg=None, filearg=None,
     :return: CmdResult instance
     """
     cmd = "update-device"
-    if domainarg is not None:  # Allow testing of ""
-        cmd += " %s" % domainarg
-    if filearg is not None:  # Allow testing of 0 and ""
-        cmd += " %s" % filearg
-    if domain_opt is not None:  # Allow testing of --domain ""
-        cmd += " --domain %s" % domain_opt
-    if file_opt is not None:  # Allow testing of --file ""
-        cmd += " --file %s" % file_opt
-    if len(flagstr) > 0:
-        cmd += " %s" % flagstr
-    return command(cmd, **dargs)
+    return _adu_device("update-device", domainarg=domainarg, filearg=filearg,
+                       domain_opt=domain_opt, file_opt=file_opt,
+                       flagstr=flagstr, **dargs)
 
 
 def attach_disk(name, source, target, extra="", **dargs):
@@ -2495,4 +2504,159 @@ def node_memtune(shm_pages_to_scan=None, shm_sleep_millisecs=None,
     if options:
         cmd += " --%s" % options
 
+    return command(cmd, **dargs)
+
+
+def iface_begin(**dargs):
+    """
+    Create a snapshot of current interfaces settings
+
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("iface-begin", **dargs)
+
+
+def iface_commit(**dargs):
+    """
+    Commit changes made since iface-begin and free restore point
+
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("iface-commit", **dargs)
+
+
+def iface_rollback(**dargs):
+    """
+    Rollback to previous saved configuration created via iface-begin
+
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("iface-rollback", **dargs)
+
+
+def emulatorpin(name, cpulist=None, options=None, **dargs):
+    """
+    Control or query domain emulator affinity
+    :param name: name of domain
+    :param cpulist: a list of physical CPU numbers
+    :param options: options may be live, config and current
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "emulatorpin %s" % name
+    if options:
+        cmd += " --%s" % options
+    if cpulist:
+        cmd += " --cpulist %s" % cpulist
+
+    return command(cmd, **dargs)
+
+
+def secret_list(options="", **dargs):
+    """
+    Get list of secret.
+
+    :param options: the option may be '--ephemeral'
+    :param dargs: standardized virsh function API keywords
+    :return: list of secret
+    """
+    # CmdResult is handled here, force ignore_status
+    dargs['ignore_status'] = True
+    cmd = "secret-list %s" % options
+    if options:
+        cmd += " %s" % options
+
+    result = command(cmd, **dargs)
+    if result.exit_status != 0:
+        raise error.CmdError(cmd, result, "Failed to get list of secret")
+
+    return result
+
+
+def secret_define(xml_file, options=None, **dargs):
+    """
+    Return True on successful secret define.
+
+    :param xml_file: secret XML file
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "secret-define --file %s" % xml_file
+    if options is not None:
+        cmd += " %s" % options
+    logging.debug("Define secret from %s", xml_file)
+    return command(cmd, **dargs)
+
+
+def secret_undefine(uuid, options=None, **dargs):
+    """
+    Return cmd result of secret undefine.
+
+    :param uuid: secret UUID
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "secret-undefine %s" % uuid
+    if options is not None:
+        cmd += " %s" % options
+
+    logging.debug("Undefine secret %s", uuid)
+    return command(cmd, **dargs)
+
+
+def secret_dumpxml(uuid, to_file="", options=None, **dargs):
+    """
+    Return the secret information as an XML dump.
+
+    :param uuid: secret UUID
+    :param to_file: optional file to write XML output to
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
+    """
+    dargs['ignore_status'] = True
+    cmd = "secret-dumpxml %s" % uuid
+    if options is not None:
+        cmd += " %s" % options
+    result = command(cmd, **dargs)
+    if to_file:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    if result.exit_status:
+        raise error.CmdError(cmd, result,
+                             "Virsh secret-dumpxml returned \
+                             non-zero exit status")
+    return result
+
+
+def secret_get_value(uuid, options=None, **dargs):
+    """
+    Get a secret value
+
+    :param uuid: secret UUID
+    :return: CmdResult object.
+    """
+    cmd = "secret-get-value --secret %s" % uuid
+    if options:
+        cmd += " --%s" % options
+
+    return command(cmd, **dargs)
+
+
+def secret_set_value(uuid, base64, options=None, **dargs):
+    """
+    Set a secret value
+
+    :param uuid: secret UUID
+    :param base64: base64-encoded secret value
+    :return: CmdResult object.
+    """
+    cmd = "secret-set-value --secret %s" % uuid
+    if base64:
+        cmd += " --base64 %s" % base64
+    if options:
+        cmd += " --%s" % options
     return command(cmd, **dargs)

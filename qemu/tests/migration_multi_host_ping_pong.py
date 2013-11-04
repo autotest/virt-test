@@ -30,11 +30,11 @@ def run_migration_multi_host_ping_pong(test, params, env):
     :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.MultihostMigration
+    base_class = utils_test.qemu.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.MultihostMigrationFd
+        base_class = utils_test.qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
+        base_class = utils_test.qemu.MultihostMigrationExec
 
     class TestMultihostMigration(base_class):
 
@@ -67,7 +67,7 @@ def run_migration_multi_host_ping_pong(test, params, env):
             """
             for vm in mig_data.vms:
                 vm.resume()
-                if not utils_test.guest_active(vm):
+                if not utils_test.qemu.guest_active(vm):
                     raise error.TestFail("Guest not active after migration")
 
             logging.info("Migrated guest appears to be running")

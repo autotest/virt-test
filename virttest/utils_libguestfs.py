@@ -534,7 +534,7 @@ class GuestfishPersistent(Guestfish):
         This call creates a file called "path". The content of the file
         is the string "content" (which can contain any 8 bit data).
         """
-        return self.inner_cmd("write %s %s" % (path, content))
+        return self.inner_cmd("write '%s' '%s'" % (path, content))
 
     def write_append(self, path, content):
         """
@@ -543,7 +543,7 @@ class GuestfishPersistent(Guestfish):
         This call appends "content" to the end of file "path".
         If "path" does not exist, then a new file is created.
         """
-        return self.inner_cmd("write-append %s %s" % (path, content))
+        return self.inner_cmd("write-append '%s' '%s'" % (path, content))
 
     def inspect_os(self):
         """
@@ -554,6 +554,78 @@ class GuestfishPersistent(Guestfish):
         looking for operating systems.
         """
         return self.inner_cmd("inspect-os")
+
+    def inspect_get_roots(self):
+        """
+        inspect-get-roots - return list of operating systems found by
+        last inspection
+
+        This function is a convenient way to get the list of root devices
+        """
+        return self.inner_cmd("inspect-get-roots")
+
+    def inspect_get_arch(self, root):
+        """
+        inspect-get-arch - get architecture of inspected operating system
+
+        This returns the architecture of the inspected operating system.
+        """
+        return self.inner_cmd("inspect-get-arch %s" % root)
+
+    def inspect_get_distro(self, root):
+        """
+        inspect-get-distro - get distro of inspected operating system
+
+        This returns the distro (distribution) of the inspected
+        operating system.
+        """
+        return self.inner_cmd("inspect-get-distro %s" % root)
+
+    def inspect_get_filesystems(self, root):
+        """
+        inspect-get-filesystems - get filesystems associated with inspected
+        operating system
+
+        This returns a list of all the filesystems that we think are associated
+        with this operating system.
+        """
+        return self.inner_cmd("inspect-get-filesystems %s" % root)
+
+    def inspect_get_hostname(self, root):
+        """
+        inspect-get-hostname - get hostname of the operating system
+
+        This function returns the hostname of the operating system as found by
+        inspection of the guest's configuration files.
+        """
+        return self.inner_cmd("inspect-get-hostname %s" % root)
+
+    def inspect_get_major_version(self, root):
+        """
+        inspect-get-major-version - get major version of inspected operating
+        system
+
+        This returns the major version number of the inspected operating system.
+        """
+        return self.inner_cmd("inspect-get-major-version %s" % root)
+
+    def inspect_get_minor_version(self, root):
+        """
+        inspect-get-minor-version - get minor version of inspected operating
+        system
+
+        This returns the minor version number of the inspected operating system
+        """
+        return self.inner_cmd("inspect-get-minor-version %s" % root)
+
+    def inspect_get_mountpoints(self, root):
+        """
+        inspect-get-mountpoints - get mountpoints of inspected operating system
+
+        This returns a hash of where we think the filesystems associated with
+        this operating system should be mounted.
+        """
+        return self.inner_cmd("inspect-get-mountpoints %s" % root)
 
     def list_filesystems(self):
         """
@@ -572,6 +644,97 @@ class GuestfishPersistent(Guestfish):
         List all the block devices.
         """
         return self.inner_cmd("list-devices")
+
+    def tar_out(self, directory, tarfile):
+        """
+        tar-out - pack directory into tarfile
+
+        This command packs the contents of "directory" and downloads it
+        to local file "tarfile".
+        """
+        return self.inner_cmd("tar-out %s %s" % (directory, tarfile))
+
+    def tar_in(self, tarfile, directory):
+        """
+        tar-in - unpack tarfile to directory
+
+        This command uploads and unpacks local file "tarfile"
+        (an *uncompressed* tar file) into "directory".
+        """
+        return self.inner_cmd("tar-in %s %s" % (tarfile, directory))
+
+    def copy_out(self, remote, localdir):
+        """
+        copy-out - copy remote files or directories out of an image
+
+        "copy-out" copies remote files or directories recursively out of the
+        disk image, placing them on the host disk in a local directory called
+        "localdir" (which must exist).
+        """
+        return self.inner_cmd("copy-out %s %s" % (remote, localdir))
+
+    def copy_in(self, local, remotedir):
+        """
+        copy-in - copy local files or directories into an image
+
+        "copy-in" copies local files or directories recursively into the disk
+        image, placing them in the directory called "/remotedir" (which must
+        exist).
+        """
+        return self.inner_cmd("copy-in %s /%s" % (local, remotedir))
+
+    def rm(self, path):
+        """
+        rm - remove a file
+
+        Remove the single file "path".
+        """
+        return self.inner_cmd("rm %s" % path)
+
+    def is_file(self, path):
+        """
+        is-file - test if a regular file
+
+        This returns "true" if and only if there is a regular file with the
+        given "path" name.
+        """
+        return self.inner_cmd("is-file %s" % path)
+
+    def cp(self, src, dest):
+        """
+        cp - copy a file
+
+        This copies a file from "src" to "dest" where "dest" is either a
+        destination filename or destination directory.
+        """
+        return self.inner_cmd("cp %s %s" % (src, dest))
+
+    def checksum(self, csumtype, path):
+        """
+        checksum - compute MD5, SHAx or CRC checksum of file
+
+        This call computes the MD5, SHAx or CRC checksum of the file named
+        "path".
+        """
+        return self.inner_cmd("checksum %s %s" % (csumtype, path))
+
+    def is_ready(self):
+        """
+        is-ready - is ready to accept commands
+
+        This returns true if this handle is ready to accept commands
+        (in the "READY" state).
+        """
+        return self.inner_cmd("is-ready")
+
+    def part_list(self, device):
+        """
+        part-list - list partitions on a device
+
+        This command parses the partition table on "device" and
+        returns the list of partitions found.
+        """
+        return self.inner_cmd("part-list %s" % device)
 
 
 # libguestfs module functions follow #####
@@ -623,4 +786,258 @@ def virt_edit_cmd(disk_or_domain, file_path, options=None,
     if expr is not None:
         cmd += " -e '%s'" % expr
 
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_clone_cmd(original, newname=None, autoclone=False, **dargs):
+    """
+    Clone existing virtual machine images.
+
+    @param original: Name of the original guest to be cloned.
+    @param newname: Name of the new guest virtual machine instance.
+    @param autoclone: Generate a new guest name, and paths for new storage.
+    @param dargs: Standardized function API keywords. There are many
+                  options not listed, they can be passed in dargs.
+    """
+    def storage_config(cmd, options):
+        """Configure options for storage"""
+        # files should be a list
+        files = options.get("files", [])
+        if len(files):
+            for file in files:
+                cmd += " --file '%s'" % file
+        if options.get("nonsparse") is not None:
+            cmd += " --nonsparse"
+        return cmd
+
+    def network_config(cmd, options):
+        """Configure options for network"""
+        mac = options.get("mac")
+        if mac is not None:
+            cmd += " --mac '%s'" % mac
+        return cmd
+
+    cmd = "virt-clone --original '%s'" % original
+    if newname is not None:
+        cmd += " --name '%s'" % newname
+    if autoclone is True:
+        cmd += " --auto-clone"
+    # Many more options can be added if necessary.
+    cmd = storage_config(cmd, dargs)
+    cmd = network_config(cmd, dargs)
+
+    ignore_status = dargs.get("ignore_status", True)
+    debug = dargs.get("debug", False)
+    timeout = dargs.get("timeout", 60)
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_sparsify_cmd(indisk, outdisk, compress=False, convert=None,
+                      format=None, ignore_status=True, debug=False,
+                      timeout=60):
+    """
+    Make a virtual machine disk sparse.
+
+    @param indisk: The source disk to be sparsified.
+    @param outdisk: The destination disk.
+    """
+    cmd = "virt-sparsify"
+    if compress is True:
+        cmd += " --compress"
+    if format is not None:
+        cmd += " --format '%s'" % format
+    cmd += " '%s'" % indisk
+
+    if convert is not None:
+        cmd += " --convert '%s'" % convert
+    cmd += " '%s'" % outdisk
+    # More options can be added if necessary.
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_resize_cmd(indisk, outdisk, **dargs):
+    """
+    Resize a virtual machine disk.
+
+    @param indisk: The source disk to be resized
+    @param outdisk: The destination disk.
+    """
+    cmd = "virt-resize"
+    ignore_status = dargs.get("ignore_status", True)
+    debug = dargs.get("debug", False)
+    timeout = dargs.get("timeout", 60)
+    resize = dargs.get("resize")
+    resized_size = dargs.get("resized_size", "0")
+    expand = dargs.get("expand")
+    shrink = dargs.get("shrink")
+    ignore = dargs.get("ignore")
+    delete = dargs.get("delete")
+    if resize is not None:
+        cmd += " --resize %s=%s" % (resize, resized_size)
+    if expand is not None:
+        cmd += " --expand %s" % expand
+    if shrink is not None:
+        cmd += " --shrink %s" % shrink
+    if ignore is not None:
+        cmd += " --ignore %s" % ignore
+    if delete is not None:
+        cmd += " --delete %s" % delete
+    cmd += " %s %s" % (indisk, outdisk)
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_list_partitions_cmd(disk_or_domain, long=False, total=False,
+                             human_readable=False, ignore_status=True,
+                             debug=False, timeout=60):
+    """
+    "virt-list-partitions" is a command line tool to list the partitions
+    that are contained in a virtual machine or disk image.
+
+    @param disk_or_domain: a disk or a domain to be mounted
+    """
+    cmd = "virt-list-partitions %s" % disk_or_domain
+    if long is True:
+        cmd += " --long"
+    if total is True:
+        cmd += " --total"
+    if human_readable is True:
+        cmd += " --human-readable"
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def guestmount(disk_or_domain, mountpoint, inspector=False,
+               readonly=False, **dargs):
+    """
+    guestmount - Mount a guest filesystem on the host using FUSE and libguestfs.
+
+    @param disk_or_domain: a disk or a domain to be mounted
+           If you need to mount a disk, set is_disk to True in dargs
+    @param mountpoint: the mountpoint of filesystems
+    @param inspector: mount all filesystems automatically
+    @param readonly: if mount filesystem with readonly option
+    """
+    def get_special_mountpoint(cmd, options):
+        special_mountpoints = options.get("special_mountpoints", [])
+        for mountpoint in special_mountpoints:
+            cmd += " -m %s" % mountpoint
+        return cmd
+
+    cmd = "guestmount"
+    ignore_status = dargs.get("ignore_status", True)
+    debug = dargs.get("debug", False)
+    timeout = dargs.get("timeout", 60)
+    # If you need to mount a disk, set is_disk to True
+    is_disk = dargs.get("is_disk", False)
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
+    if inspector is True:
+        cmd += " -i"
+    if readonly is True:
+        cmd += " --ro"
+    cmd = get_special_mountpoint(cmd, dargs)
+    cmd += " %s" % mountpoint
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_filesystems(disk_or_domain, **dargs):
+    """
+    virt-filesystems - List filesystems, partitions, block devices,
+    LVM in a virtual machine or disk image
+
+    @param disk_or_domain: a disk or a domain to be mounted
+           If you need to mount a disk, set is_disk to True in dargs
+    """
+    def get_display_type(cmd, options):
+        all = options.get("all", False)
+        filesystems = options.get("filesystems", False)
+        extra = options.get("extra", False)
+        partitions = options.get("partitions", False)
+        block_devices = options.get("block_devices", False)
+        logical_volumes = options.get("logical_volumes", False)
+        volume_groups = options.get("volume_groups", False)
+        physical_volumes = options.get("physical_volumes", False)
+        long_format = options.get("long_format", False)
+        human_readable = options.get("human_readable", False)
+        if all is True:
+            cmd += " --all"
+        if filesystems is True:
+            cmd += " --filesystems"
+        if extra is True:
+            cmd += " --extra"
+        if partitions is True:
+            cmd += " --partitions"
+        if block_devices is True:
+            cmd += " --block_devices"
+        if logical_volumes is True:
+            cmd += " --logical_volumes"
+        if volume_groups is True:
+            cmd += " --volume_groups"
+        if physical_volumes is True:
+            cmd += " --physical_volumes"
+        if long_format is True:
+            cmd += " --long"
+        if human_readable is True:
+            cmd += " -h"
+        return cmd
+
+    cmd = "virt-filesystems"
+    # If you need to mount a disk, set is_disk to True
+    is_disk = dargs.get("is_disk", False)
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
+    cmd = get_display_type(cmd, dargs)
+    return lgf_command(cmd, **dargs)
+
+
+def virt_list_partitions(disk_or_domain, long=False, total=False,
+                         human_readable=False, ignore_status=True,
+                         debug=False, timeout=60):
+    """
+    "virt-list-partitions" is a command line tool to list the partitions
+    that are contained in a virtual machine or disk image.
+
+    @param disk_or_domain: a disk or a domain to be mounted
+    """
+    cmd = "virt-list-partitions %s" % disk_or_domain
+    if long is True:
+        cmd += " --long"
+    if total is True:
+        cmd += " --total"
+    if human_readable is True:
+        cmd += " --human-readable"
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_list_filesystems(disk_or_domain, format=None, long=False,
+                          all=False, ignore_status=True, debug=False,
+                          timeout=60):
+    """
+    "virt-list-filesystems" is a command line tool to list the filesystems
+    that are contained in a virtual machine or disk image.
+
+    @param disk_or_domain: a disk or a domain to be mounted
+    """
+    cmd = "virt-list-filesystems %s" % disk_or_domain
+    if format is not None:
+        cmd += " --format %s" % format
+    if long is True:
+        cmd += " --long"
+    if all is True:
+        cmd += " --all"
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_df(disk_or_domain, ignore_status=True, debug=False, timeout=60):
+    """
+    "virt-df" is a command line tool to display free space on
+    virtual machine filesystems.
+    """
+    cmd = "virt-df %s" % disk_or_domain
     return lgf_command(cmd, ignore_status, debug, timeout)

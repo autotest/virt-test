@@ -2,7 +2,7 @@ import re
 import logging
 import string
 from autotest.client.shared import error
-from virttest import utils_misc, aexpect, storage, utils_test, data_dir
+from virttest import utils_misc, aexpect, storage, utils_test, data_dir, arch
 
 
 @error.context_aware
@@ -104,7 +104,10 @@ def run_pci_hotplug(test, params, env):
 
         if pci_model == "scsi":
             pci_model = "scsi-disk"
-            controller_model = "lsi53c895a"
+            if arch.ARCH == 'ppc64':
+                controller_model = "spapr-vscsi"
+            else:
+                controller_model = "lsi53c895a"
             verify_supported_device(controller_model)
             controller_id = "controller-" + device_id
             controller_add_cmd = ("device_add %s,id=%s" %
@@ -254,7 +257,7 @@ def run_pci_hotplug(test, params, env):
     else:
         cmd_output = vm.monitor.human_monitor_cmd("help", debug=False)
 
-    cmd_type = utils_test.find_substring(str(cmd_output), "device_add",
+    cmd_type = utils_misc.find_substring(str(cmd_output), "device_add",
                                          "pci_add")
     if not cmd_output:
         raise error.TestError("Could find a suitable method for hotplugging"
@@ -263,7 +266,7 @@ def run_pci_hotplug(test, params, env):
     # Determine syntax of drive hotplug
     # __com.redhat_drive_add == qemu-kvm-0.12 on RHEL 6
     # drive_add == qemu-kvm-0.13 onwards
-    drive_cmd_type = utils_test.find_substring(str(cmd_output),
+    drive_cmd_type = utils_misc.find_substring(str(cmd_output),
                                                "__com.redhat_drive_add", "drive_add")
     if not drive_cmd_type:
         raise error.TestError("Could find a suitable method for hotplugging"

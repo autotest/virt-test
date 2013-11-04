@@ -7,7 +7,7 @@ import logging
 import random
 from autotest.client.shared import error
 from virttest import qemu_devices, qemu_qtree, utils_test, env_process
-from virttest import funcatexit
+from virttest import funcatexit, arch
 import time
 
 
@@ -140,6 +140,9 @@ def run_multi_disk_random_hotplug(test, params, env):
             elif fmt == 'lsi_scsi':
                 args['fmt'] = 'scsi-hd'
                 args['scsi_hba'] = 'lsi53c895a'
+            elif fmt == 'spapr_vscsi':
+                args['fmt'] = 'scsi-hd'
+                args['scsi_hba'] = 'spapr-vscsi'
             else:
                 args['fmt'] = fmt
             # Other params

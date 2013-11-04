@@ -58,7 +58,7 @@ libguestfs/cfg/guest-os.cfg
 libguestfs/cfg/machines.cfg
 libguestfs/cfg/subtests.cfg
 libguestfs/cfg/virtio-win.cfg
-tools/github/*.cache
+tools/github/*cache
 tmp
 .*.swp
 RELEASE-VERSION

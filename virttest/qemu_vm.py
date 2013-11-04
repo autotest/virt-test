@@ -354,6 +354,14 @@ class VM(virt_vm.BaseVM):
         def add_name(devices, name):
             return " -name '%s'" % name
 
+        def process_sandbox(devices, action):
+            if action == "add":
+                if devices.has_option("sandbox"):
+                    return " -sandbox on "
+            elif action == "rem":
+                if devices.has_option("sandbox"):
+                    return " -sandbox off "
+
         def add_human_monitor(devices, monitor_name, filename):
             if not devices.has_option("chardev"):
                 return " -monitor unix:'%s',server,nowait" % filename
@@ -493,7 +501,7 @@ class VM(virt_vm.BaseVM):
 
         def add_nic(devices, vlan, model=None, mac=None, device_id=None,
                     netdev_id=None, nic_extra_params=None, pci_addr=None,
-                    bootindex=None, queues=1):
+                    bootindex=None, queues=1, vectors=None):
             if model == 'none':
                 return
             if devices.has_option("device"):
@@ -523,8 +531,11 @@ class VM(virt_vm.BaseVM):
                 dev.set_param('model', model)
                 dev.set_param('macaddr', mac, 'NEED_QUOTE')
             dev.set_param('id', device_id, 'NEED_QUOTE')
-            if int(queues) > 1 and "virtio" in model:
-                dev.set_param('mq', 'on')
+            if "virtio" in model:
+                if int(queues) > 1:
+                    dev.set_param('mq', 'on')
+                if vectors:
+                    dev.set_param('vectors', vectors)
             if devices.has_option("netdev"):
                 dev.set_param('netdev', netdev_id)
             else:
@@ -1059,6 +1070,11 @@ class VM(virt_vm.BaseVM):
         # Add the VM's name
         devices.insert(StrDev('vmname', cmdline=add_name(devices, name)))
 
+        if params.get("qemu_sandbox", "on") == "on":
+            devices.insert(StrDev('sandbox', cmdline=process_sandbox(devices, "add")))
+        elif params.get("sandbox", "off") == "off":
+            devices.insert(StrDev('qemu_sandbox', cmdline=process_sandbox(devices, "rem")))
+
         devs = devices.machine_by_params(params)
         for dev in devs:
             devices.insert(dev)
@@ -1275,13 +1291,21 @@ class VM(virt_vm.BaseVM):
                     vhostfds = None
                 ifname = nic.get('ifname')
                 queues = nic.get("queues", 1)
-                # Handle the '-net nic' part
-                queues = nic.get("queues", 1)
+                # specify the number of MSI-X vectors that the card should have;
+                # this option currently only affects virtio cards
+                if nic_params.get("enable_msix_vectors") == "yes":
+                    if nic.has_key("vectors"):
+                        vectors = nic.vectors
+                    else:
+                        vectors = 2 * int(queues) + 1
+                else:
+                    vectors = None
 
+                # Handle the '-net nic' part
                 add_nic(devices, vlan, nic_model, mac,
                         device_id, netdev_id, nic_extra,
                         nic_params.get("nic_pci_addr"),
-                        bootindex, queues)
+                        bootindex, queues, vectors)
 
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 cmd = add_net(devices, vlan, nettype, ifname, tftp,
@@ -1652,7 +1676,7 @@ class VM(virt_vm.BaseVM):
         if option_roms:
             cmd = ""
             for opt_rom in option_roms.split():
-                cmd += add_option_rom(help, opt_rom)
+                cmd += add_option_rom(devices, opt_rom)
             if cmd:
                 devices.insert(StrDev('ROM', cmdline=cmd))
 
@@ -1684,7 +1708,7 @@ class VM(virt_vm.BaseVM):
                     for i in nic.tapfds.split(':'):
                         os.close(int(i))
                 if nic.vhostfds:
-                    for i in nic.tapfds.split(':'):
+                    for i in nic.vhostfds.split(':'):
                         os.close(int(i))
         except TypeError:
             pass
@@ -2167,7 +2191,7 @@ class VM(virt_vm.BaseVM):
                     session = self.login()
                 else:
                     session = self.serial_login()
-            except (virt_vm.VMInterfaceIndexError), e:
+            except (IndexError), e:
                 try:
                     session = self.serial_login()
                 except (remote.LoginError, virt_vm.VMError), e:
@@ -2540,7 +2564,8 @@ class VM(virt_vm.BaseVM):
         nic = self.virtnet[nic_index_or_name]
         error.context("removing netdev info from nic %s from vm %s" % (
                       nic, self.name))
-        for propertea in ['netdev_id', 'ifname', 'queues', 'tapfds', 'tapfd_ids']:
+        for propertea in ['netdev_id', 'ifname', 'queues',
+                          'tapfds', 'tapfd_ids', 'vectors']:
             if nic.has_key(propertea):
                 del nic[propertea]
 
@@ -2565,6 +2590,8 @@ class VM(virt_vm.BaseVM):
             nic.netdev_id = self.add_netdev(**dict(nic))
         nic.set_if_none('nic_model', params['nic_model'])
         nic.set_if_none('queues', params.get('queues', '1'))
+        if params.get("enable_msix_vectors") == "yes":
+            nic.set_if_none('vectors', 2 * int(nic.queues) + 1)
         return nic
 
     @error.context_aware
@@ -2669,8 +2696,11 @@ class VM(virt_vm.BaseVM):
         if nic.has_key('mac'):
             device_add_cmd += ",mac=%s" % nic.mac
         device_add_cmd += ",id=%s" % nic.nic_name
-        if int(nic['queues']) > 1 and nic['nic_model'] == 'virtio-net-pci':
-            device_add_cmd += ",mq=on"
+        if nic['nic_model'] == 'virtio-net-pci':
+            if int(nic['queues']) > 1:
+                device_add_cmd += ",mq=on"
+            if nic.has_key('vectors'):
+                device_add_cmd += ",vectors=%s" % nic.vectors
         device_add_cmd += nic.get('nic_extra_params', '')
         if nic.has_key('romfile'):
             device_add_cmd += ",romfile=%s" % nic.romfile
@@ -3197,7 +3227,7 @@ class VM(virt_vm.BaseVM):
         :param p_dict: Dictionary that contains parameters and its value used
                        to define specified block device.
 
-        @blocks_info: the results of monitor command 'info block'
+        :param blocks_info: the results of monitor command 'info block'
 
         :return: Matched block device name, None when not find any device.
         """

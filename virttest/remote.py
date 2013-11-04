@@ -10,7 +10,9 @@ import tempfile
 import aexpect
 import utils_misc
 import rss_client
+
 from autotest.client.shared import error
+from autotest.client import utils
 import data_dir
 
 
@@ -123,7 +125,8 @@ def handle_prompts(session, username, password, prompt, timeout=10,
     while True:
         try:
             match, text = session.read_until_last_line_matches(
-                [r"[Aa]re you sure", r"[Pp]assword:\s*", r"[Ll]ogin:\s*",
+                [r"[Aa]re you sure", r"[Pp]assword:\s*",
+                 r"(?<![Ll]ast).*[Ll]ogin:\s*$",  # Don't match "Last Login:"
                  r"[Cc]onnection.*closed", r"[Cc]onnection.*refused",
                  r"[Pp]lease wait", r"[Ww]arning", r"[Ee]nter.*username",
                  r"[Ee]nter.*password", prompt],
@@ -516,23 +519,6 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
     s_session = remote_login(c_type, src, s_port, s_name, s_passwd, c_prompt)
     d_session = remote_login(c_type, dst, s_port, d_name, d_passwd, c_prompt)
 
-    def send_cmd_safe(session, cmd, timeout=360):
-        logging.debug("Sending command: %s", cmd)
-        session.sendline(cmd)
-        output = ""
-        got_prompt = False
-        start_time = time.time()
-        # Wait for shell prompt until timeout.
-        while ((time.time() - start_time) < timeout and not got_prompt):
-            time.sleep(0.2)
-            session.sendline()
-            try:
-                output += session.read_up_to_prompt()
-                got_prompt = True
-            except aexpect.ExpectTimeoutError:
-                pass
-        return output
-
     def get_abs_path(session, filename, extension):
         """
         return file path drive+path
@@ -585,7 +571,7 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
             drive_path = get_abs_path(session, "sendfile", "exe")
             start_cmd = "start /b %ssendfile.exe %s" % (drive_path,
                                                         d_port)
-        send_cmd_safe(session, start_cmd)
+        session.cmd_output_safe(start_cmd)
         if not server_alive(session):
             raise error.TestError("Start udt server failed")
 
@@ -599,7 +585,7 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
             client_cmd = client_cmd_tmp % (drive_path, src, d_port,
                                            s_path.split("\\")[-1],
                                            d_path.split("\\")[-1])
-        send_cmd_safe(session, client_cmd, timeout)
+        session.cmd_output_safe(client_cmd, timeout)
 
     def stop_server(session):
         if c_type == "ssh":
@@ -607,7 +593,7 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
         else:
             stop_cmd = "taskkill /F /IM sendfile.exe"
         if server_alive(session):
-            send_cmd_safe(session, stop_cmd)
+            session.cmd_output_safe(stop_cmd)
 
     try:
         src_md5 = get_file_md5(s_session, s_path)
@@ -866,3 +852,68 @@ class RemoteFile(object):
                 lines.append("\n%s" % repl)
         self._write_local(lines)
         self._push_file()
+
+
+class RemoteRunner(object):
+
+    """
+    Class to provide a utils.run-like method to execute command on
+    remote host or guest. Provide a similar interface with utils.run
+    on local.
+    """
+
+    def __init__(self, client, host, port, username, password, prompt,
+                 linesep="\n", log_filename=None, timeout=240,
+                 internal_timeout=10):
+        """
+        Initialization of RemoteRunner. Init a session login to remote host or
+        guest.
+
+        :param client: The client to use ('ssh', 'telnet' or 'nc')
+        :param host: Hostname or IP address
+        :param port: Port to connect to
+        :param username: Username (if required)
+        :param password: Password (if required)
+        :param prompt: Shell prompt (regular expression)
+        :param linesep: The line separator to use when sending lines
+                (e.g. '\\n' or '\\r\\n')
+        :param log_filename: If specified, log all output to this file
+        :param timeout: Total time duration to wait for a successful login
+        :param internal_timeout: The maximal time duration (in seconds) to wait for
+                each step of the login procedure (e.g. the "Are you sure" prompt
+                or the password prompt)
+        :see: wait_for_login()
+        :raise: Whatever wait_for_login() raises
+        """
+        self.session = wait_for_login(client, host, port, username, password,
+                                      prompt, linesep, log_filename,
+                                      timeout, internal_timeout)
+        # Init stdout pipe and stderr pipe.
+        self.stdout_pipe = tempfile.mktemp()
+        self.stderr_pipe = tempfile.mktemp()
+
+    def run(self, command, timeout=60, ignore_status=False):
+        """
+        Method to provide a utils.run-like interface to execute command on
+        remote host or guest.
+
+        :param timeout: Total time duration to wait for command return.
+        :param ignore_status: If ignore_status=True, do not raise an exception,
+                              no matter what the exit code of the command is.
+                              Else, raise CmdError if exit code of command is not
+                              zero.
+        """
+        # Redirect the stdout and stderr to file, Deviding error message
+        # from output, and taking off the color of output. To return the same
+        # result with utils.run() function.
+        command = "%s 1>%s 2>%s" % (command, self.stdout_pipe, self.stderr_pipe)
+        status, _ = self.session.cmd_status_output(command, timeout=timeout)
+        output = self.session.cmd_output("cat %s;rm -f %s" %
+                                         (self.stdout_pipe, self.stdout_pipe))
+        errput = self.session.cmd_output("cat %s;rm -f %s" %
+                                        (self.stderr_pipe, self.stderr_pipe))
+        cmd_result = utils.CmdResult(command=command, exit_status=status,
+                                     stdout=output, stderr=errput)
+        if (status and (not ignore_status)):
+            raise error.CmdError(command, cmd_result)
+        return cmd_result

@@ -33,23 +33,6 @@ def run_ethtool(test, params, env):
         find a way to get it installed using yum/apt-get/
         whatever
     """
-    def send_cmd_safe(session, cmd):
-        logging.debug("Sending command: %s", cmd)
-        session.sendline(cmd)
-        output = ""
-        got_prompt = False
-        start_time = time.time()
-        # Wait for shell prompt until timeout.
-        while ((time.time() - start_time) < login_timeout and not got_prompt):
-            time.sleep(0.2)
-            session.sendline()
-            try:
-                output += session.read_up_to_prompt()
-                got_prompt = True
-            except aexpect.ExpectTimeoutError:
-                pass
-        return output
-
     def ethtool_get(session, f_type):
         feature_pattern = {
             'tx': 'tx.*checksumming',
@@ -87,7 +70,7 @@ def run_ethtool(test, params, env):
         err_msg = "(%s) %s: set status %s failed" % (ethname, f_type, status)
         cmd = "ethtool -K %s %s %s" % (ethname, f_type, status)
         try:
-            send_cmd_safe(session, cmd)
+            session.cmd_output_safe(cmd)
         except aexpect.ShellCmdError, e:
             logging.error("%s, detail: %s", err_msg, e)
             return False

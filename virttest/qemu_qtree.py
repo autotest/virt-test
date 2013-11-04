@@ -10,6 +10,7 @@ import re
 import storage
 import data_dir
 import utils_misc
+import arch
 
 
 OFFSET_PER_LEVEL = 2
@@ -475,7 +476,10 @@ class QtreeDisksContainer(object):
             """ checks the drive format according to qtree info """
             expected = params.get('drive_format')
             if expected == 'scsi':
-                expected = 'lsi53c895a'
+                if arch.ARCH == 'ppc64':
+                    expected = 'spapr-vscsi'
+                else:
+                    expected = 'lsi53c895a'
             elif expected.startswith('scsi'):
                 expected = params.get('scsi_hba', 'virtio-scsi-pci')
             elif expected.startswith('usb'):

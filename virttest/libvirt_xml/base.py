@@ -1,3 +1,4 @@
+import logging
 
 from autotest.client import utils
 from virttest import propcan, xml_utils, virsh
@@ -154,6 +155,7 @@ class LibvirtXMLBase(propcan.PropCanBase):
         if ret.exit_status == 0:
             return True
         else:
+            logging.debug(ret)
             return False
 
     def set_validates(self, value):
@@ -168,6 +170,12 @@ class LibvirtXMLBase(propcan.PropCanBase):
         Raises LibvirtXMLError
         """
         raise xcepts.LibvirtXMLError("Read only property")
+
+    def restore(self):
+        """
+        Restore current xml content to original source content
+        """
+        self.xmltreefile.restore()
 
     @staticmethod
     def virt_xml_validate(filename, schema_name=None):

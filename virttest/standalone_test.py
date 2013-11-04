@@ -27,35 +27,6 @@ global TAG_INDEX
 TAG_INDEX = {}
 
 
-def get_tag_index(options, params):
-    global TAG_INDEX
-    if options.config:
-        TAG_INDEX = -1
-        return TAG_INDEX
-    # lvsb tests only have short names
-    if options.type == 'lvsb':
-        return 0
-    name = params['name']
-    if TAG_INDEX.get(name) is None:
-        guest_name_list = get_guest_name_list(options)
-
-        for guest_name in guest_name_list:
-            if guest_name in name:
-                idx = name.index(guest_name)
-                TAG_INDEX[name] = idx + len(guest_name) + 1
-                break
-
-    return TAG_INDEX[name]
-
-
-def get_tag(params, index):
-    if index == -1:
-        return params['shortname']
-    name = params['name']
-    name = name[index:]
-    return ".".join(name.split("."))
-
-
 class Test(object):
 
     """
@@ -80,8 +51,7 @@ class Test(object):
             os.makedirs(self.tmpdir)
 
         self.iteration = 0
-        tag_index = get_tag_index(options, params)
-        self.tag = get_tag(params, tag_index)
+        self.tag = params.get("_short_name_map_file")["subtests.cfg"]
         self.debugdir = None
         self.outputdir = None
         self.resultsdir = None
@@ -505,14 +475,12 @@ def print_test_list(options, cartesian_parser):
 
     pipe.write(get_cartesian_parser_details(cartesian_parser))
 
-    d = cartesian_parser.get_dicts().next()
-    tag_index = get_tag_index(options, d)
     for params in cartesian_parser.get_dicts():
         virt_test_type = params.get('virt_test_type', "")
         supported_virt_backends = virt_test_type.split(" ")
         if options.type in supported_virt_backends:
             index += 1
-            shortname = get_tag(params, tag_index)
+            shortname = params.get("_short_name_map_file")["subtests.cfg"]
             needs_root = ((params.get('requires_root', 'no') == 'yes')
                           or (params.get('vm_type') != 'qemu'))
             basic_out = (bcolors.blue + str(index) + bcolors.end + " " +
@@ -772,15 +740,12 @@ def run_tests(parser, options):
         qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
         logging.debug("")
 
-    tag_index = get_tag_index(options, d)
-
     for line in get_cartesian_parser_details(parser).splitlines():
         logging.info(line)
 
     logging.info("Defined test set:")
     for i, d in enumerate(parser.get_dicts()):
-        tag_index = get_tag_index(options, d)
-        shortname = get_tag(d, tag_index)
+        shortname = d.get("_name_map_file")["subtests.cfg"]
 
         logging.info("Test %4d:  %s", i + 1, shortname)
         last_index += 1
@@ -812,8 +777,7 @@ def run_tests(parser, options):
     job_start_time = time.time()
 
     for dct in parser.get_dicts():
-        tag_index = get_tag_index(options, dct)
-        shortname = get_tag(dct, tag_index)
+        shortname = d.get("_short_name_map_file")["subtests.cfg"]
 
         if index == 0:
             if dct.get("host_setup_flag", None) is not None:

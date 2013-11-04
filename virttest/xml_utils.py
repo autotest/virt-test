@@ -125,7 +125,7 @@ class XMLBackup(TempXMLFile):
 
         super(XMLBackup, self).__init__()
         self.sourcefilename = sourcefilename
-        self.backup()
+        XMLBackup.backup(self)
 
     def __del__(self):
         # Drop reference, don't delete source!
@@ -139,27 +139,31 @@ class XMLBackup(TempXMLFile):
         logging.info("Retaining backup of %s in %s", self.sourcefilename,
                      self.name + EXSFX)
 
+
     def backup(self):
         """
         Overwrite temporary backup with contents of original source.
         """
-
-        self.flush()
-        self.seek(0)
-        shutil.copyfileobj(file(self.sourcefilename, "rb"),
+        super(XMLBackup, self).flush()
+        super(XMLBackup, self).seek(0)
+        super(XMLBackup, self).truncate(0)
+        source_file = file(self.sourcefilename, "rb")
+        shutil.copyfileobj(source_file,
                            super(XMLBackup, self))
-        self.seek(0)
+        source_file.close()
+        super(XMLBackup, self).flush()
 
     def restore(self):
         """
         Overwrite original source with contents of temporary backup
         """
-
-        self.flush()
-        self.seek(0)
+        super(XMLBackup, self).flush()
+        super(XMLBackup, self).seek(0)
+        source_file = file(self.sourcefilename, "wb")
+        source_file.truncate(0)
         shutil.copyfileobj(super(XMLBackup, self),
-                           file(self.sourcefilename, "wb+"))
-        self.seek(0)
+                           source_file)
+        source_file.close()
 
 
 class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
@@ -203,12 +207,32 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         self.write()
         self.flush()  # make sure it's on-disk
 
+
     def __str__(self):
         self.write()
         self.flush()
         xmlstr = StringIO.StringIO()
         self.write(xmlstr)
         return xmlstr.getvalue()
+
+    def backup(self):
+        """Overwrite original source from current tree"""
+        self.write()
+        self.flush()
+        # self is the 'original', so backup/restore logic is reversed
+        super(XMLTreeFile, self).restore()
+
+    def restore(self):
+        """Overwrite and reparse current tree from original source"""
+        # self is the 'original', so backup/restore logic is reversed
+        super(XMLTreeFile, self).backup()
+        try:
+            ElementTree.ElementTree.__init__(self, element=None,
+                                                 file=self.name)
+        except expat.ExpatError:
+            raise IOError("Original XML is corrupt: '%s'"
+                          % self.sourcebackupfile.name)
+
 
     def backup_copy(self):
         """Return a copy of instance, including copies of files"""

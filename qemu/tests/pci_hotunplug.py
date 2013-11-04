@@ -73,7 +73,7 @@ def run_pci_hotunplug(test, params, env):
     if not cmd_o:
         raise error.TestError("Unknow version of qemu")
 
-    cmd_type = utils_test.find_substring(str(cmd_o), "device_del")
+    cmd_type = utils_misc.find_substring(str(cmd_o), "device_del")
 
     devices = find_pci()
     if devices:

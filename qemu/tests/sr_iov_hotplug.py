@@ -53,7 +53,7 @@ def run_sr_iov_hotplug(test, params, env):
         else:
             devices_supported = vm.monitor.send_args_cmd("%s ?" % cmd_type)
         # Check if the device is support in qemu
-        is_support = utils_test.find_substring(devices_supported, dev)
+        is_support = utils_misc.find_substring(devices_supported, dev)
         if not is_support:
             raise error.TestError("%s doesn't support device: %s" %
                                   (cmd_type, dev))
@@ -205,7 +205,7 @@ def run_sr_iov_hotplug(test, params, env):
     else:
         cmd_o = vm.monitor.send_args_cmd("help")
 
-    cmd_type = utils_test.find_substring(str(cmd_o), "device_add", "pci_add")
+    cmd_type = utils_misc.find_substring(str(cmd_o), "device_add", "pci_add")
     if not cmd_o:
         raise error.TestError("Unknow version of qemu")
 

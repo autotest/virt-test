@@ -101,10 +101,10 @@ if __name__ == "__main__":
             fd_cmd = open(tmp_file, "w")
             fd_cmd.write(command)
             fd_cmd.close()
-            os.execv("/bin/sh", ["/bin/sh", "-c", "source %s" % tmp_file])
+            os.execv("/bin/bash", ["/bin/bash", "-c", "source %s" % tmp_file])
             os.remove(tmp_file)
         else:
-            os.execv("/bin/sh", ["/bin/sh", "-c", command])
+            os.execv("/bin/bash", ["/bin/bash", "-c", command])
     else:
         # Parent process
         lock_server_running = _lock(lock_server_running_filename)
@@ -1229,6 +1229,16 @@ class ShellSession(Expect):
         return Expect.__getinitargs__(self) + (self.prompt,
                                                self.status_test_command)
 
+    @classmethod
+    def remove_command_echo(cls, cont, cmd):
+        if cont and cont.splitlines()[0] == cmd:
+            cont = "".join(cont.splitlines(True)[1:])
+        return cont
+
+    @classmethod
+    def remove_last_nonempty_line(cls, cont):
+        return "".join(cont.rstrip().splitlines(True)[:-1])
+
     def set_prompt(self, prompt):
         """
         Set the prompt attribute for later use by read_up_to_prompt.
@@ -1316,21 +1326,13 @@ class ShellSession(Expect):
                 terminates while waiting for output
         :raise ShellError: Raised if an unknown error occurs
         """
-        def remove_command_echo(cont, cmd):
-            if cont and cont.splitlines()[0] == cmd:
-                cont = "".join(cont.splitlines(True)[1:])
-            return cont
-
-        def remove_last_nonempty_line(cont):
-            return "".join(cont.rstrip().splitlines(True)[:-1])
-
         logging.debug("Sending command: %s" % cmd)
         self.read_nonblocking(0, timeout)
         self.sendline(cmd)
         try:
             o = self.read_up_to_prompt(timeout, internal_timeout, print_func)
         except ExpectError, e:
-            o = remove_command_echo(e.output, cmd)
+            o = self.remove_command_echo(e.output, cmd)
             if isinstance(e, ExpectTimeoutError):
                 raise ShellTimeoutError(cmd, o)
             elif isinstance(e, ExpectProcessTerminatedError):
@@ -1339,7 +1341,56 @@ class ShellSession(Expect):
                 raise ShellError(cmd, o)
 
         # Remove the echoed command and the final shell prompt
-        return remove_last_nonempty_line(remove_command_echo(o, cmd))
+        return self.remove_last_nonempty_line(self.remove_command_echo(o, cmd))
+
+    def cmd_output_safe(self, cmd, timeout=60, internal_timeout=None,
+                        print_func=None):
+        """
+        Send a command and return its output (serial sessions).
+
+        In serial sessions, frequently the kernel might print debug or
+        error messages that make read_up_to_prompt to timeout. Let's try
+        to be a little more robust and send a carriage return, to see if
+        we can get to the prompt.
+
+        :param cmd: Command to send (must not contain newline characters)
+        :param timeout: The duration (in seconds) to wait for the prompt to
+                return
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
+                (should take a string parameter)
+
+        :return: The output of cmd
+        :raise ShellTimeoutError: Raised if timeout expires
+        :raise ShellProcessTerminatedError: Raised if the shell process
+                terminates while waiting for output
+        :raise ShellError: Raised if an unknown error occurs
+        """
+        logging.debug("Sending command (safe): %s" % cmd)
+        self.read_nonblocking(0, timeout)
+        self.sendline(cmd)
+        o = ""
+        success = False
+        start_time = time.time()
+        while (time.time() - start_time) < timeout:
+            try:
+                o += self.read_up_to_prompt(0.5)
+                success = True
+                break
+            except ExpectError, e:
+                o = self.remove_command_echo(e.output, cmd)
+                if isinstance(e, ExpectTimeoutError):
+                    self.sendline()
+                elif isinstance(e, ExpectProcessTerminatedError):
+                    raise ShellProcessTerminatedError(cmd, e.status, o)
+                else:
+                    raise ShellError(cmd, o)
+
+        if not success:
+            raise ShellTimeoutError(cmd, o)
+
+        # Remove the echoed command and the final shell prompt
+        return self.remove_last_nonempty_line(self.remove_command_echo(o, cmd))
 
     def cmd_status_output(self, cmd, timeout=60, internal_timeout=None,
                           print_func=None):

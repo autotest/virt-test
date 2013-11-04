@@ -147,10 +147,11 @@ class VMDeadKernelCrashError(VMError):
 
     def __init__(self, kernel_crash):
         VMError.__init__(self, kernel_crash)
-        self.kernel_crash = kernel_crash
+        logging.debug(kernel_crash)
 
     def __str__(self):
-        return ("VM is dead due to a kernel crash:\n%s" % self.kernel_crash)
+        return ("VM is dead due to a kernel crash, "
+                "see debug/serial log for details")
 
 
 class VMInvalidInstructionCode(VMError):
@@ -614,8 +615,6 @@ class BaseVM(object):
         :raise VMAddressVerificationError: If the MAC-IP address mapping cannot
                 be verified (using arping)
         """
-        if self.virtnet < index:
-            raise VMInterfaceIndexError()
         nic = self.virtnet[index]
         # TODO: Determine port redirection in use w/o checking nettype
         if nic.nettype not in ['bridge', 'macvtap']:

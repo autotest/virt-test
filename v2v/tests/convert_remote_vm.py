@@ -2,8 +2,9 @@ import os
 import logging
 import re
 from autotest.client import lv_utils
-from autotest.client.shared import ssh_key, error, utils
+from autotest.client.shared import ssh_key, error
 from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh
+from virttest import virt_vm, remote, data_dir
 
 
 def create_dir_pool(spool, pool_name, target_path):
@@ -12,8 +13,7 @@ def create_dir_pool(spool, pool_name, target_path):
     """
     # Check pool before creating
     if spool.pool_exists(pool_name):
-        logging.debug("Pool '%s' exists on uri '%s'", pool_name,
-                      spool.connect_uri)
+        logging.debug("Pool '%s' already exists.", pool_name)
         return False
 
     if not spool.define_dir_pool(pool_name, target_path):
@@ -37,8 +37,7 @@ def create_partition_pool(spool, pool_name, block_device,
     """
     # Check pool before creating
     if spool.pool_exists(pool_name):
-        logging.debug("Pool '%s' exists on uri '%s'", pool_name,
-                      spool.connect_uri)
+        logging.debug("Pool '%s' already exists.", pool_name)
         return False
 
     if not spool.define_fs_pool(pool_name, block_device,
@@ -57,14 +56,13 @@ def create_partition_pool(spool, pool_name, block_device,
 
 
 def create_lvm_pool(spool, pool_name, block_device, vg_name="vg_v2v",
-                    target_path="/dev/v2v_test"):
+                    target_path="/dev/vg_v2v"):
     """
     Create a persistent lvm pool.
     """
     # Check pool before creating
     if spool.pool_exists(pool_name):
-        logging.debug("Pool '%s' exists on uri '%s'", pool_name,
-                      spool.connect_uri)
+        logging.debug("Pool '%s' already exists.", pool_name)
         return False
 
     if not spool.define_lvm_pool(pool_name, block_device, vg_name=vg_name,
@@ -73,6 +71,14 @@ def create_lvm_pool(spool, pool_name, block_device, vg_name="vg_v2v",
 
     vgroups = lv_utils.vg_list()
     if vg_name not in vgroups.keys() and not spool.build_pool(pool_name):
+        return False
+
+    # To verify if volume group has been set.
+    try:
+        lv_utils.lv_create(vg_name, "v2v_sample", "10M", True)
+        lv_utils.lv_remove(vg_name, "v2v_sample")
+    except (error.TestError, error.CmdError), detail:
+        logging.error("Check volume group failed:\n%s", str(detail))
         return False
 
     if not spool.start_pool(pool_name):
@@ -138,11 +144,17 @@ def run_convert_remote_vm(test, params, env):
     pool_type = params.get("pool_type", "dir")
     pool_name = params.get("pool_name", "v2v_test")
     target_path = params.get("target_path", "pool_path")
-    block_device = params.get("block_device")
+    block_device = params.get("block_device", "/dev/BLOCK/EXAMPLE")
     vg_name = params.get("volume_group_name", "vg_v2v")
-    # If target_path is not an abs path, join it to test.tmpdir
+
+    # Confirm parameters have been set correctly.
+    if (pool_type in ['partition', 'lvm'] and
+        re.search("EXAMPLE", block_device)):
+        raise error.TestNAError("Please set correct block device.")
+
+    # If target_path is not an abs path, join it to data_dir.tmpdir
     if os.path.dirname(target_path) is "":
-        target_path = os.path.join(test.tmpdir, target_path)
+        target_path = os.path.join(data_dir.get_tmp_dir(), target_path)
 
     # dir pool need an exist path
     if pool_type == "dir":
@@ -176,16 +188,16 @@ def run_convert_remote_vm(test, params, env):
                     'remote_user': username, 'remote_pwd': password}
     rvirsh = virsh.VirshPersistent(**rvirsh_dargs)
     if not rvirsh.domain_exists(vm_name):
+        rvirsh.close_session()
         raise error.TestFail("Couldn't find vm '%s' to be converted "
                              "on remote uri '%s'." % (vm_name, remote_uri))
-    rvirsh.close_session()
 
     if remote_hypervisor != "esx":
         remote_vm = libvirt_vm.VM(vm_name, params, test.bindir,
                                   env.get("address_cache"))
         remote_vm.connect_uri = remote_uri
         # Remote storage pool's instance
-        rsp = libvirt_storage.StoragePool(remote_uri)
+        rsp = libvirt_storage.StoragePool(rvirsh)
         # Put remote vm's disk into a directory storage pool
         prepare_remote_sp(rsp, remote_vm, pool_name)
 
@@ -216,8 +228,9 @@ def run_convert_remote_vm(test, params, env):
                       "input": input, "files": files}
         try:
             result = utils_v2v.v2v_cmd(v2v_params)
-        except error.CmdError:
-            raise error.TestFail("Virt v2v failed.")
+            logging.debug(result)
+        except error.CmdError, detail:
+            raise error.TestFail("Virt v2v failed:\n%s" % str(detail))
 
         # v2v may be successful, but devices' driver may be not virtio
         error_info = []
@@ -226,10 +239,15 @@ def run_convert_remote_vm(test, params, env):
         params['vms'] = vm_name
         params['target'] = "libvirt"
         vm_check = utils_v2v.LinuxVMCheck(test, params, env)
-        if not vm_check.is_disk_virtio():
-            error_info.append("Error:disk type was not converted to virtio.")
-        if not vm_check.is_net_virtio():
-            error_info.append("Error:nic type was not converted to virtio.")
+        try:
+            if not vm_check.is_disk_virtio():
+                error_info.append("Error:disk type was not converted to "
+                                  "virtio.")
+            if not vm_check.is_net_virtio():
+                error_info.append("Error:nic type was not converted to "
+                                  "virtio.")
+        except (remote.LoginError, virt_vm.VMError), detail:
+            error_info.append(str(detail))
 
         # Close vm for cleanup
         if vm_check.vm is not None and vm_check.vm.is_alive():

@@ -1,5 +1,6 @@
-from virttest import utils_misc, utils_test, storage
-from virttest import qemu_storage, data_dir
+from virttest import storage
+from virttest import qemu_storage
+from virttest import data_dir
 from autotest.client.shared import error
 import re
 import logging
