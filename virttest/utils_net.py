@@ -401,8 +401,9 @@ class Interface(object):
 
     def is_bonded(self):
         """
+        Check Whether this Interface is a slave
         """
-        cmd="cat /proc/net/bonding/* | grep -w -i \'%s\'"%(self.name)
+        cmd="grep -w -i \'%s\' /proc/net/bonding/*"%(self.name)
         rc=utils.run(cmd,ignore_status=True,verbose=False)
         if rc.exit_status == 0:
             return True
