@@ -48,6 +48,9 @@ def run_migration_multi_host(test, params, env):
                           % pre_sub_test, logging.info)
             utils_test.run_virt_sub_test(test, params, env, pre_sub_test)
 
+    if params.get("check_vm_before_migration", "yes") == "no":
+        params['check_vm_needs_restart'] = "no"
+
     mig = mig_type(test, params, env, False)
     mig._hosts_barrier([srchost, dsthost],
                        {'src': srchost, 'dst': dsthost, "vms": vms[0]},
