@@ -133,7 +133,7 @@ class Disk(base.TypedDeviceBase):
             accessors.XMLElementList('hosts', self, parent_xpath='/',
                                      marshal_from=self.marshal_from_host,
                                      marshal_to=self.marshal_to_host)
-            super(Disk.DiskSource, self).__init__(virsh_instance=virsh_instance)
+            super(self.__class__, self).__init__(virsh_instance=virsh_instance)
             self.xml = '<source/>'
 
         @staticmethod
