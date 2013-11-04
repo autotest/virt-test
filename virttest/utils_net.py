@@ -399,6 +399,15 @@ class Interface(object):
         if rc.exit_status == 0:
             return True
 
+    def is_bonded(self):
+        """
+        """
+        cmd="cat /proc/net/bonding/* | grep -w -i \'%s\'"%(self.name)
+        rc=utils.run(cmd,ignore_status=True,verbose=False)
+        if rc.exit_status == 0:
+            return True
+
+
 
 
 class Macvtap(Interface):
