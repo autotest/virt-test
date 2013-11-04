@@ -81,7 +81,6 @@ class Disk(base.TypedDeviceBase):
                                              'virsh_instance':virsh_instance})
         super(Disk, self).__init__(device_tag='disk', type_name=type_name,
                                    virsh_instance=virsh_instance)
-        self.xml = '<disk/>'
 
 
     def new_disk_source(self, **dargs):
