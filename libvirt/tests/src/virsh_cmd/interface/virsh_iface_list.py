@@ -1,5 +1,4 @@
 #!/usr/bin/python
-import logging
 from autotest.client.shared import error
 from virttest import virsh, utils_net
 """
@@ -15,26 +14,17 @@ Steps:
 3. Veify virsh iface-list --xyz and ensure it should fail
 
 Input:
-All the interfaces available in the host other than the interfaces which
-are not poted to any bridge(eth0,vnet0... in below e.g).
-brctl show
-bridge name	bridge id		STP enabled	interfaces
-br0		8000.e41f13180acc	yes		eth0
-							vnet0
-							vnet2
-							vnet5
-virbr0		8000.525400895d70	yes		virbr0-nic
-							vnet1
-							vnet3
-							vnet4
+All the interfaces available in the host.
 
-
+Otput:
+Virsh iface-list only returns those interfaces whose are not bridged
+or bonded and it's network script file should be available
 """
 
 
 def run_virsh_iface_list(test, params, env):
     def check_virsh_list_all(ifa,chk_ifc_virsh):
-        if ifa.avail_net_scr() and not ifa.is_brport() and not ifa.is_bonded():
+        if ifa.avail_net_scr() and not bridged_bonded:
             if chk_ifc_virsh['avail']:
                 if chk_ifc_virsh['isup'] != ifa.is_up():
                     raise error.TestFail("virsh list --all shows wrongly "
@@ -47,12 +37,20 @@ def run_virsh_iface_list(test, params, env):
                 "not show iface %s"%ifa.name)
         else:
             if chk_ifc_virsh['avail']:
-                raise error.TestFail("virsh iface-list --all should "
-                "not show iface %s"%ifa.name)
+                if ifa.is_brport():
+                    raise error.TestFail("virsh iface-list --all should "
+                                    "not show bridged port %s"%ifa.name)
+                elif ifa.is_bonded():
+                    raise error.TestFail("virsh iface-list --all should "
+                                    "not show slave iface %s"%ifa.name)
+                else:
+                    raise error.TestFail("virsh iface-list --all should "
+                                    "not show iface %s as network sciprt"
+                                    "is not available"%ifa.name)
 
 
     def check_virsh_list_active(ifa,chk_ifc_virsh):
-        if ifa.avail_net_scr() and not ifa.is_brport() and ifa.is_up()  and not ifa.is_bonded():
+        if ifa.avail_net_scr() and not bridged_bonded and ifa.is_up():
             if chk_ifc_virsh['avail']:
                 if not chk_ifc_virsh['isup']:
                     raise error.TestFail("virsh list shows wrongly "
@@ -65,12 +63,25 @@ def run_virsh_iface_list(test, params, env):
                 "not show iface %s"%ifa.name)
         else:
             if chk_ifc_virsh['avail']:
-                raise error.TestFail("virsh iface-list --active should "
-                "not show iface %s"%ifa.name)
+                if ifa.is_brport():
+                    raise error.TestFail("virsh iface-list should "
+                                    "not show bridged port %s"%ifa.name)
+                elif ifa.is_bonded():
+                    raise error.TestFail("virsh iface-list should "
+                                    "not show slave iface %s"%ifa.name)
+                elif not ifa.is_up():
+                    raise error.TestFail("virsh iface-list should"
+                                    "not show inactive iface %s"%ifa.name)
+                else:
+                    raise error.TestFail("virsh iface-list should "
+                                    "not show iface %s as network sciprt"
+                                    "is not available"%ifa.name)
+
 
 
     def check_virsh_list_inactive(ifa,chk_ifc_virsh):
-        if ifa.avail_net_scr() and not ifa.is_brport() and not ifa.is_up() and not ifa.is_bonded():
+        
+        if ifa.avail_net_scr() and not bridged_bonded and not ifa.is_up():
             if chk_ifc_virsh['avail']:
                 if chk_ifc_virsh['isup']:
                     raise error.TestFail("virsh list --inactive shows wrongly "
@@ -83,13 +94,27 @@ def run_virsh_iface_list(test, params, env):
                 "not show iface %s"%ifa.name)
         else:
             if chk_ifc_virsh['avail']:
-                raise error.TestFail("virsh iface-list --inactive should "
-                                    "not show iface %s"%ifa.name)
+                if ifa.is_brport():
+                    raise error.TestFail("virsh iface-list --inactive should "
+                                    "not show bridged port %s"%ifa.name)
+                elif ifa.is_bonded():
+                    raise error.TestFail("virsh iface-list --inactive should "
+                                    "not show slave iface %s"%ifa.name)
+                elif ifa.is_up():
+                    raise error.TestFail("virsh iface-list --inactive should"
+                                    "not show active iface %s"%ifa.name)
+                else:
+                    raise error.TestFail("virsh iface-list --inactive should "
+                                    "not show iface %s as network sciprt"
+                                    "is not available"%ifa.name)
+
+
 
 
     options_ref = params.get("iface_list_option","");
     result=virsh.iface_list(options_ref,ignore_status=True)
     status_error = params.get("status_error", "no")
+    bridged_bonded=True
     if status_error == "yes":
         if result.exit_status == 0:
             raise error.TestFail("Run successfully with wrong command!")
@@ -99,6 +124,10 @@ def run_virsh_iface_list(test, params, env):
         for ind_iface in utils_net.get_net_if():
             ifa=utils_net.Interface(ind_iface)
             chk_ifc_virsh=virsh.virsh_ifaces(ind_iface,options_ref)
+            if not ifa.is_brport() and not ifa.is_bonded():
+                bridged_bonded=False
+            else:
+                bridged_bonded=True
             if options_ref == '--all':
                 check_virsh_list_all(ifa,chk_ifc_virsh)
             elif options_ref == '--inactive':
