@@ -236,5 +236,5 @@ def run_virsh_emulatorpin(test, params, env):
 
     # Recover cgconfig and libvirtd service
     if not cg.cgconfig_is_running():
-        cg.cgconfig_restart()()
+        cg.cgconfig_restart()
         utils_libvirtd.service_libvirtd_control("restart")
