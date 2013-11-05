@@ -66,13 +66,17 @@ def run_netperf_udp(test, params, env):
     m_size = start_size
 
     error.context("Copy netperf to dsthost and guest vm.")
-    download_link = params.get("netperf_download_link")
-    download_dir = data_dir.get_download_dir()
-    md5sum = params.get("pkg_md5sum")
-    host_netperf_dir = utils.unmap_url_cache(download_dir,
-                                             download_link, md5sum)
-    remote_dir = params.get("tmp_dir", "/tmp")
-    scp_to_remote(host_netperf_dir, remote_dir)
+    netperf_links = params["netperf_links"].split()
+    remote_dir = params.get("remote_dir", "/var/tmp")
+    for netperf_link in netperf_links:
+        if utils.is_url(netperf_link):
+            download_dir = data_dir.get_download_dir()
+            md5sum = params.get("pkg_md5sum")
+            netperf_dir = utils.unmap_url_cache(download_dir,
+                                                netperf_link, md5sum)
+        elif netperf_link:
+            netperf_dir = os.path.join(test.virtdir, netperf_link)
+        scp_to_remote(netperf_dir, remote_dir)
 
     # Setup netpref.
     error.context("Set up netperf on reference machine.", logging.info)
