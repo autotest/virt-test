@@ -4,6 +4,7 @@ libguestfs tools test utility functions.
 
 import logging
 import signal
+import os
 
 from autotest.client import os_dep, utils
 from autotest.client.shared import error
@@ -1120,4 +1121,130 @@ def virt_df(disk_or_domain, ignore_status=True, debug=False, timeout=60):
     virtual machine filesystems.
     """
     cmd = "virt-df %s" % disk_or_domain
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_sysprep_cmd(disk_or_domain, options=None,
+                     extra=None, ignore_status=True,
+                     debug=False, timeout=600):
+    """
+    Execute virt-sysprep command to reset or unconfigure a virtual machine.
+
+    :param disk_or_domain: a img path or a domain name.
+    :param options: the options of virt-sysprep.
+    :return: a CmdResult object.
+    """
+    if os.path.isfile(disk_or_domain):
+        disk_or_domain = "-a " + disk_or_domain
+    else:
+        disk_or_domain = "-d " + disk_or_domain
+    cmd = "virt-sysprep %s" % (disk_or_domain)
+    if options is not None:
+        cmd += " %s" % options
+    if extra is not None:
+        cmd += " %s" % extra
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_cat_cmd(disk_or_domain, file_path, options=None, ignore_status=True,
+                 debug=False, timeout=60):
+    """
+    Execute virt-cat command to print guest's file detail.
+
+    :param disk_or_domain: a img path or a domain name.
+    :param file_path: the file to print detail
+    :param options: the options of virt-cat.
+    :return: a CmdResult object.
+    """
+    # disk_or_domain and file_path are necessary parameters.
+    if os.path.isfile(disk_or_domain):
+        disk_or_domain = "-a " + disk_or_domain
+    else:
+        disk_or_domain = "-d " + disk_or_domain
+    cmd = "virt-cat %s '%s'" % (disk_or_domain, file_path)
+    if options is not None:
+        cmd += " %s" % options
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_clone_cmd(org_domain, new_domain=None, new_uuid=None, file_path=None,
+                   force_copy_target=None, new_mac=None, options=None,
+                   ignore_status=True, debug=False, timeout=600):
+    """
+    Execute virt-clone command to clone a new guest.
+
+    :param org_domain: Name of the original guest.
+    :param new_domain: Name of the new guest.
+    :param new_uuid: New UUID for the clone guest.
+    :param file_path: New file to use as the disk image for the new guest.
+    :param force_copy: Force to copy devices(--force-copy=hdc).
+    :param new_mac: New fixed MAC address for the clone guest.
+    :param options: the options of virt-clone.
+    :return: a CmdResult object.
+    """
+    cmd = "virt-clone -o %s " % org_domain
+    if new_domain is not None:
+        cmd += "-n %s " % new_domain
+    if new_uuid is not None:
+        cmd += "-u %s " % new_uuid
+    if file_path is not None:
+        cmd += "-f %s " % file_path
+    if force_copy_target is not None:
+        cmd += "--force-copy=%s " % force_copy_target
+    if new_mac is not None:
+        cmd += "-m %s " % new_mac
+    if options is not None:
+        cmd += "%s" % options
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_resize_cmd(in_disk, out_disk, delete_part=None, expand_part=None,
+                   in_format=None, ignore_part=None, expand_lv=None,
+                   out_format=None, resize_part=None, resize_part_size=None,
+                   resize_force=False, shrink_part=None, options=None,
+                   ignore_status=True, debug=False, timeout=600):
+    """
+    Execute virt-resize command to resize a virtual machine disk.
+
+    :param in_disk: Input disk file.
+    :param out_disk: Output disk file.
+    :param delete_part: Delete partition.
+    :param expand_part: Expand partition.
+    :param in_format: Input disk format.
+    :param ignore_part: Ignore partition.
+    :param expand_lv: Expand logical volum.e
+    :param out_format: Output disk format.
+    :param resize_part: Resize partition.
+    :param resize_part_size: Resize partition size.
+    :param resize_force: Forcefully resize partition or not.
+    :param shrink_part: Shrink partition.
+    :param options: the options of virt-resize.
+    :return: a CmdResult object.
+    """
+    cmd = "virt-resize %s %s " % (in_disk, out_disk)
+    if delete_part is not None:
+        cmd += "--delete %s " % delete_part
+    if expand_part is not None:
+        cmd += "--expand %s " % expand_part
+    if in_format is not None:
+        cmd += "--format %s " % in_format
+    if ignore_part is not None:
+        cmd += "--ignore %s " % ignore_part
+    if expand_lv is not None:
+        cmd += "--lv-expand %s " % expand_lv
+    if out_format is not None:
+        cmd += "--output-format %s " % out_format
+    if resize_part is not None and resize_part_size is not None:
+        if resize_force:
+            cmd += "--resize-force %s=%s "% (resize_part, resize_part_size)
+        else:
+            cmd += "--resize %s=%s "% (resize_part, resize_part_size)
+    if shrink_part is not None:
+        cmd += "--shrink %s " % shrink_part
+    if options is not None:
+        cmd += "%s" % options
+
     return lgf_command(cmd, ignore_status, debug, timeout)
