@@ -41,11 +41,19 @@ def run_multi_nic_stress(test, params, env):
         """
         error.context("Setup env for %s" % ip_addr)
         ssh_cmd(session, "service iptables stop; true")
-
-        netperf_dir = os.path.join(data_dir.get_root_dir(), "shared/deps")
-        for i in params.get("netperf_files").split():
+        netperf_links = params["netperf_links"].split()
+        remote_dir = params.get("remote_dir", "/var/tmp")
+        for netperf_link in netperf_links:
+            if utils.is_url(netperf_link):
+                download_dir = data_dir.get_download_dir()
+                md5sum = params.get("pkg_md5sum")
+                netperf_dir = utils.unmap_url_cache(download_dir,
+                                                    netperf_link, md5sum)
+            elif netperf_link:
+                netperf_dir = os.path.join(data_dir.get_root_dir(),
+                                           "shared/%s" % netperf_link)
             remote.scp_to_remote(ip_addr, shell_port, username, password,
-                                 "%s/%s" % (netperf_dir, i), "/tmp/")
+                                 netperf_dir, remote_dir)
         ssh_cmd(session, params.get("setup_cmd"))
 
     vm = env.get_vm(params["main_vm"])
