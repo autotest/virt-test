@@ -108,9 +108,10 @@ class DriveMirror(block_copy.BlockCopy):
         info = self.get_status()
         ret = (info["len"] == info["offset"])
         if self.vm.monitor.protocol == "qmp":
-            check_event = params.get("check_event")
-            if check_event == "yes":
+            if params.get("check_event", "no") == "yes":
                 ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_READY"))
+                return ret
+        time.sleep(3.0)
         return ret
 
     def wait_for_steady(self):
@@ -122,7 +123,7 @@ class DriveMirror(block_copy.BlockCopy):
         timeout = params.get("wait_timeout")
         if self.vm.monitor.protocol == "qmp":
             self.vm.monitor.clear_event("BLOCK_JOB_READY")
-        steady = utils_misc.wait_for(self.is_steady, step=2.0,
+        steady = utils_misc.wait_for(self.is_steady, step=3.0,
                                      timeout=timeout)
         if not steady:
             raise error.TestFail("Wait mirroring job ready "
