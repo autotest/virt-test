@@ -6,7 +6,6 @@ Requires: binaries remote-viewer, Xorg, netstat
 
 """
 import logging
-import sys
 import socket
 from virttest.aexpect import ShellStatusError
 from virttest.aexpect import ShellProcessTerminatedError
@@ -59,43 +58,79 @@ def launch_rv(client_vm, guest_vm, params):
     """
     rv_binary = params.get("rv_binary", "remote-viewer")
     rv_ld_library_path = params.get("rv_ld_library_path")
+    display = params.get("display")
+
+    proxy = params.get("spice_proxy", None)
+    if proxy:
+        try:
+            socket.inet_aton(params.get("proxy_ip", None))
+        except socket.error:
+            raise error.TestNAError('Parameter proxy_ip not changed from default values')
+
     host_ip = utils_net.get_host_ip_address(params)
+    host_port = None
     if guest_vm.get_spice_var("listening_addr") == "ipv6":
-        host_ip = "[" + utils_misc.convert_ipv4_to_ipv6(host_ip) + "]"
+        host_ip = ("[" + utils_misc.convert_ipv4_to_ipv6(host_ip) +
+                   "]")
+    host_tls_port = None
+
+    disable_audio = params.get("disable_audio", "no")
+    full_screen = params.get("full_screen")
+
     check_spice_info = params.get("spice_info")
     ssltype = params.get("ssltype")
     test_type = params.get("test_type")
-    host_port = None
-    full_screen = params.get("full_screen")
-    disable_audio = params.get("disable_audio", "no")
-    display = params.get("display")
+
+    # cmd var keeps final remote-viewer command line
+    # to be executed on client
+    cmd = rv_binary
+    if client_vm.params.get("os_type") != "windows":
+        cmd = cmd + " --display=:0.0"
+
+    # If qemu_ticket is set, set the password
+    #  of the VM using the qemu-monitor
     ticket = None
     ticket_send = params.get("spice_password_send")
     qemu_ticket = params.get("qemu_password")
-    gencerts = params.get("gencerts")
-    certdb = params.get("certdb")
-    smartcard = params.get("smartcard")
-    menu = params.get("rv_menu", None)
-    # cmd var keeps final remote-viewer command line to be executed on client
-    cmd = rv_binary + " --display=:0.0"
-
-    # If qemu_ticket is set, set the password of the VM using the qemu-monitor
     if qemu_ticket:
         guest_vm.monitor.cmd("set_password spice %s" % qemu_ticket)
         logging.info("Sending to qemu monitor: set_password spice %s"
                      % qemu_ticket)
 
+    gencerts = params.get("gencerts")
+    certdb = params.get("certdb")
+    smartcard = params.get("smartcard")
+    host_subj = None
+    cacert = None
+
+    rv_parameters_from = params.get("rv_parameters_from", "cmd")
+    if rv_parameters_from == 'file':
+        cmd += " ~/rv_file.vv"
+
     client_session = client_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)))
 
     if display == "spice":
+
         ticket = guest_vm.get_spice_var("spice_password")
 
         if guest_vm.get_spice_var("spice_ssl") == "yes":
-            host_tls_port = guest_vm.get_spice_var("spice_tls_port")
-            host_port = guest_vm.get_spice_var("spice_port")
+
+            # client needs cacert file
             cacert = "%s/%s" % (guest_vm.get_spice_var("spice_x509_prefix"),
                                 guest_vm.get_spice_var("spice_x509_cacert_file"))
+            client_session.cmd("rm -rf %s && mkdir -p %s" % (
+                               guest_vm.get_spice_var("spice_x509_prefix"),
+                               guest_vm.get_spice_var("spice_x509_prefix")))
+            remote.copy_files_to(client_vm.get_address(), 'scp',
+                                 params.get("username"),
+                                 params.get("password"),
+                                 params.get("shell_port"),
+                                 cacert, cacert)
+
+            host_tls_port = guest_vm.get_spice_var("spice_tls_port")
+            host_port = guest_vm.get_spice_var("spice_port")
+
             # cacert subj is in format for create certificate(with '/' delimiter)
             # remote-viewer needs ',' delimiter. And also is needed to remove
             # first character (it's '/')
@@ -112,36 +147,35 @@ def launch_rv(client_vm, guest_vm, params):
             hostname = socket.gethostname()
             if ssltype == "invalid_implicit_hs":
                 spice_url = " spice://%s?tls-port=%s\&port=%s" % (hostname,
-                                                                  host_tls_port, host_port)
+                                                                  host_tls_port,
+                                                                  host_port)
             else:
                 spice_url = " spice://%s?tls-port=%s\&port=%s" % (host_ip,
-                                                                  host_tls_port, host_port)
+                                                                  host_tls_port,
+                                                                  host_port)
 
-            if menu == "yes":
+            if rv_parameters_from == "menu":
                 line = spice_url
+            elif rv_parameters_from == "file":
+                pass
             else:
                 cmd += spice_url
 
-            cmd += " --spice-ca-file=%s" % cacert
+            if not rv_parameters_from == "file":
+                cmd += " --spice-ca-file=%s" % cacert
 
-            if params.get("spice_client_host_subject") == "yes":
+            if (params.get("spice_client_host_subject") == "yes" and not
+                    rv_parameters_from == "file"):
                 cmd += " --spice-host-subject=\"%s\"" % host_subj
 
-            # client needs cacert file
-            client_session.cmd("rm -rf %s && mkdir -p %s" % (
-                               guest_vm.get_spice_var("spice_x509_prefix"),
-                               guest_vm.get_spice_var("spice_x509_prefix")))
-            remote.copy_files_to(client_vm.get_address(), 'scp',
-                                 params.get("username"),
-                                 params.get("password"),
-                                 params.get("shell_port"),
-                                 cacert, cacert)
         else:
             host_port = guest_vm.get_spice_var("spice_port")
-            if menu == "yes":
+            if rv_parameters_from == "menu":
                 # line to be sent through monitor once r-v is started
                 # without spice url
                 line = "spice://%s?port=%s" % (host_ip, host_port)
+            elif rv_parameters_from == "file":
+                pass
             else:
                 cmd += " spice://%s?port=%s" % (host_ip, host_port)
 
@@ -152,7 +186,7 @@ def launch_rv(client_vm, guest_vm, params):
         raise Exception("Unsupported display value")
 
     # Check to see if the test is using the full screen option.
-    if full_screen == "yes":
+    if full_screen == "yes" and not rv_parameters_from == "file":
         logging.info("Remote Viewer Set to use Full Screen")
         cmd += " --full-screen"
 
@@ -163,7 +197,8 @@ def launch_rv(client_vm, guest_vm, params):
     # Check to see if the test is using a smartcard.
     if smartcard == "yes":
         logging.info("remote viewer Set to use a smartcard")
-        cmd += " --spice-smartcard"
+        if not rv_parameters_from == file:
+            cmd += " --spice-smartcard"
 
         if certdb is not None:
             logging.debug("Remote Viewer set to use the following certificate"
@@ -175,10 +210,16 @@ def launch_rv(client_vm, guest_vm, params):
                           gencerts)
             cmd += " --spice-smartcard-certificates " + gencerts
 
-    if rv_ld_library_path:
-        cmd = "export LD_LIBRARY_PATH=" + rv_ld_library_path + "; nohup " + cmd + " &> /dev/null &"  # Launch it on background
-    else:
+    if client_vm.params.get("os_type") == "linux":
         cmd = "nohup " + cmd + " &> /dev/null &"  # Launch it on background
+        if rv_ld_library_path:
+            cmd = "export LD_LIBRARY_PATH=" + rv_ld_library_path + ";" + cmd
+
+    if rv_parameters_from == "file":
+        print "Generating file"
+        utils_spice.gen_rv_file(params, guest_vm, host_subj, cacert)
+        print "Uploading file to client"
+        client_vm.copy_files_to("rv_file.vv", "~/rv_file.vv")
 
     # Launching the actual set of commands
     try:
@@ -194,40 +235,55 @@ def launch_rv(client_vm, guest_vm, params):
                       "print versions of remote-viewer or spice-gtk")
 
     logging.info("Launching %s on the client (virtual)", cmd)
-    try:
-        client_session.cmd(cmd)
-    except ShellStatusError:
-        logging.debug("Ignoring a status exception, will check connection of"
-                      "remote-viewer later")
 
-    # Send command line through monitor since r-v was started without spice url
-    if menu == "yes":
-        utils_spice.wait_timeout(1)
-        str_input(client_vm, line)
-        client_vm.send_key("tab")
-        client_vm.send_key("tab")
-        client_vm.send_key("tab")
-        client_vm.send_key("kp_enter")
+    if proxy:
+        if "http" in proxy:
+            split = proxy.split('//')[1].split(':')
+        else:
+            split = proxy.split(':')
+        host_ip = split[0]
+        if len(split) > 1:
+            host_port = split[1]
+        else:
+            host_port = "3128"
+        if rv_parameters_from != "file":
+            client_session.cmd("export SPICE_PROXY=%s" % proxy)
 
-    # client waits for user entry (authentication) if spice_password is set
-    # use qemu monitor password if set, else check if the normal password is
-    # set
-    if qemu_ticket:
-        # Wait for remote-viewer to launch
-        utils_spice.wait_timeout(5)
-        str_input(client_vm, qemu_ticket)
-    elif ticket:
-        if ticket_send:
-            ticket = ticket_send
+    if not params.get("rv_verify") == "only":
+        try:
+            client_session.cmd(cmd)
+        except ShellStatusError:
+            logging.debug("Ignoring a status exception, will check connection"
+                          "of remote-viewer later")
 
-        utils_spice.wait_timeout(5)  # Wait for remote-viewer to launch
-        str_input(client_vm, ticket)
+        # Send command line through monitor since url was not provided
+        if rv_parameters_from == "menu":
+            utils_spice.wait_timeout(1)
+            str_input(client_vm, line)
 
-    utils_spice.wait_timeout(5)  # Wait for conncetion to establish
+        # client waits for user entry (authentication) if spice_password is set
+        # use qemu monitor password if set, else, if set, try normal password.
+        if qemu_ticket:
+            # Wait for remote-viewer to launch
+            utils_spice.wait_timeout(5)
+            str_input(client_vm, qemu_ticket)
+        elif ticket:
+            if ticket_send:
+                ticket = ticket_send
+
+            utils_spice.wait_timeout(5)  # Wait for remote-viewer to launch
+            str_input(client_vm, ticket)
+
+        utils_spice.wait_timeout(5)  # Wait for conncetion to establish
+
     is_rv_connected = True
+
     try:
-        utils_spice.verify_established(
-            client_vm, host_ip, host_port, rv_binary)
+        utils_spice.verify_established(client_vm, host_ip,
+                                       host_port, rv_binary,
+                                       host_tls_port,
+                                       params.get("spice_secure_channels",
+                                                  None))
     except utils_spice.RVConnectError:
         if test_type == "negative":
             logging.info("remote-viewer connection failed as expected")
@@ -268,8 +324,9 @@ def launch_rv(client_vm, guest_vm, params):
                      " from the qemu monitor")
 
     # prevent from kill remote-viewer after test finish
-    cmd = "disown -ar"
-    client_session.cmd(cmd)
+    if client_vm.params.get("os_type") == "linux":
+        cmd = "disown -ar"
+    client_session.cmd_output(cmd)
 
 
 def run_rv_connect(test, params, env):
@@ -285,6 +342,7 @@ def run_rv_connect(test, params, env):
     """
 
     guest_vm = env.get_vm(params["guest_vm"])
+
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)))
@@ -294,7 +352,16 @@ def run_rv_connect(test, params, env):
     client_session = client_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)))
 
-    utils_spice.wait_timeout(15)
+    if (client_vm.params.get("os_type") == "windows" and
+       client_vm.params.get("rv_installer", None)):
+        utils_spice.install_rv_win(client_vm, params.get("rv_installer"))
+        return
+
+    if params.get("clear_interface", "yes") == "yes":
+        for vm in params.get("vms").split():
+            utils_spice.clear_interface(env.get_vm(vm),
+                                        int(params.get("login_timeout", "360")))
+        utils_spice.wait_timeout(15)
 
     launch_rv(client_vm, guest_vm, params)
 
