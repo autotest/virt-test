@@ -20,7 +20,7 @@ def verify_recording(recording, params):
     rec = open(recording).read()
 
     disable_audio = params.get("disable_audio", "no")
-    threshold = int(params.get("rv_audio_threshold", "15000"))
+    threshold = int(params.get("rv_audio_threshold", "25000"))
     config_test = params.get("config_test", None)
 
     if (len(rec) - rec.count('\0') < 50):
