@@ -38,11 +38,6 @@ coreutils
 usbutils
 spice-xpi
 virt-viewer
-gtk-doc
-pulseaudio-libs-devel
-mesa-libGL-devel
-pygtk2-devel
-libjpeg-turbo-devel
 spice-vdagent
 usbredir
 SDL
