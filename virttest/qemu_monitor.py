@@ -1610,7 +1610,8 @@ class QMPMonitor(Monitor):
                             value = value.strip()
                         if opt[0] == "cert-subject":
                             value = value.replace('/', ',')
-                        args[opt[0].strip()] = value
+                        if opt[0]:
+                            args[opt[0].strip()] = value
                     except:
                         logging.debug("Fail to create args, please check cmd")
                 cmd_output.append(self.cmd(command, args, timeout=timeout))

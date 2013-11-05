@@ -275,7 +275,7 @@ def run_pci_hotplug(test, params, env):
     local_functions = locals()
 
     pci_num_range = int(params.get("pci_num"))
-    queues = int(params.get("queues"))
+    queues = int(params.get("queues", 1))
     rp_times = int(params.get("repeat_times"))
     img_list = params.get("images").split()
     context_msg = "Running sub test '%s' %s"
