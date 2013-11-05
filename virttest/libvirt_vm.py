@@ -825,11 +825,10 @@ class VM(virt_vm.BaseVM):
                 self.params.objects("isa_serials")]
 
     def setup_serial_ports(self):
-        if self.serial_ports is not None:
-            return   # Assume they're already set up
-        self.serial_ports = []
-        for serial in self.params.objects("isa_serials"):
-            self.serial_ports.append(serial)
+        if self.serial_ports is None:
+            self.serial_ports = []
+            for serial in self.params.objects("isa_serials"):
+                self.serial_ports.append(serial)
         if self.serial_console is None:
             # Attempt to setup serial0
             try:
