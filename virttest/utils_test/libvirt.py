@@ -126,3 +126,70 @@ def cpu_allowed_list_by_task(pid, tid):
     if result.exit_status:
         return None
     return result.stdout.strip()
+
+
+def transform_size(value):
+    """
+    Transform size, make its unit to be bytes.
+    :param value: transformed size, format can be
+                  11, "11", "11G", "11M", "1.1M" etc.
+    """
+    try:
+        # if value is an integer, just return it
+        if isinstance(value, int):
+            return value
+        human = {'B': 1,
+                 'K': 1024,
+                 'M': 1048576,
+                 'G': 1073741824,
+                 'T': 1099511627776
+                }
+        if not human.has_key(value[-1]):
+            try:
+                # if value can be format to int, return it
+                value = int(value)
+                return value
+            except ValueError:
+                raise error.TestFail("Transformed size format is not valid")
+        value = int(float(value[:-1]) * human[value[-1]])
+        return value
+    except (IndexError, ValueError), detail:
+        raise error.TestFail("Size transform failed!:\n %s" % detail)
+
+
+def get_image_info(image_file):
+    """
+    Get image information and put it into a dict. Image information like this:
+    *******************************
+    image: /path/vm1_6.3.img
+    file format: raw
+    virtual size: 10G (10737418240 bytes)
+    disk size: 888M
+    ....
+    ....
+    *******************************
+    And the image info dict will be like this
+    image_info_dict = { 'format':'raw',
+                        'vsize' : '10737418240'
+                        'dsize' : '931135488'
+                      }
+    TODO: Add more information to dict
+    """
+    try:
+        cmd = "qemu-img info %s" % image_file
+        image_info = utils.run(cmd, ignore_status=False).stdout.strip()
+        image_info_dict = {}
+        if image_info:
+            for line in image_info.splitlines():
+                if line.find("format") != -1:
+                    image_info_dict['format'] = line.split(':')[-1].strip()
+                elif line.find("virtual size") != -1:
+                    vsize = line.split(":")[-1].strip().split(" ")[0]
+                    image_info_dict['vsize'] = transform_size(vsize)
+                elif line.find("disk size") != -1:
+                    dsize = line.split(':')[-1].strip()
+                    image_info_dict['dsize'] = transform_size(dsize)
+        return image_info_dict
+    except (KeyError, IndexError, error.CmdError), detail:
+        raise error.TestError("Fail to get information of %s:\n%s" %
+                              (image_file, detail))
