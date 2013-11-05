@@ -923,7 +923,8 @@ def is_mounted(src, mount_point, fstype, perm=""):
     :rtype: Boolean
     """
     mount_point = os.path.realpath(mount_point)
-    src = os.path.realpath(src)
+    if fstype != 'nfs' and fstype != 'smbfs':
+        src = os.path.realpath(src)
     mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
     if mount_string.strip() in file("/etc/mtab").read():
         logging.debug("%s is successfully mounted", src)
