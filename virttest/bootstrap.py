@@ -306,7 +306,6 @@ def create_subtests_cfg(t_type):
     tmp_dir = data_dir.get_tmp_dir()
     if not os.path.isdir(tmp_dir):
         os.makedirs(tmp_dir)
-    logging.critical(dropin_tests)
     for dropin_test in dropin_tests:
         autogen_cfg_path = os.path.join(tmp_dir,
                                         '%s.cfg' % dropin_test)
