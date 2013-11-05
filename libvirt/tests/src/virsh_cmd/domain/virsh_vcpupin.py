@@ -60,7 +60,7 @@ def run_virsh_vcpupin(test, params, env):
         vcpus_pid = vm.get_vcpus_pid()
         vcpu_pid = vcpus_pid[vcpu]
         # Get the actual cpu affinity value in the proc entry
-        output = utils_test.cpu_allowed_list_by_task(pid, vcpu_pid)
+        output = utils_test.libvirt.cpu_allowed_list_by_task(pid, vcpu_pid)
         actual_output_proc = utils_test.libvirt.cpus_string_to_affinity_list(
             output,
             host_cpu_count)
