@@ -4,6 +4,7 @@ libguestfs tools test utility functions.
 
 import logging
 import signal
+import os
 
 from autotest.client import os_dep, utils
 from autotest.client.shared import error
@@ -1121,3 +1122,49 @@ def virt_df(disk_or_domain, ignore_status=True, debug=False, timeout=60):
     """
     cmd = "virt-df %s" % disk_or_domain
     return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_sysprep_cmd(disk_or_domain, options=None,
+                     extra=None, ignore_status=True,
+                     debug=False, timeout=600):
+    """
+    Execute virt-sysprep command to reset or unconfigure a virtual machine.
+
+    :param disk_or_domain: a img path or a domain name.
+    :param options: the options of virt-sysprep.
+    :return: a CmdResult object.
+    """
+    if os.path.isfile(disk_or_domain):
+        disk_or_domain = "-a " + disk_or_domain
+    else:
+        disk_or_domain = "-d " + disk_or_domain
+    cmd = "virt-sysprep %s" % (disk_or_domain)
+    if options is not None:
+        cmd += " %s" % options
+    if extra is not None:
+        cmd += " %s" % extra
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_cat_cmd(disk_or_domain, file_path, options=None, ignore_status=True,
+                 debug=False, timeout=60):
+    """
+    Execute virt-cat command to print guest's file detail.
+
+    :param disk_or_domain: a img path or a domain name.
+    :param file_path: the file to print detail
+    :param options: the options of virt-cat.
+    :return: a CmdResult object.
+    """
+    # disk_or_domain and file_path are necessary parameters.
+    if os.path.isfile(disk_or_domain):
+        disk_or_domain = "-a " + disk_or_domain
+    else:
+        disk_or_domain = "-d " + disk_or_domain
+    cmd = "virt-cat %s '%s'" % (disk_or_domain, file_path)
+    if options is not None:
+        cmd += " %s" % options
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
