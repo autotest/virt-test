@@ -1546,12 +1546,12 @@ class VM(virt_vm.BaseVM):
                     "listening_addr"
                 )
 
-            for skey in spice_keys:
-                value = params.get(skey, None)
-                if value:
-                    self.spice_options[skey] = value
+                for skey in spice_keys:
+                    value = params.get(skey, None)
+                    if value:
+                        self.spice_options[skey] = value
 
-            cmd += add_spice()
+                cmd += add_spice()
         if cmd:
             devices.insert(StrDev('display', cmdline=cmd))
 
