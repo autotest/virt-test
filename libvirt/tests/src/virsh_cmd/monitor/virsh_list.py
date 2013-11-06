@@ -1,8 +1,7 @@
 import re
 import logging
-import time
 from autotest.client.shared import error
-from virttest import virsh, libvirt_vm, remote, utils_libvirtd
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_list(test, params, env):
@@ -15,28 +14,6 @@ def run_virsh_list(test, params, env):
     4) Execute list command.
     5) Result check.
     """
-    def list_local_domains_on_remote(options_ref, remote_ip, remote_passwd, local_ip):
-        """
-        Create a virsh list command and execute it on remote host.
-        It will list local domains on remote host.
-
-        :param options_ref:options in virsh list command.
-        :param remote_ip:remote host's ip.
-        :param remote_passwd:remote host's password.
-        :param local_ip:local ip, to create uri in virsh list.
-        :return:return status and output of the virsh list command.
-        """
-        complete_uri = libvirt_vm.complete_uri(local_ip)
-        command_on_remote = "virsh -c %s list %s" % (complete_uri, options_ref)
-        session = remote.remote_login(
-            "ssh", remote_ip, "22", "root", remote_passwd, "#")
-        time.sleep(5)
-        status, output = session.cmd_status_output(
-            command_on_remote, internal_timeout=5)
-        time.sleep(5)
-        session.close()
-        return int(status), output
-
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
 
@@ -99,26 +76,12 @@ def run_virsh_list(test, params, env):
     elif options_ref == "":
         options_ref = "%s" % list_ref
 
-    remote_ref = params.get("remote_ref", "local")
-    if remote_ref == "remote":
-        remote_ip = params.get("remote_ip", "REMOTE.EXAMPLE.COM")
-        remote_passwd = params.get("remote_passwd", None)
-        local_ip = params.get("local_ip", "LOCAL.EXAMPLE.COM")
-        if remote_ip.count("EXAMPLE.COM") or local_ip.count("EXAMPLE.COM"):
-            raise error.TestNAError(
-                "Remote test parameters unchanged from default")
-        logging.info("Execute virsh command on remote host %s.", remote_ip)
-        status, output = list_local_domains_on_remote(
-            options_ref, remote_ip, remote_passwd, local_ip)
-        logging.info("Status:%s", status)
-        logging.info("Output:\n%s", output)
-    else:
-        if vm_ref:
-            options_ref = "%s --%s" % (options_ref, vm_ref)
-        result = virsh.dom_list(
-            options_ref, ignore_status=True, print_info=True)
-        status = result.exit_status
-        output = result.stdout.strip()
+    if vm_ref:
+        options_ref = "%s --%s" % (options_ref, vm_ref)
+    result = virsh.dom_list(
+        options_ref, ignore_status=True, print_info=True)
+    status = result.exit_status
+    output = result.stdout.strip()
 
     # Recover libvirtd service status
     if libvirtd == "off":

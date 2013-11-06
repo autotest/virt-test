@@ -1,5 +1,5 @@
 from autotest.client.shared import error
-from virttest import libvirt_vm, remote, virsh, utils_libvirtd
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_destroy(test, params, env):
@@ -21,13 +21,6 @@ def run_virsh_destroy(test, params, env):
     vm_ref = params.get("destroy_vm_ref")
     status_error = params.get("status_error", "no")
     libvirtd = params.get("libvirtd", "on")
-    remote_ip = params.get("remote_ip", "REMOTE.EXAMPLE.COM")
-    remote_pwd = params.get("remote_pwd", None)
-    local_ip = params.get("local_ip", "LOCAL.EXAMPLE.COM")
-    if vm_ref == "remote" and (remote_ip.count("EXAMPLE.COM")
-                 or local_ip.count("EXAMPLE.COM")):
-        raise error.TestNAError(
-            "Remote test parameters unchanged from default")
 
     if vm_ref == "id":
         vm_ref = domid
@@ -43,22 +36,8 @@ def run_virsh_destroy(test, params, env):
     if libvirtd == "off":
         utils_libvirtd.libvirtd_stop()
 
-    if vm_ref != "remote":
-        status = virsh.destroy(vm_ref, ignore_status=True).exit_status
-        output = ""
-    else:
-        status = 0
-        try:
-            remote_uri = libvirt_vm.complete_uri(local_ip)
-            session = remote.remote_login("ssh", remote_ip, "22", "root",
-                                          remote_pwd, "#")
-            session.cmd_output('LANG=C')
-            command = "virsh -c %s destroy %s" % (remote_uri, vm_name)
-            status, output = session.cmd_status_output(command,
-                                                       internal_timeout=5)
-            session.close()
-        except error.CmdError:
-            status = 1
+    status = virsh.destroy(vm_ref, ignore_status=True).exit_status
+    output = ""
 
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
