@@ -32,7 +32,7 @@ import time
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
-from virttest import aexpect, remote, utils_misc, virt_vm
+from virttest import aexpect, remote, utils_misc, virt_vm, data_dir
 import virttest
 
 try:
@@ -920,7 +920,9 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     subtest_dir_specific = os.path.join(test.bindir, params.get('vm_type'),
                                         "tests")
     subtest_dir = None
-    for d in [subtest_dir_specific, subtest_dir_virt]:
+    subtest_dirs = data_dir.SubdirList(subtest_dir_virt)
+    subtest_dirs += data_dir.SubdirList(subtest_dir_specific)
+    for d in subtest_dirs:
         module_path = os.path.join(d, "%s.py" % sub_type)
         if os.path.isfile(module_path):
             subtest_dir = d

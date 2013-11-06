@@ -28,8 +28,10 @@ def run_libvirt_bench_domstate_switch_in_loop(test, params, env):
         :Param state: State to verify the result of virsh_func.
                       None means do not check the state.
         """
+        vm_names = []
         for vm in vms:
-            vm_name = vm.name
+            vm_names.append(vm.name)
+        for vm_name in vm_names:
             cmd_result = virsh_func(vm_name)
             if cmd_result.exit_status:
                 raise error.TestFail(cmd_result)
@@ -40,7 +42,8 @@ def run_libvirt_bench_domstate_switch_in_loop(test, params, env):
                 raise error.TestFail("Command %s succeed, but the state is %s,"
                                      "but not %s." %
                                      (virsh_func.__name__, actual_state, state))
-        logging.debug("Operation %s on %s succeed.", virsh_func.__name__, vms)
+        logging.debug("Operation %s on %s succeed.",
+                      virsh_func.__name__, vm_names)
 
     # Get VMs.
     vms = env.get_all_vms()
