@@ -881,7 +881,7 @@ def umount(src, mount_point, fstype):
         return True
 
 
-def mount(src, mount_point, fstype, perm="rw"):
+def mount(src, mount_point, fstype, perm=None):
     """
     Mount the src into mount_point of the host.
 
@@ -890,6 +890,9 @@ def mount(src, mount_point, fstype, perm="rw"):
     @fstype: file system type
     @perm: mount permission
     """
+    if perm is None:
+        perm = "rw"
+
     umount(src, mount_point, fstype)
     mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
 
@@ -907,7 +910,7 @@ def mount(src, mount_point, fstype, perm="rw"):
     return is_mounted(src, mount_point, fstype, perm)
 
 
-def is_mounted(src, mount_point, fstype, perm=""):
+def is_mounted(src, mount_point, fstype, perm=None):
     """
     Check mount status from /etc/mtab
 
@@ -922,6 +925,9 @@ def is_mounted(src, mount_point, fstype, perm=""):
     :return: if the src is mounted as expect
     :rtype: Boolean
     """
+    if perm is None:
+        perm = ""
+
     mount_point = os.path.realpath(mount_point)
     if fstype not in ['nfs', 'smbfs']:
         src = os.path.realpath(src)
