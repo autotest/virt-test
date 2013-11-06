@@ -9,7 +9,25 @@ This file has the functions that helps
 import logging
 import os
 import re
+import shutil
 from autotest.client.shared import utils, error
+import data_dir
+import utils_misc
+import utils_net
+import socket
+
+
+class GlusterError(Exception):
+    pass
+
+
+class GlusterBrickError(GlusterError):
+    def __init__(self, error_mgs):
+        super(GlusterBrickError, self).__init__(error_mgs)
+        self.error_mgs = error_mgs
+
+    def __str__(self):
+        return ("Gluster: %s" % (self.error_mgs))
 
 
 @error.context_aware
@@ -53,6 +71,45 @@ def gluster_vol_start(vol_name):
         return True
 
 
+def gluster_vol_stop(vol_name, force=False):
+    """
+    Starts the volume if it is stopped
+    """
+    # Check if the volume is stopped, if then start
+    if is_gluster_vol_started(vol_name):
+        error.context("Gluster volume stop for volume; %s" % vol_name)
+        if force:
+            cmd = "gluster volume stop %s force" % vol_name
+        else:
+            cmd = "gluster volume stop %s" % vol_name
+        utils.run(cmd, ignore_status=False,
+                  stdout_tee=utils.TEE_TO_LOGS,
+                  stderr_tee=utils.TEE_TO_LOGS,
+                  stdin="y\n",
+                  verbose=True)
+        return True
+    else:
+        return True
+
+
+def gluster_vol_delete(vol_name):
+    """
+    Starts the volume if it is stopped
+    """
+    # Check if the volume is stopped, if then start
+    if not is_gluster_vol_started(vol_name):
+        error.context("Gluster volume delete; %s" % vol_name)
+        cmd = "gluster volume delete %s" % vol_name
+        utils.run(cmd, ignore_status=False,
+                  stdout_tee=utils.TEE_TO_LOGS,
+                  stderr_tee=utils.TEE_TO_LOGS,
+                  stdin="y\n",
+                  verbose=True)
+        return True
+    else:
+        return False
+
+
 def is_gluster_vol_avail(vol_name):
     """
     Returns if the volume already available
@@ -65,53 +122,143 @@ def is_gluster_vol_avail(vol_name):
         return gluster_vol_start(vol_name)
 
 
-def gluster_brick_create(brick_path):
+def gluster_brick_create(brick_path, force=False):
     """
     Creates brick
     """
-    if not os.path.isdir(brick_path):
+    if os.path.isdir(brick_path) and force:
+        gluster_brick_delete(brick_path)
+    try:
+        os.mkdir(brick_path)
+        return True
+    except OSError, details:
+        logging.error("Not able to create brick folder %s", details)
+
+
+def gluster_brick_delete(brick_path):
+    """
+    Creates brick
+    """
+    if os.path.isdir(brick_path):
         try:
-            os.mkdir(brick_path)
+            shutil.rmtree(brick_path)
             return True
         except OSError, details:
             logging.error("Not able to create brick folder %s", details)
 
 
-def gluster_vol_create(vol_name, hostname, brick_path):
+def gluster_vol_create(vol_name, hostname, brick_path, force=False):
     """
     Gluster Volume Creation
     """
     # Create a brick
+    if is_gluster_vol_avail(vol_name):
+        gluster_vol_stop(vol_name, True)
+        gluster_vol_delete(vol_name)
+        gluster_brick_delete(brick_path)
+
     gluster_brick_create(brick_path)
 
     cmd = "gluster volume create %s %s:/%s" % (vol_name, hostname,
                                                brick_path)
     error.context("Volume creation failed")
     utils.system(cmd)
+    return is_gluster_vol_avail(vol_name)
 
 
-def create_gluster_uri(params):
+def glusterfs_mount(g_uri, mount_point):
     """
-    Find/create gluster volume
+    Mount gluster volume to mountpoint.
+
+    :param g_uri: stripped gluster uri from create_gluster_uri(.., True)
+    :type g_uri: str
     """
+    utils_misc.mount(g_uri, mount_point, "glusterfs", None,
+                     False, "fuse.glusterfs")
+
+
+def create_gluster_vol(params):
     vol_name = params.get("gluster_volume_name")
+    force = params.get('force_recreate_gluster') == "yes"
+
     brick_path = params.get("gluster_brick")
+    if not os.path.isabs(brick_path):  # do nothing when path is absolute
+        base_dir = params.get("images_base_dir", data_dir.get_data_dir())
+        brick_path = os.path.join(base_dir, brick_path)
+
     error.context("Host name lookup failed")
-    hostname = utils.system_output("hostname -f")
-    cmd = "ip addr show|grep -A2 'state UP'|grep inet|awk '{print $2}'|cut -d'/' -f1"
-    if not hostname:
-        ip_addr = utils.system_output(cmd).split()
-        hostname = ip_addr[0]
+    hostname = socket.gethostname()
+    if not hostname or hostname == "(none)":
+        if_up = utils_net.get_net_if(state="UP")
+        ip_addr = utils_net.get_net_if_addrs(if_up[0])["ipv4"][0]
+        hostname = ip_addr
 
     # Start the gluster dameon, if not started
     glusterd_start()
     # Check for the volume is already present, if not create one.
-    if not is_gluster_vol_avail(vol_name):
-        gluster_vol_create(vol_name, hostname, brick_path)
+    if not is_gluster_vol_avail(vol_name) or force:
+        return gluster_vol_create(vol_name, hostname, brick_path, force)
+    else:
+        return True
 
+
+def create_gluster_uri(params, stripped=False):
+    """
+    Find/create gluster volume
+    """
+    vol_name = params.get("gluster_volume_name")
+
+    error.context("Host name lookup failed")
+    hostname = socket.gethostname()
+    if not hostname or hostname == "(none)":
+        if_up = utils_net.get_net_if(state="UP")
+        ip_addr = utils_net.get_net_if_addrs(if_up[0])["ipv4"][0]
+        hostname = ip_addr
+
+    # Start the gluster dameon, if not started
     # Building gluster uri
-    gluster_uri = "gluster://%s:0/%s/" % (hostname, vol_name)
+    gluster_uri = None
+    if stripped:
+        gluster_uri = "%s:/%s" % (hostname, vol_name)
+    else:
+        gluster_uri = "gluster://%s:0/%s/" % (hostname, vol_name)
     return gluster_uri
+
+
+def file_exists(params, filename_path):
+    sg_uri = create_gluster_uri(params, stripped=True)
+    g_uri = create_gluster_uri(params, stripped=False)
+    # Using directly /tmp dir because directory should be really temporary and
+    # should be deleted immediately when no longer needed and
+    # created directory don't file tmp dir by any data.
+    tmpdir = "gmount-%s" % (utils_misc.generate_random_string(6))
+    tmpdir_path = os.path.join("/tmp", tmpdir)
+    while os.path.exists(tmpdir_path):
+        tmpdir = "gmount-%s" % (utils_misc.generate_random_string(6))
+        tmpdir_path = os.path.join("/tmp", tmpdir)
+    ret = False
+    try:
+        try:
+            os.mkdir(tmpdir_path)
+            glusterfs_mount(sg_uri, tmpdir_path)
+            mount_filename_path = os.path.join(tmpdir_path,
+                                               filename_path[len(g_uri):])
+            if os.path.exists(mount_filename_path):
+                ret = True
+        except Exception, e:
+            logging.error("Failed to mount gluster volume %s to"
+                          " mount dir %s: %s" % (sg_uri, tmpdir_path, e))
+    finally:
+        if utils_misc.umount(sg_uri, tmpdir_path, "glusterfs", False,
+                             "fuse.glusterfs"):
+            try:
+                os.rmdir(tmpdir_path)
+            except OSError:
+                pass
+        else:
+            logging.warning("Unable to unmount tmp directory %s with glusterfs"
+                            " mount.", tmpdir_path)
+    return ret
 
 
 def get_image_filename(params, image_name, image_format):
