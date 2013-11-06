@@ -8,15 +8,17 @@ import utils_misc
 import data_dir
 import asset
 import cartesian_config
+import utils_selinux
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
 recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',),
                                  ('qemu-io',)],
                         'libvirt': [('virsh',), ('virt-install',),
-                                    ('fakeroot',)],
+                                    ('fakeroot',), ('semanage',),
+                                    ('getfattr',), ('restorecon',)],
                         'openvswitch': [],
-                        'lvsb': [],
+                        'lvsb': [('semanage',), ('getfattr',), ('restorecon',)],
                         'v2v': [],
                         'libguestfs': [('perl',)]}
 
@@ -412,6 +414,203 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
                 logging.debug("Config file %s exists, not touching", dst_file)
 
 
+def haz_defcon(datadir, imagesdir, isosdir, tmpdir):
+    """
+    Compare current types from Defaults, or if default, compare on-disk type
+    """
+    # Searching through default contexts is very slow.
+    # Exploit restorecon -n to find any defaults
+    try:
+        # First element is list, third tuple item is desired context
+        data_type = utils_selinux.diff_defcon(datadir, False)[0][2]
+    except IndexError: # object matches default, get current on-disk context
+        data_type = utils_selinux.get_context_of_file(datadir)
+    # Extract just the type component
+    data_type = utils_selinux.get_type_from_context(data_type)
+
+    try:
+        # Do not descend, we want to know the base-dir def. context
+        images_type = utils_selinux.diff_defcon(imagesdir, False)[0][2]
+    except IndexError:
+        images_type = utils_selinux.get_context_of_file(imagesdir)
+    images_type = utils_selinux.get_type_from_context(images_type)
+
+    try:
+        isos_type = utils_selinux.diff_defcon(isosdir, False)[0][2]
+    except IndexError:
+        isos_type = utils_selinux.get_context_of_file(isosdir)
+    isos_type = utils_selinux.get_type_from_context(isos_type)
+
+    try:
+        tmp_type = utils_selinux.diff_defcon(tmpdir, False)[0][2]
+    except IndexError:
+        tmp_type = utils_selinux.get_context_of_file(tmpdir)
+    tmp_type = utils_selinux.get_type_from_context(tmp_type)
+
+    # hard-coded values b/c only four of them and widly-used
+    if data_type == 'virt_var_lib_t':
+        if images_type == 'virt_image_t':
+            if isos_type == 'virt_content_t':
+                if tmp_type == 'user_tmp_t':
+                    return True  # No changes needed
+    return False
+
+
+def set_defcon(datadir, imagesdir, isosdir, tmpdir):
+    """
+    Tries to set datadir default contexts returns True if changed
+    """
+    made_changes = False
+    try:
+        # Returns list of tuple(pathname, from, to) of context differences
+        # between on-disk and defaults.  Only interested in top-level
+        # object [0] and the context it would change to [2]
+        data_type = utils_selinux.diff_defcon(datadir, False)[0][2]
+        # Extrach only the type
+        existing_data = utils_selinux.get_type_from_context(data_type)
+    except IndexError:
+        existing_data = None
+    try:
+        images_type = utils_selinux.diff_defcon(imagesdir, False)[0][2]
+        existing_images = utils_selinux.get_type_from_context(images_type)
+    except IndexError:
+        existing_images = None
+    try:
+        isos_type = utils_selinux.diff_defcon(isosdir, False)[0][2]
+        existing_isos = utils_selinux.get_type_from_context(isos_type)
+    except IndexError:
+        existing_isos = None
+
+    try:
+        tmp_type = utils_selinux.diff_defcon(tmpdir, False)[0][2]
+        existing_tmp = utils_selinux.get_type_from_context(tmp_type)
+    except IndexError:
+        existing_tmp = None
+
+    # Only print slow info message one time
+    could_be_slow=False
+    msg = "Defining default contexts, this could take a few seconds..."
+    # Changing default contexts is *slow*, avoid it if not necessary
+    if existing_data is None or existing_data is not 'virt_var_lib_t':
+        # semanage gives errors if don't treat /usr & /usr/local the same
+        data_regex = utils_selinux.transmogrify_usr_local(datadir)
+        logging.info(msg)
+        could_be_slow=True
+        # This applies only to datadir symlink, not sub-directories!
+        utils_selinux.set_defcon('virt_var_lib_t', data_regex)
+        made_changes = True
+
+    if existing_images is None or existing_images is not 'virt_image_t':
+        # Applies to imagesdir and everything below
+        images_regex = utils_selinux.transmogrify_usr_local(imagesdir)
+        images_regex = utils_selinux.transmogrify_sub_dirs(images_regex)
+        if not could_be_slow:
+            logging.info(msg)
+            could_be_slow=True
+        utils_selinux.set_defcon('virt_image_t', images_regex)
+        made_changes = True
+
+    if existing_isos is None or existing_isos is not 'virt_content_t':
+        # Applies to isosdir and everything below
+        isos_regex = utils_selinux.transmogrify_usr_local(isosdir)
+        isos_regex = utils_selinux.transmogrify_sub_dirs(isos_regex)
+        if not could_be_slow:
+            logging.info(msg)
+            could_be_slow=True
+        utils_selinux.set_defcon('virt_content_t', isos_regex)
+        made_changes = True
+
+    if existing_tmp is None or existing_tmp is not 'user_tmp_t':
+        tmp_regex = utils_selinux.transmogrify_usr_local(tmpdir)
+        tmp_regex = utils_selinux.transmogrify_sub_dirs(tmp_regex)
+        if not could_be_slow:
+            logging.info(msg)
+            could_be_slow=True
+        utils_selinux.set_defcon('user_tmp_t', tmp_regex)
+        made_changes = True
+
+    return made_changes
+
+
+def verify_selinux(datadir, imagesdir, isosdir, tmpdir, interactive):
+    """
+    Verify/Set/Warn about SELinux and default file contexts for testing.
+
+    :param datadir: Abs. path to data-directory symlink
+    :param imagesdir: Abs. path to data/images directory
+    :param isosdir: Abs. path to data/isos directory
+    :param tmpdir: Abs. path to virt-test tmp dir
+    :param interactive: True if running from console
+    """
+    # datadir can be a symlink, but these must not have any
+    imagesdir = os.path.realpath(imagesdir)
+    isosdir = os.path.realpath(isosdir)
+    tmpdir = os.path.realpath(tmpdir)
+    needs_relabel = None
+    try:
+        # Raise SeCmdError if selinux not installed
+        if utils_selinux.get_status() == 'enforcing':
+            # Check if default contexts are set
+            if not haz_defcon(datadir, imagesdir, isosdir, tmpdir):
+                if interactive:
+                    answer = utils.ask("Setup all undefined default SELinux "
+                                       "contexts for shared/data/?")
+                else:
+                    answer = "n"
+            else:
+                answer = "n"
+            if answer.lower() == "y":
+                # Assume relabeling is needed if changes made
+                needs_relabel = set_defcon(datadir, imagesdir, isosdir, tmpdir)
+            # Only relabel if files/dirs don't match default
+            labels_ok = utils_selinux.verify_defcon(datadir, False)
+            labels_ok &= utils_selinux.verify_defcon(imagesdir, True)
+            labels_ok &= utils_selinux.verify_defcon(isosdir, True)
+            labels_ok &= utils_selinux.verify_defcon(tmpdir, True)
+            if labels_ok:
+                needs_relabel = False
+            else:
+                logging.warning("On-disk SELinux labels do not match defaults")
+                needs_relabel = True
+        # Disabled or Permissive mode is same result as not installed
+        else:
+            logging.info("SELinux in permissive or disabled, testing"
+                         "in enforcing mode is highly encourraged.")
+    except utils_selinux.SemanageError:
+        logging.info("Could not set default SELinux contexts. Please")
+        logging.info("consider installing the semanage program then ")
+        logging.info("verifying and/or running running:")
+        # Paths must be transmogrified (changed) into regular expressions
+        logging.info("semanage fcontext --add -t virt_var_lib_t '%s'",
+                     utils_selinux.transmogrify_usr_local(datadir))
+        logging.info("semanage fcontext --add -t virt_image_t '%s'",
+                     utils_selinux.transmogrify_usr_local(
+                         utils_selinux.transmogrify_sub_dirs(imagesdir)))
+        logging.info("semanage fcontext --add -t virt_content_t '%s'",
+                     utils_selinux.transmogrify_usr_local(
+                         utils_selinux.transmogrify_sub_dirs(isosdir)))
+        logging.info("semanage fcontext --add -t user_tmp_t '%s'",
+                     utils_selinux.transmogrify_usr_local(
+                         utils_selinux.transmogrify_sub_dirs(tmpdir)))
+        needs_relabel = None  # Next run will catch if relabeling needed
+    except utils_selinux.SelinuxError:  # Catchall SELinux related
+        logging.info("SELinux not available, or error in command/setup.")
+        logging.info("Please manually verify default file contexts before")
+        logging.info("testing with SELinux enabled and enforcing.")
+    if needs_relabel:
+        if interactive:
+            answer = utils.ask("Relabel from default contexts?")
+        else:
+            answer = "n"
+        if answer.lower() == 'y':
+            changes = utils_selinux.apply_defcon(datadir, False)
+            changes += utils_selinux.apply_defcon(imagesdir, True)
+            changes += utils_selinux.apply_defcon(isosdir, True)
+            changes += utils_selinux.apply_defcon(tmpdir, True)
+            logging.info("Corrected contexts on %d files/dirs",
+                         len(changes))
+
+
 def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
               check_modules, online_docs_url, restore_image=False,
               download_image=True, interactive=True, verbose=False):
@@ -463,10 +662,30 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
             logging.debug("Dir %s exists, not creating",
                           sub_dir_path)
 
-    # lvsb test doesn't use any shared configs
-    if test_name == 'lvsb':
+    datadir = data_dir.get_data_dir()
+    if test_name == 'libvirt':
+        create_config_files(test_dir, shared_dir, interactive, step)
         create_subtests_cfg(test_name)
-    else:
+        create_guest_os_cfg(test_name)
+        # Don't bother checking if changes can't be made
+        if os.getuid() == 0:
+            verify_selinux(datadir,
+                           os.path.join(datadir, 'images'),
+                           os.path.join(datadir, 'isos'),
+                           data_dir.get_tmp_dir(),
+                           interactive)
+
+    # lvsb test doesn't use any shared configs
+    elif test_name == 'lvsb':
+        create_subtests_cfg(test_name)
+        if os.getuid() == 0:
+            # Don't bother checking if changes can't be made
+            verify_selinux(datadir,
+                           os.path.join(datadir, 'images'),
+                           os.path.join(datadir, 'isos'),
+                           data_dir.get_tmp_dir(),
+                           interactive)
+    else:  # Some other test
         create_config_files(test_dir, shared_dir, interactive, step)
         create_subtests_cfg(test_name)
         create_guest_os_cfg(test_name)
