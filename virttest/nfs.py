@@ -6,8 +6,8 @@ import re
 import os
 import logging
 from autotest.client import os_dep
-from autotest.client.shared import utils, service, error
-import utils_misc
+from autotest.client.shared import utils, error
+import utils_misc, staging
 
 
 def nfs_exported():
@@ -151,7 +151,7 @@ class Nfs(object):
             self.nfs_setup = True
             os_dep.command("service")
             os_dep.command("exportfs")
-            self.nfs_service = service.SpecificServiceManager("nfs")
+            self.nfs_service = staging.service.SpecificServiceManager("nfs")
 
             self.export_dir = (params.get("export_dir")
                                or self.mount_src.split(":")[-1])
