@@ -1352,6 +1352,17 @@ def net_list(options, extra="", **dargs):
     return command("net-list %s %s" % (options, extra), **dargs)
 
 
+def net_info(network, extra="", **dargs):
+    """
+    Returns basic information about the network
+
+    @param: network: network name or uuid
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-info %s %s" % (network, extra), **dargs)
+
 def net_state_dict(only_names=False, **dargs):
     """
     Return network name to state/autostart/persistent mapping
@@ -1473,6 +1484,79 @@ def net_autostart(network, extra="", **dargs):
     :return: CmdResult object
     """
     return command("net-autostart %s %s" % (network, extra), **dargs)
+
+
+def iface_list(options, extra="", **dargs):
+    """
+    List interfaces on host.
+
+    @param: options: --all or --inactive or blank value to be passed
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("iface-list %s %s" % (options, extra), **dargs)
+
+
+def iface_dumpxml(ifc_name, to_file=None, extra="", **dargs):
+    """
+    Dumps iface details in xml
+    @param: ifc_name: interface name to be passed
+    @param: options: options to pass to command
+    @param: to_file: capture the output to a optional file
+    @return: CmdResult object
+    """
+    cmd = ('iface-dumpxml %s %s' %(ifc_name,extra))
+    result = command(cmd, **dargs)
+    if to_file is not None:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    return result
+
+def virsh_ifaces(ifc_name,list_option):
+    """
+    Create the list of dicts for the output of virsh iface-list
+    @param: ifc_name: interface name to be passed
+    @param: list_option: options for virsh list --all, --inactive or blank
+    @return: has variable which is having the elments (avail)availaibility of the interface, 
+    (isup) status and (mac) mac address.
+    
+    If interface is available  from virsh list command, then the avail would
+    would set as true and  others would set as the respective value
+    from the virsh command.
+    
+    Else, the avail would record as false and others are none
+   
+    """
+    ifaces = []
+    iface = {}
+    iface_dtl = {'avail':False,'mac':'','state':''}
+    output=iface_list(list_option,ignore_status=True)
+    ifacelist = output.stdout.strip().splitlines()
+    ifacelist = ifacelist[2:]
+    for line in ifacelist:
+        linesplit = line.split(None, 3)
+        iface['name']= linesplit[0]
+        try:
+            iface['mac']= linesplit[2]
+        except IndexError:
+            iface['mac']=''
+        iface['state']= linesplit[1]
+        ifaces.append(iface)
+        iface = {}
+    for line in ifaces:
+        if line['name']==ifc_name:
+            iface_dtl['avail']=True
+            iface_dtl['mac']=line['mac']
+            if line['state']=='active':
+                iface_dtl['isup']=True
+            else:
+                iface_dtl['isup']=False
+            break
+    return iface_dtl
+
+
 
 
 def pool_info(name, **dargs):
