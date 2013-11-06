@@ -207,6 +207,8 @@ def run_pci_devices(test, params, env):
                 name = "pci_%s%d" % (device, idx)
                 names[device] = idx
                 params, bus = add_bus(qdev, params, device, name, _lasts[_idx])
+                # we inserted a device, increase the upper bus first idx
+                _lasts[_idx].first += 1
                 out += "->%s" % (name)
                 _idx += 1
                 if len(_lasts) > _idx:
@@ -230,6 +232,7 @@ def run_pci_devices(test, params, env):
     vm = env.get_vm(params["main_vm"])
     qtree = qemu_qtree.QtreeContainer()
 
+    error.context("Verify qtree vs. qemu devices", logging.info)
     info_qtree = vm.monitor.info('qtree', False)
     qtree.parse_info_qtree(info_qtree)
     errors = verify_qdev_vs_qtree(vm.devices, qtree)
@@ -240,3 +243,6 @@ def run_pci_devices(test, params, env):
         raise error.TestFail("Errors occured while comparing info qtree vs. "
                              "the internal representation. Please check the "
                              "log for details.")
+
+    error.context("Verify VM booted properly.", logging.info)
+    vm.wait_for_login()
