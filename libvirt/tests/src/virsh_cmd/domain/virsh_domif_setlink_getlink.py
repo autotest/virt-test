@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh
@@ -54,6 +55,11 @@ def run_virsh_domif_setlink_getlink(test, params, env):
     status_error = params.get("status_error", "no")
     mac_address = vm.get_virsh_mac_address(0)
     device = "vnet0"
+
+    # Back up xml file.
+    vm_xml_file = os.path.join(test.tmpdir, "vm.xml")
+    virsh.dumpxml(vm_name, extra="--inactive", to_file=vm_xml_file)
+
     # Vm status
     if start_vm == "yes" and vm.is_dead():
         vm.start()
@@ -94,6 +100,7 @@ def run_virsh_domif_setlink_getlink(test, params, env):
     elif start_vm == "no":
         vm.start()
 
+    error_msg = None
     if status_error == "no":
         # Serial login the vm to check link status
         # Start vm check the link statue
@@ -110,14 +117,23 @@ def run_virsh_domif_setlink_getlink(test, params, env):
         cmd_status = session.cmd_status('ifdown %s' % guest_if_name)
         cmd_status = session.cmd_status('ifup %s' % guest_if_name)
         if cmd_status != 0:
-            raise error.TestFail("Could not bring up interface %s inside guest"
-                                 % guest_if_name)
+            error_msg = ("Could not bring up interface %s inside guest"
+                         % guest_if_name)
     else:  # negative test
         # stop guest, so state is always consistent on next start
         vm.destroy()
 
-    # Check status_error
+    # Recover VM.
+    if vm.is_alive():
+        vm.destroy(gracefully=False)
+    virsh.undefine(vm_name)
+    virsh.define(vm_xml_file)
+    os.remove(vm_xml_file)
 
+    if error_msg:
+        raise error.TestFail(error_msg)
+
+    # Check status_error
     if status_error == "yes":
         if status:
             logging.info("Expected error (negative testing). Output: %s",
