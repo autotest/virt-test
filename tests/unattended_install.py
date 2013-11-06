@@ -689,13 +689,13 @@ class UnattendedInstallConfig(object):
         elif self.unattended_file.endswith('.xml'):
             if "autoyast" in self.kernel_params:
                 # SUSE autoyast install
-                dest_fname = "autoinst.xml"
+                dest_fname = "autounattend.xml"
                 if (self.cdrom_unattended and
                         self.params.get('unattended_delivery_method') == 'cdrom'):
                     boot_disk = utils_disk.CdromDisk(self.cdrom_unattended,
                                                      self.tmpdir)
                 elif self.floppy:
-                    autoyast_param = 'autoyast=floppy'
+                    autoyast_param = 'autoyast=device://fd0/autounattend.xml'
                     kernel_params = self.kernel_params
                     if 'autoyast=' in kernel_params:
                         kernel_params = re.sub('autoyast\=[\w\d\:\.\/]+',
