@@ -2675,3 +2675,35 @@ def secret_set_value(uuid, base64, options=None, **dargs):
     if options:
         cmd += " --%s" % options
     return command(cmd, **dargs)
+
+
+def nodedev_create(xml_file, options=None, **dargs):
+    """
+    Return cmd result of the device to be created by an XML file
+
+    :param xml_file: device XML file
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nodedev-create %s" % xml_file
+    if options is not None:
+        cmd += " %s" % options
+
+    logging.debug("Create the device from %s", xml_file)
+    return command(cmd, **dargs)
+
+
+def nodedev_destroy(dev_name, options=None, **dargs):
+    """
+    Return cmd result of the device to be destroyed
+
+    :param dev_name: name of the device
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nodedev-destroy %s" % dev_name
+    if options is not None:
+        cmd += " %s" % options
+
+    logging.debug("Destroy the device %s on the node", dev_name)
+    return command(cmd, **dargs)
