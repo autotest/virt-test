@@ -558,8 +558,8 @@ Slots:
 
         # Try to insert device into specific port which belongs to inferior bus
         out = hub2.insert(qemu_devices.QDevice('usb-kbd',
-                                                {'port': '2.4.3.3'},
-                                                parent_bus={'type': 'uhci'}))
+                                               {'port': '2.4.3.3'},
+                                               parent_bus={'type': 'uhci'}))
         assert out == "BusId"
 
         # Try to insert device into specific port which belongs to superior bus
@@ -1088,12 +1088,12 @@ fdc
         dev.verify_hotplug = lambda _out, _monitor: True
         qdev3.simple_hotplug(dev, monitor)
         assert qdev1 == qdev3, ("Similar hotplugged qdevs are not alike\n%s\n"
-                                "%s" % (qdev1.str_long(), qdev3.str_long()))
+                                "%s" % (qdev1.str_long(), qdev2.str_long()))
 
         # Eq. is not symmetrical, qdev1 doesn't allow hotplugged VMs.
         assert qdev3 != qdev1, ("Similar hotplugged qdevs match even thought "
                                 "qdev1 doesn't allow hotplugged VM\n%s\n%s"
-                                % (qdev1.str_long(), qdev3.str_long()))
+                                % (qdev1.str_long(), qdev2.str_long()))
 
         qdev2.__qemu_help = "I support only this :-)"  # pylint: disable=W0212
         assert qdev1 == qdev2, ("qdevs of different qemu versions match:\n%s\n"
