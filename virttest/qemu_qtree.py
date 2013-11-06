@@ -313,9 +313,9 @@ class QtreeContainer(object):
                     current = new
                     line = line[5:].split(',')
                     line[1] = line[1].strip()
-                    q_id = line[1][5:-1]
+                    q_id = line[1][4:-1]
                     if len(q_id) > 0:
-                        current.set_qtree_prop('id', line[1][5:-1])
+                        current.set_qtree_prop('id', q_id)
                     offset += OFFSET_PER_LEVEL
                     line = ['type', line[0]]
                 elif _RE_CLASS.match(line):
