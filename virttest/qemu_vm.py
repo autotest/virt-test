@@ -2950,6 +2950,7 @@ class VM(virt_vm.BaseVM):
                             "spice_migrate_info",
                             "client_migrate_info"]
 
+                cmdline = ""
                 for command in commands:
                     try:
                         self.monitor.verify_supported_cmd(command)
@@ -2967,7 +2968,8 @@ class VM(virt_vm.BaseVM):
                     if cert_subj:
                         cmdline += ",cert-subject=%s" % cert_subj
                     break
-                self.monitor.send_args_cmd(cmdline)
+                if cmdline:
+                    self.monitor.send_args_cmd(cmdline)
 
             if protocol in ["tcp", "rdma", "x-rdma"]:
                 if local:
