@@ -807,7 +807,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("part-get-parttype %s" % device)
 
-
     def fsck(self, fstype, device):
         """
         fsck - run the filesystem checker
@@ -816,6 +815,73 @@ class GuestfishPersistent(Guestfish):
         filesystem type "fstype".
         """
         return self.inner_cmd("fsck %s %s" % (fstype, device))
+
+    def blockdev_getss(self, device):
+        """
+        blockdev-getss - get sectorsize of block device
+
+        This returns the size of sectors on a block device. Usually 512,
+        but can be larger for modern devices.
+        """
+        return self.inner_cmd("blockdev-getss %s" % device)
+
+    def blockdev_getsz(self, device):
+        """
+        blockdev-getsz - get total size of device in 512-byte sectors
+
+        This returns the size of the device in units of 512-byte sectors
+        (even if the sectorsize isn't 512 bytes ... weird).
+        """
+        return self.inner_cmd("blockdev-getsz %s" % device)
+
+    def blockdev_getbsz(self, device):
+        """
+        blockdev-getbsz - get blocksize of block device
+
+        This returns the block size of a device.
+        """
+        return self.inner_cmd("blockdev-getbsz %s" % device)
+
+    def blockdev_getsize64(self, device):
+        """
+        blockdev-getsize64 - get total size of device in bytes
+
+        This returns the size of the device in bytes
+        """
+        return self.inner_cmd("blockdev-getsize64 %s" % device)
+
+    def blockdev_setbsz(self, device, blocksize):
+        """
+        blockdev-setbsz - set blocksize of block device
+
+        This sets the block size of a device.
+        """
+        return self.inner_cmd("blockdev-setbsz %s %s" % (device, blocksize))
+
+    def blockdev_getro(self, device):
+        """
+        blockdev-getro - is block device set to read-only
+
+        Returns a boolean indicating if the block device is read-only
+        (true if read-only, false if not).
+        """
+        return self.inner_cmd("blockdev-getro %s" % device)
+
+    def blockdev_setro(self, device):
+        """
+        blockdev-setro - set block device to read-only
+
+        Sets the block device named "device" to read-only.
+        """
+        return self.inner_cmd("blockdev-setro %s" % device)
+
+    def blockdev_setrw(self, device):
+        """
+        blockdev-setrw - set block device to read-write
+
+        Sets the block device named "device" to read-write.
+        """
+        return self.inner_cmd("blockdev-setrw %s" % device)
 
 
 # libguestfs module functions follow #####
