@@ -121,6 +121,17 @@ class IfNotInBridgeError(NetError):
                 (self.ifname, self.details))
 
 
+class OpenflowSwitchError(NetError):
+
+    def __init__(self, brname):
+        NetError.__init__(self, brname)
+        self.brname = brname
+
+    def __str__(self):
+        return ("Only support openvswitch, make sure your env support ovs, "
+                "and your bridge %s is an openvswitch" % self.brname)
+
+
 class BRNotExistError(NetError):
 
     def __init__(self, brname, details):
@@ -1043,6 +1054,28 @@ def del_from_bridge(ifname, brname, ovs=None):
     # Try add port to OpenVSwitch bridge.
     if brname in ovs.list_br():
         ovs.del_port(brname, _ifname)
+
+
+@__init_openvswitch
+def openflow_manager(br_name, command, flow_options=None, ovs=None):
+    """
+    Manager openvswitch flow rules
+
+    :param br_name: name of the bridge
+    :param command: manager cmd(add-flow, del-flows, dump-flows..)
+    :param flow_options: open flow options
+    :param ovs: OpenVSwitch object.
+    """
+    if ovs is None:
+        ovs = __ovs
+
+    if ovs is None or br_name not in ovs.list_br():
+        raise OpenflowSwitchError(br_name)
+
+    manager_cmd = "ovs-ofctl %s %s" % (command, br_name)
+    if flow_options:
+        manager_cmd += " %s" % flow_options
+    utils.run(manager_cmd)
 
 
 def bring_up_ifname(ifname):
