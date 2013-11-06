@@ -566,22 +566,11 @@ def vcpupin(name, vcpu, cpu_list, options="", **dargs):
 
 def vcpuinfo(name, **dargs):
     """
-    Retrieves the vcpuinfo command result if values not "N/A"
-
     :param name: name of domain
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
-    # Guarantee cmdresult object created
-    dargs['ignore_status'] = True
-    cmdresult = command("vcpuinfo %s" % name, **dargs)
-    if cmdresult.exit_status == 0:
-        # Non-running vm makes virsh exit(0) but have "N/A" info.
-        # on newer libvirt.  Treat this as an error.
-        if re.search(r"\s*CPU:\s+N/A\s*", cmdresult.stdout.strip()):
-            cmdresult.exit_status = -1
-            cmdresult.stdout += "\n\nvirsh.vcpuinfo inject error: N/A values\n"
-    return cmdresult
+    return command("vcpuinfo %s" % name, **dargs)
 
 
 def freecell(extra="", **dargs):
