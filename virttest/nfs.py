@@ -7,7 +7,12 @@ import os
 import logging
 from autotest.client import os_dep
 from autotest.client.shared import utils, error
-import utils_misc, staging
+from virttest import utils_misc
+
+try:
+    from autotest.client.shared import service
+except ImportError:
+    from virttest.staging import service
 
 
 def nfs_exported():
@@ -151,7 +156,7 @@ class Nfs(object):
             self.nfs_setup = True
             os_dep.command("service")
             os_dep.command("exportfs")
-            self.nfs_service = staging.service.SpecificServiceManager("nfs")
+            self.nfs_service = service.SpecificServiceManager("nfs")
 
             self.export_dir = (params.get("export_dir")
                                or self.mount_src.split(":")[-1])
