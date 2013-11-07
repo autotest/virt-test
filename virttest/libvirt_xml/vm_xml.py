@@ -280,7 +280,7 @@ class VMXML(VMXMLBase):
     """
 
     # Must copy these here or there will be descriptor problems
-    __slots__ = VMXMLBase.__slots__
+    __slots__ = []
 
     def __init__(self, hypervisor_type='kvm', virsh_instance=base.virsh):
         """
@@ -629,7 +629,7 @@ class VMXML(VMXMLBase):
         :param: vm_name: Name of defined vm to get mac
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
-        xmltreefile = vmxml.dict_get('xml')
+        xmltreefile = vmxml.__dict_get__('xml')
         try:
             iface = xmltreefile.find('devices').find('interface')
             return iface.find('mac').get('address')

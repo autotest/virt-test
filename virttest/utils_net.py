@@ -1152,7 +1152,7 @@ class VirtIface(propcan.PropCan):
 
     def __getstate__(self):
         state = {}
-        for key in self.__class__.__slots__:
+        for key in self.__class__.__all_slots__:
             if key in self:
                 state[key] = self[key]
         return state

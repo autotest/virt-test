@@ -138,7 +138,7 @@ class VirtTools(object):
 class GuestfishTools(lgf.GuestfishPersistent):
     """Useful Tools for Guestfish class."""
 
-    __slots__ = lgf.GuestfishPersistent.__slots__ + ('params', )
+    __slots__ = ('params', )
 
     def __init__(self, params):
         """

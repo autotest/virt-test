@@ -31,13 +31,9 @@ class Disk(base.TypedDeviceBase):
         source: libvirt_xml.devices.Disk.DiskSource instance
     """
 
-    __slots__ = base.TypedDeviceBase.__slots__ + ('device', 'rawio',
-                                                  'sgio', 'snapshot',
-                                                  'driver', 'target',
-                                                  'address', 'boot',
-                                                  'readonly', 'transient',
-                                                  'share', 'mirror', 'ready',
-                                                  'iotune', 'source')
+    __slots__ = ('device', 'rawio', 'sgio', 'snapshot', 'driver', 'target',
+                 'address', 'boot', 'readonly', 'transient', 'share',
+                 'mirror', 'ready', 'iotune', 'source')
 
     def __init__(self, type_name='file', virsh_instance=base.base.virsh):
         accessors.XMLAttribute('device', self, parent_xpath='/',
@@ -120,9 +116,7 @@ class Disk(base.TypedDeviceBase):
             hosts: list of dictionaries describing network host properties
         """
 
-        __slots__ = base.base.LibvirtXMLBase.__slots__ + ('attrs',
-                                                          'seclabels',
-                                                          'hosts',)
+        __slots__ = ('attrs', 'seclabels', 'hosts',)
 
         def __init__(self, virsh_instance=base.base.virsh):
             accessors.XMLElementDict('attrs', self, parent_xpath='/',
@@ -192,16 +186,12 @@ class Disk(base.TypedDeviceBase):
             write_iops_sec: str(int)
         """
 
-        __slots__ = base.base.LibvirtXMLBase.__slots__ + ('total_bytes_sec',
-                                                          'read_bytes_sec',
-                                                          'write_bytes_sec',
-                                                          'total_iops_sec',
-                                                          'read_iops_sec',
-                                                          'write_iops_sec')
+        __slots__ = ('total_bytes_sec', 'read_bytes_sec', 'write_bytes_sec',
+                     'total_iops_sec', 'read_iops_sec', 'write_iops_sec')
 
         def __init__(self, virsh_instance=base.base.virsh):
-            for slot in self.__slots__:
-                if slot in base.base.LibvirtXMLBase.__slots__:
+            for slot in self.__all_slots__:
+                if slot in base.base.LibvirtXMLBase.__all_slots__:
                     continue    # don't add these
                 else:
                     accessors.XMLElementInt(slot, self, parent_xpath='/',

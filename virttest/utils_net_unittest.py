@@ -123,9 +123,9 @@ class TestVirtIface(unittest.TestCase):
             self.assertEqual(get_access_value, expected_value)
 
     def test_half_set(self):
-        half_prop_end = (len(self.VirtIface.__slots__) / 2) + 1
+        half_prop_end = (len(self.VirtIface.__all_slots__) / 2) + 1
         props = {}
-        for propertea in self.VirtIface.__slots__[0:half_prop_end]:
+        for propertea in self.VirtIface.__all_slots__[0:half_prop_end]:
             props[propertea] = utils_misc.generate_random_string(16)
         virtiface = self.VirtIface(props)
         what_func = lambda propertea: props[propertea]
@@ -133,7 +133,7 @@ class TestVirtIface(unittest.TestCase):
 
     def test_full_set(self):
         props = {}
-        for propertea in self.VirtIface.__slots__:
+        for propertea in self.VirtIface.__all_slots__:
             props[propertea] = utils_misc.generate_random_string(16)
         virtiface = self.VirtIface(props)
         what_func = lambda propertea: props[propertea]
@@ -144,7 +144,7 @@ class TestVirtIface(unittest.TestCase):
         Verify container ignores unknown key names
         """
         props = {}
-        for propertea in self.VirtIface.__slots__:
+        for propertea in self.VirtIface.__all_slots__:
             props[propertea] = utils_misc.generate_random_string(16)
         more_props = {}
         for _ in xrange(0, 16):
@@ -443,7 +443,7 @@ class TestVmNetSubclasses(unittest.TestCase):
                                  "%s != %s" % (virtnet_nic.nic_name,
                                                params_nic))
                 # __slots__ functionality established/asserted elsewhere
-                props_to_check = list(utils_net.VirtIface.__slots__)
+                props_to_check = list(utils_net.VirtIface.__all_slots__)
                 # other tests check mac address handling
                 del props_to_check[props_to_check.index('mac')]
                 for propertea in props_to_check:

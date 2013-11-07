@@ -17,11 +17,9 @@ class SourceXML(base.LibvirtXMLBase):
     attributes which dependent on pool type.
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('device_path', 'vg_name',
-                                                 'host_name', 'dir_path',
-                                                 'adp_type', 'adp_name',
-                                                 'adp_parent', 'adp_wwnn',
-                                                 'adp_wwpn')
+    __slots__ = ('device_path', 'vg_name', 'host_name', 'dir_path',
+                 'adp_type', 'adp_name', 'adp_parent', 'adp_wwnn',
+                 'adp_wwpn')
 
     def __init__(self, virsh_instance=base.virsh):
         """
@@ -91,10 +89,8 @@ class PoolXMLBase(base.LibvirtXMLBase):
         target: string, target path of pool
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('pool_type', 'name',
-                                                 'uuid', 'capacity',
-                                                 'allocation', 'available',
-                                                 'source', 'target_path')
+    __slots__ = ('pool_type', 'name', 'uuid', 'capacity',
+                 'allocation', 'available', 'source', 'target_path')
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
     __schema_name__ = "pool"
@@ -132,17 +128,17 @@ class PoolXMLBase(base.LibvirtXMLBase):
         super(PoolXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def get_source(self):
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         try:
             source_root = xmltreefile.reroot('/source')
         except KeyError as detail:
             raise xcepts.LibvirtXMLError(detail)
-        sourcexml = SourceXML(virsh_instance=self.dict_get('virsh'))
+        sourcexml = SourceXML(virsh_instance=self.__dict_get__('virsh'))
         sourcexml.xmltreefile = source_root
         return sourcexml
 
     def del_soruce(self):
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         element = xmltreefile.find('/source')
         if element is not None:
             xmltreefile.remove(element)
@@ -152,7 +148,7 @@ class PoolXMLBase(base.LibvirtXMLBase):
         if not issubclass(type(value), SourceXML):
             raise xcepts.LibvirtXMLError(
                 "Value muse be a SourceXML or subclass")
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         self.del_source()
         root = xmltreefile.getroot()
         root.append(value.xmltreefile.getroot())
@@ -165,7 +161,7 @@ class PoolXML(PoolXMLBase):
     Manipulators of a libvirt Pool through it's XML definition.
     """
 
-    __slots__ = PoolXMLBase.__slots__
+    __slots__ = []
 
     def __init__(self, pool_type='dir', virsh_instance=base.virsh):
         """

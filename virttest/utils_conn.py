@@ -452,10 +452,8 @@ class SSHConnection(ConnectionBase):
     SSH_KEYGEN, SSH_ADD, SSH_COPY_ID, SSH_AGENT, SHELL, SSH: tools to build
     a non-pwd connection.
     """
-    __slots__ = ConnectionBase.__slots__ + ('ssh_rsa_pub_path',
-                                            'ssh_id_rsa_path', 'SSH_KEYGEN',
-                                            'SSH_ADD', 'SSH_COPY_ID',
-                                            'SSH_AGENT', 'SHELL', 'SSH')
+    __slots__ = ('ssh_rsa_pub_path', 'ssh_id_rsa_path', 'SSH_KEYGEN',
+                 'SSH_ADD', 'SSH_COPY_ID', 'SSH_AGENT', 'SHELL', 'SSH')
 
     def __init__(self, *args, **dargs):
         """
@@ -595,9 +593,7 @@ class TCPConnection(ConnectionBase):
     libvirtd_conf_path: Path of libvirtd.conf, default is
                         /etc/libvirt/libvirtd.conf.
     """
-    __slots__ = ConnectionBase.__slots__ + ('tcp_port',
-                                            'remote_syslibvirtd',
-                                            'remote_libvirtdconf')
+    __slots__ = ('tcp_port', 'remote_syslibvirtd', 'remote_libvirtdconf')
 
     def __init__(self, *args, **dargs):
         """
@@ -703,13 +699,9 @@ class TLSConnection(ConnectionBase):
     sysconfig_libvirtd_path, libvirtd_conf_path: Path of libvirt config file.
     hosts_path: /etc/hosts
     """
-    __slots__ = ConnectionBase.__slots__ + ('server_cn', 'client_cn',
-                                            'CERTTOOL', 'pki_CA_dir',
-                                            'libvirt_pki_dir',
-                                            'libvirt_pki_private_dir',
-                                            'client_hosts',
-                                            'server_libvirtdconf',
-                                            'server_syslibvirtd')
+    __slots__ = ('server_cn', 'client_cn', 'CERTTOOL', 'pki_CA_dir',
+                 'libvirt_pki_dir', 'libvirt_pki_private_dir', 'client_hosts',
+                 'server_libvirtdconf', 'server_syslibvirtd')
 
     def __init__(self, *args, **dargs):
         """

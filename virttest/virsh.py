@@ -26,9 +26,12 @@ import logging
 import urlparse
 import re
 import weakref
-from autotest.client import utils, os_dep
+from autotest.client import utils
+from autotest.client import os_dep
 from autotest.client.shared import error
-from virttest import aexpect, propcan, remote
+from virttest import aexpect
+from virttest import propcan
+from virttest import remote
 
 # list of symbol names NOT to wrap as Virsh class methods
 # Everything else from globals() will become a method of Virsh class
@@ -338,7 +341,7 @@ class VirshPersistent(Virsh):
                         self.counter_decrease()
                 except aexpect.ShellStatusError:
                     # session was already closed
-                    pass # don't check is_alive or update counter
+                    pass  # don't check is_alive or update counter
                 self.__dict_del__("session_id")
         except KeyError:
             # Allow other exceptions to be raised

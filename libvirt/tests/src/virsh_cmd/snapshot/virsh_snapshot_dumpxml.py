@@ -16,10 +16,10 @@ def recovery_from_snapshot(vmxml, snap_name_list):
     """
     vmxml.undefine("--snapshots-metadata")
     vmxml.define()
-    logging.debug("xml is %s", vmxml.dict_get('xml'))
+    logging.debug("xml is %s", vmxml.__dict_get__('xml'))
 
     # Delete useless disk snapshot file
-    dom_xml = vmxml.dict_get('xml')
+    dom_xml = vmxml.__dict_get__('xml')
     disk_path = dom_xml.find('devices/disk/source').get('file')
     for name in snap_name_list:
         snap_disk_path = disk_path.split(".")[0] + "." + name

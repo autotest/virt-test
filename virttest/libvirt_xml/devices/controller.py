@@ -10,7 +10,7 @@ from virttest.libvirt_xml.devices import base
 
 class Controller(base.TypedDeviceBase):
 
-    __slots__ = base.TypedDeviceBase.__slots__ + ('type', 'index', 'model',)
+    __slots__ = ('type', 'index', 'model',)
 
     def __init__(self, type_name, virsh_instance=base.base.virsh):
         super(Controller, self).__init__(device_tag='controller',

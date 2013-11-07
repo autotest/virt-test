@@ -161,8 +161,8 @@ class VirtTools(object):
             vmxml.vm_name = new_vm_name
             vmxml.uuid = ""
             vmxml.set_xml(re.sub(old_disk, new_disk,
-                                 str(vmxml.dict_get('xml'))))
-            logging.debug(vmxml.dict_get('xml'))
+                                 str(vmxml.__dict_get__('xml'))))
+            logging.debug(vmxml.__dict_get__('xml'))
             vmxml.define()
         except xcepts.LibvirtXMLError, detail:
             logging.debug(detail)
@@ -197,7 +197,7 @@ class GuestfishTools(lgf.GuestfishPersistent):
 
     """Useful methods for guestfish operations"""
 
-    __slots__ = lgf.GuestfishPersistent.__slots__ + ('params',)
+    __slots__ = ('params',)
 
     def __init__(self, params):
         """

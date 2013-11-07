@@ -341,7 +341,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             portgroup_root = self.xmltreefile.reroot('/portgroup')
         except KeyError, detail:
             raise xcepts.LibvirtXMLError(detail)
-        portgroup_xml = PortgroupXML(virsh_instance=self.dict_get('virsh'))
+        portgroup_xml = PortgroupXML(virsh_instance=self.__dict_get__('virsh'))
         portgroup_xml.xmltreefile = portgroup_root
         return portgroup_xml
 

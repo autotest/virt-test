@@ -10,11 +10,8 @@ from virttest.libvirt_xml.devices import base
 
 class Interface(base.TypedDeviceBase):
 
-    __slots__ = base.TypedDeviceBase.__slots__ + ('type', 'source',
-                                                  'mac_address',
-                                                  'bandwidth_inbound',
-                                                  'bandwidth_outbound',
-                                                  'portgroup')
+    __slots__ = ('type', 'source', 'mac_address', 'bandwidth_inbound',
+                 'bandwidth_outbound', 'portgroup')
 
     def __init__(self, type_name, virsh_instance=base.base.virsh):
         super(Interface, self).__init__(device_tag='interface',

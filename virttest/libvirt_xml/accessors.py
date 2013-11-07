@@ -56,23 +56,26 @@ def type_check(name, thing, expected):
     """
     is_a = type(thing)
     is_a_name = str(is_a)
-    expected_string = str(expected)
-    try:
-        it_is = issubclass(thing, expected)
-    except TypeError:
-        it_is = isinstance(thing, expected)
-    if not it_is:
-        raise ValueError('%s value is not a %s, it is a %s'
-                         % (name, expected_string, is_a_name))
+    if not isinstance(expected, list):
+        expected = [expected]
+    for e in expected:
+        try:
+            it_is = issubclass(thing, e)
+        except TypeError:
+            it_is = isinstance(thing, e)
+        if it_is:
+            return
+    raise ValueError('%s value is not any of %s, it is a %s'
+                      % (name, expected, is_a_name))
 
 
 def add_to_slots(*args):
     """
-    Return list of AccessorBase.__slots__ + args
+    Return list of AccessorBase.__all_slots__ + args
     """
     for slot in args:
         type_check('slot name', slot, str)
-    return AccessorBase.__slots__ + args
+    return AccessorBase.__all_slots__ + args
 
 
 class AccessorBase(PropCanBase):
@@ -95,7 +98,7 @@ class AccessorBase(PropCanBase):
         """
         type_check('Parameter property_name', property_name, str)
         type_check('Operation attribute', operation, str)
-        type_check('__slots__ attribute', self.__slots__, tuple)
+        type_check('__slots__ attribute', self.__all_slots__, [tuple, list])
         type_check('Parameter libvirtxml', libvirtxml, base.LibvirtXMLBase)
 
         super(AccessorBase, self).__init__()
@@ -103,11 +106,12 @@ class AccessorBase(PropCanBase):
         self.__dict_set__('operation', operation)
         self.__dict_set__('property_name', property_name)
         self.__dict_set__('libvirtxml', libvirtxml)
-        for slot in self.__slots__:
-            if slot in AccessorBase.__slots__:
+
+        for slot in self.__all_slots__:
+            if slot in AccessorBase.__all_slots__:
                 continue  # already checked these
             # Don't care about value type
-            if not dargs.has_key(slot):
+            if not slot in dargs:
                 raise ValueError('Required accessor generator parameter %s'
                                  % slot)
             self.__dict_set__(slot, dargs[slot])
@@ -182,7 +186,7 @@ class ForbiddenBase(AccessorBase):
     Raise LibvirtXMLAccessorError when called w/ or w/o a value arg.
     """
 
-    __slots__ = AccessorBase.__slots__
+    __slots__ = []
 
     def __call__(self, value=None):
         if value:
