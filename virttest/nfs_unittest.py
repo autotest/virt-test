@@ -11,7 +11,12 @@ import nfs
 import utils_misc
 from autotest.client.shared.test_utils import mock
 from autotest.client import os_dep
-from autotest.client.shared import utils, service
+from autotest.client.shared import utils
+
+try:
+    from autotest.client.shared import service
+except ImportError:
+    from virttest.staging import service
 
 
 class FakeService(object):
