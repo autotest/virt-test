@@ -87,13 +87,13 @@ def run_virsh_snapshot_create_as(test, params, env):
     * virsh snapshot-create-as --print-xml --memspec
     * virsh snapshot-create-as --description
     * virsh snapshot-create-as --no-metadata
-    * virsh snapshot-create-as --no-metadata --print-xml (negtive test)
+    * virsh snapshot-create-as --no-metadata --print-xml (negative test)
     * virsh snapshot-create-as --atomic --disk-only
-    * virsh snapshot-create-as --quiesce --disk-only (positive and negtive)
+    * virsh snapshot-create-as --quiesce --disk-only (positive and negative)
     * virsh snapshot-create-as --reuse-external
     * virsh snapshot-create-as --disk-only --diskspec
-    * virsh snapshot-create-as --memspec --reuse-external --atomic(negtive)
-    * virsh snapshot-create-as --disk-only and --memspec (negtive)
+    * virsh snapshot-create-as --memspec --reuse-external --atomic(negative)
+    * virsh snapshot-create-as --disk-only and --memspec (negative)
     * Create multi snapshots with snapshot-create-as
     * Create snapshot with name a--a a--a--snap1
     """
@@ -152,7 +152,7 @@ def run_virsh_snapshot_create_as(test, params, env):
     vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name)
     logging.debug("original xml is %s", vmxml_backup)
 
-    # Generate empty image for negtive test
+    # Generate empty image for negative test
     if bad_disk is not None:
         bad_disk = os.path.join(test.virtdir, bad_disk)
         os.open(bad_disk, os.O_RDWR | os.O_CREAT)
@@ -253,7 +253,7 @@ def run_virsh_snapshot_create_as(test, params, env):
                     # check domain/snapshot xml depends on if have metadata
                     if no_metadata < 0:
                         output_dump = virsh.snapshot_dumpxml(
-                            vm_name, get_sname)
+                            vm_name, get_sname).stdout.strip()
                     else:
                         output_dump = virsh.dumpxml(vm_name).stdout.strip()
                         fdisks = "devices"
