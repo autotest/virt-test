@@ -477,6 +477,22 @@ class QDrive(QCustomDevice):
         super(QDrive, self).set_param(option, value, option_type)
 
 
+class QOldDrive(QDrive):
+    """
+    This is a variant for -drive without 'addr' support
+    """
+    def set_param(self, option, value, option_type=None):
+        """
+        Ignore addr parameters as they are not supported by old qemus
+        """
+        if option == 'addr':
+            logging.warn("Ignoring 'addr=%s' parameter of %s due of old qemu"
+                         ", PCI addresses might be messed up.", value,
+                         self.str_short())
+            return
+        return super(QOldDrive, self).set_param(option, value, option_type)
+
+
 class QHPDrive(QDrive):
 
     """
@@ -2767,8 +2783,10 @@ class DevContainer(object):
             devices.append(QRHDrive(name))
         elif self.has_hmp_cmd('drive_add') and use_device:
             devices.append(QHPDrive(name))
-        else:
+        elif self.has_option("device"):
             devices.append(QDrive(name, use_device))
+        else:       # very old qemu without 'addr' support
+            devices.append(QOldDrive(name, use_device))
         devices[-1].set_param('if', 'none')
         devices[-1].set_param('cache', cache)
         devices[-1].set_param('rerror', rerror)
