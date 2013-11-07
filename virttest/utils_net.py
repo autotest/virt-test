@@ -955,7 +955,7 @@ def find_current_bridge(iface_name, ovs=None):
     # find ifname in standard linux bridge.
     master = __bridge
     bridge = master.port_to_br(iface_name)
-    if bridge is None:
+    if bridge is None and ovs:
         master = ovs
         bridge = master.port_to_br(iface_name)
 

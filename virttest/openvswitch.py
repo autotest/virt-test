@@ -322,7 +322,7 @@ class OpenVSwitchControlCli_140(OpenVSwitchControl):
         """
         bridge = None
         try:
-            bridge = self.ovs_vsctl(["port-to-br", port_name]).stdout
+            bridge = self.ovs_vsctl(["port-to-br", port_name]).stdout.strip()
         except error.CmdError, e:
             if e.result_obj.exit_status == 1:
                 pass
