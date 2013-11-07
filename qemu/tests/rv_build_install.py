@@ -35,7 +35,7 @@ def connect_to_vm(vm_name, env, params):
 
 def install_req_pkgs(pkgsRequired, vm_root_session, params):
     """
-    Checks to see if packages are installed and if not, installs the package 
+    Checks to see if packages are installed and if not, installs the package
 
     :params rpms_to_install: List of packages to check
     :params vm_root_session: Session object of VM
