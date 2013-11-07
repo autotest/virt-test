@@ -114,6 +114,14 @@ class Test(object):
         for key in keys:
             logging.debug("    %s = %s", key, params[key])
 
+        # Warn of this special condition in related location in output & logs
+        if os.getuid() == 0 and params.get('nettype', 'user') == 'user':
+            logging.warning("")
+            logging.warning("Testing with nettype='user' while running "
+                            "as root may produce unexpected results!!!")
+            logging.warning("")
+
+
         # Open the environment file
         env_filename = os.path.join(self.bindir, params.get("vm_type"),
                                     params.get("env", "env"))
@@ -474,7 +482,6 @@ def print_test_list(options, cartesian_parser):
     index = 0
 
     pipe.write(get_cartesian_parser_details(cartesian_parser))
-
     for params in cartesian_parser.get_dicts():
         virt_test_type = params.get('virt_test_type', "")
         supported_virt_backends = virt_test_type.split(" ")

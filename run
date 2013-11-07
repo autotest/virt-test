@@ -174,6 +174,11 @@ class VirtTestRunParser(optparse.OptionParser):
         except ValueError:
             qemu_bin_path = "Could not find one"
 
+        if os.getuid() == 0:
+            nettype_default = 'bridge'
+        else:
+            nettype_default = 'user'
+
         general = optparse.OptionGroup(self, 'General Options')
         general.add_option("-v", "--verbose", action="store_true",
                            dest="verbose", help="Exhibit debug messages")
@@ -273,7 +278,7 @@ class VirtTestRunParser(optparse.OptionParser):
                         help=("Accelerator used to run qemu (kvm or tcg). "
                               "Default: kvm"))
         qemu.add_option("--nettype", action="store", dest="nettype",
-                        default="user",
+                        default=nettype_default,
                         help=("QEMU network option (bridge, user or none). "
                               "Default: %default"))
         qemu.add_option("--netdst", action="store", dest="netdst",
