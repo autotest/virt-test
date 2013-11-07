@@ -1491,11 +1491,8 @@ class QBusUnitBus(QDenseBus):
                                           busid, bus_type, aobject, atype)
 
     def _update_device_props(self, device, addr):
-        """ This bus is compound of m-buses + n-units, update properties """
-        if device.get_param('bus'):
-            device.set_param('bus', "%s.%s" % (self.busid, addr[0]))
-        if device.get_param('unit'):
-            device.set_param('unit', addr[1])
+        """ Always set the properties """
+        return self._set_device_props(device, addr)
 
     def _set_device_props(self, device, addr):
         """This bus is compound of m-buses + n-units, set properties """
@@ -1541,14 +1538,6 @@ class QAHCIBus(QBusUnitBus):
     def __init__(self, busid, aobject=None):
         """ 6xbus, 2xunit """
         super(QAHCIBus, self).__init__(busid, 'IDE', [6, 1], aobject, 'ahci')
-
-    def _update_device_props(self, device, addr):
-        """
-        Qemu has problems assigning the ahci disks to ahci bus. We have to
-        specify the full address to avoid errors.
-        :todo: REMOVE THIS WHEN QEMU STARTS WORKING PROPERLY WITH AHCI
-        """
-        super(QAHCIBus, self)._set_device_props(device, addr)
 
 
 class QIDEBus(QBusUnitBus):
