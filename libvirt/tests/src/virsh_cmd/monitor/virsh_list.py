@@ -64,7 +64,7 @@ def run_virsh_list(test, params, env):
         addition_status_error = "yes"
 
     if vm_ref == "transient":
-        tmp_xml = vm.backup_xml()
+        tmp_xml = vm.backup_to_xml()
         vm.undefine()
     elif vm_ref == "managed-save":
         virsh.managedsave(vm_name, ignore_status=True, print_info=True)

@@ -121,6 +121,7 @@ class VM(virt_vm.BaseVM):
             self.pci_devices = []
             self.uuid = None
 
+        self.xml_file = None
         self.spice_port = 8000
         self.name = name
         self.params = params
@@ -242,22 +243,82 @@ class VM(virt_vm.BaseVM):
         """
         return virsh.dumpxml(self.name, uri=self.connect_uri).stdout.strip()
 
-    def backup_xml(self):
+    def backup_to_xml(self, tmpdir=None):
         """
         Backup the guest's xmlfile.
+
+        :param tmpdir: Optional, specify directory where temp file
+                       will be created.
+        :return: xml file absolute path.
         """
         # Since backup_xml() is not a function for testing,
         # we have to handle the exception here.
         try:
-            xml_file = tempfile.mktemp(dir="/tmp")
-
-            virsh.dumpxml(self.name, to_file=xml_file, uri=self.connect_uri)
-            return xml_file
-        except Exception, detail:
-            if os.path.exists(xml_file):
-                os.remove(xml_file)
-            logging.error("Failed to backup xml file:\n%s", detail)
+            if tmpdir is not None:
+                osfd, xml_file = tempfile.mkstemp(suffix='.xml', dir=tmpdir,
+                                                  prefix=self.name+'-',
+                                                  text=True)
+                os.close(osfd)
+                # Remove original self.xml_file and update it
+                if not self.xml_file and os.path.exists(self.xml_file):
+                    try:
+                        os.remove(self.xml_file)
+                    except OSError:
+                        logging.debug("Remove %s failed." % self.xml_file)
+                self.xml_file = xml_file
+            else:
+                if self.xml_file is None:
+                    tmpdir = data_dir.get_tmp_dir()
+                    osfd, xml_file = tempfile.mkstemp(suffix='.xml', dir=tmpdir,
+                                                      prefix=self.name+'-',
+                                                      text=True)
+                    os.close(osfd)
+                    self.xml_file = xml_file
+            virsh.dumpxml(self.name, to_file=self.xml_file,
+                          uri=self.connect_uri)
+            logging.debug("Backup xml to %s" % self.xml_file)
+            return self.xml_file
+        except (OSError, IOError, AttributeError, KeyError, aexpect.ExpectError,
+                aexpect.ShellError, error.CmdError), detail:
+            try:
+                os.remove(self.xml_file)
+            except OSError:
+                logging.debug("Remove %s failed." % self.xml_file)
+            logging.error("Failed to backup xml file:\n%s" % detail)
             return ""
+
+    def recover_from_xml(self, xml_file=None, clean_up=True):
+        """
+        Recover domain from a xml file
+
+        :param xml_file: Optional, XML file used to recover domain
+        :param clean_up: Optional, clean up xml file after recovering domian
+        :return : True if recover success.
+        """
+        if xml_file is None:
+            xml_file = self.xml_file
+        try:
+            if self.is_alive():
+                self.destroy(gracefully=False)
+            self.undefine()
+            self.define(xml_file)
+            logging.debug("VM xml will be recovered from %s" % xml_file)
+            if clean_up:
+                try:
+                    os.remove(xml_file)
+                except OSError:
+                    logging.debug("Remove %s failed." % xml_file)
+                # Sometimes self.xml_file equal to passed xml_file
+                try:
+                    if not os.path.exists(self.xml_file):
+                        self.xml_file = None
+                except OSError:
+                    self.xml_file = None
+            return True
+        except (OSError, IOError, AttributeError, KeyError, aexpect.ExpectError,
+                aexpect.ShellError, error.CmdError), detail:
+            logging.error("Failed to recover vm.\n%s" % detail)
+            return False
 
     def clone(self, name=None, params=None, root_dir=None, address_cache=None,
               copy_state=False):
