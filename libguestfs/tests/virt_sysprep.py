@@ -1,7 +1,7 @@
 import logging
 import os
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh, remote, aexpect, virt_vm, utils_test
+from virttest import libvirt_vm, virsh, remote, aexpect, virt_vm, utils_misc
 from virttest.libvirt_xml import vm_xml
 import virttest.utils_libguestfs as lgf
 from autotest.client import utils
@@ -139,7 +139,7 @@ def run_virt_sysprep(test, params, env):
         disk = disks.values()[0]
         image = disk['source']
         target = disks.keys()[0]
-        image_info_dict = utils_test.get_image_info(image)
+        image_info_dict = utils_misc.get_image_info(image)
     else:
         raise error.TestError("Can not get disk of %s" % vm_name)
 
@@ -151,9 +151,10 @@ def run_virt_sysprep(test, params, env):
     clean_clone_vm()
 
     # Clone guest to guest_clone
-    clone_result = lgf.virt_clone_cmd(vm_name, new_domain=vm_clone_name,
-                                      file_path=clone_image, options="--force",
-                                      ignore_status=True)
+    dargs={}
+    dargs['files'] = [clone_image]
+    dargs['ignore_status'] = True
+    clone_result = lgf.virt_clone_cmd(vm_name, newname=vm_clone_name, **dargs)
     if clone_result.exit_status:
         raise error.TestFail("virt-clone failed.")
     try:
@@ -169,7 +170,7 @@ def run_virt_sysprep(test, params, env):
             resize_image = "%s_resize.img" % clone_image
             utils.run("qemu-img create -f raw %s %dG" % (resize_image,
                                                          (img_size+1)))
-            lgf.virt_resize_cmd(clone_image, resize_image, debug=True)
+            lgf.virt_resize_cmd(clone_image, resize_image, timeout=600, debug=True)
             modify_source(vm_clone_name, target, resize_image)
             test_image = resize_image
         sysprep_action(vm_clone_name, test_image, sysprep_target,

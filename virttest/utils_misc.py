@@ -2002,3 +2002,41 @@ def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
                     option_dict[key].append(value)
 
     return option_dict
+
+
+def get_image_info(image_file):
+    """
+    Get image information and put it into a dict. Image information like this:
+    *******************************
+    image: /path/vm1_6.3.img
+    file format: raw
+    virtual size: 10G (10737418240 bytes)
+    disk size: 888M
+    ....
+    ....
+    *******************************
+    And the image info dict will be like this
+    image_info_dict = { 'format':'raw',
+                        'vsize' : '10737418240'
+                        'dsize' : '931135488'
+                      }
+    TODO: Add more information to dict
+    """
+    try:
+        cmd = "qemu-img info %s" % image_file
+        image_info = utils.run(cmd, ignore_status=False).stdout.strip()
+        image_info_dict = {}
+        if image_info:
+            for line in image_info.splitlines():
+                if line.find("format") != -1:
+                    image_info_dict['format'] = line.split(':')[-1].strip()
+                elif line.find("virtual size") != -1:
+                    vsize = line.split(":")[-1].strip().split(" ")[0]
+                    image_info_dict['vsize'] = int(float(normalize_data_size(vsize, "B")))
+                elif line.find("disk size") != -1:
+                    dsize = line.split(':')[-1].strip()
+                    image_info_dict['dsize'] = int(float(normalize_data_size(dsize, "B")))
+        return image_info_dict
+    except (KeyError, IndexError, error.CmdError), detail:
+        raise error.TestError("Fail to get information of %s:\n%s" %
+                              (image_file, detail))
