@@ -10,7 +10,7 @@ from virttest.libvirt_xml.devices import base
 
 class Graphics(base.TypedDeviceBase):
 
-    __slots__ = base.TypedDeviceBase.__slots__ + ('passwd',)
+    __slots__ = ('passwd',)
 
     def __init__(self, type_name='vnc', virsh_instance=base.base.virsh):
         # Add additional attribute 'passwd' for security

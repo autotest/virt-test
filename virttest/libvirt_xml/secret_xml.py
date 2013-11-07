@@ -21,10 +21,8 @@ class SecretXMLBase(base.LibvirtXMLBase):
                 operates on volume tag
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('secret_ephemeral',
-                                                 'secret_private',
-                                                 'description', 'uuid',
-                                                 'usage', 'volume')
+    __slots__ = ('secret_ephemeral', 'secret_private', 'description',
+                 'uuid', 'usage', 'volume')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -52,7 +50,7 @@ class SecretXML(SecretXMLBase):
     Manipulators of a secret through it's XML definition.
     """
 
-    __slots__ = SecretXMLBase.__slots__
+    __slots__ = []
 
     def __init__(self, ephemeral='yes', private='no',
                  virsh_instance=base.virsh):

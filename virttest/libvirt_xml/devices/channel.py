@@ -10,7 +10,7 @@ from virttest.libvirt_xml.devices.character import CharacterBase
 
 class Channel(CharacterBase):
 
-    __slots__ = CharacterBase.__slots__
+    __slots__ = []
 
     def __init__(self, type_name='unix', virsh_instance=base.virsh):
         super(

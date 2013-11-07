@@ -147,6 +147,36 @@ class LibvirtXMLTestBase(unittest.TestCase):
         exit_status = 0
         return utils.CmdResult(cmd, stdout, stderr, exit_status)
 
+
+    @staticmethod
+    def _nodedev_dumpxml(name, options="", to_file=None, **dargs):
+        # Must mirror virsh.nodedev_dumpxml() API but can't test this option
+        if options != "":
+            raise ValueError('Dummy virsh for testing does not support options'
+                             ' parameter')
+        if to_file is not None:
+            raise ValueError('Dummy virsh for testing does not support to_file'
+                             ' parameter')
+        if name is not 'pci_0000_00_00_0':
+            raise ValueError('Dummy virsh for testing only support '
+                             ' device name pci_0000_00_00_0')
+        xml =   ("<device>"
+                  "<name>pci_0000_00_00_0</name>"
+                  "<path>/sys/devices/pci0000:00/0000:00:00.0</path>"
+                  "<parent>computer</parent>"
+                  "<capability type='pci'>"
+                    "<domain>0</domain>"
+                    "<bus>0</bus>"
+                    "<slot>0</slot>"
+                    "<function>0</function>"
+                    "<product id='0x25c0'>5000X Chipset Memory Controller Hub</product>"
+                    "<vendor id='0x8086'>Intel Corporation</vendor>"
+                  "</capability>"
+                "</device>")
+        return utils.CmdResult('virsh nodedev-dumpxml pci_0000_00_00_0',
+                               xml, '', 0)
+
+
     def setUp(self):
         # cause any called virsh commands to fail testing unless a mock declared
         # necessary so virsh module doesn't complain about missing virsh command
@@ -164,10 +194,10 @@ class LibvirtXMLTestBase(unittest.TestCase):
             os.makedirs(LibvirtXMLTestBase.__doms_dir__)
 
         # Normally not kosher to call super_set, but required here for testing
-        self.dummy_virsh.super_set('capabilities', self._capabilities)
-        self.dummy_virsh.super_set('dumpxml', self._dumpxml)
-        self.dummy_virsh.super_set('domuuid', self._domuuid)
-        self.dummy_virsh.super_set('define', self._define)
+        self.dummy_virsh.__super_set__('capabilities', self._capabilities)
+        self.dummy_virsh.__super_set__('dumpxml', self._dumpxml)
+        self.dummy_virsh.__super_set__('domuuid', self._domuuid)
+        self.dummy_virsh.__super_set__('define', self._define)
 
     def tearDown(self):
         librarian.DEVICE_TYPES = list(ORIGINAL_DEVICE_TYPES)
@@ -177,7 +207,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
 
 # AccessorsTest.test_XMLElementNest is namespace sensitive
 class Baz(base.LibvirtXMLBase):
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('foobar',)
+    __slots__ = ('foobar',)
     def __init__(self, parent, virsh_instance):
         accessors.XMLElementText('foobar', self, ['set', 'del'],
                                  '/', 'baz')
@@ -200,7 +230,7 @@ class Baz(base.LibvirtXMLBase):
 
 # AccessorsTest.test_XMLElementNest is namespace sensitive
 class Bar(base.LibvirtXMLBase):
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('baz',)
+    __slots__ = ('baz',)
     def __init__(self, parent, virsh_instance):
         subclass_dargs = {'parent':parent,
                           'virsh_instance':virsh_instance}
@@ -265,11 +295,11 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_XMLElementInt(self):
         class FooBar(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('auto_test',
-                                                         'bin_test',
-                                                         'oct_test',
-                                                         'dec_test',
-                                                         'hex_test')
+            __slots__ = ('auto_test',
+                         'bin_test',
+                         'oct_test',
+                         'dec_test',
+                         'hex_test')
         lvx = FooBar(self.dummy_virsh)
         lvx.xml = ('<integer>'
                    ' <auto>00</auto>'
@@ -292,7 +322,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_AllForbidden(self):
         class FooBar(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
+            __slots__ = ('test',)
         lvx = FooBar(self.dummy_virsh)
         accessors.AllForbidden('test', lvx)
         self.assertRaises(xcepts.LibvirtXMLForbiddenError,
@@ -304,7 +334,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_not_enuf_dargs(self):
         class FooBar(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
+            __slots__ = ('test',)
         foobar = FooBar(self.dummy_virsh)
         self.assertRaises(ValueError,
                           accessors.XMLElementText, 'test',
@@ -316,7 +346,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_too_many_dargs(self):
         class FooBar(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
+            __slots__ = ('test',)
         foobar = FooBar(self.dummy_virsh)
         self.assertRaises(ValueError,
                           accessors.XMLElementText, 'test',
@@ -327,8 +357,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_create_by_xpath(self):
         class FooBar(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
-
+            __slots__ = ('test',)
             def __init__(self, virsh_instance):
                 super(FooBar, self).__init__(virsh_instance)
                 accessors.XMLElementDict('test', self, None, 'foo/bar', 'baz')
@@ -345,7 +374,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_XMLElementNest(self):
         class Foo(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('bar',)
+            __slots__ = ('bar',)
             def __init__(self, parent, virsh_instance):
                 subclass_dargs = {'parent':parent,
                                   'virsh_instance':virsh_instance}
@@ -380,7 +409,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_XMLElementBool_simple(self):
         class Foo(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('bar','baz')
+            __slots__ = ('bar','baz')
             def __init__(self, virsh_instance):
                 accessors.XMLElementBool('bar', self,
                                          parent_xpath='/', tag_name='bar')
@@ -407,7 +436,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_XMLElementBool_deep(self):
         class Foo(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('bar', 'baz', 'foo')
+            __slots__ = ('bar', 'baz', 'foo')
             def __init__(self, virsh_instance):
                 accessors.XMLElementBool('foo', self,
                                          parent_xpath='/l1', tag_name='foo')
@@ -454,7 +483,7 @@ class AccessorsTest(LibvirtXMLTestBase):
                 else:
                     return Whatchamacallit(attrs.get('secret_sauce'))
         class Foo(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('bar',)
+            __slots__ = ('bar',)
             def __init__(self, virsh_instance):
                 accessors.XMLElementList('bar', self, parent_xpath='/bar',
                                          marshal_from=Whatchamacallit.from_it,

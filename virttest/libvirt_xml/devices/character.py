@@ -11,7 +11,7 @@ from virttest.libvirt_xml.devices import base
 
 class CharacterBase(base.TypedDeviceBase):
 
-    __slots__ = base.TypedDeviceBase.__slots__ + ('sources', 'targets')
+    __slots__ = ('sources', 'targets')
 
     # Not overriding __init__ because ABC cannot hide device_tag as expected
 
