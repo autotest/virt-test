@@ -151,8 +151,7 @@ class Nfs(object):
             self.nfs_setup = True
             os_dep.command("service")
             os_dep.command("exportfs")
-            service_factory = staging.service.ServiceManagerFactory()
-            self.nfs_service = service_factory.create_specific_service_manager("nfs")
+            self.nfs_service = staging.service.SpecificServiceManager("nfs")
 
             self.export_dir = (params.get("export_dir")
                                or self.mount_src.split(":")[-1])
