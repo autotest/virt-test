@@ -35,6 +35,9 @@ from autotest.client.tools import scan_results
 from virttest import aexpect, remote, utils_misc, virt_vm, data_dir
 import virttest
 
+import libvirt
+import qemu
+
 try:
     from virttest.staging import utils_cgroup
 except ImportError:

@@ -31,7 +31,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
 
-from virttest import env_process, remote, storage, utils_misc, utils_test
+from virttest import env_process, remote, storage, utils_misc
 
 try:
     from virttest.staging import utils_memory
