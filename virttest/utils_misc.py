@@ -107,14 +107,14 @@ def find_substring(string, pattern1, pattern2=None):
 
 
 def lock_file(filename, mode=fcntl.LOCK_EX):
-    f = open(filename, "w")
-    fcntl.lockf(f, mode)
-    return f
+    lockfile = open(filename, "w")
+    fcntl.lockf(lockfile, mode)
+    return lockfile
 
 
-def unlock_file(f):
-    fcntl.lockf(f, fcntl.LOCK_UN)
-    f.close()
+def unlock_file(lockfile):
+    fcntl.lockf(lockfile, fcntl.LOCK_UN)
+    lockfile.close()
 
 
 # Utility functions for dealing with external processes
