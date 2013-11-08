@@ -2,7 +2,9 @@ import os
 import logging
 import re
 from autotest.client import utils
-import remote, aexpect, data_dir
+import remote
+import aexpect
+import data_dir
 
 
 class NetperfError(Exception):
@@ -10,6 +12,7 @@ class NetperfError(Exception):
 
 
 class NetperfPackageError(NetperfError):
+
     def __init__(self, error_info):
         NetperfError.__init__(self)
         self.error_info = error_info
@@ -20,6 +23,7 @@ class NetperfPackageError(NetperfError):
 
 
 class NetserverError(NetperfError):
+
     def __init__(self, error_info):
         NetperfError.__init__(self)
         self.error_info = error_info
@@ -30,6 +34,7 @@ class NetserverError(NetperfError):
 
 
 class NetperfTestError(NetperfError):
+
     def __init__(self, error_info):
         NetperfError.__init__(self)
         self.error_info = error_info
@@ -40,6 +45,7 @@ class NetperfTestError(NetperfError):
 
 
 class NetperfPackage(remote.Remote_Package):
+
     def __init__(self, address, netperf_path, md5sum="", local_path="",
                  client="ssh", port="22", username="root", password="redhat"):
         """
@@ -112,7 +118,9 @@ class NetperfPackage(remote.Remote_Package):
         except aexpect.ShellError, e:
             raise NetperfPackageError("Compile failed: %s" % e)
 
+
 class NetperfServer(NetperfPackage):
+
     def __init__(self, address, netperf_path, md5sum="", local_path="",
                  client="ssh", port="22", username="root", password="redhat",
                  compile_option="--enable-demo=yes"):
@@ -189,6 +197,7 @@ class NetperfServer(NetperfPackage):
 
 
 class NetperfClient(NetperfPackage):
+
     def __init__(self, address, netperf_path, md5sum="", local_path="",
                  client="ssh", port="22", username="root", password="redhat",
                  compile_option=""):
@@ -229,7 +238,7 @@ class NetperfClient(NetperfPackage):
                                         test_option)
         logging.debug("Start netperf with cmd: '%s'" % netperf_cmd)
         (status, output) = self.session.cmd_status_output(netperf_cmd,
-                                                     timeout=timeout)
+                                                          timeout=timeout)
         if status:
             raise NetperfTestError("Run netperf error. %s" % output)
         self.result = output

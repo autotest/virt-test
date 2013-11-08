@@ -61,10 +61,11 @@ class TestSelinux(unittest.TestCase):
         """
         context = "system_u:object_r:virt_image_t"
         context_type = utils_selinux.get_type_from_context(context)
-        self.assertEqual("virt_image_t",  context_type)
+        self.assertEqual("virt_image_t", context_type)
         context = "system_u:object_r:virt_image_t:s0-s1:c250,c280"
         context_type = utils_selinux.get_type_from_context(context)
-        self.assertEqual("virt_image_t",  context_type)
+        self.assertEqual("virt_image_t", context_type)
+
 
 class TestDefCon(unittest.TestCase):
 
@@ -80,13 +81,13 @@ class TestDefCon(unittest.TestCase):
                                                      exit_status=127)
             # verify/set defcon unittest always use same test context
             elif command.count('restorecon'):
-                pathname = command.split()[-1] # Always last argument
+                pathname = command.split()[-1]  # Always last argument
                 if pathname.count('fail'):
                     msg = ('restorecon reset %s context '
                            'foo_u:bar_r:baz_t:s0->baz_u:bar_r:foo_t:s0'
                            % pathname)
-                else: # restorecon check passes
-                    msg = '' # no output when pass
+                else:  # restorecon check passes
+                    msg = ''  # no output when pass
                 return utils_selinux.utils.CmdResult(command, stdout=msg)
 
         # Need to restore original function after each test
@@ -101,16 +102,16 @@ class TestDefCon(unittest.TestCase):
         Test extracting context type by path
         """
         default_contexts = [
-            {'type':'all files',
-             'context':'system_u:object_r:virt_image_t:s0',
-             'fcontext':r'/var/lib/virt_test/images(/.*)?'},
-            {'type':'all files',
-             'context':'system_u:object_r:virt_content_t:s0',
-             'fcontext':r'/var/lib/virt_test/isos(/.*)?'},
-            {'type':'all files',
-             'context':'system_u:object_r:virt_var_lib_t:s0',
+            {'type': 'all files',
+             'context': 'system_u:object_r:virt_image_t:s0',
+             'fcontext': r'/var/lib/virt_test/images(/.*)?'},
+            {'type': 'all files',
+             'context': 'system_u:object_r:virt_content_t:s0',
+             'fcontext': r'/var/lib/virt_test/isos(/.*)?'},
+            {'type': 'all files',
+             'context': 'system_u:object_r:virt_var_lib_t:s0',
              'fcontext':
-                    r'/usr/(local/)?autotest/client/tests/virt/shared/data'}]
+             r'/usr/(local/)?autotest/client/tests/virt/shared/data'}]
         test_paths = ['/var/lib/virt_test/images/foobar/baz',
                       '/var/lib/virt_test/isos/Linux',
                       '/var/lib/virt_test/isos/Windows'

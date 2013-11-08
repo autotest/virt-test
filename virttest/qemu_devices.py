@@ -478,9 +478,11 @@ class QDrive(QCustomDevice):
 
 
 class QOldDrive(QDrive):
+
     """
     This is a variant for -drive without 'addr' support
     """
+
     def set_param(self, option, value, option_type=None):
         """
         Ignore addr parameters as they are not supported by old qemus
@@ -1161,9 +1163,11 @@ class QSparseBus(object):
 
 
 class QStrictCustomBus(QSparseBus):
+
     """
     Similar to QSparseBus. The address starts with 1 and addr is always set
     """
+
     def __init__(self, bus_item, addr_spec, busid, bus_type=None, aobject=None,
                  atype=None, first_port=None):
         super(QStrictCustomBus, self).__init__(bus_item, addr_spec, busid,
@@ -1388,10 +1392,12 @@ class QPCIBus(QSparseBus):
 
 
 class QPCISwitchBus(QPCIBus):
+
     """
     PCI Switch bus representation (creates downstream device while inserting
     a device).
     """
+
     def __init__(self, busid, bus_type, downstream_type, aobject=None):
         super(QPCISwitchBus, self).__init__(busid, bus_type, aobject)
         self.__downstream_ports = {}
@@ -1406,12 +1412,12 @@ class QPCISwitchBus(QPCIBus):
             bus = QPCIBus(bus_id, 'PCIE', bus_id)
             self.__downstream_ports[addr] = bus
             downstream = QDevice(self.__downstream_type,
-                                         {'id': bus_id,
-                                          'bus': self.busid,
-                                          'addr': addr},
-                                         aobject=self.aobject,
-                                         parent_bus={'busid': '_PCI_CHASSIS'},
-                                         child_bus=bus)
+                                 {'id': bus_id,
+                                  'bus': self.busid,
+                                  'addr': addr},
+                                 aobject=self.aobject,
+                                 parent_bus={'busid': '_PCI_CHASSIS'},
+                                 child_bus=bus)
             return downstream
 
     def _insert(self, device, addr):

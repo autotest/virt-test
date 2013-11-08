@@ -15,7 +15,7 @@ from virttest import data_dir
 
 
 def run_libvirt_scsi(test, params, env):
-    #Get variables.
+    # Get variables.
     status_error = ('yes' == params.get("status_error", 'no'))
     img_type = ('yes' == params.get("libvirt_scsi_img_type", "no"))
     cdrom_type = ('yes' == params.get("libvirt_scsi_cdrom_type", "no"))

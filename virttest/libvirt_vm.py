@@ -1173,7 +1173,6 @@ class VM(virt_vm.BaseVM):
         self.setup_serial_ports()
         return result
 
-
     def attach_interface(self, option="", ignore_status=False,
                          debug=False):
         """

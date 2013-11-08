@@ -188,7 +188,7 @@ def run_convert_local_image(test, params, env):
     pool_type = params.get("pool_type", "dir")
     block_device = params.get("block_device", "/dev/BLOCK/EXAMPLE")
     if pool_type in ['disk', 'partition', 'lvm'] and \
-        re.search("EXAMPLE", block_device):
+            re.search("EXAMPLE", block_device):
         raise error.TestNAError("Please set correct block device.")
     pool_name = params.get("pool_name", "v2v_test")
     target_path = params.get("target_path", "pool_path")

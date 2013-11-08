@@ -49,6 +49,7 @@ class GuestfishTools(lgf.GuestfishPersistent):
 
 
 class VirtTools(object):
+
     """
     Useful functions for virt-commands.
     """

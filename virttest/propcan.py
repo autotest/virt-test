@@ -112,6 +112,7 @@ class PropCanInternal(object):
 
 
 class classproperty(property):
+
     def __get__(self, obj, type_):
         data = self.fget.__get__(None, type_)()
         return data
@@ -119,7 +120,6 @@ class classproperty(property):
     def __set__(self, obj, value):
         cls = type(obj)
         return self.fset.__get__(None, cls)(value)
-
 
 
 class PropCanBase(dict, PropCanInternal):
@@ -173,7 +173,6 @@ class PropCanBase(dict, PropCanInternal):
                 self[key] = value
         # Let accessor methods know initialization is complete
         self.__super_set__('INITIALIZED', True)
-
 
     def __getitem__(self, key):
         try:
@@ -293,8 +292,7 @@ class PropCan(PropCanBase):
     def keys(self):
         # special None/False value handling
         return [key for key in self.__all_slots__
-                                         if self.__contains__(key)]
-
+                if self.__contains__(key)]
 
     def values(self):
         # special None/False value handling

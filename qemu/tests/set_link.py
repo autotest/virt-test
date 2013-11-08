@@ -54,7 +54,6 @@ def run_set_link(test, params, env):
             if not link_up:
                 logging.info("Login error is expected when net link is down")
 
-
     def guest_netwok_connecting_check(guest_ip, link_up):
         """
         Check whether guest network is connective by ping
@@ -72,7 +71,6 @@ def run_set_link(test, params, env):
         else:
             logging.info("Guest network connecting is exactly as expected")
 
-
     def guest_interface_operstate_check(expect_status, guest_ifname=""):
         """
         Check Guest interface operstate
@@ -81,11 +79,11 @@ def run_set_link(test, params, env):
 
         os_type = params.get("os_type")
         if os_type == "linux":
-            if_operstate  = utils_net.get_net_if_operstate(guest_ifname,
-                                                           session.cmd)
+            if_operstate = utils_net.get_net_if_operstate(guest_ifname,
+                                                          session.cmd)
         else:
             if_operstate = utils_net.get_windows_nic_attribute(session,
-                "macaddress", vm.get_mac_address(), "netconnectionstatus")
+                                                               "macaddress", vm.get_mac_address(), "netconnectionstatus")
         session.close()
 
         if if_operstate != expect_status:
@@ -95,7 +93,6 @@ def run_set_link(test, params, env):
             raise error.TestError(err_msg)
         logging.info("Guest interface operstate '%s' is exactly as expected" %
                      if_operstate)
-
 
     def set_link_test(linkid, link_up, expect_status,
                       operstate_always_up=False):
@@ -124,14 +121,13 @@ def run_set_link(test, params, env):
 
         reboot_method = params.get("reboot_method", "shell")
         error.context("Reboot guest by '%s' and recheck interface operstate" %
-                       reboot_method, logging.info)
+                      reboot_method, logging.info)
         guest_reboot(reboot_method, link_up)
         guest_interface_operstate_check(expect_status, guest_ifname)
 
         error.context("Check guest network connecting after reboot by '%s'" %
                       reboot_method, logging.info)
         guest_netwok_connecting_check(guest_ip, link_up)
-
 
     netdev_id = vm.virtnet[0].netdev_id
     device_id = vm.virtnet[0].device_id

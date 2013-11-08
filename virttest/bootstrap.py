@@ -127,7 +127,7 @@ def write_subtests_files(config_file_list, output_file_object, test_type=None):
             if test_type is not None:
                 if write_test_type_line:
                     type_line = ("                virt_test_type = %s\n" %
-                                                                     test_type)
+                                 test_type)
                     output_file_object.write(type_line)
                     write_test_type_line = False
                 elif line.startswith('- '):
@@ -423,7 +423,7 @@ def haz_defcon(datadir, imagesdir, isosdir, tmpdir):
     try:
         # First element is list, third tuple item is desired context
         data_type = utils_selinux.diff_defcon(datadir, False)[0][2]
-    except IndexError: # object matches default, get current on-disk context
+    except IndexError:  # object matches default, get current on-disk context
         data_type = utils_selinux.get_context_of_file(datadir)
     # Extract just the type component
     data_type = utils_selinux.get_type_from_context(data_type)
@@ -488,14 +488,14 @@ def set_defcon(datadir, imagesdir, isosdir, tmpdir):
         existing_tmp = None
 
     # Only print slow info message one time
-    could_be_slow=False
+    could_be_slow = False
     msg = "Defining default contexts, this could take a few seconds..."
     # Changing default contexts is *slow*, avoid it if not necessary
     if existing_data is None or existing_data is not 'virt_var_lib_t':
         # semanage gives errors if don't treat /usr & /usr/local the same
         data_regex = utils_selinux.transmogrify_usr_local(datadir)
         logging.info(msg)
-        could_be_slow=True
+        could_be_slow = True
         # This applies only to datadir symlink, not sub-directories!
         utils_selinux.set_defcon('virt_var_lib_t', data_regex)
         made_changes = True
@@ -506,7 +506,7 @@ def set_defcon(datadir, imagesdir, isosdir, tmpdir):
         images_regex = utils_selinux.transmogrify_sub_dirs(images_regex)
         if not could_be_slow:
             logging.info(msg)
-            could_be_slow=True
+            could_be_slow = True
         utils_selinux.set_defcon('virt_image_t', images_regex)
         made_changes = True
 
@@ -516,7 +516,7 @@ def set_defcon(datadir, imagesdir, isosdir, tmpdir):
         isos_regex = utils_selinux.transmogrify_sub_dirs(isos_regex)
         if not could_be_slow:
             logging.info(msg)
-            could_be_slow=True
+            could_be_slow = True
         utils_selinux.set_defcon('virt_content_t', isos_regex)
         made_changes = True
 
@@ -525,7 +525,7 @@ def set_defcon(datadir, imagesdir, isosdir, tmpdir):
         tmp_regex = utils_selinux.transmogrify_sub_dirs(tmp_regex)
         if not could_be_slow:
             logging.info(msg)
-            could_be_slow=True
+            could_be_slow = True
         utils_selinux.set_defcon('user_tmp_t', tmp_regex)
         made_changes = True
 

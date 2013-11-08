@@ -8,6 +8,7 @@ from tests.guest_suspend import GuestSuspendBaseTest
 
 
 class GuestSuspendSerialConsole(GuestSuspendBaseTest):
+
     def __init__(self, params, vm, session):
         super(GuestSuspendSerialConsole, self).__init__(params, vm)
 

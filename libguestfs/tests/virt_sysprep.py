@@ -6,6 +6,7 @@ from virttest.libvirt_xml import vm_xml
 import virttest.utils_libguestfs as lgf
 from autotest.client import utils
 
+
 def run_virt_sysprep(test, params, env):
     """
     Test the command virt-sysprep
@@ -22,21 +23,21 @@ def run_virt_sysprep(test, params, env):
             vm.start()
         try:
             session = vm.wait_for_login()
-            #Create tmp file and modify hostname
+            # Create tmp file and modify hostname
             session.cmd("touch /var/log/tmp.log")
             session.cmd("touch /var/mail/tmp")
             tmp_hostname = "%stmp" % sysprep_hostname
             session.cmd("hostname %s" % tmp_hostname)
             o_ssh = session.cmd_output("cd /etc/ssh && cat ssh_host_key.pub")
 
-            #Confirm the file/hostname has been created/modified
+            # Confirm the file/hostname has been created/modified
             log_out = session.cmd_output("cd /var/log/ && ls | grep tmp.log")
             mail_out = session.cmd_output("cd /var/mail && ls | grep tmp")
             hname_out = session.cmd_output("hostname")
             if (not log_out.strip() or not mail_out.strip() or
-                hname_out.strip() != tmp_hostname):
+                    hname_out.strip() != tmp_hostname):
                 logging.debug("log:%s\nmail:%s\nhostname:%s" %
-                               (log_out, mail_out, hname_out))
+                             (log_out, mail_out, hname_out))
                 raise error.TestFail("Prepare action failed!")
             session.close()
             vm.destroy()
@@ -104,7 +105,7 @@ def run_virt_sysprep(test, params, env):
             vm.destroy()
             if (log_out.strip() or mail_out.strip() or
                 hname_out.strip() != sysprep_hostname or
-                ssh_out.strip() == o_ssh.strip()):
+                    ssh_out.strip() == o_ssh.strip()):
                 logging.debug("log: %s\nmail:%s\nhostname:%s\nsshkey:%s" %
                               (log_out, mail_out, hname_out, ssh_out))
                 return False
@@ -151,7 +152,7 @@ def run_virt_sysprep(test, params, env):
     clean_clone_vm()
 
     # Clone guest to guest_clone
-    dargs={}
+    dargs = {}
     dargs['files'] = [clone_image]
     dargs['ignore_status'] = True
     clone_result = lgf.virt_clone_cmd(vm_name, newname=vm_clone_name, **dargs)
@@ -166,10 +167,10 @@ def run_virt_sysprep(test, params, env):
         test_image = clone_image
 
         if sysprep_type == "resize":
-            img_size = image_info_dict['vsize']/1024/1024/1024
+            img_size = image_info_dict['vsize'] / 1024 / 1024 / 1024
             resize_image = "%s_resize.img" % clone_image
             utils.run("qemu-img create -f raw %s %dG" % (resize_image,
-                                                         (img_size+1)))
+                                                         (img_size + 1)))
             lgf.virt_resize_cmd(clone_image, resize_image, timeout=600, debug=True)
             modify_source(vm_clone_name, target, resize_image)
             test_image = resize_image

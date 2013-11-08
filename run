@@ -680,7 +680,6 @@ class VirtTestApp(object):
         self._process_bridge_mode()
         self._process_only_type_specific()
 
-
     def _process_options(self):
         """
         Process the options given in the command line.

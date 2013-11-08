@@ -21,6 +21,7 @@ import logging
 
 from autotest.client import utils
 
+
 def cpus_parser(cpulist):
     """
     Parse a list of cpu list, its syntax is a comma separated list,

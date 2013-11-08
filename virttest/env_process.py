@@ -124,13 +124,13 @@ def preprocess_vm(test, params, env, name):
             # Start the VM (or restart it if it's already up)
             if params.get("reuse_previous_config", "no") == "no":
                 vm.create(name, params, test.bindir,
-                       migration_mode=params.get("migration_mode"),
-                       migration_fd=params.get("migration_fd"),
-                       migration_exec_cmd=params.get("migration_exec_cmd_dst"))
+                          migration_mode=params.get("migration_mode"),
+                          migration_fd=params.get("migration_fd"),
+                          migration_exec_cmd=params.get("migration_exec_cmd_dst"))
             else:
                 vm.create(migration_mode=params.get("migration_mode"),
-                       migration_fd=params.get("migration_fd"),
-                       migration_exec_cmd=params.get("migration_exec_cmd_dst"))
+                          migration_fd=params.get("migration_fd"),
+                          migration_exec_cmd=params.get("migration_exec_cmd_dst"))
             # Update mac and IP info for assigned device
             # NeedFix: Can we find another way to get guest ip?
             if params.get("mac_changeable") == "yes":
@@ -825,7 +825,7 @@ def postprocess(test, params, env):
             image_nfs = nfs.Nfs(params)
             image_nfs.cleanup()
         except Exception, details:
-            err += "\nnfs cleanup: %s" % str(details).replace ('\\n', '\n  ')
+            err += "\nnfs cleanup: %s" % str(details).replace('\\n', '\n  ')
 
     setup_pb = False
     for nic in params.get('nics', "").split():

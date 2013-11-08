@@ -47,7 +47,7 @@ def run_virsh_capabilities(test, params, env):
             img = utils_misc.find_command("qemu-kvm")
         except ValueError:
             raise error.TestNAError("Cannot find qemu-kvm")
-        cmd = img+" --cpu ? | grep qemu"
+        cmd = img + " --cpu ? | grep qemu"
         cmd_result = utils.run(cmd, ignore_status=True)
         guest_wordsize_array = dom.getElementsByTagName('wordsize')
         length = len(guest_wordsize_array)

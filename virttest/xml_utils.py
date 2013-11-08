@@ -139,7 +139,6 @@ class XMLBackup(TempXMLFile):
         logging.info("Retaining backup of %s in %s", self.sourcefilename,
                      self.name + EXSFX)
 
-
     def backup(self):
         """
         Overwrite temporary backup with contents of original source.
@@ -207,7 +206,6 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         self.write()
         self.flush()  # make sure it's on-disk
 
-
     def __str__(self):
         self.write()
         self.flush()
@@ -228,11 +226,10 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         super(XMLTreeFile, self).backup()
         try:
             ElementTree.ElementTree.__init__(self, element=None,
-                                                 file=self.name)
+                                             file=self.name)
         except expat.ExpatError:
             raise IOError("Original XML is corrupt: '%s'"
                           % self.sourcebackupfile.name)
-
 
     def backup_copy(self):
         """Return a copy of instance, including copies of files"""

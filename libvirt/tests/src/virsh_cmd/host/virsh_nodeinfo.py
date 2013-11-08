@@ -61,8 +61,8 @@ def run_virsh_nodeinfo(test, params, env):
         # a "fudge" factor to declare "close enough". Don't return a failure
         # just print a debug message and move on.
         diffval = abs(int(cpu_frequency_nodeinfo) - int(cpu_frequency_os))
-        if float(diffval)/float(cpu_frequency_nodeinfo) > 0.20 or \
-           float(diffval)/float(cpu_frequency_os) > 0.20:
+        if float(diffval) / float(cpu_frequency_nodeinfo) > 0.20 or \
+           float(diffval) / float(cpu_frequency_os) > 0.20:
             logging.debug("Virsh nodeinfo output didn't match CPU "
                           "frequency within 20 percent")
 

@@ -180,8 +180,6 @@ def launch_rv(client_vm, guest_vm, params):
     else:
         cmd = "nohup " + cmd + " &> /dev/null &"  # Launch it on background
 
-
-
     # Launching the actual set of commands
     try:
         if rv_ld_library_path:

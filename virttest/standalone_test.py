@@ -121,7 +121,6 @@ class Test(object):
                             "as root may produce unexpected results!!!")
             logging.warning("")
 
-
         # Open the environment file
         env_filename = os.path.join(self.bindir, params.get("vm_type"),
                                     params.get("env", "env"))

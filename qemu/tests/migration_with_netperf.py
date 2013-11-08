@@ -44,16 +44,16 @@ def run_migration_with_netperf(test, params, env):
     port = params.get("shell_port", "22")
 
     netperf_client = utils_netperf.NetperfClient("localhost", client_path,
-                                                  md5sum, download_link,
-                                                  password=passwd)
+                                                 md5sum, download_link,
+                                                 password=passwd)
 
     netperf_server = utils_netperf.NetperfServer(guest_address,
-                                                  server_path,
-                                                  server_md5sum,
-                                                  server_download_link,
-                                                  client, port,
-                                                  username=username,
-                                                  password=password)
+                                                 server_path,
+                                                 server_md5sum,
+                                                 server_download_link,
+                                                 client, port,
+                                                 username=username,
+                                                 password=password)
 
     try:
         session.cmd("service iptables stop; iptables -F || true")

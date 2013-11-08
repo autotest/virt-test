@@ -117,7 +117,6 @@ def run_virsh_nodecpumap(test, params, env):
     (2) Call virsh nodecpumap with an unexpected option
     """
 
-
     option = params.get("virsh_node_options")
     status_error = params.get("status_error")
 

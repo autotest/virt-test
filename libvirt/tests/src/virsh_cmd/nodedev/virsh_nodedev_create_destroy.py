@@ -270,7 +270,7 @@ def run_virsh_nodedev_create_destroy(test, params, env):
         if port_offline_list:
             params["nodedev_scsi_host"] = port_offline_list[0]
 
-    ########## positive and negative testing #########
+    # positive and negative testing #########
 
     if status_error == "no":
         try:

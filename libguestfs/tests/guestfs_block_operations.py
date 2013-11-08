@@ -7,11 +7,13 @@ from virttest import virsh, virt_vm, libvirt_vm, data_dir, remote, aexpect
 from virttest.libvirt_xml import vm_xml, xcepts
 from virttest import utils_libguestfs as lgf
 
+
 class VTError(Exception):
     pass
 
 
 class VTAttachError(VTError):
+
     def __init__(self, cmd, output):
         super(VTAttachError, self).__init__(cmd, output)
         self.cmd = cmd
@@ -123,6 +125,7 @@ def prepare_attached_device(guestfs, device):
 
 
 class VirtTools(object):
+
     """
     Useful functions for virt-commands.
 
@@ -170,6 +173,7 @@ class VirtTools(object):
 
 
 class GuestfishTools(lgf.GuestfishPersistent):
+
     """Useful Tools for Guestfish class."""
 
     __slots__ = ('params', )
@@ -336,8 +340,8 @@ def test_blockdev_info(vm, params):
         blocksize2 = session.cmd_output("blockdev --getbsz %s" % device,
                                         timeout=5).strip()
         total_size_in_bytes2 = session.cmd_output(
-                                        "blockdev --getsize64 %s" % device,
-                                        timeout=5).strip()
+            "blockdev --getsize64 %s" % device,
+            timeout=5).strip()
         attached_vm.destroy()
         attached_vm.wait_for_shutdown()
     except (virt_vm.VMError, remote.LoginError, aexpect.ShellError), detail:
@@ -351,7 +355,7 @@ def test_blockdev_info(vm, params):
                  "Blocksize:%s\n"
                  "Totalsize_bytes:%s"
                  % (sectorsize2, total_size2, blocksize2,
-                 total_size_in_bytes2))
+                    total_size_in_bytes2))
 
     fail_info = []
     if sectorsize != sectorsize2:
@@ -395,7 +399,7 @@ def test_blocksize(vm, params):
     logging.info("Get blocksize successfully.")
 
     # Set blocksize of device to half
-    setbsz_result = gf.blockdev_setbsz(device, int(blocksize)/2)
+    setbsz_result = gf.blockdev_setbsz(device, int(blocksize) / 2)
     logging.debug(setbsz_result)
     gf.close_session()
     if setbsz_result.exit_status:
@@ -422,7 +426,7 @@ def test_blocksize(vm, params):
         raise error.TestFail(str(detail))
 
     if blocksize2.isdigit():
-        if blocksize != int(blocksize2)*2:
+        if blocksize != int(blocksize2) * 2:
             raise error.TestFail("\nSet blocksize failed:\n"
                                  "Original:%s\n"
                                  "Current:%s" % (blocksize, blocksize2))

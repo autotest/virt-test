@@ -2,7 +2,9 @@
 selinux test utility functions.
 """
 
-import logging, re, os.path
+import logging
+import re
+import os.path
 from autotest.client import utils
 
 

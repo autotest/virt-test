@@ -14,6 +14,7 @@ import random
 
 
 class PCIBusInfo:
+
     def __init__(self, device):
         self.name = device.aobject
         if device.child_bus:
@@ -44,7 +45,7 @@ def verify_qdev_vs_qtree(qdev, qtree):
                    'type': device.get_param('driver'),
                    'bus': device.get_param('bus'),
                    'addr': addr
-                  }
+                   }
             if dev_id is None:
                 qdev_devices_noid.append(dev)
             else:
@@ -59,7 +60,7 @@ def verify_qdev_vs_qtree(qdev, qtree):
                    'type': node.qtree.get('type'),
                    'bus': node.parent.qtree.get('id'),
                    'addr': node.qtree.get('addr')
-                  }
+                   }
             if dev_id is None:
                 # HOOK for VGA
                 if dev['type'] == 'VGA':

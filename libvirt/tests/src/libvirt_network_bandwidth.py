@@ -34,7 +34,7 @@ def run_libvirt_network_bandwidth(test, params, env):
 
     config_type = params.get("LNB_config_type", "network")
 
-    bandwidth_tolerance = float(params.get("LNB_bandwidth_tolerance", "20"))/100
+    bandwidth_tolerance = float(params.get("LNB_bandwidth_tolerance", "20")) / 100
 
     file_size = params.get("LNB_verify_file_size", "10")
 
@@ -127,9 +127,9 @@ def run_libvirt_network_bandwidth(test, params, env):
         time_after = time.time()
 
         speed_expected = int(inbound_average)
-        speed_actual = (10*1024/(time_after-time_before))
+        speed_actual = (10 * 1024 / (time_after - time_before))
         if not (abs(speed_actual - speed_expected) <=
-                speed_expected*bandwidth_tolerance):
+                speed_expected * bandwidth_tolerance):
             raise error.TestFail("Speed from host to guest is %s.\n"
                                  "But the average of bandwidth.inbound is %s.\n"
                                  % (speed_actual, speed_expected))
@@ -138,9 +138,9 @@ def run_libvirt_network_bandwidth(test, params, env):
         time_after = time.time()
 
         speed_expected = int(outbound_average)
-        speed_actual = (10*1024/(time_after-time_before))
+        speed_actual = (10 * 1024 / (time_after - time_before))
         if not (abs(speed_actual - speed_expected) <=
-                speed_expected*bandwidth_tolerance):
+                speed_expected * bandwidth_tolerance):
             raise error.TestFail("Speed from guest to host is %s.\n"
                                  "But the average of bandwidth.outbound is %s\n"
                                  % (speed_actual, speed_expected))

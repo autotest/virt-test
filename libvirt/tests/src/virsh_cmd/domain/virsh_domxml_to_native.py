@@ -48,7 +48,7 @@ def run_virsh_domxml_to_native(test, params, env):
                 continue
 
             # Need a peek at the next element
-            enext = elems[i+1]
+            enext = elems[i + 1]
 
             # If current and next element starts with "-", then the
             # is not an argument to the current, thus we just append.
@@ -106,8 +106,8 @@ def run_virsh_domxml_to_native(test, params, env):
         # argument list and we find "qemu-system-x86_64 -machine accel=kvm"
         # in the running guest's cmdline
         if conv_arg.find("/usr/bin/qemu-kvm") != 1 and \
-            cmdline.find("/usr/bin/qemu-system-x86_64 -machine accel=kvm") != -1:
-            cmdline = re.sub(r"/usr/bin/qemu-system-x86_64 -machine accel=kvm",\
+                cmdline.find("/usr/bin/qemu-system-x86_64 -machine accel=kvm") != -1:
+            cmdline = re.sub(r"/usr/bin/qemu-system-x86_64 -machine accel=kvm",
                              "/usr/bin/qemu-kvm", cmdline)
 
         # Now prepend the various environment variables that will be in
@@ -120,14 +120,14 @@ def run_virsh_domxml_to_native(test, params, env):
         conv_arg_lines = buildcmd(conv_arg)
         qemu_arg_lines = buildcmd(qemu_arg)
 
-        diff1 = filtlist(tuple(x for x in conv_arg_lines \
+        diff1 = filtlist(tuple(x for x in conv_arg_lines
                                if x not in set(qemu_arg_lines)))
         if diff1:
             logging.debug("Found the following in conv_arg not in qemu_arg:")
         for elem in diff1:
             logging.debug("\t%s", elem)
 
-        diff2 = filtlist(tuple(x for x in qemu_arg_lines \
+        diff2 = filtlist(tuple(x for x in qemu_arg_lines
                                if x not in set(conv_arg_lines)))
         if diff2:
             logging.debug("Found the following in qemu_arg not in conv_arg:")

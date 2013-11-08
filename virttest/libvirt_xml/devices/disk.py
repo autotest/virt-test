@@ -9,6 +9,7 @@ from virttest.libvirt_xml.devices import base, librarian
 
 
 class Disk(base.TypedDeviceBase):
+
     """
     Disk device XML class
 
@@ -51,7 +52,7 @@ class Disk(base.TypedDeviceBase):
         accessors.XMLElementNest('address', self, parent_xpath='/',
                                  tag_name='address', subclass=self.Address,
                                  subclass_dargs={'type_name': 'drive',
-                                             'virsh_instance': virsh_instance})
+                                                 'virsh_instance': virsh_instance})
         accessors.XMLAttribute('boot', self, parent_xpath='/',
                                tag_name='boot', attribute='order')
         accessors.XMLElementBool('readonly', self, parent_xpath='/',
@@ -63,7 +64,7 @@ class Disk(base.TypedDeviceBase):
         accessors.XMLElementNest('source', self, parent_xpath='/',
                                  tag_name='source', subclass=self.DiskSource,
                                  subclass_dargs={
-                                    'virsh_instance': virsh_instance})
+                                     'virsh_instance': virsh_instance})
         ro = ['set', 'del']
         accessors.XMLElementBool('mirror', self, forbidden=ro,
                                  parent_xpath='/', tag_name='mirror')
@@ -72,7 +73,7 @@ class Disk(base.TypedDeviceBase):
         accessors.XMLElementNest('iotune', self, parent_xpath='/',
                                  tag_name='iotune', subclass=self.IOTune,
                                  subclass_dargs={
-                                             'virsh_instance': virsh_instance})
+                                     'virsh_instance': virsh_instance})
         super(Disk, self).__init__(device_tag='disk', type_name=type_name,
                                    virsh_instance=virsh_instance)
 
@@ -107,6 +108,7 @@ class Disk(base.TypedDeviceBase):
     Address = librarian.get('address')
 
     class DiskSource(base.base.LibvirtXMLBase):
+
         """
         Disk source device XML class
 
@@ -174,6 +176,7 @@ class Disk(base.TypedDeviceBase):
             return dict(attr_dict)       # return copy of dict, not reference
 
     class IOTune(base.base.LibvirtXMLBase):
+
         """
         IOTune device XML class
 

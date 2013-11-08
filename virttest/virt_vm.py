@@ -190,7 +190,7 @@ class VMPortNotRedirectedError(VMAddressError):
             nic = self.virtnet_nic
             msg += (" with networking type '%s', to destination '%s', for nic "
                     "'%s' with mac '%s' and ip '%s'." % (nic.nettype, nic.netdst,
-                    nic.nic_name, nic.mac, nic.ip))
+                                                         nic.nic_name, nic.mac, nic.ip))
             return msg
 
 

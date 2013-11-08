@@ -420,7 +420,6 @@ class VirshConnectBack(VirshPersistent):
         session_id = new_session.get_id()
         self.__dict_set__('session_id', session_id)
 
-
     @staticmethod
     def kosher_args(remote_ip, uri):
         """
@@ -2029,11 +2028,11 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     cmd = "setmem"
     if domainarg is not None:  # Allow testing of ""
         cmd += " %s" % domainarg
-    if domain is not None: # Allow testing of --domain ""
+    if domain is not None:  # Allow testing of --domain ""
         cmd += " --domain %s" % domain
-    if sizearg is not None: # Allow testing of 0 and ""
+    if sizearg is not None:  # Allow testing of 0 and ""
         cmd += " %s" % sizearg
-    if size is not None: # Allow testing of --size "" or --size 0
+    if size is not None:  # Allow testing of --size "" or --size 0
         if use_kilobytes:
             cmd += " --kilobytes %s" % size
         else:

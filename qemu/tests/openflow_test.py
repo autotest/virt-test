@@ -30,8 +30,7 @@ def run_openflow_test(test, params, env):
                                    30, 0, 1, "Waiting tcpdump start..."):
             raise error.TestNAError("Error, can not run tcpdump")
 
-
-    def dump_catch_data(session,  dump_log, catch_reg):
+    def dump_catch_data(session, dump_log, catch_reg):
         """
         Search data from dump_log
         """
@@ -40,7 +39,6 @@ def run_openflow_test(test, params, env):
             return True
         return False
 
-
     def tcpdump_is_alive(session):
         """
         Check whether tcpdump is alive
@@ -48,7 +46,6 @@ def run_openflow_test(test, params, env):
         if session.cmd_status("pidof tcpdump"):
             return False
         return True
-
 
     def tcpdump_catch_packet_test(session, drop_flow=False):
         """
@@ -62,9 +59,8 @@ def run_openflow_test(test, params, env):
             raise error.TestError(err_msg % ((drop_flow and "was" or "wasn't"),
                                   (packet_receive and "can" or "can not")))
         logging.info("Correct, flow %s dropped, tcpdump %s receive the packet"
-                      % ((drop_flow and "was" or "was not"),
+                     % ((drop_flow and "was" or "was not"),
                          (packet_receive and "can" or "can not")))
-
 
     def arp_entry_clean(session, entry=None):
         """
@@ -77,15 +73,14 @@ def run_openflow_test(test, params, env):
         for session in sessions:
             session.cmd_output_safe(arp_clean_cmd)
 
-
     def ping_test(session, dst, drop_flow=False):
         """
         Ping test, check icmp
         """
         ping_status, ping_output = utils_test.ping(dest=dst, count=10,
                                                    timeout=20, session=session)
-        #when drop_flow is true, ping should failed(return not zero)
-        #drop_flow is false, ping should success
+        # when drop_flow is true, ping should failed(return not zero)
+        # drop_flow is false, ping should success
         packets_lost = 100
         if ping_status and not drop_flow:
             raise error.TestError("Ping should success when not drop_icmp")
@@ -101,7 +96,6 @@ def run_openflow_test(test, params, env):
         logging.info(info_msg % ((drop_flow and "was" or "was not"),
                                  (ping_status and "failed" or "success"),
                                  packets_lost))
-
 
     def nc_connect_test(sessions, addresses, drop_flow=False, nc_port="8899",
                         udp_model=False):
@@ -133,14 +127,13 @@ def run_openflow_test(test, params, env):
                                       (nc_connect and "failed" or "success")))
 
             logging.info("Correct, '%s' flow %s dropped, and nc connect %s" %
-                          (nc_protocol, (drop_flow and "was" or "was not"),
-                          (nc_connect and "success" or "failed")))
+                        (nc_protocol, (drop_flow and "was" or "was not"),
+                         (nc_connect and "success" or "failed")))
         finally:
             for session in sessions:
                 session.cmd_output_safe("killall nc || killall ncat")
                 session.cmd("%s %s" % (clean_cmd, nc_log),
                             ignore_all_errors=True)
-
 
     timeout = int(params.get("login_timeout", '360'))
     clean_cmd = params.get("clean_cmd", "rm -f")
@@ -156,7 +149,7 @@ def run_openflow_test(test, params, env):
         sessions.append(vm.wait_for_login(timeout=timeout))
         addresses.append(vm.get_address())
 
-    #set openflow rules:
+    # set openflow rules:
     br_name = params.get("netdst", "ovs0")
     f_protocol = params.get("flow", "arp")
     f_base_options = "%s,nw_src=%s,nw_dst=%s" % (f_protocol, addresses[0],

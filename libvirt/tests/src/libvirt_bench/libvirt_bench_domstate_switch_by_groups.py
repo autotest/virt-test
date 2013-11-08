@@ -47,12 +47,12 @@ def run_libvirt_bench_domstate_switch_by_groups(test, params, env):
     # Wait for background_tests joining.
     err_msg = ""
     try:
-        odd_bt.join(int(timeout)*2)
+        odd_bt.join(int(timeout) * 2)
     except error.TestFail, detail:
         err_msg += ("Group odd_group failed to run sub test.\n"
                     "Detail: %s." % detail)
     try:
-        even_bt.join(int(timeout)*2)
+        even_bt.join(int(timeout) * 2)
     except error.TestFail, detail:
         err_msg += ("Group even_group failed to run sub test.\n"
                     "Detail: %s." % detail)

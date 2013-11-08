@@ -314,7 +314,7 @@ class GuestfishPersistent(Guestfish):
             except aexpect.ShellProcessTerminatedError:
                 self.__class__.SESSION_COUNTER -= 1
                 self.__dict_del__('session_id')
-                return # guestfish session was closed normally
+                return  # guestfish session was closed normally
             # Close with 'quit' did not respond
             # So close with aexpect functions
             if existing.is_alive():
@@ -766,7 +766,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("mkfs %s %s" % (fstype, device))
 
-
     def part_disk(self, device, parttype):
         """
         part-disk - partition whole disk with a single primary partition
@@ -777,7 +776,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("part-disk %s %s" % (device, parttype))
 
-
     def part_get_bootable(self, device, partnum):
         """
         part-get-bootable - return true if a partition is bootable
@@ -787,7 +785,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("part-get-bootable %s %s" % (device, partnum))
 
-
     def part_get_mbr_id(self, device, partnum):
         """
         part-get-mbr-id - get the MBR type byte (ID byte) from a partition
@@ -796,7 +793,6 @@ class GuestfishPersistent(Guestfish):
         numbered partition "partnum".
         """
         return self.inner_cmd("part-get-mbr-id %s %s" % (device, partnum))
-
 
     def part_get_parttype(self, device):
         """
@@ -1233,4 +1229,3 @@ def virt_cat_cmd(disk_or_domain, file_path, options=None, ignore_status=True,
         cmd += " %s" % options
 
     return lgf_command(cmd, ignore_status, debug, timeout)
-

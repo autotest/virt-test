@@ -675,6 +675,7 @@ def copy_files_from(address, client, username, password, port, remote_path,
 
 
 class Remote_Package(object):
+
     def __init__(self, address, client, username, password, port, remote_path):
         """
         Initialization of Remote Package class.
@@ -719,8 +720,8 @@ class Remote_Package(object):
         logging.debug("Push local: '%s' to remote: '%s'." % (local_path,
                                                              self.remote_path))
         copy_files_to(self.address, self.cp_client, self.username,
-                          self.password, self.cp_port, local_path,
-                          self.remote_path, timeout=timeout)
+                      self.password, self.cp_port, local_path,
+                      self.remote_path, timeout=timeout)
 
 
 class RemoteFile(object):

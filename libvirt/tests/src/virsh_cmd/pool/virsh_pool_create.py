@@ -76,7 +76,7 @@ def run_virsh_pool_create(test, params, env):
 
     # Run virsh test
     if os.path.isfile(pool_xml):
-        logging.debug("Create pool from file:\n %s",open(pool_xml, 'r').read())
+        logging.debug("Create pool from file:\n %s", open(pool_xml, 'r').read())
     try:
         cmd_result = virsh.pool_create(
             pool_xml,

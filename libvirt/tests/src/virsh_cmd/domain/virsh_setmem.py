@@ -233,7 +233,7 @@ def run_virsh_setmem(test, params, env):
                 msg += "Inside memory deviated. "
             raise error.TestFail(msg)
 
-        return # Normal test passed
+        return  # Normal test passed
     elif status_error == "no" and old_libvirt_fail == "yes":
         if status is 0:
             if old_libvirt:
@@ -241,6 +241,6 @@ def run_virsh_setmem(test, params, env):
         else:
             if not old_libvirt:
                 raise error.TestFail("Newer libvirt failed when it should not")
-    else: # Verify an error test resulted in error
+    else:  # Verify an error test resulted in error
         if status is 0:
             raise error.TestFail("Error test did not result in an error")

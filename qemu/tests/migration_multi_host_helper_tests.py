@@ -8,6 +8,7 @@ from virttest import utils_misc
 
 
 class MiniSubtest(object):
+
     def __new__(cls, *args, **kargs):
         self = super(MiniSubtest, cls).__new__(cls)
         ret = None
@@ -32,6 +33,7 @@ def run_migration_multi_host_helper_tests(test, params, env):
     """
 
     class hot_unplug_block_dev(MiniSubtest):
+
         def test(self):
             attempts = int(params.get("attempts", "100"))
             attempt_timeout = int(params.get("attempt_timeout", "1"))
@@ -54,6 +56,7 @@ def run_migration_multi_host_helper_tests(test, params, env):
                         time.sleep(attempt_timeout)
 
     class hot_plug_block_dev(MiniSubtest):
+
         def test(self):
             def get_index(vm, index):
                 while vm.index_in_use.get(str(index)):

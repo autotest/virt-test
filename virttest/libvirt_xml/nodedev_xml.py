@@ -199,7 +199,7 @@ class NodedevXMLBase(base.LibvirtXMLBase):
         accessors.XMLElementText('host', self, parent_xpath='/capability',
                                  tag_name='host')
         accessors.XMLAttribute('fc_type', self, parent_xpath='/capability',
-                                 tag_name='capability', attribute='type')
+                               tag_name='capability', attribute='type')
         accessors.XMLElementText('wwnn', self,
                                  parent_xpath='/capability/capability',
                                  tag_name='wwnn')

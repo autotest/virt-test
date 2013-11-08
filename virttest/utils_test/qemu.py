@@ -547,14 +547,14 @@ class MultihostMigration(object):
             if mig_data.is_src():
                 self.vm_lock.acquire()
                 env_process.process(self.test, new_params, self.env,
-                                         env_process.preprocess_image,
-                                         env_process.preprocess_vm)
+                                    env_process.preprocess_image,
+                                    env_process.preprocess_vm)
                 self.vm_lock.release()
                 self._quick_check_vms(mig_data)
 
                 # Send vms configuration to dst host.
                 vms = cPickle.dumps([self.env.get_vm(vm_name)
-                                             for vm_name in mig_data.vms_name])
+                                     for vm_name in mig_data.vms_name])
 
                 self.env.get_vm(mig_data.vms_name[0]).monitor.info("qtree")
                 SyncData(self.master_id(), self.hostid,
@@ -564,7 +564,7 @@ class MultihostMigration(object):
                 # Load vms configuration from src host.
                 vms = cPickle.loads(SyncData(self.master_id(), self.hostid,
                                              mig_data.hosts, mig_data.mig_id,
-                            self.sync_server).sync(timeout=240)[mig_data.src])
+                                             self.sync_server).sync(timeout=240)[mig_data.src])
                 for vm in vms:
                     # Save config to env. Used for create machine.
                     # When reuse_previous_config params is set don't check
@@ -574,16 +574,16 @@ class MultihostMigration(object):
 
                 self.vm_lock.acquire()
                 env_process.process(self.test, new_params, self.env,
-                                         env_process.preprocess_image,
-                                         env_process.preprocess_vm)
+                                    env_process.preprocess_image,
+                                    env_process.preprocess_vm)
                 vms[0].monitor.info("qtree")
                 self.vm_lock.release()
                 self._quick_check_vms(mig_data)
         else:
             self.vm_lock.acquire()
             env_process.process(self.test, new_params, self.env,
-                                     env_process.preprocess_image,
-                                     env_process.preprocess_vm)
+                                env_process.preprocess_image,
+                                env_process.preprocess_vm)
             self.vm_lock.release()
             self._quick_check_vms(mig_data)
 

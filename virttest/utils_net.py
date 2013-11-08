@@ -866,7 +866,7 @@ def get_net_if_operstate(ifname, runner=None):
         if "up" in operstate:
             return "up"
         elif "down" in operstate:
-            return  "down"
+            return "down"
         elif "unknown" in operstate:
             return "unknown"
         else:

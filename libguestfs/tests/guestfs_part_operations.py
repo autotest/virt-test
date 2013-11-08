@@ -13,6 +13,7 @@ class VTError(Exception):
 
 
 class VTAttachError(VTError):
+
     def __init__(self, cmd, output):
         super(VTAttachError, self).__init__(cmd, output)
         self.cmd = cmd
@@ -92,6 +93,7 @@ def define_new_vm(vm_name, new_name):
 
 
 class VirtTools(object):
+
     """
     Useful functions for virt-commands.
 
@@ -136,6 +138,7 @@ class VirtTools(object):
 
 
 class GuestfishTools(lgf.GuestfishPersistent):
+
     """Useful Tools for Guestfish class."""
 
     __slots__ = ('params', )

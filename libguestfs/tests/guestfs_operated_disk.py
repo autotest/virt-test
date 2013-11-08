@@ -59,6 +59,7 @@ def get_primary_disk(vm):
 
 
 class VirtTools(object):
+
     """
     Useful functions for virt-commands.
 
