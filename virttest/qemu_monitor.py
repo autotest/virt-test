@@ -122,6 +122,7 @@ def create_monitor(vm, monitor_name, monitor_params):
             monitor_creator = HumanMonitor
 
     monitor_filename = get_monitor_filename(vm, monitor_name)
+    logging.info("Connecting to monitor '%s'", monitor_name)
     monitor = monitor_creator(vm, monitor_name, monitor_filename)
     monitor.verify_responsive()
 
