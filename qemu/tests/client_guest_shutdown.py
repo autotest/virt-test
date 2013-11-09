@@ -44,6 +44,7 @@ def run_client_guest_shutdown(test, params, env):
                               "(system_powerdown monitor cmd)")
 
             if not utils_misc.wait_for(vm.is_dead, 240, 0, 1):
+                vm.destroy(gracefully=False, free_mac_addresses=True)
                 raise error.TestFail("Guest refuses to go down")
 
         finally:
