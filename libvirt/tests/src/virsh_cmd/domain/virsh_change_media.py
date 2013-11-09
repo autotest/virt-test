@@ -127,6 +127,10 @@ def run_virsh_change_media(test, params, env):
     if device_type not in ['cdrom', 'floppy']:
         raise error.TestNAError("Got a invalid device type:/n%s") % device_type
 
+    # Back up xml file.
+    vm_xml_file = os.path.join(test.tmpdir, "vm.xml")
+    virsh.dumpxml(vm_name, extra="--inactive", to_file=vm_xml_file)
+
     iso_dir = os.path.join(data_dir.get_tmp_dir(), "tmp")
     old_iso = os.path.join(iso_dir, old_iso_name)
     new_iso = os.path.join(iso_dir, new_iso_name)
@@ -201,6 +205,13 @@ def run_virsh_change_media(test, params, env):
     # Clean the iso dir  and clean the device
     update_device(vm_name, "", options, start_vm)
     shutil.rmtree(iso_dir)
+
+    # Recover VM.
+    if vm.is_alive():
+        vm.destroy(gracefully=False)
+    virsh.undefine(vm_name)
+    virsh.define(vm_xml_file)
+    os.remove(vm_xml_file)
 
     # Check status_error
     # Negative testing
