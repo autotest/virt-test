@@ -681,11 +681,15 @@ def umount(src, mount_point, fstype):
     """
     Umount the src mounted in mount_point.
 
-    @src: mount source
-    @mount_point: mount point
-    :type: file system type
+    :param src: mount source
+    :type src: string
+    :param mount_point: mount point
+    :type mount_point: string
+    :param fstype: file system type
+    :type fstype: string
+    :return: if umount success
+    :rtype: Boolean
     """
-    mount_string = "%s %s %s" % (src, mount_point, fstype)
     if is_mounted(src, mount_point, fstype):
         umount_cmd = "umount %s" % mount_point
         try:
@@ -702,22 +706,24 @@ def mount(src, mount_point, fstype, perm=None):
     """
     Mount the src into mount_point of the host.
 
-    @src: mount source
-    @mount_point: mount point
-    @fstype: file system type
-    @perm: mount permission
+    :param src: mount source
+    :type src: string
+    :param mount_point: mount point
+    :type mount_point: string
+    :param fstype: file system type
+    :type fstype: string
+    :param perm: mount permission
+    :type perm: string
+    :return: if mount success
+    :rtype: Boolean
     """
     if perm is None:
         perm = "rw"
 
-    umount(src, mount_point, fstype)
-    mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
-
     if is_mounted(src, mount_point, fstype, perm):
-        logging.debug("%s is already mounted in %s with %s",
-                      src, mount_point, perm)
+        logging.debug("%s is already mounted under %s", src, mount_point)
         return True
-
+    umount(src, mount_point, fstype)
     mount_cmd = "mount -t %s %s %s -o %s" % (fstype, src, mount_point, perm)
     try:
         utils.system(mount_cmd)
@@ -748,13 +754,23 @@ def is_mounted(src, mount_point, fstype, perm=None):
     mount_point = os.path.realpath(mount_point)
     if fstype not in ['nfs', 'smbfs']:
         src = os.path.realpath(src)
-    mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
-    if mount_string.strip() in file("/etc/mtab").read():
-        logging.debug("%s is successfully mounted", src)
-        return True
+    mount_string = "%s %s" % (src, mount_point)
+    mount_items = file("/etc/mtab", 'r').readlines()
+    for mount_item in mount_items:
+        if mount_string.strip() in mount_item:
+            logging.debug("%s is mounted under %s", src, mount_point)
+            logging.debug("Mounted options: %s", mount_item.split()[3])
+            if not perm:
+                return True
+            elif perm+"," in mount_item:
+                logging.debug("Mounted permission is %s", perm)
+                return True
+            else:
+                logging.debug("Mounted permission is not %s", perm)
+                return False
     else:
-        logging.error("Can't find mounted NFS share - /etc/mtab contents \n%s",
-                      file("/etc/mtab").read())
+        logging.debug("Can't find mounted NFS share - /etc/mtab contents:\n%s",
+                      mount_items)
         return False
 
 
