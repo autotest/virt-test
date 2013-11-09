@@ -22,7 +22,7 @@ def run_virsh_edit(test, params, env):
     domid = vm.get_id()
     domuuid = vm.get_uuid()
     # pylint: disable=E1111
-    vcpucount_result = virsh.vcpucount(vm_name, options="--config")
+    vcpucount_result = virsh.vcpucount(vm_name, options="--config --maximum")
     if vcpucount_result.exit_status:
         raise error.TestError("Failed to get vcpucount. Detail:\n%s"
                               % vcpucount_result)
@@ -64,7 +64,7 @@ def run_virsh_edit(test, params, env):
         """
         dic_mode = {
             "edit": ":%s /[0-9]*<\/vcpu>/" + expected_vcpu + "<\/vcpu>",
-                    "recover": ":%s /[0-9]*<\/vcpu>/" + original_vcpu + "<\/vcpu>"}
+            "recover": ":%s /[0-9]*<\/vcpu>/" + original_vcpu + "<\/vcpu>"}
         status = modify_vcpu(source, dic_mode["edit"])
         if not status:
             return status
