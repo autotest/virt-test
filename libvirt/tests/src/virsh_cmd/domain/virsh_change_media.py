@@ -74,7 +74,7 @@ def run_virsh_change_media(test, params, env):
 
         virsh.attach_disk(vm_name, init_source,
                           target_device,
-                          " --type %s --sourcetype file --config" % device_type,
+                          "--type %s --sourcetype file --config" % device_type,
                           debug=True)
 
     def update_device(vm_name, init_iso, options, start_vm):
@@ -125,7 +125,10 @@ def run_virsh_change_media(test, params, env):
     source_path = params.get("change_media_source_path", "yes")
 
     if device_type not in ['cdrom', 'floppy']:
-        raise error.TestNAError("Got a invalid device type:/n%s") % device_type
+        raise error.TestNAError("Got a invalid device type:/n%s" % device_type)
+
+    # Backup for recovery.
+    vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name, options="--inactive")
 
     iso_dir = os.path.join(data_dir.get_tmp_dir(), "tmp")
     old_iso = os.path.join(iso_dir, old_iso_name)
@@ -144,7 +147,7 @@ def run_virsh_change_media(test, params, env):
     env_pre(old_iso, new_iso)
     # Check domain's disk device
     disk_blk = vm_xml.VMXML.get_disk_blk(vm_name)
-    logging.info("disk_blk %s" % disk_blk)
+    logging.info("disk_blk %s", disk_blk)
     if target_device not in disk_blk:
         logging.info("Adding device")
         add_device(vm_name)
@@ -201,6 +204,9 @@ def run_virsh_change_media(test, params, env):
     # Clean the iso dir  and clean the device
     update_device(vm_name, "", options, start_vm)
     shutil.rmtree(iso_dir)
+
+    # Recover xml of vm.
+    vmxml_backup.sync()
 
     # Check status_error
     # Negative testing
