@@ -1996,6 +1996,8 @@ class VM(virt_vm.BaseVM):
             self.process = aexpect.run_bg(qemu_command, None,
                                           logging.info, "[qemu output] ",
                                           auto_close=False)
+            logging.info("Created qemu process with parent PID %d",
+                         self.process.get_pid())
             self.start_time = time.time()
 
             # test doesn't need to hold tapfd's open
