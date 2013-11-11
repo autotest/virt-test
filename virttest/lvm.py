@@ -598,3 +598,104 @@ class LVM(object):
         if lvm_reload_cmd:
             utils.system(lvm_reload_cmd, ignore_status=True)
             logging.info("reload lvm monitor service")
+
+
+class EmulatedLVM(LVM):
+
+    def __init__(self, params, root_dir="/tmp"):
+        os_dep.command("losetup")
+        os_dep.command("dd")
+        super(EmulatedLVM, self).__init__(params)
+        self.data_dir = root_dir
+
+    def get_emulate_image_name(self):
+        img_path = self.params.get("emulated_image")
+        if img_path is None:
+            img_path = self.generate_id(self.params)
+        return utils_misc.get_path(self.data_dir, img_path)
+
+    def make_emulate_image(self):
+        """
+        Create emulate image via dd with 8M block size;
+        """
+        img_size = self.params["lv_size"]
+        img_path = self.get_emulate_image_name()
+        bs_size = normalize_data_size("8M")
+        count = int(math.ceil(img_size / bs_size)) + 8
+        logging.info("create emulated image file(%s)" % img_path)
+        cmd = "dd if=/dev/zero of=%s bs=8M count=%s" % (img_path, count)
+        utils.system(cmd)
+        self.params["pv_size"] = count * bs_size
+        return img_path
+
+    def make_volume(self, img_file, extra_args=""):
+        """
+        Map a file to loop back device;
+
+        :param img_file: image file path;
+        :return: loop back device name;
+        """
+        cmd = "losetup %s --show --find %s" % (extra_args, img_file)
+        pv_name = utils.system_output(cmd)
+        self.params["pv_name"] = pv_name.strip()
+        return pv_name
+
+    def setup_pv(self, vg):
+        """
+        Setup physical volume device if exists return it driectly;
+        """
+        pvs = []
+        emulate_image_file = self.get_emulate_image_name()
+        cmd = "losetup -j %s" % emulate_image_file
+        output = utils.system_output(cmd)
+        try:
+            pv_name = re.findall("(/dev/loop\d+)", output, re.M | re.I)[-1]
+            pv = self.get_vol(pv_name, "pvs")
+        except IndexError:
+            pv = None
+        if pv is None:
+            img_file = self.make_emulate_image()
+            pv_name = self.make_volume(img_file)
+            pv_size = self.params["pv_size"]
+            pv = PhysicalVolume(pv_name, pv_size)
+            pv.create()
+            self.register(pv)
+        else:
+            logging.warn("PhysicalVolume(%s) really exists" % pv_name +
+                         "skip to create it")
+        pv.set_vg(vg)
+        pvs.append(pv)
+        return pvs
+
+    def setup(self):
+        """
+        Main function to setup a lvm envrionments;
+
+        :return: LogicalVolume path
+        """
+        self.rescan()
+        lv = self.setup_lv()
+        if "/dev/loop" not in lv.get_attr("devices"):
+            lv.display()
+            raise error.TestError("logical volume exists but is not a " +
+                                  "emulated logical device")
+        return lv.get_attr("lv_path")
+
+    def cleanup(self):
+        """
+        Cleanup created logical volumes;
+        """
+        super(EmulatedLVM, self).cleanup()
+        if self.params.get("remove_emulated_image", "no") == "yes":
+            emulate_image_file = self.get_emulate_image_name()
+            cmd = "losetup -j %s" % emulate_image_file
+            output = utils.system_output(cmd)
+            devices = re.findall("(/dev/loop\d+)", output, re.M | re.I)
+            for dev in devices:
+                cmd = "losetup -d %s" % dev
+                logging.info("disconnect %s", dev)
+                utils.system(cmd, ignore_status=True)
+            emulate_image_file = self.get_emulate_image_name()
+            cmd = "rm -f %s" % emulate_image_file
+            utils.system(cmd, ignore_status=True)
+            logging.info("remove emulate image file %s", emulate_image_file)
