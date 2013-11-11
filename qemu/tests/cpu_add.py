@@ -10,20 +10,35 @@ def run_cpu_add(test, params, env):
     """
     Runs CPU hotplug test:
 
+    0) sync host clock via ntp server
     1) Boot the vm with -smp X,maxcpus=Y
     2) After logged into the vm, check CPUs number
     3) Stop the guest if config 'stop_before_hotplug'
-    4) Do cpu hotplug
-    5) Resume the guest if config 'stop_before_hotplug'
-    6) Recheck guest get hot-pluged CPUs
-    7) Do cpu online/offline in guest if config
-    8) Run sub test after CPU Hotplug
-    9) Recheck guest cpus after sub test
+    4) sync guest clock via ntp server if config ntp_sync_cmd
+    5) stop ntp service in guest if config ntp_service_stop_cmd
+    6) Do cpu hotplug
+    7) Resume the guest if config 'stop_before_hotplug'
+    8) Recheck guest get hot-pluged CPUs
+    9) Do cpu online/offline in guest and check clock
+       offset via ntp server if config online/offline_cpus
+    10) Run sub test after CPU Hotplug if run_sub_test is 'yes'
+    11) Recheck guest cpus after sub test if vcpu_num_rechek is 'yes'
 
     :param test: QEMU test object.
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+    def get_clock_offset(session, ntp_query_cmd):
+        """
+        Get guest clock offset between ntp service;
+        """
+        output = session.cmd_output(ntp_query_cmd)
+        try:
+            offset = float(re.findall(r"[+-](\d+\.\d+)", output)[-1])
+        except IndexError:
+            offset = 0.0
+        return offset
+
     def qemu_guest_cpu_match(vm, vcpu_been_pluged=0, wait_time=60):
         """
         Check Whether the vcpus are matche
@@ -76,12 +91,23 @@ def run_cpu_add(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     onoff_iterations = int(params.get("onoff_iterations", 2))
     vcpu_need_hotplug = int(params.get("vcpu_need_hotplug", 1))
+    acceptable_offset = float(params.get("acceptable_offset", 5))
+    ntp_query_cmd = params.get("ntp_query_cmd", "")
+    ntp_sync_cmd = params.get("ntp_sync_cmd", "")
+    ntp_service_stop_cmd = params.get("ntp_service_stop_cmd")
 
     error.context("Boot the vm, with '-smp X,maxcpus=Y' option", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
     maxcpus = vm.cpuinfo.maxcpus
+
+    if ntp_sync_cmd:
+        error.context("sync guest time via ntp server", logging.info)
+        session.cmd(ntp_sync_cmd)
+    if ntp_service_stop_cmd:
+        logging.info("stop ntp service in guest")
+        session.cmd(ntp_service_stop_cmd)
 
     error.context("Check if cpus in guest matche qemu cmd before hotplug",
                   logging.info)
@@ -147,7 +173,7 @@ def run_cpu_add(test, params, env):
                 logging.debug("The error info is:\n '%s'" % output)
                 raise error.TestFail(err_msg)
 
-    if stop_before_hotplug:
+    if stop_before_hotplug == "yes":
         error.context("Resume the guest after cpu hotplug", logging.info)
         vm.resume()
 
@@ -182,10 +208,28 @@ def run_cpu_add(test, params, env):
     for i in range(repeat_time):
         for offline_cpu in offline_list:
             cpu_online_offline(session, offline_cpu)
+            logging.info("sleep %s seconds", onoff_iterations)
             time.sleep(onoff_iterations)
+            if ntp_query_cmd:
+                error.context("Check guest clock after online cpu",
+                              logging.info)
+                current_offset = get_clock_offset(session, ntp_query_cmd)
+                if current_offset > acceptable_offset:
+                    raise error.TestFail("time drift(%ss)" % current_offset +
+                                         "after online cpu(%s)"
+                                         % offline_cpu)
         for online_cpu in online_list:
             cpu_online_offline(session, online_cpu, "online")
+            logging.info("sleep %s seconds", onoff_iterations)
             time.sleep(onoff_iterations)
+            if ntp_query_cmd:
+                error.context("Check guest clock after offline cpu",
+                              logging.info)
+                current_offset = get_clock_offset(session, ntp_query_cmd)
+                if current_offset > acceptable_offset:
+                    raise error.TestFail("time drift(%s)" % current_offset +
+                                         "after offline cpu(%s)"
+                                         % online_cpu)
 
     # do sub test after cpu hotplug
     if (params.get("run_sub_test", "no") == "yes" and
