@@ -18,6 +18,7 @@ except ImportError:
 import utils_misc
 import virt_vm
 import gluster
+import lvm
 
 
 def preprocess_images(bindir, params, env):
@@ -410,3 +411,22 @@ class Iscsidev(Rawdev):
         params["iscsi_thread_id"] = self.image_name
         self.iscsidevice = iscsi.Iscsi(params, root_dir=root_dir)
         self.device_id = params.get("device_id")
+
+
+class LVMdev(Rawdev):
+    """
+    Class for handle LVM devices for VM
+    """
+    def __init__(self, params, root_dir, tag):
+        """
+        Init the default value for image object.
+
+        @param params: Dictionary containing the test parameters.
+        @param root_dir: Base directory for relative filenames.
+        @param tag: Image tag defined in parameter images
+        """
+        super(LVMdev, self).__init__(params, root_dir, tag)
+        if params.get("emulational_device", "yes") == "yes":
+            self.lvmdevice = lvm.EmulatedLVM(params, root_dir=root_dir)
+        else:
+            self.lvmdevice = lvm.LVM(params)

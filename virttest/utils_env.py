@@ -168,3 +168,29 @@ class Env(UserDict.IterableUserDict):
         :param port: Sync Server port.
         """
         return self.data.get("sync__%s" % port)
+
+    def register_lvmdev(self, name, lvmdev):
+        """
+        Register lvm device object into env;
+
+        :param name: name of register lvmdev object
+        :param lvmdev: lvmdev object;
+        """
+        self.data["lvmdev__%s" % name] = lvmdev
+
+    def unregister_lvmdev(self, name):
+        """
+        Remove lvm device object from env;
+
+        :param name: name of lvm device object;
+        """
+        del self.data["lvmdev__%s" % name]
+
+    def get_lvmdev(self, name):
+        """
+        Get lvm device object by name from env;
+
+        :param name: lvm device object name;
+        :return: lvmdev object
+        """
+        return self.data.get("lvmdev__%s" % name)

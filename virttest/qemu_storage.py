@@ -482,3 +482,30 @@ class Iscsidev(storage.Iscsidev):
                     os.unlink(self.emulated_image)
                 else:
                     logging.debug("File %s not found", self.emulated_image)
+
+
+class LVMdev(storage.LVMdev):
+    """
+    Class for handle lvm devices for VM
+    """
+    def __init__(self, params, root_dir, tag):
+        """
+        Init the default value for image object.
+
+        @param params: Dictionary containing the test parameters.
+        @param root_dir: Base directory for relative filenames.
+        @param tag: Image tag defined in parameter images
+        """
+        super(LVMdev, self).__init__(params, root_dir, tag)
+
+    def setup(self):
+        """
+        Get logical volume path;
+        """
+        return self.lvmdevice.setup()
+
+    def cleanup(self):
+        """
+        Cleanup useless volumes;
+        """
+        return self.lvmdevice.cleanup()
