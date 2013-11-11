@@ -443,6 +443,12 @@ def preprocess(test, params, env):
         params["image_name"] = iscsidev.setup()
         params["image_raw_device"] = "yes"
 
+    if params.get("storage_type") == "lvm":
+        lvmdev = qemu_storage.LVMdev(params, base_dir, "lvm")
+        params["image_name"] = lvmdev.setup()
+        params["image_raw_device"] = "yes"
+        env.register_lvmdev("lvm_%s" % params["main_vm"], lvmdev)
+
     if params.get("storage_type") == "nfs":
         image_nfs = nfs.Nfs(params)
         image_nfs.setup()
@@ -820,6 +826,16 @@ def postprocess(test, params, env):
         except Exception, details:
             err += "\niscsi cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
+
+    if params.get("storage_type") == "lvm":
+        try:
+            lvmdev = env.get_lvmdev("lvm_%s" % params["main_vm"])
+            lvmdev.cleanup()
+        except Exception, details:
+            err += "\nLVM cleanup: %s" % str(details).replace('\\n', '\n  ')
+            logging.error(details)
+        env.unregister_lvmdev("lvm_%s" % params["main_vm"])
+
     if params.get("storage_type") == "nfs":
         try:
             image_nfs = nfs.Nfs(params)
