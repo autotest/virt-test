@@ -1,9 +1,21 @@
 import logging
 import re
 import commands
-from autotest.client.shared import error
+from autotest.client.shared import error, utils
 from virttest import utils_libguestfs as lgf
 from virttest import aexpect
+
+
+def primary_disk_virtio(vm):
+    """
+    To verify if system disk is virtio.
+
+    :param vm: Libvirt VM object.
+    """
+    vmdisks = vm.get_disk_devices()
+    if "vda" in vmdisks.keys():
+        return True
+    return False
 
 
 def set_guestfs_args(guestfs, ignore_status=True, debug=False, timeout=60):
@@ -165,6 +177,10 @@ def run_guestfs_add(test, params, env):
 
     # Start vm and login to check writed file.
     guestfs.close_session()
+    # Convert sdx in root to vdx for virtio system disk
+    if primary_disk_virtio(vm):
+        root = utils.run("echo %s | sed -e 's/sd/vd/g'" % root,
+                         ignore_status=True).stdout.strip()
     if login_to_check:
         try:
             vm.start()
