@@ -392,7 +392,7 @@ class VirshConnectBack(VirshPersistent):
     Persistent virsh session connected back from a remote host
     """
 
-    __slots__ = ('remote_ip', )
+    __slots__ = ('remote_ip', 'remote_pwd')
 
     def new_session(self):
         """
