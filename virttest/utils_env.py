@@ -1,8 +1,12 @@
-import cPickle
 import UserDict
 import os
 import logging
 import virt_vm
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 ENV_VERSION = 1
 
@@ -39,7 +43,7 @@ class Env(UserDict.IterableUserDict):
             try:
                 if os.path.isfile(filename):
                     f = open(filename, "r")
-                    env = cPickle.load(f)
+                    env = pickle.load(f)
                     f.close()
                     if env.get("version", 0) >= version:
                         self.data = env
@@ -73,7 +77,13 @@ class Env(UserDict.IterableUserDict):
         if filename is None:
             raise EnvSaveError("No filename specified for this env file")
         f = open(filename, "w")
-        cPickle.dump(self.data, f)
+
+        tmp_data = self.data.copy()
+        for key,value in tmp_data.iteritems():
+            if type(value) == type(dict()):
+                tmp_data[key] = self.data[key].copy()
+
+        pickle.dump(tmp_data, f)
         f.close()
 
     def get_all_vms(self):
