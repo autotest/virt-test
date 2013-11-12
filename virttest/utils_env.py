@@ -77,7 +77,13 @@ class Env(UserDict.IterableUserDict):
         if filename is None:
             raise EnvSaveError("No filename specified for this env file")
         f = open(filename, "w")
-        pickle.dump(self.data, f)
+
+        tmp_data = self.data.copy()
+        for key,value in tmp_data.iteritems():
+            if type(value) == type(dict()):
+                tmp_data[key] = self.data[key].copy()
+
+        pickle.dump(tmp_data, f)
         f.close()
 
     def get_all_vms(self):
