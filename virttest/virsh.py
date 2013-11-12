@@ -1129,6 +1129,35 @@ def migrate(name="", dest_uri="", option="", extra="", **dargs):
     return command(cmd, **dargs)
 
 
+def migrate_setspeed(domain, bandwidth, extra=None, **dargs):
+    """
+    Set the maximum migration bandwidth (in MiB/s) for
+    a domain which is being migrated to another host.
+
+    :param domain: name/uuid/id of guest
+    :param bandwith: migration bandwidth limit in MiB/s
+    :param dargs: standardized virsh function API keywords
+    """
+
+    cmd = "migrate-setspeed %s %s" % (domain, bandwidth)
+    if extra is not None:
+        cmd += " %s" % extra
+    return command(cmd, **dargs)
+
+
+def migrate_getspeed(domain, **dargs):
+    """
+    Get the maximum migration bandwidth (in MiB/s) for
+    a domain.
+
+    :param domain: name/uuid/id of guest
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
+    """
+    cmd = "migrate-getspeed %s" % domain
+    return command(cmd, **dargs).stdout.strip()
+
+
 def migrate_setmaxdowntime(domain, downtime, extra=None, **dargs):
     """
     Set maximum tolerable downtime of a domain
