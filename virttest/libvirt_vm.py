@@ -488,6 +488,28 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
+        def add_security(help_text, sec_type, sec_label=None, sec_relabel=None):
+            """
+            Return security options for install command.
+            """
+            if has_option(help_text, "security"):
+                result = " --security"
+                if sec_type == 'static':
+                    if sec_label is None:
+                        raise ValueError("Seclabel is not setted for static.")
+                    result += " type=static,label=%s" % (sec_label)
+                elif sec_type == 'dynamic':
+                    result += " type=dynamic"
+                else:
+                    raise ValueError("Security type %s is not supported."
+                                     % sec_type)
+                if sec_relabel is not None:
+                    result += ",relabel=%s" % sec_relabel
+            else:
+                result = ""
+
+            return result
+
         def add_nic(help_text, nic_params):
             """
             Return additional command line params based on dict-like nic_params
@@ -805,6 +827,14 @@ class VM(virt_vm.BaseVM):
             virt_install_cmd += " --extra-args '%s'" % kernel_params
 
         virt_install_cmd += " --noautoconsole"
+
+        sec_type = params.get("sec_type", None)
+        if sec_type:
+            sec_label = params.get("sec_label", None)
+            sec_relabel = params.get("sec_relabel", None)
+            virt_install_cmd += add_security(help_text, sec_type=sec_type,
+                                             sec_label=sec_label,
+                                             sec_relabel=sec_relabel)
 
         return virt_install_cmd
 
