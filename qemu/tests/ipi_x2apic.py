@@ -58,7 +58,8 @@ def run_ipi_x2apic(test, params, env):
         x2apic_check_string = params.get("x2apic_check_string").split(",")
         for check_string in x2apic_check_string:
             if check_string.strip() not in x2apic_output:
-                raise error.TestFail("%s is not displayed in output" % str)
+                msg = "%s is not displayed in output" % check_string
+                raise error.TestFail(msg)
 
     file_link = os.path.join(test.virtdir, "scripts/pipetest.c")
     vm.copy_files_to(file_link, "/tmp/pipetest.c")
