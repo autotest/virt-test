@@ -356,13 +356,13 @@ def reset_logging():
     logger.setLevel(logging.NOTSET)
 
 
-def configure_console_logging():
+def configure_console_logging(loglevel=logging.DEBUG):
     """
     Simple helper for adding a file logger to the root logger.
     """
     logger = logging.getLogger()
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setLevel(loglevel)
 
     fmt = '%(asctime)s %(levelname)-5.5s| %(message)s'
     formatter = logging.Formatter(fmt=fmt, datefmt='%H:%M:%S')
@@ -373,13 +373,13 @@ def configure_console_logging():
     return stream_handler
 
 
-def configure_file_logging(logfile):
+def configure_file_logging(logfile, loglevel=logging.DEBUG):
     """
     Simple helper for adding a file logger to the root logger.
     """
     logger = logging.getLogger()
     file_handler = logging.FileHandler(filename=logfile)
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(loglevel)
 
     fmt = '%(asctime)s %(levelname)-5.5s| %(message)s'
     formatter = logging.Formatter(fmt=fmt, datefmt='%H:%M:%S')
@@ -710,7 +710,8 @@ def run_tests(parser, options):
     os.symlink(debugdir, latestdir)
 
     debuglog = os.path.join(debugdir, "debug.log")
-    configure_file_logging(debuglog)
+    loglevel = options.log_level
+    configure_file_logging(debuglog, loglevel)
 
     print_stdout(bcolors.HEADER +
                  "DATA DIR: %s" % data_dir.get_backing_data_dir() +

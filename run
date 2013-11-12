@@ -260,6 +260,10 @@ class VirtTestRunParser(optparse.OptionParser):
                            help=("Run tests present on the drop in dir on the "
                                  "host. Incompatible with --tests."))
 
+        general.add_option("--log-level", action="store", dest="log_level",
+                           default="debug",
+                           help=("Define log level. Default: %default"))
+
         self.add_option_group(general)
 
         qemu = optparse.OptionGroup(self, 'Options specific to the qemu test')
@@ -700,6 +704,12 @@ class VirtTestApp(object):
                                        " ".join(SUPPORTED_TEST_TYPES)))
                 sys.exit(1)
 
+        # Translate log level from string to numeric value
+        num_level = getattr(logging, self.options.log_level.upper(), None)
+        if not isinstance(num_level, int):
+            raise ValueError("Invalid log level: %s" % self.options.log_level)
+        self.options.log_level = num_level
+
         if self.options.datadir:
             data_dir.set_backing_data_dir(self.options.datadir)
 
@@ -741,9 +751,10 @@ class VirtTestApp(object):
         try:
             from virttest import standalone_test
 
-            standalone_test.reset_logging()
-            standalone_test.configure_console_logging()
             self._process_options()
+            standalone_test.reset_logging()
+            standalone_test.configure_console_logging(
+                loglevel=self.options.log_level)
             standalone_test.bootstrap_tests(self.options)
             ok = standalone_test.run_tests(self.cartesian_parser, self.options)
 
