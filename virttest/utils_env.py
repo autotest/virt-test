@@ -94,8 +94,6 @@ class Env(UserDict.IterableUserDict):
             try:
                 if key.startswith("vm__"):
                     self.data[key].destroy(gracefully=False)
-                elif key == "tcpdump":
-                    self.data[key].close()
             except Exception:
                 pass
         self.data = {}
