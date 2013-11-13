@@ -238,7 +238,7 @@ def launch_client(sessions, servers, server_ctl, clients,
     counts = 5
     for server in servers:
         if not re.findall("TEST.*to %s" % server, str(result_info)):
-            raise error.TestError("Nerperf stress on nic % failed" % server)
+            raise error.TestError("Nerperf stress on nic %s failed" % server)
         logging.info("Network stress on %s successfully" % server)
 
         status, output = utils_test.ping(server, counts,
