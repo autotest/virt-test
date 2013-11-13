@@ -88,7 +88,7 @@ def run_pci_hotplug(test, params, env):
             pci_add_cmd += ",mq=on"
         return device_add(pci_num, pci_add_cmd)
 
-    def device_add_block(pci_num):
+    def device_add_block(pci_num, queues=1):
         device_id = pci_type + "-" + utils_misc.generate_random_id()
         pci_info.append([device_id, device_id])
 
