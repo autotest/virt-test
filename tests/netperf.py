@@ -203,13 +203,7 @@ def run_netperf(test, params, env):
             username = params_tmp["username"]
             env_setup(i, ip_dict[i], username, shell_port, password)
 
-    if "tcpdump" in env and env["tcpdump"].is_alive():
-        # Stop the background tcpdump process
-        try:
-            logging.debug("Stopping the background tcpdump")
-            env["tcpdump"].close()
-        except Exception:
-            pass
+    env.stop_tcpdump()
 
     error.context("Start netperf testing", logging.info)
     start_test(server_ip, server_ctl, host, clients, test.resultsdir,
