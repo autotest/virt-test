@@ -23,6 +23,73 @@ def cleanup_vm(vm_name=None, disk_removed=None):
         pass
 
 
+def prepare_disk_params(target_list, params):
+    """
+    Prepare params lists for creating disk xml.
+
+    :param target_list: devices which need disk xml.
+    :param params: base slot/func value in config file.
+    """
+    addr_multifunction = params.get("mf_addr_multifunction")
+    addr_type = params.get("mf_addr_type")
+    base_domain = params.get("mf_addr_domain", "0x0000")
+    base_bus = params.get("mf_addr_bus", "0x00")
+    base_slot = params.get("mf_addr_slot", "0x0a")
+    base_function = params.get("mf_addr_function", "0x0")
+    # slot_metric: the metric which slot will increase.
+    # func_metric: the metric which func will increase.
+    try:
+        slot_metric = int(params.get("mf_slot_metric", 0))
+    except ValueError, detail:    # illegal metric
+        logging.warn(detail)
+        slot_metric = 0
+    try:
+        func_metric = int(params.get("mf_func_metric", 0))
+    except ValueError, detail:    # illegal metric
+        logging.warn(detail)
+        func_metric = 0
+
+    disk_params_dict = {}
+    for target_dev in target_list:
+        disk_params = {}
+        disk_params['addr_multifunction'] = addr_multifunction
+        disk_params['addr_type'] = addr_type
+        # Do not support increated metric of domain and bus yet
+        disk_params['addr_domain'] = base_domain
+        disk_params['addr_bus'] = base_bus
+        disk_params['addr_slot'] = base_slot
+        disk_params['addr_function'] = base_function
+
+        # Convert string hex to number hex for operation
+        try:
+            base_slot = int(base_slot, 16)
+            base_function = int(base_function, 16)
+        except ValueError:
+            pass  # Can not convert, use original string
+
+        # Increase slot/func for next target_dev
+        if slot_metric:
+            try:
+                base_slot += slot_metric
+            except TypeError, detail:
+                logging.warn(detail)
+        if func_metric:
+            try:
+                base_function += func_metric
+            except TypeError, detail:
+                logging.warn(detail)
+
+        # Convert number hex back to string hex if necessary
+        try:
+            base_slot = hex(base_slot)
+            base_function = hex(base_function)
+        except TypeError:
+            pass   # Can not convert, directly pass
+
+        disk_params_dict[target_dev] = disk_params
+    return disk_params_dict
+
+
 def create_disk_xml(params):
     """
     Create a disk configuration file.
@@ -173,13 +240,13 @@ def run_multifunction(test, params, env):
                 target_list.append(target_dev)
             index += 1
 
-        disk_params = {}
-        disk_params['addr_multifunction'] = params.get("mf_addr_multifunction")
-        disk_params['addr_type'] = params.get("mf_addr_type")
-        # According disk count, increasing target_dev vdb->vdc->vdd...
+        disk_params_dict = prepare_disk_params(target_list, params)
+        # To record failed attach
+        fail_info = []
         for target_dev in target_list:
             result = attach_additional_device(new_vm_name, disk_size,
-                                              target_dev, disk_params)
+                                              target_dev,
+                                              disk_params_dict[target_dev])
             if result.exit_status:
                 if status_error:
                     # Attach fail is expected.
@@ -191,8 +258,10 @@ def run_multifunction(test, params, env):
                                          % target_dev)
             else:
                 if status_error:
-                    raise error.TestFail("Attach %s successfully "
-                                         "but not expected." % target_dev)
+                    fail_info.append("Attach %s successfully "
+                                     "but not expected." % target_dev)
+        if len(fail_info):
+            raise error.TestFail(fail_info)
         logging.debug("New VM XML:\n%s", new_vm.get_xml())
 
         # Login to check attached devices
