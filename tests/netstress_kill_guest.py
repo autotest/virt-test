@@ -96,16 +96,7 @@ def run_netstress_kill_guest(test, params, env):
         guest_netperf_cmd = params.get("netperf_cmd") % ("/tmp", "TCP_STREAM",
                                                          server_ip, params.get("packet_size", "1500"))
 
-        tcpdump = env.get("tcpdump")
-        pid = None
-        if tcpdump:
-            # Stop the background tcpdump process
-            try:
-                pid = int(utils.system_output("pidof tcpdump"))
-                logging.debug("Stopping the background tcpdump")
-                os.kill(pid, signal.SIGSTOP)
-            except Exception:
-                pass
+        env.stop_tcpdump()
 
         try:
             logging.info("Start heavy network load host <=> guest.")
@@ -118,10 +109,7 @@ def run_netstress_kill_guest(test, params, env):
 
         finally:
             utils.run(clean_cmd, ignore_status=True)
-            if tcpdump and pid:
-                logging.debug("Resuming the background tcpdump")
-                logging.info("pid is %s" % pid)
-                os.kill(pid, signal.SIGCONT)
+            env.start_tcpdump()
 
     def netdriver_kill_problem(session_serial):
         modules = get_ethernet_driver(session_serial)

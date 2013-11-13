@@ -2,7 +2,14 @@ import cPickle
 import UserDict
 import os
 import logging
+import re
+import time
+
+import utils_misc
 import virt_vm
+import aexpect
+import remote
+import threading
 
 ENV_VERSION = 1
 
@@ -13,6 +20,66 @@ def get_env_version():
 
 class EnvSaveError(Exception):
     pass
+
+
+def _update_address_cache(address_cache, lock, line):
+    lock.acquire()
+    try:
+        if re.search("Your.IP", line, re.IGNORECASE):
+            matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
+            if matches:
+                address_cache["last_seen"] = matches[0]
+
+        if re.search("Client.Ethernet.Address", line, re.IGNORECASE):
+            matches = re.findall(r"\w*:\w*:\w*:\w*:\w*:\w*", line)
+            if matches and address_cache.get("last_seen"):
+                mac_address = matches[0].lower()
+                last_time = address_cache.get("time_%s" % mac_address, 0)
+                last_ip = address_cache.get("last_seen")
+                cached_ip = address_cache.get(mac_address)
+
+                if (time.time() - last_time > 5 or cached_ip != last_ip):
+                    logging.debug("(address cache) DHCP lease OK: %s --> %s",
+                                  mac_address, address_cache.get("last_seen"))
+
+                address_cache[mac_address] = address_cache.get("last_seen")
+                address_cache["time_%s" % mac_address] = time.time()
+                del address_cache["last_seen"]
+            elif matches:
+                address_cache["last_seen_mac"] = matches[0]
+
+        if re.search("Requested.IP", line, re.IGNORECASE):
+            matches = matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
+            if matches and address_cache.get("last_seen_mac"):
+                ip_address = matches[0]
+                mac_address = address_cache.get("last_seen_mac")
+                last_time = address_cache.get("time_%s" % mac_address, 0)
+
+                if time.time() - last_time > 10:
+                    logging.debug("(address cache) DHCP lease OK: %s --> %s",
+                                  mac_address, ip_address)
+
+                address_cache[mac_address] = ip_address
+                address_cache["time_%s" % mac_address] = time.time()
+                del address_cache["last_seen_mac"]
+    finally:
+        lock.release()
+
+
+def _tcpdump_handler(address_cache, filename, lock, line):
+    """
+    Helper for handler tcpdump output.
+
+    :params address_cache: address cache path.
+    :params filename: Log file name for tcpdump message.
+    :params line: Tcpdump output message.
+    """
+    try:
+        utils_misc.log_line(filename, line)
+    except Exception, reason:
+        logging.warn("Can't log tcpdump output, '%s'", reason)
+
+    _update_address_cache(address_cache, lock, line)
 
 
 class Env(UserDict.IterableUserDict):
@@ -35,6 +102,9 @@ class Env(UserDict.IterableUserDict):
         UserDict.IterableUserDict.__init__(self)
         empty = {"version": version}
         self._filename = filename
+        self._tcpdump = None
+        self._params = None
+        self.save_lock = threading.RLock()
         if filename:
             try:
                 if os.path.isfile(filename):
@@ -72,9 +142,13 @@ class Env(UserDict.IterableUserDict):
         filename = filename or self._filename
         if filename is None:
             raise EnvSaveError("No filename specified for this env file")
-        f = open(filename, "w")
-        cPickle.dump(self.data, f)
-        f.close()
+        self.save_lock.acquire()
+        try:
+            f = open(filename, "w")
+            cPickle.dump(self.data, f)
+            f.close()
+        finally:
+            self.save_lock.release()
 
     def get_all_vms(self):
         """
@@ -90,12 +164,11 @@ class Env(UserDict.IterableUserDict):
         """
         Destroy all objects registered in this Env object.
         """
+        self.stop_tcpdump()
         for key in self.data:
             try:
                 if key.startswith("vm__"):
                     self.data[key].destroy(gracefully=False)
-                elif key == "tcpdump":
-                    self.data[key].close()
             except Exception:
                 pass
         self.data = {}
@@ -194,3 +267,57 @@ class Env(UserDict.IterableUserDict):
         :return: lvmdev object
         """
         return self.data.get("lvmdev__%s" % name)
+
+    def _start_tcpdump(self):
+        port = self._params.get('shell_port')
+        prompt = self._params.get('shell_prompt')
+        address = self._params.get('ovirt_node_address')
+        username = self._params.get('ovirt_node_user')
+        password = self._params.get('ovirt_node_password')
+
+        cmd = "%s -npvi any 'port 68'" % utils_misc.find_command("tcpdump")
+        if self._params.get("remote_preprocess") == "yes":
+            login_cmd = ("ssh -o UserKnownHostsFile=/dev/null -o "
+                         "PreferredAuthentications=password -p %s %s@%s" %
+                         (port, username, address))
+
+            self._tcpdump = aexpect.ShellSession(
+                    login_cmd,
+                    output_func=_update_address_cache,
+                    output_params=(self.data["address_cache"], self.save_lock,))
+
+            remote.handle_prompts(self._tcpdump, username, password, prompt)
+            self._tcpdump.sendline(cmd)
+
+        else:
+            self._tcpdump = aexpect.Tail(command=cmd,
+                                         output_func=_tcpdump_handler,
+                                         output_params=(self.data["address_cache"],
+                                                        "tcpdump.log",
+                                                        self.save_lock,))
+
+        if utils_misc.wait_for(lambda: not self._tcpdump.is_alive(),
+                               0.1, 0.1, 1.0):
+            logging.warn("Could not start tcpdump")
+            logging.warn("Status: %s", self._tcpdump.get_status())
+            msg = utils_misc.format_str_for_message(self._tcpdump.get_output())
+            logging.warn("Output: %s", msg)
+
+    def start_tcpdump(self, params):
+        self._params = params
+
+        if "address_cache" not in self.data:
+            self.data["address_cache"] = {}
+
+        if self._tcpdump is None:
+            self._start_tcpdump()
+        else:
+            if not self._tcpdump.is_alive():
+                del self._tcpdump
+                self._start_tcpdump()
+
+    def stop_tcpdump(self):
+        if self._tcpdump is not None:
+            self._tcpdump.close()
+            del self._tcpdump
+            self._tcpdump = None

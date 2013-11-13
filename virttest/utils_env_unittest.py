@@ -185,11 +185,8 @@ class TestEnv(unittest.TestCase):
         """
         1) Create an env file.
         2) Create a thread that creates a dict as one of env's elements, and
-           keeps updating it.
+           keeps updating it, using the env save_lock attribute.
         3) Try to save the environment.
-
-        Right now, the unittest is supposed to fail, as there is no locking
-        in the env class. Later on, a fix for this issue will be introduced.
         """
         termination_event = threading.Event()
         env = utils_env.Env(filename=self.envfilename)
@@ -200,7 +197,11 @@ class TestEnv(unittest.TestCase):
             while True:
                 key = "%s" % utils_misc.generate_random_string(length=10)
                 value = "%s" % utils_misc.generate_random_string(length=10)
-                env["changing_dict"][key] = value
+                env.save_lock.acquire()
+                try:
+                    env["changing_dict"][key] = value
+                finally:
+                    env.save_lock.release()
                 if termination_event.isSet():
                     break
 
