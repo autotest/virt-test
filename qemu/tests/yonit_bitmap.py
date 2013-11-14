@@ -6,7 +6,7 @@ from tests import guest_test
 
 
 @error.context_aware
-def run_yonit_bitmap(test, params, env):
+def run(test, params, env):
     """
     Run yonit bitmap benchmark in Windows guests, especially win7 32bit,
     for regression test of BZ #556455.

@@ -3,7 +3,7 @@ from autotest.client.shared import error, utils
 from virttest import virsh
 
 
-def run_virsh_net_dumpxml(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh net-dumpxml.
 

@@ -14,7 +14,7 @@ except ImportError:
     from autotest.client.shared import utils_memory
 
 
-def run_ksm_overcommit(test, params, env):
+def run(test, params, env):
     """
     Tests KSM (Kernel Shared Memory) capability by allocating and filling
     KVM guests memory using various values. KVM sets the memory as

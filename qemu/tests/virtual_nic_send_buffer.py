@@ -5,7 +5,7 @@ from virttest import remote, utils_misc, utils_test
 
 
 @error.context_aware
-def run_virtual_nic_send_buffer(test, params, env):
+def run(test, params, env):
     """
     Test Steps:
 

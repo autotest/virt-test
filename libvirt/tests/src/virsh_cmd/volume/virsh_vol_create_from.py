@@ -7,7 +7,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 
 
-def run_virsh_vol_create_from(test, params, env):
+def run(test, params, env):
     """
     Test virsh vol-create-from command to cover the following matrix:
 

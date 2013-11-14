@@ -64,7 +64,7 @@ def login_to_check(vm, checked_mac):
     return (0, "")
 
 
-def run_virsh_attach_detach_interface(test, params, env):
+def run(test, params, env):
     """
     Test virsh {at|de}tach-interface command.
 

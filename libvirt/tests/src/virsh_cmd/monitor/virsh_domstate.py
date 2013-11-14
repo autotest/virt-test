@@ -3,7 +3,7 @@ from autotest.client.shared import error
 from virttest import libvirt_vm, remote, virsh, utils_libvirtd
 
 
-def run_virsh_domstate(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh domstate.
 

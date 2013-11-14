@@ -7,7 +7,7 @@ from autotest.client.shared import error, iscsi
 
 
 @error.context_aware
-def run_boot_from_device(test, params, env):
+def run(test, params, env):
     """
     QEMU boot from device:
 

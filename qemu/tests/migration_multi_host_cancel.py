@@ -10,7 +10,7 @@ from autotest.client.shared.syncdata import SyncData
 
 
 @error.context_aware
-def run_migration_multi_host_cancel(test, params, env):
+def run(test, params, env):
     """
     KVM multi-host migration over fd test:
 

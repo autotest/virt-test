@@ -4,7 +4,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_timerdevice_kvmclock_newer_msrs_support(test, params, env):
+def run(test, params, env):
     """
     check kvm-clock using newer msrs test (only for Linux guest):
 

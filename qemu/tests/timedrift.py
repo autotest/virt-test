@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import utils_test, aexpect
 
 
-def run_timedrift(test, params, env):
+def run(test, params, env):
     """
     Time drift test (mainly for Windows guests):
 

@@ -7,7 +7,7 @@ from autotest.client.shared import error
 from virttest import utils_misc, env_process
 
 
-def run_unittest(test, params, env):
+def run(test, params, env):
     """
     KVM RHEL-6 style unit test:
     1) Resume a stopped VM

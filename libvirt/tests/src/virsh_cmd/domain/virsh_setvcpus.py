@@ -7,7 +7,7 @@ from virttest import remote, virsh, libvirt_xml
 from xml.dom.minidom import parse
 
 
-def run_virsh_setvcpus(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh setvcpus.
 

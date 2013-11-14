@@ -4,7 +4,7 @@ from autotest.client.shared import error
 from virttest import utils_libguestfs as lgf
 
 
-def run_virt_list_operations(test, params, env):
+def run(test, params, env):
     """
     Test libguestfs with list commands: virt-list-partitions, virt-filesystems
                                         virt-df, virt-list-filesystems

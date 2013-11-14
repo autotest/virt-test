@@ -8,7 +8,7 @@ from autotest.client.shared import utils
 
 
 @error.context_aware
-def run_load_module(test, params, env):
+def run(test, params, env):
     """
     Run basic test of OpenVSwitch driver.
     """

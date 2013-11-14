@@ -19,7 +19,7 @@ from virttest import env_process, data_dir, utils_test
 
 
 @error.context_aware
-def run_cdrom(test, params, env):
+def run(test, params, env):
     """
     KVM cdrom test:
 

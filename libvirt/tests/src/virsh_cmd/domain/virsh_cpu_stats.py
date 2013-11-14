@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import virsh
 
 
-def run_virsh_cpu_stats(test, params, env):
+def run(test, params, env):
     """
     Test virsh cpu-stats command.
 

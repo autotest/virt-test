@@ -18,7 +18,7 @@ class BlockStreamTest(blk_stream.BlockStream):
 
 
 @error.context_aware
-def run_block_stream(test, params, env):
+def run(test, params, env):
     """
     Test block streaming functionality.
 

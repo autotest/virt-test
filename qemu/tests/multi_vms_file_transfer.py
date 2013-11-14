@@ -7,7 +7,7 @@ from virttest import remote, utils_misc, data_dir
 
 
 @error.context_aware
-def run_multi_vms_file_transfer(test, params, env):
+def run(test, params, env):
     """
     Transfer a file back and forth between multi VMs for long time.
 

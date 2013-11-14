@@ -13,7 +13,7 @@ from virttest import utils_misc
 from virttest import utils_net
 
 
-def run_rv_vmshutdown(test, params, env):
+def run(test, params, env):
     """
     Tests clean exit after shutting down the VM.
     Covers two cases:

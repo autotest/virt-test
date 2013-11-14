@@ -20,7 +20,7 @@ def umount_lv(lv_path, session):
 
 
 @error.context_aware
-def run_lvm(test, params, env):
+def run(test, params, env):
     """
     KVM reboot test:
     1) Log into a guest

@@ -168,5 +168,5 @@ class DriveMirror(block_copy.BlockCopy):
         super(DriveMirror, self).clean()
 
 
-def run_drive_mirror(test, params, env):
+def run(test, params, env):
     pass

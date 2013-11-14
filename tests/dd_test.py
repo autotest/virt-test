@@ -9,7 +9,7 @@ from virttest import aexpect
 
 
 @error.context_aware
-def run_dd_test(test, params, env):
+def run(test, params, env):
     """
     Executes dd with defined parameters and checks the return number and output
 

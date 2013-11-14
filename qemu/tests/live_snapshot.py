@@ -5,7 +5,7 @@ from virttest import utils_test
 from tests import file_transfer
 
 
-def run_live_snapshot(test, params, env):
+def run(test, params, env):
     """
     live_snapshot test:
     1). Create live snapshot during big file creating

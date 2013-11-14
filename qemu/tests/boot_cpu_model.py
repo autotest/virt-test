@@ -4,7 +4,7 @@ from virttest import env_process, utils_misc, utils_test
 
 
 @error.context_aware
-def run_boot_cpu_model(test, params, env):
+def run(test, params, env):
     """
     boot cpu model test:
     steps:

@@ -5,7 +5,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_cpuinfo_query(test, params, env):
+def run(test, params, env):
     """
     cpuinfo query test:
     1). run query cmd. e.g -cpu ?cpuid

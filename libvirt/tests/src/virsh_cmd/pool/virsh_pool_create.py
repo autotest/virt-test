@@ -18,7 +18,7 @@ def pool_check(pool_name, pool_ins):
     return True
 
 
-def run_virsh_pool_create(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh pool-create.
 

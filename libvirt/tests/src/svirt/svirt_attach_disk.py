@@ -6,7 +6,7 @@ from virttest import qemu_storage, data_dir, utils_selinux, virt_vm, virsh
 from virttest.libvirt_xml.vm_xml import VMXML
 
 
-def run_svirt_attach_disk(test, params, env):
+def run(test, params, env):
     """
     Test svirt in adding disk to VM.
 

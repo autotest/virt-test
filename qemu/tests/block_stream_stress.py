@@ -96,7 +96,7 @@ class BlockStreamStress(blk_stream.BlockStream):
         return status == 0
 
 
-def run_block_stream_stress(test, params, env):
+def run(test, params, env):
     """
     block_stream_stress test:
     1). load stress in guest

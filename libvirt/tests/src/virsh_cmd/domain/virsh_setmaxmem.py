@@ -4,7 +4,7 @@ from virttest import virsh, virt_vm
 from virttest.libvirt_xml import vm_xml
 
 
-def run_virsh_setmaxmem(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh setmaxmem.
 

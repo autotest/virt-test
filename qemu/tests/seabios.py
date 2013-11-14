@@ -5,7 +5,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_seabios(test, params, env):
+def run(test, params, env):
     """
     KVM Seabios test:
     1) Start guest with sga bios

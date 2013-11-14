@@ -22,7 +22,7 @@ class CommitTest(qemu_disk_img.QemuImgTest):
         return super(CommitTest, self).commit(params, cache_mode)
 
 
-def run_qemu_disk_img_commit(test, params, env):
+def run(test, params, env):
     """
     'qemu-img' commit functions test:
 

@@ -5,7 +5,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_eject_media(test, params, env):
+def run(test, params, env):
     """
     change a removable media:
     1) Boot VM with QMP/human monitor enabled.

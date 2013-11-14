@@ -50,7 +50,7 @@ class BlockStreamCheckBackingfile(blk_stream.BlockStream):
             raise error.TestFail(msg)
 
 
-def run_block_stream_check_backingfile(test, params, env):
+def run(test, params, env):
     """
     block_stream.check_backingfile test:
     1). boot up vm and create snapshots;

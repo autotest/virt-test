@@ -2,7 +2,7 @@ from autotest.client.shared import error
 from virttest import libvirt_vm, virsh, remote, utils_libvirtd
 
 
-def run_virsh_vncdisplay(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh vncdisplay.
 

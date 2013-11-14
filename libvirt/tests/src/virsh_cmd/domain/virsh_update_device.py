@@ -6,7 +6,7 @@ from virttest import virsh, libvirt_xml
 from xml.dom.minidom import parseString
 
 
-def run_virsh_update_device(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh update-device.
 

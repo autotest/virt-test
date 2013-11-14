@@ -37,7 +37,7 @@ def func_in_thread(vm, timeout):
         current_time = time.time()
 
 
-def run_libvirt_bench_domstate_switch_with_unixbench(test, params, env):
+def run(test, params, env):
     """
     Test steps:
 

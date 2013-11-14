@@ -72,7 +72,7 @@ def cmd_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout=300):
     return tag
 
 
-def run_performance(test, params, env):
+def run(test, params, env):
     """
     KVM performance test:
 

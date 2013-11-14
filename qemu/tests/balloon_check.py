@@ -315,7 +315,7 @@ class BallooningTestLinux(BallooningTest):
 
 
 @error.context_aware
-def run_balloon_check(test, params, env):
+def run(test, params, env):
     """
     Check Memory ballooning, use M when compare memory in this script:
     1) Boot a guest with balloon enabled.

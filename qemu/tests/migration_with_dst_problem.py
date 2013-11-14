@@ -9,7 +9,7 @@ from virttest import aexpect, env_process, utils_misc, qemu_storage
 
 
 @error.context_aware
-def run_migration_with_dst_problem(test, params, env):
+def run(test, params, env):
     """
     KVM migration with destination problems.
     Contains group of test for testing qemu behavior if some

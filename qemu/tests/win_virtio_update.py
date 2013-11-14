@@ -12,7 +12,7 @@ from virttest import env_process
 
 
 @error.context_aware
-def run_win_virtio_update(test, params, env):
+def run(test, params, env):
     """
     Update virtio driver:
     1) Boot up guest with default devices and virtio_win iso

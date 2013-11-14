@@ -5,7 +5,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_ioquit(test, params, env):
+def run(test, params, env):
     """
     Emulate the poweroff under IO workload(dd so far) with signal SIGKILL.
 

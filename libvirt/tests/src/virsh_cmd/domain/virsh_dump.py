@@ -75,7 +75,7 @@ def check_bypass(dump_file):
             raise error.TestFail(detail)
 
 
-def run_virsh_dump(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh dump.
 

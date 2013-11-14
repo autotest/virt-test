@@ -6,7 +6,7 @@ from virttest import utils_test, aexpect, utils_misc
 
 
 @error.context_aware
-def run_usb_storage(test, params, env):
+def run(test, params, env):
     """
     Test usb storage devices in the guest.
 

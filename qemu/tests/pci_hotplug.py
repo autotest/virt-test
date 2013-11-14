@@ -6,7 +6,7 @@ from virttest import utils_misc, aexpect, storage, utils_test, data_dir, arch
 
 
 @error.context_aware
-def run_pci_hotplug(test, params, env):
+def run(test, params, env):
     """
     Test hotplug of PCI devices.
 

@@ -5,7 +5,7 @@ from autotest.client.shared import utils, error
 
 
 @error.context_aware
-def run_flag_check(test, params, env):
+def run(test, params, env):
     """
     flag_check test:
     steps:

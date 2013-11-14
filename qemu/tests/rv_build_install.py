@@ -172,7 +172,7 @@ def build_install_vdagent(vm_root_session, vm_script_path, params):
     except ShellCmdError:
         logging.error(output)
 
-def run_rv_build_install(test, params, env):
+def run(test, params, env):
     """
     Build and install packages from git on the client or guest VM
 

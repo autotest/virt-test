@@ -5,7 +5,7 @@ from virttest import utils_misc, aexpect
 
 
 @error.context_aware
-def run_format_disk(test, params, env):
+def run(test, params, env):
     """
     Format guest disk:
     1) Boot guest with second disk

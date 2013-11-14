@@ -1,7 +1,7 @@
 from qemu.tests import drive_mirror
 
 
-def run_drive_mirror_reboot(test, params, env):
+def run(test, params, env):
     """
     drive_mirror_reboot test:
     1). boot guest, do system_reset

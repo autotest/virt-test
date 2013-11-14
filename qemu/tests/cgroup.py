@@ -31,7 +31,7 @@ except ImportError:
 
 
 @error.context_aware
-def run_cgroup(test, params, env):
+def run(test, params, env):
     """
     Tests the cgroup functions on KVM guests.
     """

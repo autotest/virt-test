@@ -4,7 +4,7 @@ from autotest.client import utils
 from virttest import base_installer, utils_misc
 
 
-def run_module_probe(test, params, env):
+def run(test, params, env):
     """
     load/unload kernel modules several times.
 

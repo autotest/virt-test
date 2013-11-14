@@ -18,7 +18,7 @@ def cleanup(debugfs_path, session):
 
 
 @error.context_aware
-def run_trans_hugepage(test, params, env):
+def run(test, params, env):
     """
     KVM kernel hugepages user side test:
     1) Smoke test

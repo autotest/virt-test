@@ -4,7 +4,7 @@ from virttest import utils_test
 
 
 @error.context_aware
-def run_check_block_size(test, params, env):
+def run(test, params, env):
     """
     Check physical block size and logical block size for virtio block device:
     1) Install guest with a new image.

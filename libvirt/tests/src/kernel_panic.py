@@ -3,7 +3,7 @@ from autotest.client.shared import error
 from virttest import virt_vm, aexpect, virsh
 
 
-def run_kernel_panic(test, params, env):
+def run(test, params, env):
     """
     Verify various kernel panic methods
 

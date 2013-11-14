@@ -34,7 +34,7 @@ def max_mem_map_node(host_numa_node, qemu_pid):
 
 
 @error.context_aware
-def run_numa_stress(test, params, env):
+def run(test, params, env):
     """
     Qemu numa stress test:
     1) Boot up a guest and find the node it used

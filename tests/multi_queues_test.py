@@ -7,7 +7,7 @@ from virttest import utils_net, utils_misc, utils_test
 
 
 @error.context_aware
-def run_multi_queues_test(test, params, env):
+def run(test, params, env):
     """
     Enable MULTI_QUEUE feature in guest
 

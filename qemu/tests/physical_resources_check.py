@@ -7,7 +7,7 @@ from virttest import qemu_monitor, storage, utils_misc, env_process, data_dir
 from virttest import qemu_qtree
 
 
-def run_physical_resources_check(test, params, env):
+def run(test, params, env):
     """
     Check physical resources assigned to KVM virtual machines:
     1) Log into the guest

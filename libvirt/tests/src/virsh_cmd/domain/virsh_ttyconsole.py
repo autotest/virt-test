@@ -25,7 +25,7 @@ def xml_console_recover(vmxml):
         return False
 
 
-def run_virsh_ttyconsole(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh ttyconsole.
 

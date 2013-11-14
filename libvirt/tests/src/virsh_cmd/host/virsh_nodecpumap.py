@@ -109,7 +109,7 @@ def get_online_cpu():
     return cpu_map
 
 
-def run_virsh_nodecpumap(test, params, env):
+def run(test, params, env):
     """
     Test the command virsh nodecpumap
 

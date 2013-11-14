@@ -4,7 +4,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_nmi_bsod_catch(test, params, env):
+def run(test, params, env):
     """
     Generate a dump on NMI, then analyse the dump file:
     1) Boot a windows guest.

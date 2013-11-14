@@ -2,7 +2,7 @@ import logging
 from autotest.client.shared import error
 
 
-def run_disable_win_update(test, params, env):
+def run(test, params, env):
     """
     This simply stop updates services in Windows guests.
 

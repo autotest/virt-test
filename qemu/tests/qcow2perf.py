@@ -8,7 +8,7 @@ from autotest.client import utils
 
 
 @error.context_aware
-def run_qcow2perf(test, params, env):
+def run(test, params, env):
     """
     Run qcow2 performance tests:
     1. Create image with given parameters

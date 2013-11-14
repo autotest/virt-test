@@ -66,7 +66,7 @@ def step_test():
     return temp_path
 
 
-def run_autotest_distro_detect(test, params, env):
+def run(test, params, env):
     """
     Run an distro detection check on guest
 

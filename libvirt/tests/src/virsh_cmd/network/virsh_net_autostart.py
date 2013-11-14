@@ -4,7 +4,7 @@ from virttest import virsh, utils_libvirtd
 from virttest.libvirt_xml import network_xml, xcepts
 
 
-def run_virsh_net_autostart(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh net-autostart.
     """

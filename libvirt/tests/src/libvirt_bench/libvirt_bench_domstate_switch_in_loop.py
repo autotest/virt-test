@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import virsh
 
 
-def run_libvirt_bench_domstate_switch_in_loop(test, params, env):
+def run(test, params, env):
     """
     Test steps:
 

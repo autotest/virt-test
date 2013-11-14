@@ -14,7 +14,7 @@ def umount_fs(mountpoint):
     return True
 
 
-def run_guestmount(test, params, env):
+def run(test, params, env):
     """
     Test libguestfs tool guestmount.
     """

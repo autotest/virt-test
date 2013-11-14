@@ -8,7 +8,7 @@ import time
 
 
 @error.context_aware
-def run_live_snapshot_chain(test, params, env):
+def run(test, params, env):
     """
     live_snapshot chain test:
 

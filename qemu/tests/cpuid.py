@@ -15,7 +15,7 @@ dbg = logger.debug
 info = logger.info
 
 
-def run_cpuid(test, params, env):
+def run(test, params, env):
     """
     Boot guest with different cpu_models and cpu flags and check if guest works correctly.
 

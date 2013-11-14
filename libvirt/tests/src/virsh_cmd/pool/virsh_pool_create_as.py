@@ -4,7 +4,7 @@ from autotest.client.shared import error
 from virttest import virsh
 
 
-def run_virsh_pool_create_as(test, params, env):
+def run(test, params, env):
     '''
     Test the command virsh pool-create-as
 

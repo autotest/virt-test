@@ -6,7 +6,7 @@ from autotest.client import utils
 
 
 @error.context_aware
-def run_chardev_hotplug(test, params, env):
+def run(test, params, env):
     """
     Test chardev hotplug.
 

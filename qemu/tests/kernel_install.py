@@ -8,7 +8,7 @@ CLIENT_TEST = "kernelinstall"
 
 
 @error.context_aware
-def run_kernel_install(test, params, env):
+def run(test, params, env):
     """
     KVM kernel install test:
     1) Log into a guest

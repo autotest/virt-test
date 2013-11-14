@@ -5,7 +5,7 @@ from virttest import utils_misc, qemu_monitor
 
 
 @error.context_aware
-def run_qmp_command(test, params, env):
+def run(test, params, env):
     """
     Test qmp event notification, this case will:
     1) Start VM with qmp enable.

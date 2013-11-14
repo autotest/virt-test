@@ -173,7 +173,7 @@ def set_emulatorpin_parameter(params):
                                      " value from cgroup cpuset controller")
 
 
-def run_virsh_emulatorpin(test, params, env):
+def run(test, params, env):
     """
     Test emulatorpin tuning
 

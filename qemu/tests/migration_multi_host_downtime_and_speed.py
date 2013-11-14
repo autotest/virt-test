@@ -6,7 +6,7 @@ from virttest import utils_test, remote, virt_vm, utils_misc
 from autotest.client.shared import utils
 
 
-def run_migration_multi_host_downtime_and_speed(test, params, env):
+def run(test, params, env):
     """
     KVM multi-host migration test:
 

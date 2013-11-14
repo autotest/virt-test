@@ -969,7 +969,7 @@ def copy_file_from_nfs(src, dst, mount_point, image_name):
 
 
 @error.context_aware
-def run_unattended_install(test, params, env):
+def run(test, params, env):
     """
     Unattended install test:
     1) Starts a VM with an appropriated setup to start an unattended OS install.

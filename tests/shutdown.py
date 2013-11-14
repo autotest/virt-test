@@ -5,7 +5,7 @@ from virttest import utils_misc, env_process
 
 
 @error.context_aware
-def run_shutdown(test, params, env):
+def run(test, params, env):
     """
     KVM shutdown test:
     1) Log into a guest

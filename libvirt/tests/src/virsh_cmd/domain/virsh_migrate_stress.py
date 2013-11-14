@@ -384,7 +384,7 @@ def check_dest_vm_network(vm, remote_host, username, password,
         raise error.TestFail("Check %s IP failed:%s" % (vm.name, output))
 
 
-def run_virsh_migrate_stress(test, params, env):
+def run(test, params, env):
     """
     Test migration under stress.
     """

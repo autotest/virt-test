@@ -11,7 +11,7 @@ from autotest.client import utils
 
 
 @error.context_aware
-def run_whql_env_setup(test, params, env):
+def run(test, params, env):
     """
     KVM whql env setup test:
     1) Log into a guest

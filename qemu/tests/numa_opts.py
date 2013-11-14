@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 dbg = logger.debug
 
 
-def run_numa_opts(test, params, env):
+def run(test, params, env):
     """
     Simple test to check if NUMA options are being parsed properly
 

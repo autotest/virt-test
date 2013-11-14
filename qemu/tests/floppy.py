@@ -10,7 +10,7 @@ from virttest import data_dir, env_process, utils_test, aexpect
 
 
 @error.context_aware
-def run_floppy(test, params, env):
+def run(test, params, env):
     """
     Test virtual floppy of guest:
 

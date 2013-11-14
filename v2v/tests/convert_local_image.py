@@ -171,7 +171,7 @@ def cleanup_vm(vm_name=None, disk=None):
         pass
 
 
-def run_convert_local_image(test, params, env):
+def run(test, params, env):
     """
     Convert a local vm disk to local libvirt(KVM).
     """

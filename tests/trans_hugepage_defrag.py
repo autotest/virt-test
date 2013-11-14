@@ -8,7 +8,7 @@ from virttest import utils_test, test_setup
 
 
 @error.context_aware
-def run_trans_hugepage_defrag(test, params, env):
+def run(test, params, env):
     """
     KVM khugepage userspace side test:
     1) Verify that the host supports kernel hugepages.

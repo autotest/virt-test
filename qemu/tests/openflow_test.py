@@ -5,7 +5,7 @@ from virttest import utils_net, utils_test, utils_misc
 
 
 @error.context_aware
-def run_openflow_test(test, params, env):
+def run(test, params, env):
     """
     Test Step:
         1. Boot up two virtual machine

@@ -103,7 +103,7 @@ class QemuIOConfig(object):
                 os.remove(f)
 
 
-def run_qemu_io(test, params, env):
+def run(test, params, env):
     """
     Run qemu_iotests.sh script:
     1) Do some qemu_io operations(write & read etc.)

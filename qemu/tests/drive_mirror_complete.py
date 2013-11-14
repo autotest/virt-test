@@ -6,7 +6,7 @@ from qemu.tests import drive_mirror
 
 
 @error.context_aware
-def run_drive_mirror_complete(test, params, env):
+def run(test, params, env):
     """
     Test block mirroring functionality
 

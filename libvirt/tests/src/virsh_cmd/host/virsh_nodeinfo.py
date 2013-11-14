@@ -10,7 +10,7 @@ except ImportError:
     from autotest.client.shared import utils_memory
 
 
-def run_virsh_nodeinfo(test, params, env):
+def run(test, params, env):
     """
     Test the command virsh nodeinfo
 

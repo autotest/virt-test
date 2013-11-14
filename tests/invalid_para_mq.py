@@ -4,7 +4,7 @@ from virttest import utils_net, env_process
 
 
 @error.context_aware
-def run_invalid_para_mq(test, params, env):
+def run(test, params, env):
     """
     Enable MULTI_QUEUE feature in guest
 

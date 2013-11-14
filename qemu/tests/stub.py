@@ -1,4 +1,4 @@
-def run_stub(test, params, env):
+def run(test, params, env):
     """
     A stub test case for using framework feature to do the test
 

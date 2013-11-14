@@ -75,7 +75,7 @@ def check_usb_device(test, params, env):
 
 
 @error.context_aware
-def run_usb_basic_check(test, params, env):
+def run(test, params, env):
     """
     KVM usb_basic_check test:
     1) Log into a guest

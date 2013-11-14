@@ -1,7 +1,7 @@
 from autotest.client import utils
 
 
-def run_perf_kvm(test, params, env):
+def run(test, params, env):
     """
     run perf tool to get kvm events info
 

@@ -11,7 +11,7 @@ from virttest import aexpect
 _receiver_ready = False
 
 
-def run_ntttcp(test, params, env):
+def run(test, params, env):
     """
     Run NTttcp on Windows guest
 

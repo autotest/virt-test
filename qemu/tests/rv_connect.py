@@ -329,7 +329,7 @@ def launch_rv(client_vm, guest_vm, params):
     client_session.cmd_output(cmd)
 
 
-def run_rv_connect(test, params, env):
+def run(test, params, env):
     """
     Simple test for Remote Desktop connection
     Tests expectes that Remote Desktop client (spice/vnc) will be executed

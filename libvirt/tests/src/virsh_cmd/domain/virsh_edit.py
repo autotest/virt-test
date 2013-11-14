@@ -6,7 +6,7 @@ from autotest.client.shared import error
 from virttest import virsh, aexpect, utils_libvirtd
 
 
-def run_virsh_edit(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh edit.
 

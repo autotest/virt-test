@@ -4,7 +4,7 @@ from autotest.client.shared import error
 from virttest import libvirt_vm, virsh, remote, utils_libvirtd, aexpect
 
 
-def run_virsh_undefine(test, params, env):
+def run(test, params, env):
     """
     Test virsh undefine command.
 

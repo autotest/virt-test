@@ -3,7 +3,7 @@ from autotest.client.shared import error
 from virttest import utils_test
 
 
-def run_timedrift_with_reboot(test, params, env):
+def run(test, params, env):
     """
     Time drift test with reboot:
 

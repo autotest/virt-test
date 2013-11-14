@@ -4,7 +4,7 @@ from virttest import env_process
 
 
 @error.context_aware
-def run_sr_iov_boot_negative(test, params, env):
+def run(test, params, env):
     """
     KVM boot with negative parameter test:
     1) Try to boot VM with negative parameters.

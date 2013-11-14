@@ -5,7 +5,7 @@ from virttest import data_dir
 
 
 @error.context_aware
-def run_kexec(test, params, env):
+def run(test, params, env):
     """
     Reboot to new kernel through kexec command:
     1) Boot guest with x2apic cpu flag.

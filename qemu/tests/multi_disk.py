@@ -70,7 +70,7 @@ def _range(buf, n=None):
 
 
 @error.context_aware
-def run_multi_disk(test, params, env):
+def run(test, params, env):
     """
     Test multi disk suport of guest, this case will:
     1) Create disks image in configuration file.

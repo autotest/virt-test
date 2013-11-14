@@ -4,7 +4,7 @@ from autotest.client import utils
 
 
 @error.context_aware
-def run_usb_host(test, params, env):
+def run(test, params, env):
     """
     Test usb host device passthrough
 

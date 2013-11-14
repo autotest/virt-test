@@ -30,7 +30,7 @@ class ConvertTest(qemu_disk_img.QemuImgTest):
         return params
 
 
-def run_qemu_disk_img_convert(test, params, env):
+def run(test, params, env):
     """
     'qemu-img' convert functions test:
 

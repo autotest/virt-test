@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import utils_misc, utils_test, aexpect
 
 
-def run_migration(test, params, env):
+def run(test, params, env):
     """
     KVM migration test:
     1) Get a live VM and clone it.

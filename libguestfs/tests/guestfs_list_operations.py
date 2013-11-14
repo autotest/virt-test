@@ -232,7 +232,7 @@ def test_list_with_inspector(vm, params):
     logging.info("Df successfully.")
 
 
-def run_guestfs_list_operations(test, params, env):
+def run(test, params, env):
     """
     Test guestfs with list commands: list-partitions, list-filesystems
                                      list-devices

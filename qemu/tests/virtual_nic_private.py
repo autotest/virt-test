@@ -7,7 +7,7 @@ from virttest.aexpect import ShellCmdError
 
 
 @error.context_aware
-def run_virtual_nic_private(test, params, env):
+def run(test, params, env):
     """
     Test Step:
         1. boot up three virtual machine

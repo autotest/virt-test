@@ -9,7 +9,7 @@ from autotest.client import utils
 
 
 @error.context_aware
-def run_qemu_io_blkdebug(test, params, env):
+def run(test, params, env):
     """
     Run qemu-io blkdebug tests:
     1. Create image with given parameters

@@ -3,7 +3,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_fillup_disk(test, params, env):
+def run(test, params, env):
     """
     Fileup disk test:
     Purpose to expand the qcow2 file to its max size.

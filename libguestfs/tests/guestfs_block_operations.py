@@ -433,7 +433,7 @@ def test_blockdev_rw(vm, params):
             raise error.TestFail(str(detail))
 
 
-def run_guestfs_block_operations(test, params, env):
+def run(test, params, env):
     """
     Test guestfs with block commands.
     """

@@ -13,7 +13,7 @@ import os
 from autotest.client.shared import error
 
 
-def run_kill_app(test, params, env):
+def run(test, params, env):
     """
     Test kills application. Application is given by name kill_app_name in
     params.

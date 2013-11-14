@@ -6,7 +6,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_migration_with_file_transfer(test, params, env):
+def run(test, params, env):
     """
     KVM migration test:
     1) Get a live VM and clone it.

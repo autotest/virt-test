@@ -10,7 +10,7 @@ import logging
 from virttest import utils_spice
 
 
-def run_fullscreen_setup(test, params, env):
+def run(test, params, env):
     """
     Simple test for Remote Desktop connection
     Tests expectes that Remote Desktop client (spice/vnc) will be executed

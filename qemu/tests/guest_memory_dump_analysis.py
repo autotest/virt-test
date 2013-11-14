@@ -31,7 +31,7 @@ CRASH_SCRIPT = "crash.cmd"  # guest-side filename of the minimal
                                # crash script
 
 
-def run_guest_memory_dump_analysis(test, params, env):
+def run(test, params, env):
     """
     Verify the vmcore written by dump-guest-memory by a big guest.
 

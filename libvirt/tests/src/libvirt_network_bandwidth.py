@@ -8,7 +8,7 @@ from virttest.libvirt_xml.vm_xml import VMXML
 from virttest.libvirt_xml.network_xml import NetworkXML, PortgroupXML
 
 
-def run_libvirt_network_bandwidth(test, params, env):
+def run(test, params, env):
     """
     Test for network bandwidth in libvirt.
 

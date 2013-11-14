@@ -4,7 +4,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_tracing_exception_injection(test, params, env):
+def run(test, params, env):
     """
     Run tracing of exception injection test
 

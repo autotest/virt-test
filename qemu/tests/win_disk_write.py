@@ -3,7 +3,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_win_disk_write(test, params, env):
+def run(test, params, env):
     """
     KVM virtio viostor heavy random write load:
 

@@ -4,7 +4,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_nonexist_vcpu_hotplug(test, params, env):
+def run(test, params, env):
     """
     NOTE: hotplug_vcpu is added since RHEL.6.3,
           so not boot with hmp is consider here.

@@ -66,7 +66,7 @@ def deploy_video_file(test, vm_obj, params):
                          params.get("destination_video_file_path"))
 
 
-def run_rv_video(test, params, env):
+def run(test, params, env):
     """
     Test of video through spice
 

@@ -7,7 +7,7 @@ from virttest import remote, utils_misc, utils_net
 
 
 @error.context_aware
-def run_transfer_file_over_ipv6(test, params, env):
+def run(test, params, env):
     """
     Test Step
         1. boot up two virtual machine

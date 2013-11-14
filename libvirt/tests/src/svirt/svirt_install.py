@@ -3,7 +3,7 @@ from virttest import data_dir, storage, utils_selinux, virsh
 from tests import unattended_install
 
 
-def run_svirt_install(test, params, env):
+def run(test, params, env):
     """
     Test svirt in virt-install.
 

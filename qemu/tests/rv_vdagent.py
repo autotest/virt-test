@@ -9,7 +9,7 @@ from autotest.client.shared import error
 from virttest import utils_spice
 
 
-def run_rv_vdagent(test, params, env):
+def run(test, params, env):
     """
     Tests spice vdagent (starting, stopping, restarting, and status)
 

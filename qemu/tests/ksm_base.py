@@ -12,7 +12,7 @@ TMPFS_OVERHEAD = 0.0022
 
 
 @error.context_aware
-def run_ksm_base(test, params, env):
+def run(test, params, env):
     """
     Test how KSM (Kernel Shared Memory) act when more than physical memory is
     used. In second part we also test how KVM handles a situation when the host

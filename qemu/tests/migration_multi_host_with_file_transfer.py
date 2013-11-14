@@ -8,7 +8,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_migration_multi_host_with_file_transfer(test, params, env):
+def run(test, params, env):
     """
     KVM multi-host migration test:
 

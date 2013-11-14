@@ -259,7 +259,7 @@ def analyze_results(file_path, test_type):
     return None
 
 
-def run_rv_input(test, params, env):
+def run(test, params, env):
     """
     Test for testing keyboard inputs through spice.
     Test depends on rv_connect test.

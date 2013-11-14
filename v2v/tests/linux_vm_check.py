@@ -4,7 +4,7 @@ from autotest.client.shared import error
 from virttest import utils_v2v
 
 
-def run_linux_vm_check(test, params, env):
+def run(test, params, env):
     """
     Check VM after conversion
     """

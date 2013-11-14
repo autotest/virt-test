@@ -20,7 +20,7 @@ class DriveMirrorSimple(drive_mirror.DriveMirror):
             raise error.TestFail("No active job")
 
 
-def run_drive_mirror_simple(test, params, env):
+def run(test, params, env):
     """
     drive_mirror_simple test:
     1). launch block mirroring job w/o max speed

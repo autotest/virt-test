@@ -12,7 +12,7 @@ driver_dict = {'virtio': 'virtio_net', '-': '8139cp', 'e1000': 'e1000',
 rg = re.compile(r"^(\w+)\s+(\w+)\s+(\w+)\s+(\S+)\s+(([a-fA-F0-9]{2}:?){6})")
 
 
-def run_virsh_domiflist(test, params, env):
+def run(test, params, env):
     """
     Step 1: Get the virsh domiflist value.
     Step 2: Check for interface in xml file.

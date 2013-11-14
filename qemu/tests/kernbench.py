@@ -7,7 +7,7 @@ from autotest.client.shared import error
 from virttest import env_process
 
 
-def run_kernbench(test, params, env):
+def run(test, params, env):
     """
     Run kernbench for performance testing.
 

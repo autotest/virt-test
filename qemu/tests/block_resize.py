@@ -5,7 +5,7 @@ from virttest import qemu_monitor, utils_misc, storage, data_dir
 
 
 @error.context_aware
-def run_block_resize(test, params, env):
+def run(test, params, env):
     """
     KVM block resize test:
 

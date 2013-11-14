@@ -1,11 +1,6 @@
 import logging
 
-# If you copy template.py to pickles.py,
-# the function name has to be changed to
-# run_pickles.
-
-
-def run_template(test, params, env):
+def run(test, params, env):
     """
     Docstring describing template.
 

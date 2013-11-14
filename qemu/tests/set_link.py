@@ -6,7 +6,7 @@ from virttest import utils_test, utils_net, utils_misc, virt_vm
 
 
 @error.context_aware
-def run_set_link(test, params, env):
+def run(test, params, env):
     """
     KVM guest link test:
     1) Boot up guest with one nic

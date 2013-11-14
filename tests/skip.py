@@ -1,7 +1,7 @@
 from autotest.client.shared import error
 
 
-def run_skip(test, params, env):
+def run(test, params, env):
     """
     Raise TestNAError exception (should trigger SKIP in simple harness)
     """

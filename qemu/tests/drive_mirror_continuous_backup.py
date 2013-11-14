@@ -6,7 +6,7 @@ from qemu.tests import drive_mirror
 
 
 @error.context_aware
-def run_drive_mirror_continuous_backup(test, params, env):
+def run(test, params, env):
     """
     1) Synchronize disk and then do continuous backup
 

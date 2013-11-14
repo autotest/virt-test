@@ -6,7 +6,7 @@ from autotest.client.shared import error
 from virttest import utils_misc
 
 
-def run_virtio_driver_sign_check(test, params, env):
+def run(test, params, env):
     """
     KVM windows virtio driver signed status check test:
     1) Start a windows guest with virtio driver iso/floppy

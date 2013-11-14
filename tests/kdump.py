@@ -4,7 +4,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_kdump(test, params, env):
+def run(test, params, env):
     """
     KVM reboot test:
     1) Log into a guest

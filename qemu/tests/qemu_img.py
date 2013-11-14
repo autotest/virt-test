@@ -7,7 +7,7 @@ from virttest import utils_misc, env_process, storage, data_dir
 
 
 @error.context_aware
-def run_qemu_img(test, params, env):
+def run(test, params, env):
     """
     'qemu-img' functions test:
     1) Judge what subcommand is going to be tested

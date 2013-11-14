@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import aexpect
 
 
-def run_iofuzz(test, params, env):
+def run(test, params, env):
     """
     KVM iofuzz test:
     1) Log into a guest

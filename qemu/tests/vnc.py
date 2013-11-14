@@ -97,7 +97,7 @@ class VNC(object):
 
 
 @error.context_aware
-def run_vnc(test, params, env):
+def run(test, params, env):
     """
     Base test for vnc, mainly focus on handshaking during vnc connection setup.
     This case check following point:

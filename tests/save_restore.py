@@ -5,7 +5,7 @@ import os.path
 from autotest.client.shared import error
 
 
-def run_save_restore(test, params, env):
+def run(test, params, env):
     """
     VM save / restore test:
 

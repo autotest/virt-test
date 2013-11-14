@@ -48,7 +48,7 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheck):
         self.vm.destroy()
 
 
-def run_qemu_guest_agent_snapshot(test, params, env):
+def run(test, params, env):
     """
     Freeze guest + create live snapshot + thaw guest
 

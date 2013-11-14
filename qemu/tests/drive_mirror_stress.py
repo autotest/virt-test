@@ -99,7 +99,7 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
             offset = _offset
 
 
-def run_drive_mirror_stress(test, params, env):
+def run(test, params, env):
     """
     drive_mirror_stress test:
     1). load stress in guest

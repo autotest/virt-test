@@ -207,7 +207,7 @@ def check_port_connectivity(vport_ops_list):
     return port_state_dict
 
 
-def run_virsh_nodedev_create_destroy(test, params, env):
+def run(test, params, env):
     """
     Test create/destroy node device
 

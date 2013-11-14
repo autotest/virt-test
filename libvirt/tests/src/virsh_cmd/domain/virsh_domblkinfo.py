@@ -4,7 +4,7 @@ from virttest import virsh
 from virttest.libvirt_xml import vm_xml
 
 
-def run_virsh_domblkinfo(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh domblkinfo.
     1.Prepare test environment.

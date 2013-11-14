@@ -8,7 +8,7 @@ from virttest import funcatexit
 
 
 @error.context_aware
-def run_timerdevice_boot(test, params, env):
+def run(test, params, env):
     """
     Timer device boot guest:
 

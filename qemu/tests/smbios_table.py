@@ -4,7 +4,7 @@ from virttest import env_process, utils_misc
 
 
 @error.context_aware
-def run_smbios_table(test, params, env):
+def run(test, params, env):
     """
     Check smbios table :
     1) Get the smbios table from config file,if there is no config option in

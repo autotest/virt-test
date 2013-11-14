@@ -183,7 +183,7 @@ def multi_migration(helpers, simultaneous=False, jobabort=False, timeout=60):
                 ret_migration = False
 
 
-def run_virsh_migrate_multi_vms(test, params, env):
+def run(test, params, env):
     """
     Test migration of multi vms.
     """

@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from autotest.client import utils
 
 
-def run_vmstop(test, params, env):
+def run(test, params, env):
     """
     KVM guest stop test:
     1) Log into a guest

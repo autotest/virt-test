@@ -40,7 +40,7 @@ class BlockStreamReboot(blk_stream.BlockStream):
         super(BlockStreamReboot, self).clean()
 
 
-def run_block_stream_reboot(test, params, env):
+def run(test, params, env):
     """
     block_stream_reboot test:
     1). boot guest, then reboot guest with system_reset;

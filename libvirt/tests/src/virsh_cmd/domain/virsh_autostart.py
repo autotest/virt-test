@@ -4,7 +4,7 @@ from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
 
 
-def run_virsh_autostart(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh autostart
 

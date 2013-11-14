@@ -4,7 +4,7 @@ from virttest import aexpect
 
 
 @error.context_aware
-def run_pxe(test, params, env):
+def run(test, params, env):
     """
     PXE test:
 

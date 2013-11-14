@@ -79,7 +79,7 @@ def snapshot_dumpxml_check(output, opt_dict):
                          "passwd in xml")
 
 
-def run_virsh_snapshot_dumpxml(test, params, env):
+def run(test, params, env):
     """
     Test snapshot-dumpxml command, make sure that the xml you get is correct
 

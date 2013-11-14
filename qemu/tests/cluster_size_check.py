@@ -6,7 +6,7 @@ from virttest import qemu_storage, data_dir
 
 
 @error.context_aware
-def run_cluster_size_check(test, params, env):
+def run(test, params, env):
     """
     qemu-img cluster size check test:
 

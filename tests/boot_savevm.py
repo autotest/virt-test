@@ -6,7 +6,7 @@ from autotest.client.shared import error
 from virttest import qemu_storage, data_dir, utils_misc
 
 
-def run_boot_savevm(test, params, env):
+def run(test, params, env):
     """
     libvirt boot savevm test:
 

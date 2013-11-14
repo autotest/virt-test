@@ -10,7 +10,7 @@ except ImportError:
 
 
 @error.context_aware
-def run_numa_consistency(test, params, env):
+def run(test, params, env):
     """
     Qemu numa consistency test:
     1) Get host numa topological structure

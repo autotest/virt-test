@@ -6,7 +6,7 @@ from autotest.client import utils
 from virttest import utils_test, aexpect
 
 
-def run_multicast(test, params, env):
+def run(test, params, env):
     """
     Test multicast function of nic (rtl8139/e1000/virtio)
 

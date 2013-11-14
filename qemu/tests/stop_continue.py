@@ -4,7 +4,7 @@ from virttest import utils_test
 
 
 @error.context_aware
-def run_stop_continue(test, params, env):
+def run(test, params, env):
     """
     Suspend a running Virtual Machine and verify its state.
 

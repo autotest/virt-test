@@ -7,7 +7,7 @@ from virttest import utils_misc, virsh
 from virttest.libvirt_xml import vol_xml
 
 
-def run_virsh_volume(test, params, env):
+def run(test, params, env):
     """
     1. Create a pool
     2. Create n number of volumes(vol-create-as)

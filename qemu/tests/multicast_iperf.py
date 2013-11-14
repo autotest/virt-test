@@ -6,7 +6,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_multicast_iperf(test, params, env):
+def run(test, params, env):
     """
     Multicast test using iperf.
 

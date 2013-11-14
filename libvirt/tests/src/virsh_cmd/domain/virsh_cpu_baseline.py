@@ -5,7 +5,7 @@ from virttest import virsh
 from xml.dom.minidom import parseString
 
 
-def run_virsh_cpu_baseline(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh cpu-baseline.
 

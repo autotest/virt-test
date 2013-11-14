@@ -5,7 +5,7 @@ from virttest import utils_test
 
 
 @error.context_aware
-def run_clock_getres(test, params, env):
+def run(test, params, env):
     """
     Verify if guests using kvm-clock as the time source have a sane clock
     resolution.

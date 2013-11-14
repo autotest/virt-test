@@ -6,7 +6,7 @@ from virttest import utils_test, utils_misc
 
 
 @error.context_aware
-def run_cpu_hotplug(test, params, env):
+def run(test, params, env):
     """
     Runs CPU hotplug test:
 

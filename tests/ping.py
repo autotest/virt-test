@@ -5,7 +5,7 @@ from virttest import utils_test
 
 
 @error.context_aware
-def run_ping(test, params, env):
+def run(test, params, env):
     """
     Ping the guest with different size of packets.
 

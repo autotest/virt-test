@@ -4,7 +4,7 @@ from virttest import virsh, libvirt_vm
 from virttest.libvirt_xml import network_xml
 
 
-def run_virsh_net_start(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh net-start.
     """
