@@ -484,7 +484,7 @@ def run_ksm_overcommit(test, params, env):
         overcommit = 1
         mem = host_mem
         # 32bit system adjustment
-        if not params['image_name'].endswith("64"):
+        if not "64" in params.get("platform"):
             logging.debug("Probably i386 guest architecture, "
                           "max allocator mem = 2G")
             # Guest can have more than 2G but
