@@ -33,11 +33,11 @@ def run_drive_mirror_continuous_backup(test, params, env):
         mirror_test.vm.pause()
         time.sleep(5)
         error.context("Compare original and backup images", logging.info)
+        qemu_img.compare_images(source_image, target_image)
         mirror_test.vm.resume()
         session = mirror_test.get_session()
-        session.cmd(clean_cmd)
         session.cmd("cd %s" % tmp_dir)
-        qemu_img.compare_images(source_image, target_image)
+        session.cmd(clean_cmd)
         mirror_test.vm.destroy()
     finally:
         mirror_test.clean()
