@@ -1,5 +1,4 @@
 import logging
-import re
 import os
 from autotest.client.shared import error, utils
 from virttest import utils_libguestfs as lgf
@@ -14,6 +13,23 @@ def umount_fs(mountpoint):
             return False
     logging.debug("Umount %s successfully", mountpoint)
     return True
+
+
+def get_primary_disk(vm):
+    """
+    Get primary disk source.
+
+    @param vm: Libvirt VM object.
+    """
+    vmdisks = vm.get_disk_devices()
+    if len(vmdisks):
+        pri_target = ['vda', 'sda']
+        for target in pri_target:
+            try:
+                return vmdisks[target]['source']
+            except KeyError:
+                pass
+    return None
 
 
 class GuestfishTools(lgf.GuestfishPersistent):
@@ -74,11 +90,13 @@ class VirtTools(object):
         inspector = "yes" == self.params.get("gm_inspector", "yes")
         readonly = "yes" == self.params.get("gm_readonly", "no")
         special_mountpoints = self.params.get("special_mountpoints", [])
+        is_disk = "yes" == self.params.get("gm_is_disk", "no")
         options = {}
         options['ignore_status'] = True
         options['debug'] = True
         options['timeout'] = int(self.params.get("timeout", 240))
         options['special_mountpoints'] = special_mountpoints
+        options['is_disk'] = is_disk
         result = lgf.guestmount(disk_or_domain, mountpoint,
                                 inspector, readonly, **options)
         if result.exit_status:
@@ -124,9 +142,12 @@ def run_guestmount(test, params, env):
     """
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
+    start_vm = "yes" == params.get("start_vm", "no")
 
-    if vm.is_alive():
+    if vm.is_alive() and not start_vm:
         vm.destroy()
+    elif vm.is_dead() and start_vm:
+        vm.start()
 
     # Create a file to vm with guestmount
     content = "This is file for guestmount test."
@@ -136,6 +157,11 @@ def run_guestmount(test, params, env):
     readonly = "no" == params.get("gm_readonly", "no")
     special_mount = "yes" == params.get("gm_mount", "no")
     vt = VirtTools(vm, params)
+    vm_ref = params.get("gm_vm_ref")
+    is_disk = "yes" == params.get("gm_is_disk", "no")
+    # Automatically get disk if no disk specified.
+    if is_disk and vm_ref is None:
+        vm_ref = get_primary_disk(vm)
 
     if special_mount:
         # Get root filesystem before test
@@ -150,9 +176,10 @@ def run_guestmount(test, params, env):
         logging.info("Root filesystem is:%s", rootfs)
         params['special_mountpoints'] = [rootfs]
 
-    writes, writeo = vt.write_file_with_guestmount(mountpoint, path, content)
+    writes, writeo = vt.write_file_with_guestmount(mountpoint, path, content,
+                                                   vm_ref)
     if umount_fs(mountpoint) is False:
-        logging.error("Umount vm's filesytem failed.")
+        logging.error("Umount vm's filesystem failed.")
 
     if status_error:
         if writes:
