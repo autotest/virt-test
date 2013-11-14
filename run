@@ -152,6 +152,10 @@ def _find_default_qemu_paths(options_qemu=None):
 
     return [qemu_bin_path, qemu_img_path, qemu_io_path]
 
+
+SUPPORTED_LOG_LEVELS = [
+    "debug", "info", "warning", "error", "critical"]
+
 SUPPORTED_TEST_TYPES = [
     'qemu', 'libvirt', 'libguestfs', 'openvswitch', 'v2v', 'lvsb']
 
@@ -262,7 +266,10 @@ class VirtTestRunParser(optparse.OptionParser):
 
         general.add_option("--log-level", action="store", dest="log_level",
                            default="debug",
-                           help=("Define log level. Default: %default"))
+                           help=("Set log level for top level log file."
+                                 " Supported levels: " +
+                                 ", ".join(SUPPORTED_LOG_LEVELS) +
+                                 ". Default: %default"))
 
         self.add_option_group(general)
 
@@ -704,10 +711,13 @@ class VirtTestApp(object):
                                        " ".join(SUPPORTED_TEST_TYPES)))
                 sys.exit(1)
 
-        # Translate log level from string to numeric value
+        if self.options.log_level not in SUPPORTED_LOG_LEVELS:
+            _restore_stdout()
+            print("Invalid log level '%s'. Valid log levels: %s. "
+                  "Aborting..." % (self.options.log_level,
+                                   " ".join(SUPPORTED_LOG_LEVELS)))
+            sys.exit(1)
         num_level = getattr(logging, self.options.log_level.upper(), None)
-        if not isinstance(num_level, int):
-            raise ValueError("Invalid log level: %s" % self.options.log_level)
         self.options.log_level = num_level
 
         if self.options.datadir:
