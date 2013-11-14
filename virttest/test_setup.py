@@ -140,27 +140,36 @@ class TransparentHugePageConfig(object):
             """
             Check the status of khugepaged when set value to specify file.
             """
-            for (a, r) in action_list:
+            for (act, ret) in action_list:
                 logging.info("Writing path %s: %s, expected khugepage rc: %s ",
-                             file_name, a, r)
+                             file_name, act, ret)
                 try:
                     file_object = open(file_name, "w")
-                    file_object.write(a)
+                    file_object.write(act)
                     file_object.close()
                 except IOError, error_detail:
                     logging.info("IO Operation on path %s failed: %s",
                                  file_name, error_detail)
-                time.sleep(5)
-                try:
-                    utils.run('pgrep khugepaged', verbose=False)
-                    if r != 0:
+                timeout = time.time() + 50
+                while time.time() < timeout:
+                    try:
+                        utils.run('pgrep khugepaged', verbose=False)
+                        if ret != 0:
+                            time.sleep(1)
+                            continue
+                    except error.CmdError:
+                        if ret == 0:
+                            time.sleep(1)
+                            continue
+                    break
+                else:
+                    if ret != 0:
                         raise THPKhugepagedError("Khugepaged still alive when"
                                                  "transparent huge page is "
                                                  "disabled")
-                except error.CmdError:
-                    if r == 0:
+                    else:
                         raise THPKhugepagedError("Khugepaged could not be set to"
-                                                 "status %s" % a)
+                                                 "status %s" % act)
 
         logging.info("Testing khugepaged")
         for file_path in self.file_list_str:
