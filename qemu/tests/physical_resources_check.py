@@ -2,7 +2,7 @@ import re
 import string
 import logging
 import random
-from autotest.client.shared import error
+from autotest.client.shared import error, utils
 from virttest import qemu_monitor, storage, utils_misc, env_process, data_dir
 from virttest import qemu_qtree
 
@@ -135,35 +135,45 @@ def run_physical_resources_check(test, params, env):
 
     def verify_machine_type():
         f_fail = []
-        pattern = params["mtype_pattern"]
         cmd = params.get("check_machine_type_cmd")
 
         if cmd is None:
             return f_fail
 
-        s, o = session.cmd_status_output(cmd)
-        if s != 0:
+        status, actual_mtype = session.cmd_status_output(cmd)
+        if status != 0:
             raise error.TestError("Failed to get machine type from vm")
 
-        expect_mtype = re.findall(pattern, params['machine_type'])
-        actual_mtype = re.findall(pattern, o)
-        try:
-            if actual_mtype[0] != expect_mtype[0]:
-                fail_log = "Machine type mismatch:\n"
-                fail_log += "    Assigned to VM: %s \n" % expect_mtype[0]
-                fail_log += "    Reported by OS: %s" % actual_mtype[0]
-                f_fail.append(fail_log)
-                logging.error(fail_log)
+        machine_type_cmd = "%s -M ?" % utils_misc.get_qemu_binary(params)
+        machine_types = utils.system_output(machine_type_cmd,
+                                            ignore_status=True)
+        machine_types = machine_types.split(':')[-1]
+        machine_type_map = {}
+        for machine_type in machine_types.splitlines():
+            if not machine_type:
+                continue
+            type_pair = re.findall("([\w\.-]+)\s+([^(]+).*", machine_type)
+            if len(type_pair) == 1 and len(type_pair[0]) == 2:
+                machine_type_map[type_pair[0][0]] = type_pair[0][1]
             else:
-                logging.info(
-                    "MachineType check pass. Expected: %s, Actual: %s" %
-                            (expect_mtype[0], actual_mtype[0]))
+                logging.warn("Unexpect output from qemu-kvm -M "
+                             "?: '%s'" % machine_type)
+        try:
+            expect_mtype = machine_type_map[params['machine_type']].strip()
+        except KeyError:
+            logging.warn("Can not find machine type '%s' from qemu-kvm -M ?"
+                         " output. Skip this test." % params['machine_type'])
             return f_fail
-        except IndexError, e:
-            fail_log = "Failed to get machine type, pls check script: %s" % e
+
+        if expect_mtype not in actual_mtype:
+            fail_log += "    Assigned to VM: '%s' \n" % expect_mtype
+            fail_log += "    Reported by OS: '%s'" % actual_mtype
             f_fail.append(fail_log)
             logging.error(fail_log)
-            return f_fail
+        else:
+            logging.info("MachineType check pass. Expected: %s, Actual: %s" %
+                        (expect_mtype, actual_mtype))
+        return f_fail
 
     if params.get("catch_serial_cmd") is not None:
         length = int(params.get("length", "20"))
