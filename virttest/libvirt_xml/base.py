@@ -67,6 +67,16 @@ class LibvirtXMLBase(propcan.PropCanBase):
                 pass  # Unset virtual values won't have keys
         return dict_1 == dict_2
 
+    def __contains__(self, key):
+        """
+        Also hide any Libvirt_xml API exceptions behind standard python behavior
+        """
+        try:
+            return super(LibvirtXMLBase, self).__contains__(key)
+        except xcepts.LibvirtXMLError:
+            return False
+        return True
+
     def set_virsh(self, value):
         """Accessor method for virsh property, make sure it's right type"""
         value_type = type(value)
