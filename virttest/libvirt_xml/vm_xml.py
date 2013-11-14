@@ -172,7 +172,8 @@ class VMXMLBase(base.LibvirtXMLBase):
         for node in device_nodes:
             device_tag = node.tag
             device_class = librarian.get(device_tag)
-            new_one = device_class.new_from_element(node)
+            new_one = device_class.new_from_element(node,
+                                                    virsh_instance=self.virsh)
             devices.append(new_one)
         return devices
 
