@@ -16,7 +16,7 @@ import arch
 OFFSET_PER_LEVEL = 2
 
 _RE_BLANKS = re.compile(r'^([ ]*)')
-_RE_CLASS = re.compile(r'^class ([^,]*), addr (\d\d:\d\d.\d+), pci id '
+_RE_CLASS = re.compile(r'^class ([^,]*), addr (\w\w:\w\w.\w+), pci id '
                        '(\w{4}:\w{4}) \(sub (\w{4}:\w{4})\)')
 
 
