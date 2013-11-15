@@ -2085,6 +2085,19 @@ def snapshot_create(name, options="", **dargs):
     return command(cmd, **dargs)
 
 
+def snapshot_edit(name, options="", **dargs):
+    """
+    Edit snapshot xml
+
+    :param name: name of domain
+    :param options: options of snapshot-edit command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "snapshot-edit %s %s" % (name, options)
+    return command(cmd, **dargs)
+
+
 def snapshot_create_as(name, options="", **dargs):
     """
     Create snapshot of domain with options.
@@ -2102,20 +2115,38 @@ def snapshot_create_as(name, options="", **dargs):
     return command(cmd, **dargs)
 
 
-def snapshot_current(name, **dargs):
+def snapshot_parent(name, options, **dargs):
     """
-    Create snapshot of domain.
+    Get name of snapshot parent
 
     :param name: name of domain
+    :param options: options of snapshot-parent
     :param dargs: standardized virsh function API keywords
     :return: name of snapshot
     """
+    cmd = "snapshot-parent %s %s" % (name, options)
+    return command(cmd, **dargs)
+
+
+def snapshot_current(name, options="--name", **dargs):
+    """
+    Get name or xml of current snapshot.
+
+    :param name: name of domain
+    :param options: options of snapshot-current, default is --name
+    :param dargs: standardized virsh function API keywords
+    :return: name or xml of snapshot
+    """
     # CmdResult is handled here, force ignore_status
     dargs['ignore_status'] = True
-    cmd = "snapshot-current %s --name" % name
+    cmd = "snapshot-current %s" % name
+    if options is not None:
+        cmd += " %s" % options
     sc_output = command(cmd, **dargs)
-    if sc_output.exit_status != 0:
+    if sc_output.exit_status != 0 and dargs['readonly'] is False:
         raise error.CmdError(cmd, sc_output, "Failed to get current snapshot")
+    elif sc_output.exit_status != 0:
+        return sc_output
 
     return sc_output.stdout.strip()
 
