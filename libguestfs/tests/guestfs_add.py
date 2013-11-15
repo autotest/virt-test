@@ -1,9 +1,21 @@
 import logging
 import re
 import commands
-from autotest.client.shared import error
+from autotest.client.shared import error, utils
 from virttest import utils_libguestfs as lgf
 from virttest import aexpect
+
+
+def primary_disk_virtio(vm):
+    """
+    To verify if system disk is virtio.
+
+    :param vm: Libvirt VM object.
+    """
+    vmdisks = vm.get_disk_devices()
+    if "vda" in vmdisks.keys():
+        return True
+    return False
 
 
 def set_guestfs_args(guestfs, ignore_status=True, debug=False, timeout=60):
@@ -29,9 +41,6 @@ def add_disk_or_domain(guestfs, disk_or_domain, add_ref="domain",
         add_result = guestfs.add_domain(disk_or_domain, readonly=readonly)
     elif add_ref == "disk":
         add_result = guestfs.add_drive_opts(disk_or_domain, readonly=readonly)
-    else:
-        guestfs.close_session()
-        raise error.TestFail("Added must be a disk or a domain.")
 
     if add_result.exit_status:
         guestfs.close_session()
@@ -87,14 +96,13 @@ def run_guestfs_add(test, params, env):
     add_readonly = "yes" == params.get("guestfs_add_readonly", "no")
     status_error = "yes" == params.get("status_error", "no")
     login_to_check = "yes" == params.get("login_to_check_write", "no")
+    start_vm = "yes" == params.get("start_vm", "no")
     # Any failed info will be recorded in this dict
     # Result check will rely on it.
     fail_flag = 0
     fail_info = {}
 
-    if vm.is_alive():
-        # Execute guestfish when vm is alive is dangerous.
-        # Do not support this test right now.
+    if vm.is_alive() and not start_vm:
         vm.destroy()
 
     if add_ref == "domain":
@@ -108,12 +116,24 @@ def run_guestfs_add(test, params, env):
         else:
             # No need to test since getting vm's disk failed.
             raise error.TestFail("Can not get disk of %s" % vm_name)
+    else:
+        # If adding an unknown disk or domain
+        disk_or_domain = add_ref
+        add_ref = "disk"
 
     guestfs = lgf.GuestfishPersistent()
     set_guestfs_args(guestfs)
 
+    add_error = params.get("guestfs_add_error", "no")
     # Add tested disk or domain
-    add_disk_or_domain(guestfs, disk_or_domain, add_ref, add_readonly)
+    try:
+        add_disk_or_domain(guestfs, disk_or_domain, add_ref, add_readonly)
+    except error.TestFail, detail:
+        guestfs.close_session()
+        if add_error:
+            logging.debug("Add failed as expected:%s", str(detail))
+            return
+        raise
 
     # Launch added disk or domain
     launch_disk(guestfs)
@@ -157,6 +177,10 @@ def run_guestfs_add(test, params, env):
 
     # Start vm and login to check writed file.
     guestfs.close_session()
+    # Convert sdx in root to vdx for virtio system disk
+    if primary_disk_virtio(vm):
+        root = utils.run("echo %s | sed -e 's/sd/vd/g'" % root,
+                         ignore_status=True).stdout.strip()
     if login_to_check:
         try:
             vm.start()
@@ -176,6 +200,7 @@ def run_guestfs_add(test, params, env):
             else:
                 logging.debug("Login to check successfully.")
                 fail_info['login_to_check'] = "Login to check successfully."
+            session.close()
         except aexpect.ShellError, detail:
             fail_flag = 1
             fail_info['login_to_check'] = detail
