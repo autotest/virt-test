@@ -35,13 +35,14 @@ def run_virt_sysprep(test, params, env):
             mail_out = session.cmd_output("cd /var/mail && ls | grep tmp")
             hname_out = session.cmd_output("hostname")
             if (not log_out.strip() or not mail_out.strip() or
-                    hname_out.strip() != tmp_hostname):
-                logging.debug("log:%s\nmail:%s\nhostname:%s" %
-                             (log_out, mail_out, hname_out))
+                hname_out.strip() != tmp_hostname):
+                logging.debug("log:%s\nmail:%s\nhostname:%s"
+                              % (log_out, mail_out, hname_out))
                 raise error.TestFail("Prepare action failed!")
             session.close()
             vm.destroy()
-        except (remote.LoginError, virt_vm.VMError, aexpect.ShellError), detail:
+        except (remote.LoginError, virt_vm.VMError,
+                aexpect.ShellError), detail:
             if "session" in dir():
                 session.close()
             raise error.TestFail("Prepare action failed: %s" % detail)
@@ -66,9 +67,12 @@ def run_virt_sysprep(test, params, env):
         try:
             virsh.detach_disk(vm_name, target, extra="--config",
                               ignore_status=False)
-            virsh.attach_disk(vm_name, dst_image, target, extra="--config",
+            dst_image_format = utils_misc.get_image_info(dst_image)['format']
+            options = "--config --subdriver %s" % dst_image_format
+            virsh.attach_disk(vm_name, dst_image, target, extra=options,
                               ignore_status=False)
-        except (remote.LoginError, virt_vm.VMError, aexpect.ShellError), detail:
+        except (remote.LoginError, virt_vm.VMError,
+                aexpect.ShellError), detail:
             raise error.TestFail("Modify guest source failed: %s" % detail)
 
     def modify_network(vm_name, first_nic):
@@ -85,7 +89,8 @@ def run_virt_sysprep(test, params, env):
                                    "--type=%s --source %s --mac %s --config"
                                    % (iface_type, iface_source, mac_address),
                                    ignore_status=False)
-        except (remote.LoginError, virt_vm.VMError, aexpect.ShellError), detail:
+        except (remote.LoginError, virt_vm.VMError,
+                aexpect.ShellError), detail:
             raise error.TestFail("Modify network failed:%s" % detail)
 
     def result_confirm(vm):
@@ -105,12 +110,13 @@ def run_virt_sysprep(test, params, env):
             vm.destroy()
             if (log_out.strip() or mail_out.strip() or
                 hname_out.strip() != sysprep_hostname or
-                    ssh_out.strip() == o_ssh.strip()):
+                ssh_out.strip() == o_ssh.strip()):
                 logging.debug("log: %s\nmail:%s\nhostname:%s\nsshkey:%s" %
                               (log_out, mail_out, hname_out, ssh_out))
                 return False
             return True
-        except (remote.LoginError, virt_vm.VMError, aexpect.ShellError), detail:
+        except (remote.LoginError, virt_vm.VMError,
+                aexpect.ShellError), detail:
             logging.error(str(detail))
             if "session" in dir():
                 session.close()
@@ -141,6 +147,8 @@ def run_virt_sysprep(test, params, env):
         image = disk['source']
         target = disks.keys()[0]
         image_info_dict = utils_misc.get_image_info(image)
+        if sysprep_type == "sparsify" and image_info_dict['format'] != 'qcow2':
+            raise error.TestNAError("This test case needs qcow2 format image.")
     else:
         raise error.TestError("Can not get disk of %s" % vm_name)
 
@@ -171,9 +179,17 @@ def run_virt_sysprep(test, params, env):
             resize_image = "%s_resize.img" % clone_image
             utils.run("qemu-img create -f raw %s %dG" % (resize_image,
                                                          (img_size + 1)))
-            lgf.virt_resize_cmd(clone_image, resize_image, timeout=600, debug=True)
+            lgf.virt_resize_cmd(clone_image, resize_image, timeout=600,
+                                debug=True)
             modify_source(vm_clone_name, target, resize_image)
             test_image = resize_image
+        elif sysprep_type == "sparsify":
+            sparsify_image = "%s_sparsify.img" % clone_image
+            lgf.virt_sparsify_cmd(clone_image, sparsify_image, compress=True,
+                                  format=image_info_dict['format'],
+                                  timeout=600)
+            modify_source(vm_clone_name, target, sparsify_image)
+            test_image = sparsify_image
         sysprep_action(vm_clone_name, test_image, sysprep_target,
                        sysprep_hostname)
         if not result_confirm(new_vm):
@@ -181,4 +197,8 @@ def run_virt_sysprep(test, params, env):
     finally:
         clean_clone_vm()
         if "resize_image" in dir():
-            os.remove(resize_image)
+            if os.path.exists(resize_image):
+                os.remove(resize_image)
+        if "sparsify_image" in dir():
+            if os.path.exists(sparsify_image):
+                os.remove(sparsify_image)
