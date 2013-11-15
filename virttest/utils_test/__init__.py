@@ -37,6 +37,7 @@ import virttest
 
 import libvirt
 import qemu
+import libguestfs
 
 try:
     from virttest.staging import utils_cgroup
