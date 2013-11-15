@@ -3,6 +3,8 @@ import unittest
 import time
 import logging
 import os
+
+import common
 import utils_env
 import utils_params
 import utils_misc

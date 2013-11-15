@@ -1,10 +1,8 @@
 #!/usr/bin/python
 
 import unittest
-try:
-    import autotest.common as common
-except ImportError:
-    import common
+
+import common
 import utils_params
 
 BASE_DICT = {

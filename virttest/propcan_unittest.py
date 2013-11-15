@@ -1,6 +1,8 @@
 #!/usr/bin/python
 import unittest
 import logging
+
+import common
 import propcan
 
 

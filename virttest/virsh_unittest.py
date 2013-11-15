@@ -2,6 +2,7 @@
 
 import unittest
 import logging
+
 import common
 from autotest.client import utils
 

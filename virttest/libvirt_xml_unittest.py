@@ -4,6 +4,7 @@ import unittest
 import os
 import shutil
 import logging
+
 import common
 from virttest import xml_utils, virsh, utils_misc, data_dir
 from autotest.client import utils

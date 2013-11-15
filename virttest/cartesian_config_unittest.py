@@ -3,6 +3,8 @@
 import unittest
 import os
 import gzip
+
+import common
 import cartesian_config
 
 
