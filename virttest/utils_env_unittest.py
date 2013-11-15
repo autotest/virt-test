@@ -42,6 +42,13 @@ class FakeSyncListenServer(object):
 
 class TestEnv(unittest.TestCase):
 
+    def setUp(self):
+        self.envfilename = "/dev/shm/EnvUnittest" + self.id()
+
+    def tearDown(self):
+        if os.path.exists(self.envfilename):
+            os.unlink(self.envfilename)
+
     def test_save(self):
         """
         1) Verify that calling env.save() with no filename where env doesn't
@@ -55,33 +62,30 @@ class TestEnv(unittest.TestCase):
            the syncserver can be found there, and that the sync server
            instance attribute is equal to the initial sync server instance.
         """
-        fname = "/dev/shm/EnvUnittest"
-        env = utils_env.Env()
 
+        env = utils_env.Env()
         self.assertRaises(utils_env.EnvSaveError, env.save, {})
 
         params = utils_params.Params({"main_vm": 'rhel7-migration'})
         vm1 = FakeVm(params['main_vm'], params)
         vm1.is_alive()
         env.register_vm(params['main_vm'], vm1)
-        env.save(filename=fname)
-        env2 = utils_env.Env(filename=fname)
+        env.save(filename=self.envfilename)
+        env2 = utils_env.Env(filename=self.envfilename)
         vm2 = env2.get_vm(params['main_vm'])
         vm2.is_alive()
         assert vm1.instance == vm2.instance
 
         sync1 = FakeSyncListenServer(port=222)
         env.register_syncserver(222, sync1)
-        env3 = utils_env.Env(filename=fname)
+        env3 = utils_env.Env(filename=self.envfilename)
         syncnone = env3.get_syncserver(222)
         assert syncnone is None
 
-        env.save(filename=fname)
-        env4 = utils_env.Env(filename=fname)
+        env.save(filename=self.envfilename)
+        env4 = utils_env.Env(filename=self.envfilename)
         sync2 = env4.get_syncserver(222)
         assert sync2.instance == sync1.instance
-        if os.path.isfile(fname):
-            os.unlink(fname)
 
     def test_register_vm(self):
         """
@@ -90,7 +94,7 @@ class TestEnv(unittest.TestCase):
         3) Get the vm back from the env.
         4) Verify that the 2 objects are the same.
         """
-        env = utils_env.Env()
+        env = utils_env.Env(filename=self.envfilename)
         params = utils_params.Params({"main_vm": 'rhel7-migration'})
         vm1 = FakeVm(params['main_vm'], params)
         vm1.is_alive()
@@ -107,7 +111,7 @@ class TestEnv(unittest.TestCase):
         4) Remove one of those vms.
         5) Verify that the removed vm is no longer in env.
         """
-        env = utils_env.Env()
+        env = utils_env.Env(filename=self.envfilename)
         params = utils_params.Params({"main_vm": 'rhel7-migration'})
         vm1 = FakeVm(params['main_vm'], params)
         vm1.is_alive()
@@ -129,7 +133,7 @@ class TestEnv(unittest.TestCase):
         4) Verify that the 2 vms are in the output of get_all_vms.
         5) Verify that the sync server is not in the output of get_all_vms.
         """
-        env = utils_env.Env()
+        env = utils_env.Env(filename=self.envfilename)
         params = utils_params.Params({"main_vm": 'rhel7-migration'})
         vm1 = FakeVm(params['main_vm'], params)
         vm1.is_alive()
@@ -150,7 +154,7 @@ class TestEnv(unittest.TestCase):
         3) Get that SyncListenServer with get_syncserver.
         4) Verify that both objects are the same.
         """
-        env = utils_env.Env()
+        env = utils_env.Env(filename=self.envfilename)
         sync1 = FakeSyncListenServer(port=333)
         env.register_syncserver(333, sync1)
         sync2 = env.get_syncserver(333)
@@ -165,7 +169,7 @@ class TestEnv(unittest.TestCase):
         6) Verify that the SyncListenServer unregistered can't be retrieved
            anymore with get_syncserver().
         """
-        env = utils_env.Env()
+        env = utils_env.Env(filename=self.envfilename)
         sync1 = FakeSyncListenServer(port=333)
         env.register_syncserver(333, sync1)
         sync2 = FakeSyncListenServer(port=444)

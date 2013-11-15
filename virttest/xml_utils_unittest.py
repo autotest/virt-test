@@ -19,12 +19,6 @@ class xml_test_data(unittest.TestCase):
 
     def setUp(self):
         xml_utils.TMPPFX = 'xml_utils_unittest_temp_'
-        # Previous testing may have failed / left behind extra files
-        for filename in self.get_tmp_files(xml_utils.TMPPFX, xml_utils.TMPSFX):
-            os.unlink(filename)
-        for filename in self.get_tmp_files(xml_utils.TMPPFX,
-                                           xml_utils.TMPSFX + xml_utils.EXSFX):
-            os.unlink(filename)
         # Compacted to save excess scrolling
         self.TEXT_REPLACE_KEY = "TEST_XML_TEXT_REPLACE"
         self.XMLSTR = """<?xml version='1.0' encoding='UTF-8'?><capabilities><host>
