@@ -2,11 +2,7 @@
 import unittest
 import os
 
-try:
-    import autotest.common as common
-except ImportError:
-    import common
-
+import common
 from autotest.client.shared.test_utils import mock
 from autotest.client import os_dep
 from autotest.client.shared import utils

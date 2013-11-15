@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import unittest
+
 import common
 from autotest.client import utils
 from autotest.client.shared.test_utils import mock

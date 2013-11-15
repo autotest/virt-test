@@ -2,11 +2,7 @@
 import unittest
 import logging
 
-try:
-    import autotest.common as common
-except ImportError:
-    import common
-
+import common
 from autotest.client import os_dep
 import utils_libguestfs as lgf
 

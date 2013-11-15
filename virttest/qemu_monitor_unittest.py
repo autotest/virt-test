@@ -1,4 +1,6 @@
 import unittest
+
+import common
 from qemu_monitor import Monitor
 import qemu_monitor
 

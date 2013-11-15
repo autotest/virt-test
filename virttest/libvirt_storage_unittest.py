@@ -1,11 +1,7 @@
 #!/usr/bin/python
 import unittest
 
-try:
-    import autotest.common as common
-except ImportError:
-    import common
-
+import common
 from autotest.client.utils import CmdResult
 from virttest import libvirt_storage, virsh
 

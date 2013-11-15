@@ -5,6 +5,7 @@ import tempfile
 import os
 import glob
 import logging
+
 import common
 import xml_utils
 from virttest import element_tree as ElementTree

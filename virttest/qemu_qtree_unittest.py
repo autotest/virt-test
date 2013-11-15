@@ -8,6 +8,7 @@ This is a unittest for qemu_qtree library.
 __author__ = """Lukas Doktor (ldoktor@redhat.com)"""
 
 import unittest
+
 import common
 from autotest.client.shared.test_utils import mock
 import qemu_qtree
