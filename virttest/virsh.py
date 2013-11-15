@@ -38,7 +38,7 @@ from virttest import remote
 NOCLOSE = globals().keys() + [
     'NOCLOSE', 'SCREENSHOT_ERROR_COUNT', 'VIRSH_COMMAND_CACHE',
     'VIRSH_EXEC', 'VirshBase', 'VirshClosure', 'VirshSession', 'Virsh',
-    'VirshPersistent', 'VIRSH_COMMAND_GROUP_CACHE',
+    'VirshPersistent', 'VirshConnectBack', 'VIRSH_COMMAND_GROUP_CACHE',
     'VIRSH_COMMAND_GROUP_CACHE_NO_DETAIL',
 ]
 
