@@ -14,7 +14,6 @@ import random
 
 
 class PCIBusInfo:
-
     def __init__(self, device):
         self.name = device.aobject
         if device.child_bus:
@@ -28,7 +27,7 @@ class PCIBusInfo:
             self.last = 32      # (last + 1)
 
 
-def verify_qdev_vs_qtree(qdev, qtree):
+def process_qdev(qdev):
     qdev_devices = {}
     qdev_devices_noid = []
     for bus in qdev.get_buses({'type': ('PCI', 'PCIE')}):
@@ -44,13 +43,15 @@ def verify_qdev_vs_qtree(qdev, qtree):
             dev = {'id': dev_id,
                    'type': device.get_param('driver'),
                    'bus': device.get_param('bus'),
-                   'addr': addr
-                   }
+                   'addr': addr}
             if dev_id is None:
                 qdev_devices_noid.append(dev)
             else:
                 qdev_devices[dev_id] = dev
+    return (qdev_devices, qdev_devices_noid)
 
+
+def process_qtree(qtree):
     qtree_devices = {}
     qtree_devices_noid = []
     for node in qtree.get_nodes():
@@ -59,8 +60,7 @@ def verify_qdev_vs_qtree(qdev, qtree):
             dev = {'id': dev_id,
                    'type': node.qtree.get('type'),
                    'bus': node.parent.qtree.get('id'),
-                   'addr': node.qtree.get('addr')
-                   }
+                   'addr': node.qtree.get('addr')}
             if dev_id is None:
                 # HOOK for VGA
                 if dev['type'] == 'VGA':
@@ -68,6 +68,11 @@ def verify_qdev_vs_qtree(qdev, qtree):
                 qtree_devices_noid.append(dev)
             else:
                 qtree_devices[dev_id] = dev
+    return (qtree_devices, qtree_devices_noid)
+
+def verify_qdev_vs_qtree(qdev_info, qtree_info):
+    qdev_devices, qdev_devices_noid = qdev_info
+    qtree_devices, qtree_devices_noid = qtree_info[:2]
 
     errors = ""
     for dev_id, device in qtree_devices.iteritems():
@@ -234,16 +239,21 @@ def run_pci_devices(test, params, env):
     qtree = qemu_qtree.QtreeContainer()
 
     error.context("Verify qtree vs. qemu devices", logging.info)
-    info_qtree = vm.monitor.info('qtree', False)
-    qtree.parse_info_qtree(info_qtree)
-    errors = verify_qdev_vs_qtree(vm.devices, qtree)
-    if errors:
-        logging.error(info_qtree)
+    _info_qtree = vm.monitor.info('qtree', False)
+    qtree.parse_info_qtree(_info_qtree)
+    info_qdev = process_qdev(vm.devices)
+    info_qtree = process_qtree(qtree)
+    errors = ""
+    err = verify_qdev_vs_qtree(info_qdev, info_qtree)
+    if err:
+        logging.error(_info_qtree)
         logging.error(qtree.get_qtree().str_qtree())
-        logging.error(errors)
-        raise error.TestFail("Errors occurred while comparing info qtree vs. "
-                             "the internal representation. Please check the "
-                             "log for details.")
+        logging.error(err)
+        errors += "qdev vs. qtree, "
 
     error.context("Verify VM booted properly.", logging.info)
     vm.wait_for_login()
+    error.context("Results")
+    if errors:
+        raise error.TestFail("Errors occurred while comparing %s. Please check"
+                             " the log for details." % errors[:-2])
