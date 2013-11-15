@@ -3,41 +3,7 @@ import os
 import logging
 import tarfile
 from autotest.client.shared import utils, error
-from virttest import data_dir
-from virttest import utils_libguestfs as lgf
-
-
-class GuestfishTools(lgf.GuestfishPersistent):
-
-    """Useful Tools for Guestfish class."""
-
-    __slots__ = ('params', )
-
-    def __init__(self, params):
-        """
-        Init a persistent guestfish shellsession.
-        """
-        self.params = params
-        disk_img = params.get("disk_img")
-        ro_mode = bool(params.get("gf_ro_mode", False))
-        libvirt_domain = params.get("libvirt_domain")
-        inspector = bool(params.get("gf_inspector", False))
-        mount_options = params.get("mount_options")
-        super(GuestfishTools, self).__init__(disk_img, ro_mode,
-                                             libvirt_domain, inspector,
-                                             mount_options=mount_options)
-
-    def write_file(self, path, content):
-        """
-        Create a new file to vm with guestfish
-        """
-        logging.info("Creating file %s in vm...", path)
-        write_result = self.write(path, content)
-        if write_result.exit_status:
-            logging.error("Create '%s' with content '%s' failed:%s",
-                          path, content, write_result)
-            return False
-        return True
+from virttest import data_dir, utils_test
 
 
 def test_tar_in(vm, params):
@@ -66,7 +32,7 @@ def test_tar_in(vm, params):
 
     params['libvirt_domain'] = vm.name
     params['gf_inspector'] = True
-    gf = GuestfishTools(params)
+    gf = utils_test.libguestfs.GuestfishTools(params)
 
     # Copy file to guest
     tar_in_result = gf.tar_in(path_on_host, "/")
@@ -116,7 +82,7 @@ def test_tar_out(vm, params):
 
     params['libvirt_domain'] = vm.name
     params['gf_inspector'] = True
-    gf = GuestfishTools(params)
+    gf = utils_test.libguestfs.GuestfishTools(params)
 
     # Create file
     if gf.write_file(path, content) is False:
@@ -185,7 +151,7 @@ def test_copy_in(vm, params):
 
     params['libvirt_domain'] = vm.name
     params['gf_inspector'] = True
-    gf = GuestfishTools(params)
+    gf = utils_test.libguestfs.GuestfishTools(params)
 
     # Copy file to guest
     copy_in_result = gf.copy_in(path, path_dir)
@@ -232,7 +198,7 @@ def test_copy_out(vm, params):
 
     params['libvirt_domain'] = vm.name
     params['gf_inspector'] = True
-    gf = GuestfishTools(params)
+    gf = utils_test.libguestfs.GuestfishTools(params)
 
     # Create file
     if gf.write_file(path, content) is False:

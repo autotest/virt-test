@@ -1,39 +1,7 @@
 import logging
 import re
 from autotest.client.shared import error
-from virttest import utils_libguestfs as lgf
-
-
-class GuestfishTools(lgf.GuestfishPersistent):
-
-    """Useful Tools for Guestfish class."""
-
-    __slots__ = ('params', )
-
-    def __init__(self, params):
-        """
-        Init a persistent guestfish shellsession.
-        """
-        self.params = params
-        disk_img = params.get("disk_img")
-        ro_mode = bool(params.get("ro_mode", False))
-        libvirt_domain = params.get("libvirt_domain")
-        inspector = bool(params.get("inspector", False))
-        mount_options = params.get("mount_options")
-        super(GuestfishTools, self).__init__(disk_img, ro_mode,
-                                             libvirt_domain, inspector,
-                                             mount_options=mount_options)
-
-    def get_root(self):
-        """
-        Get root filesystem w/ guestfish
-        """
-        getroot_result = self.inspect_os()
-        roots_list = getroot_result.stdout.splitlines()
-        if getroot_result.exit_status or not len(roots_list):
-            logging.error("Get root failed:%s", getroot_result)
-            return (False, getroot_result)
-        return (True, roots_list[0].strip())
+from virttest import utils_test
 
 
 def test_list_with_mount(vm, params):
@@ -43,8 +11,8 @@ def test_list_with_mount(vm, params):
     3) Try to mount root filesystem to /
     """
     params['libvirt_domain'] = vm.name
-    params['inspector'] = False
-    gf = GuestfishTools(params)
+    params['gf_inspector'] = False
+    gf = utils_test.libguestfs.GuestfishTools(params)
 
     # Launch
     run_result = gf.run()
@@ -92,8 +60,6 @@ def test_list_with_mount(vm, params):
         raise error.TestFail("Df failed:%s" % list_df_result)
     logging.info("Df successfully.")
 
-    logging.info("###############PASS##############")
-
 
 def test_list_without_mount(vm, params):
     """
@@ -102,8 +68,8 @@ def test_list_without_mount(vm, params):
     3) Try to list umounted partitions
     """
     params['libvirt_domain'] = vm.name
-    params['inspector'] = False
-    gf = GuestfishTools(params)
+    params['gf_inspector'] = False
+    gf = utils_test.libguestfs.GuestfishTools(params)
 
     # Launch
     run_result = gf.run()
@@ -145,7 +111,6 @@ def test_list_without_mount(vm, params):
     logging.info("Df failed as expected.")
 
     logging.info("Test end as expected.")
-    logging.info("###############PASS##############")
 
 
 def test_list_without_launch(vm, params):
@@ -156,16 +121,16 @@ def test_list_without_launch(vm, params):
     """
     # Get root filesystem before test
     params['libvirt_domain'] = vm.name
-    params['inspector'] = True
-    gf = GuestfishTools(params)
+    params['gf_inspector'] = True
+    gf = utils_test.libguestfs.GuestfishTools(params)
     roots, rootfs = gf.get_root()
     gf.close_session()
     if roots is False:
         raise error.TestError("Can not get root filesystem "
                               "in guestfish before test")
 
-    params['inspector'] = False
-    gf = GuestfishTools(params)
+    params['gf_inspector'] = False
+    gf = utils_test.libguestfs.GuestfishTools(params)
 
     # Do not launch
 
@@ -213,7 +178,6 @@ def test_list_without_launch(vm, params):
             raise error.TestFail("Unknown error.")
 
     logging.info("Test end as expected.")
-    logging.info("###############PASS##############")
 
 
 def test_list_with_inspector(vm, params):
@@ -223,17 +187,17 @@ def test_list_with_inspector(vm, params):
     """
     # Get root filesystem before test
     params['libvirt_domain'] = vm.name
-    params['inspector'] = True
-    gf = GuestfishTools(params)
+    params['gf_inspector'] = True
+    gf = utils_test.libguestfs.GuestfishTools(params)
     roots, rootfs = gf.get_root()
     gf.close_session()
     if roots is False:
         raise error.TestError("Can not get root filesystem "
                               "in guestfish before test")
 
-    params['inspector'] = False
+    params['gf_inspector'] = False
     params['mount_options'] = "%s:/" % rootfs
-    gf = GuestfishTools(params)
+    gf = utils_test.libguestfs.GuestfishTools(params)
 
     # List filesystems
     list_fs_result = gf.list_filesystems()
@@ -266,8 +230,6 @@ def test_list_with_inspector(vm, params):
     if list_df_result.exit_status:
         raise error.TestFail("Df failed")
     logging.info("Df successfully.")
-
-    logging.info("###############PASS##############")
 
 
 def run_guestfs_list_operations(test, params, env):

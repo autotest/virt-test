@@ -1,100 +1,8 @@
 import re
-import os
 import logging
-import commands
 from autotest.client.shared import error, utils
-from virttest import virsh, virt_vm, libvirt_vm, data_dir, remote, aexpect
-from virttest.libvirt_xml import vm_xml, xcepts
-from virttest import utils_libguestfs as lgf
-
-
-class VTError(Exception):
-    pass
-
-
-class VTAttachError(VTError):
-
-    def __init__(self, cmd, output):
-        super(VTAttachError, self).__init__(cmd, output)
-        self.cmd = cmd
-        self.output = output
-
-    def __str__(self):
-        return ("Attach command failed:%s\n%s" % (self.cmd, self.output))
-
-
-def cleanup_vm(vm_name=None, disk=None):
-    """
-    Cleanup the vm with its disk deleted.
-    """
-    try:
-        if vm_name is not None:
-            virsh.undefine(vm_name)
-    except error.CmdError:
-        pass
-    try:
-        if disk is not None:
-            os.remove(disk)
-    except IOError:
-        pass
-
-
-def get_primary_disk(vm):
-    """
-    Get primary disk source.
-
-    @param vm: Libvirt VM object.
-    """
-    vmdisks = vm.get_disk_devices()
-    if len(vmdisks):
-        pri_target = ['vda', 'sda']
-        for target in pri_target:
-            try:
-                return vmdisks[target]['source']
-            except KeyError:
-                pass
-    return None
-
-
-def attach_additional_disk(vm, disksize, targetdev):
-    """
-    Create a disk with disksize, then attach it to given vm.
-
-    @param vm: Libvirt VM object.
-    @param disksize: size of attached disk
-    @param targetdev: target of disk device
-    """
-    logging.info("Attaching disk...")
-    disk_path = os.path.join(data_dir.get_tmp_dir(), targetdev)
-    cmd = "qemu-img create %s %s" % (disk_path, disksize)
-    status, output = commands.getstatusoutput(cmd)
-    if status:
-        return (False, output)
-
-    # To confirm attached device do not exist.
-    virsh.detach_disk(vm.name, targetdev, extra="--config")
-
-    attach_result = virsh.attach_disk(vm.name, disk_path, targetdev,
-                                      extra="--config", debug=True)
-    if attach_result.exit_status:
-        return (False, attach_result)
-    return (True, disk_path)
-
-
-def define_new_vm(vm_name, new_name):
-    """
-    Just define a new vm from given name
-    """
-    try:
-        vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
-        vmxml.vm_name = new_name
-        del vmxml.uuid
-        logging.debug(str(vmxml))
-        vmxml.define()
-        return True
-    except xcepts.LibvirtXMLError, detail:
-        logging.error(detail)
-        return False
+from virttest import virt_vm, remote, aexpect
+from virttest import utils_test
 
 
 def prepare_attached_device(guestfs, device):
@@ -124,145 +32,6 @@ def prepare_attached_device(guestfs, device):
     return createo
 
 
-class VirtTools(object):
-
-    """
-    Useful functions for virt-commands.
-
-    Some virt-tools need an input disk and output disk.
-    Main for virt-clone, virt-sparsify, virt-resize.
-    """
-
-    def __init__(self, vm, params):
-        self.params = params
-        self.oldvm = vm
-        # Many command will create a new vm or disk, init it here
-        self.newvm = libvirt_vm.VM("VTNEWVM", vm.params, vm.root_dir,
-                                   vm.address_cache)
-        # Preapre for created vm disk
-        self.indisk = get_primary_disk(vm)
-        self.outdisk = None
-
-    def update_vm_disk(self):
-        """
-        Update oldvm's disk, and then create a newvm.
-        """
-        target_dev = self.params.get("gf_updated_target_dev", "vdb")
-        device_size = self.params.get("gf_updated_device_size", "50M")
-        self.newvm.name = self.params.get("gf_updated_new_vm")
-        if self.newvm.is_alive():
-            self.newvm.destroy()
-            self.newvm.wait_for_shutdown()
-
-        attachs, attacho = attach_additional_disk(self.newvm,
-                                                  disksize=device_size,
-                                                  targetdev=target_dev)
-        if attachs:
-            # Restart vm for guestfish command
-            # Otherwise updated disk is not visible
-            try:
-                self.newvm.start()
-                self.newvm.wait_for_login()
-                self.newvm.destroy()
-                self.newvm.wait_for_shutdown()
-                self.params['added_disk_path'] = attacho
-            except virt_vm.VMError, detail:
-                raise VTAttachError("", str(detail))
-        else:
-            raise VTAttachError("", attacho)
-
-
-class GuestfishTools(lgf.GuestfishPersistent):
-
-    """Useful Tools for Guestfish class."""
-
-    __slots__ = ('params', )
-
-    def __init__(self, params):
-        """
-        Init a persistent guestfish shellsession.
-        """
-        self.params = params
-        disk_img = params.get("disk_img")
-        ro_mode = params.get("gf_ro_mode", False)
-        libvirt_domain = params.get("libvirt_domain")
-        inspector = params.get("gf_inspector", False)
-        mount_options = params.get("mount_options")
-        super(GuestfishTools, self).__init__(disk_img, ro_mode,
-                                             libvirt_domain, inspector,
-                                             mount_options=mount_options)
-
-    def get_partitions_info(self, device="/dev/sda"):
-        """
-        Get disk partition's information.
-        """
-        list_result = self.part_list(device)
-        if list_result.exit_status:
-            logging.error("List partition info failed:%s", list_result)
-            return (False, list_result)
-        list_lines = list_result.stdout.splitlines()
-        # This dict is a struct like this: {key:{a dict}, key:{a dict}}
-        partitions = {}
-        # This dict is a struct of normal dict, for temp value of a partition
-        part_details = {}
-        index = -1
-        for line in list_lines:
-            # Init for a partition
-            if re.search("\[\d\]\s+=", line):
-                index = line.split("]")[0].split("[")[-1]
-                part_details = {}
-                partitions[index] = part_details
-
-            if re.search("part_num", line):
-                part_num = int(line.split(":")[-1].strip())
-                part_details['num'] = part_num
-            elif re.search("part_start", line):
-                part_start = int(line.split(":")[-1].strip())
-                part_details['start'] = part_start
-            elif re.search("part_end", line):
-                part_end = int(line.split(":")[-1].strip())
-                part_details['end'] = part_end
-            elif re.search("part_size", line):
-                part_size = int(line.split(":")[-1].strip())
-                part_details['size'] = part_size
-
-            if index != -1:
-                partitions[index] = part_details
-        logging.info(partitions)
-        return (True, partitions)
-
-    def create_whole_disk_msdos_part(self, device):
-        """
-        Create only one msdos partition in given device.
-        And return its part name if part add succeed.
-        """
-        logging.info("Creating one partition of whole %s...", device)
-        init_result = self.part_init(device, "msdos")
-        if init_result.exit_status:
-            logging.error("Init disk failed:%s", init_result)
-            return (False, init_result)
-        disk_result = self.part_disk(device, "msdos")
-        if disk_result.exit_status:
-            logging.error("Init disk failed:%s", disk_result)
-            return (False, disk_result)
-
-        # Get latest created part num to return
-        status, partitions = self.get_partitions_info(device)
-        if status is False:
-            return (False, partitions)
-        part_num = -1
-        for partition in partitions.values():
-            cur_num = partition.get("num")
-            if cur_num > part_num:
-                part_num = cur_num
-
-        if part_num == -1:
-            return (False, partitions)
-
-        part_name = "%s%s" % (device, part_num)
-        return (True, part_name)
-
-
 def test_blockdev_info(vm, params):
     """
     1) Fall into guestfish session w/ inspector
@@ -271,18 +40,25 @@ def test_blockdev_info(vm, params):
     4) Get block information
     5) Login guest to check
     """
-    vt = VirtTools(vm, params)
+    add_device = params.get("gf_additional_device", "/dev/vdb")
+    device_in_gf = utils.run("echo %s | sed -e 's/vd/sd/g'" % add_device,
+                             ignore_status=True).stdout.strip()
+    if utils_test.libguestfs.primary_disk_virtio(vm):
+        device_in_vm = add_device
+    else:
+        device_in_vm = "/dev/vda"
+
+    vt = utils_test.libguestfs.VirtTools(vm, params)
     # Create a new vm with additional disk
     vt.update_vm_disk()
-    device = params.get("gf_additional_device", "/dev/vdb")
 
     params['libvirt_domain'] = vt.newvm.name
     params['gf_inspector'] = True
-    gf = GuestfishTools(params)
-    prepare_attached_device(gf, device)
+    gf = utils_test.libguestfs.GuestfishTools(params)
+    prepare_attached_device(gf, device_in_gf)
 
     # Get sectorsize of block device
-    getss_result = gf.blockdev_getss(device)
+    getss_result = gf.blockdev_getss(device_in_gf)
     logging.debug(getss_result)
     if getss_result.exit_status:
         gf.close_session()
@@ -291,7 +67,7 @@ def test_blockdev_info(vm, params):
     logging.info("Get sectionsize successfully.")
 
     # Get total size of device in 512-byte sectors
-    getsz_result = gf.blockdev_getsz(device)
+    getsz_result = gf.blockdev_getsz(device_in_gf)
     logging.debug(getsz_result)
     if getsz_result.exit_status:
         gf.close_session()
@@ -300,7 +76,7 @@ def test_blockdev_info(vm, params):
     logging.info("Get device size successfully.")
 
     # Get blocksize of device
-    getbsz_result = gf.blockdev_getbsz(device)
+    getbsz_result = gf.blockdev_getbsz(device_in_gf)
     logging.debug(getbsz_result)
     if getbsz_result.exit_status:
         gf.close_session()
@@ -309,7 +85,7 @@ def test_blockdev_info(vm, params):
     logging.info("Get blocksize successfully.")
 
     # Get total size in bytes
-    getsize64_result = gf.blockdev_getsize64(device)
+    getsize64_result = gf.blockdev_getsize64(device_in_gf)
     gf.close_session()
     logging.debug(getsize64_result)
     if getsize64_result.exit_status:
@@ -333,14 +109,14 @@ def test_blockdev_info(vm, params):
         raise error.TestFail(str(detail))
 
     try:
-        sectorsize2 = session.cmd_output("blockdev --getss %s" % device,
+        sectorsize2 = session.cmd_output("blockdev --getss %s" % device_in_vm,
                                          timeout=10).strip()
-        total_size2 = session.cmd_output("blockdev --getsz %s" % device,
+        total_size2 = session.cmd_output("blockdev --getsz %s" % device_in_vm,
                                          timeout=5).strip()
-        blocksize2 = session.cmd_output("blockdev --getbsz %s" % device,
+        blocksize2 = session.cmd_output("blockdev --getbsz %s" % device_in_vm,
                                         timeout=5).strip()
         total_size_in_bytes2 = session.cmd_output(
-            "blockdev --getsize64 %s" % device,
+            "blockdev --getsize64 %s" % device_in_vm,
             timeout=5).strip()
         attached_vm.destroy()
         attached_vm.wait_for_shutdown()
@@ -379,18 +155,25 @@ def test_blocksize(vm, params):
     4) Get blocksize and set blocksize
     5) Login guest to check
     """
-    vt = VirtTools(vm, params)
+    add_device = params.get("gf_additional_device", "/dev/vdb")
+    device_in_gf = utils.run("echo %s | sed -e 's/vd/sd/g'" % add_device,
+                             ignore_status=True).stdout.strip()
+    if utils_test.libguestfs.primary_disk_virtio(vm):
+        device_in_vm = add_device
+    else:
+        device_in_vm = "/dev/vda"
+
+    vt = utils_test.libguestfs.VirtTools(vm, params)
     # Create a new vm with additional disk
     vt.update_vm_disk()
-    device = params.get("gf_additional_device", "/dev/vdb")
 
     params['libvirt_domain'] = vt.newvm.name
     params['gf_inspector'] = True
-    gf = GuestfishTools(params)
-    prepare_attached_device(gf, device)
+    gf = utils_test.libguestfs.GuestfishTools(params)
+    prepare_attached_device(gf, device_in_gf)
 
     # Get blocksize of device
-    getbsz_result = gf.blockdev_getbsz(device)
+    getbsz_result = gf.blockdev_getbsz(device_in_gf)
     logging.debug(getbsz_result)
     if getbsz_result.exit_status:
         gf.close_session()
@@ -399,7 +182,7 @@ def test_blocksize(vm, params):
     logging.info("Get blocksize successfully.")
 
     # Set blocksize of device to half
-    setbsz_result = gf.blockdev_setbsz(device, int(blocksize) / 2)
+    setbsz_result = gf.blockdev_setbsz(device_in_gf, int(blocksize) / 2)
     logging.debug(setbsz_result)
     gf.close_session()
     if setbsz_result.exit_status:
@@ -416,7 +199,7 @@ def test_blocksize(vm, params):
         raise error.TestFail(str(detail))
 
     try:
-        blocksize2 = session.cmd_output("blockdev --getbsz %s" % device,
+        blocksize2 = session.cmd_output("blockdev --getbsz %s" % device_in_vm,
                                         timeout=5).strip()
         attached_vm.destroy()
         attached_vm.wait_for_shutdown()
@@ -443,15 +226,19 @@ def test_blockdev_ro(vm, params):
     4) Get disk readonly status and set it.
     5) Try to write a file to readonly disk
     """
-    vt = VirtTools(vm, params)
+    add_device = params.get("gf_additional_device", "/dev/vdb")
+    device_in_gf = utils.run("echo %s | sed -e 's/vd/sd/g'" % add_device,
+                             ignore_status=True).stdout.strip()
+
+    vt = utils_test.libguestfs.VirtTools(vm, params)
     # Create a new vm with additional disk
     vt.update_vm_disk()
-    device = params.get("gf_additional_device", "/dev/vdb")
 
     params['libvirt_domain'] = vt.newvm.name
     params['gf_inspector'] = True
-    gf = GuestfishTools(params)
-    part_name = prepare_attached_device(gf, device)
+    gf = utils_test.libguestfs.GuestfishTools(params)
+    part_num = prepare_attached_device(gf, device_in_gf)
+    part_name = "%s%s" % (device_in_gf, part_num)
 
     mkfs_result = gf.mkfs("ext3", part_name)
     logging.debug(mkfs_result)
@@ -526,15 +313,24 @@ def test_blockdev_rw(vm, params):
     6) Write file to rw device
     7) Login vm to check file
     """
-    vt = VirtTools(vm, params)
+    add_device = params.get("gf_additional_device", "/dev/vdb")
+    device_in_gf = utils.run("echo %s | sed -e 's/vd/sd/g'" % add_device,
+                             ignore_status=True).stdout.strip()
+    if utils_test.libguestfs.primary_disk_virtio(vm):
+        device_in_vm = add_device
+    else:
+        device_in_vm = "/dev/vda"
+
+    vt = utils_test.libguestfs.VirtTools(vm, params)
     # Create a new vm with additional disk
     vt.update_vm_disk()
-    device = params.get("gf_additional_device", "/dev/vdb")
 
     params['libvirt_domain'] = vt.newvm.name
     params['gf_inspector'] = True
-    gf = GuestfishTools(params)
-    part_name = prepare_attached_device(gf, device)
+    gf = utils_test.libguestfs.GuestfishTools(params)
+    part_num = prepare_attached_device(gf, device_in_gf)
+    part_name = "%s%s" % (device_in_gf, part_num)
+    part_name_in_vm = "%s%s" % (device_in_vm, part_num)
 
     mkfs_result = gf.mkfs("ext3", part_name)
     logging.debug(mkfs_result)
@@ -569,7 +365,6 @@ def test_blockdev_rw(vm, params):
             raise error.TestFail("Check readonly status failed.")
 
     # Reset device to r/w
-    gf = GuestfishTools(params)
     setrw_result = gf.blockdev_setrw(part_name)
     logging.debug(setrw_result)
     if setrw_result.exit_status:
@@ -624,7 +419,7 @@ def test_blockdev_rw(vm, params):
         raise error.TestFail(str(detail))
 
     try:
-        session.cmd_status("mount %s %s" % (part_name, mountpoint),
+        session.cmd_status("mount %s %s" % (part_name_in_vm, mountpoint),
                            timeout=10)
         session.cmd_status("cat %s" % path, timeout=5)
         # Delete file
@@ -654,7 +449,7 @@ def run_guestfs_block_operations(test, params, env):
     testcase = globals()["test_%s" % operation]
     try:
         # Create a new vm for editing and easier cleanup :)
-        define_new_vm(vm_name, new_vm_name)
+        utils_test.libguestfs.define_new_vm(vm_name, new_vm_name)
         testcase(vm, params)
     finally:
-        cleanup_vm(new_vm_name)
+        utils_test.libguestfs.cleanup_vm(new_vm_name)
