@@ -616,5 +616,3 @@ class GuestfishTools(lgf.GuestfishPersistent):
                     logging.warn("Recover ifcfg file failed:%s", cp_result)
                     return False
         return True
-
-
