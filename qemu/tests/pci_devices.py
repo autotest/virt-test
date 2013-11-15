@@ -11,6 +11,7 @@ from virttest import qemu_devices
 from virttest import qemu_qtree
 import logging
 import random
+import re
 
 
 class PCIBusInfo:
@@ -54,6 +55,7 @@ def process_qdev(qdev):
 def process_qtree(qtree):
     qtree_devices = {}
     qtree_devices_noid = []
+    qtree_pciinfo = []
     for node in qtree.get_nodes():
         if node.parent and node.parent.qtree.get('type') in ('PCI', 'PCIE'):
             dev_id = node.qtree.get('id')
@@ -63,12 +65,25 @@ def process_qtree(qtree):
                    'addr': node.qtree.get('addr')}
             if dev_id is None:
                 # HOOK for VGA
-                if dev['type'] == 'VGA':
+                if 'vga' in dev['type'].lower():
                     dev['type'] = None
                 qtree_devices_noid.append(dev)
             else:
                 qtree_devices[dev_id] = dev
-    return (qtree_devices, qtree_devices_noid)
+
+            qtree_pciinfo.append({'class_addr': node.qtree.get('class_addr'),
+                                  'class_pciid': node.qtree.get('class_pciid')
+                                  })
+    return (qtree_devices, qtree_devices_noid, qtree_pciinfo)
+
+
+def process_lspci(lspci):
+    lspci = re.findall(r'(\w\w:\w\w.\w) "[^"]+ \[\w{4}\]" "[^"]+ '
+                       r'\[(\w{4})\]" "[^"]+ \[(\w{4})\].*', lspci)
+    return [{'class_addr': info[0],
+             'class_pciid': "%s:%s" % (info[1], info[2])}
+            for info in lspci]
+
 
 def verify_qdev_vs_qtree(qdev_info, qtree_info):
     qdev_devices, qdev_devices_noid = qdev_info
@@ -100,6 +115,19 @@ def verify_qdev_vs_qtree(qdev_info, qtree_info):
             errors += "No match in qdev for device without id %s\n" % device
     for device in qdev_devices_noid:
         errors += "No match in qtree for device without id %s\n" % device
+
+    return errors
+
+
+def verify_lspci(info_lspci, info_qtree):
+    errors = ""
+    for lspci_dev in info_lspci:
+        if lspci_dev not in info_qtree:
+            errors += "Device %s is in lspci but not in qtree\n" % lspci_dev
+
+    for qtree_dev in info_qtree:
+        if qtree_dev not in info_lspci:
+            errors += "Device %s is in qtree but not in lspci\n" % qtree_dev
 
     return errors
 
@@ -248,11 +276,24 @@ def run_pci_devices(test, params, env):
     if err:
         logging.error(_info_qtree)
         logging.error(qtree.get_qtree().str_qtree())
+        logging.error(vm.devices.str_bus_long())
         logging.error(err)
         errors += "qdev vs. qtree, "
 
     error.context("Verify VM booted properly.", logging.info)
-    vm.wait_for_login()
+    session = vm.wait_for_login()
+
+    error.context("Verify lspci vs. qtree", logging.info)
+    if params.get('lspci_cmd'):
+        _info_lspci = session.cmd_output(params['lspci_cmd'])
+        info_lspci = process_lspci(_info_lspci)
+        err = verify_lspci(info_lspci, info_qtree[2])
+        if err:
+            logging.error(_info_lspci)
+            logging.error(_info_qtree)
+            logging.error(err)
+            errors += "qtree vs. lspci, "
+
     error.context("Results")
     if errors:
         raise error.TestFail("Errors occurred while comparing %s. Please check"
