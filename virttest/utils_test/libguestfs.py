@@ -23,6 +23,16 @@ class VTAttachError(VTError):
         return ("Attach command failed:%s\n%s" % (self.cmd, self.output))
 
 
+class VTMountError(VTError):
+    def __init__(self, cmd, output):
+        VTError.__init__(self, cmd, output)
+        self.cmd = cmd
+        self.output = output
+
+    def __str__(self):
+        return ("Mount command failed:%s\n%s" % (self.cmd, self.output))
+
+
 def primary_disk_virtio(vm):
     """
     To verify if system disk is virtio.
@@ -100,13 +110,13 @@ def cleanup_vm(vm_name=None, disk=None):
     try:
         if vm_name is not None:
             virsh.undefine(vm_name)
-    except error.CmdError:
-        pass
+    except error.CmdError, detail:
+        logging.error("Undefine %s failed:%s", vm_name, detail)
     try:
         if disk is not None:
             os.remove(disk)
-    except IOError:
-        pass
+    except IOError, detail:
+        logging.error("Remove disk %s failed:%s", disk, detail)
 
 
 class VirtTools(object):
@@ -299,7 +309,7 @@ class VirtTools(object):
             error_info = "Mount %s to %s failed." % (disk_or_domain,
                                                      mountpoint)
             logging.error(result)
-            return (False, str(result))
+            return (False, error_info)
         return (True, mountpoint)
 
     def write_file_with_guestmount(self, mountpoint, path,
@@ -379,7 +389,6 @@ class GuestfishTools(lgf.GuestfishPersistent):
         for key in release_type:
             if re.search(release_type[key], release_result.stdout):
                 return (True, key)
-
 
     def write_file(self, path, content):
         """
