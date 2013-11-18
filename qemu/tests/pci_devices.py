@@ -7,7 +7,6 @@ This is a autotest/virt-test test for testing PCI devices in various PCI setups
 """
 from autotest.client.shared import error
 from virttest import env_process
-from virttest import qemu_devices
 from virttest import qemu_qtree
 import logging
 import random
@@ -15,6 +14,9 @@ import re
 
 
 class PCIBusInfo:
+    """
+    Structured info about PCI bus
+    """
     def __init__(self, device):
         self.name = device.aobject
         if device.child_bus:
@@ -29,6 +31,9 @@ class PCIBusInfo:
 
 
 def process_qdev(qdev):
+    """
+    Get PCI devices from qemu_devices representation
+    """
     qdev_devices = {}
     qdev_devices_noid = []
     for bus in qdev.get_buses({'type': ('PCI', 'PCIE')}):
@@ -53,6 +58,9 @@ def process_qdev(qdev):
 
 
 def process_qtree(qtree):
+    """
+    Get PCI devices from qtree
+    """
     qtree_devices = {}
     qtree_devices_noid = []
     qtree_pciinfo = []
@@ -78,6 +86,9 @@ def process_qtree(qtree):
 
 
 def process_lspci(lspci):
+    """
+    Get info about PCI devices from lspci
+    """
     lspci = re.findall(r'(\w\w:\w\w.\w) "[^"]+ \[\w{4}\]" "[^"]+ '
                        r'\[(\w{4})\]" "[^"]+ \[(\w{4})\].*', lspci)
     return [{'class_addr': info[0],
@@ -86,6 +97,9 @@ def process_lspci(lspci):
 
 
 def verify_qdev_vs_qtree(qdev_info, qtree_info):
+    """
+    Compare qemu_devices and qtree devices
+    """
     qdev_devices, qdev_devices_noid = qdev_info
     qtree_devices, qtree_devices_noid = qtree_info[:2]
 
@@ -120,6 +134,9 @@ def verify_qdev_vs_qtree(qdev_info, qtree_info):
 
 
 def verify_lspci(info_lspci, info_qtree):
+    """
+    Compare lspci and qtree info
+    """
     errors = ""
     for lspci_dev in info_lspci:
         if lspci_dev not in info_qtree:
@@ -133,6 +150,9 @@ def verify_lspci(info_lspci, info_qtree):
 
 
 def add_bus(qdev, params, bus_type, name, parent_bus):
+    """
+    Define new bus in params
+    """
     if bus_type == 'bridge':
         if parent_bus.type is True:    # PCI
             bus_type = 'pci-bridge'
@@ -151,17 +171,26 @@ def add_bus(qdev, params, bus_type, name, parent_bus):
 
 
 def add_devices_first(params, name_idxs, bus, add_device):
+    """
+    Define new device and set it to the first available port
+    """
     params, name_idxs = add_device(params, name_idxs, bus.name, bus.first)
     return params, name_idxs
 
 
 def add_devices_all(params, name_idxs, bus, add_device):
+    """
+    Fill all available slots of certain bus with devices
+    """
     for addr in xrange(bus.first, bus.last):
         params, name_idxs = add_device(params, name_idxs, bus.name, addr)
     return params, name_idxs
 
 
 def add_devices_random(params, name_idxs, bus, add_device):
+    """
+    Define three devices in first, last and random ports of the given bus
+    """
     params, name_idxs = add_device(params, name_idxs, bus.name, bus.first)
     params, name_idxs = add_device(params, name_idxs, bus.name,
                                    random.randrange(bus.first + 1,
@@ -171,6 +200,9 @@ def add_devices_random(params, name_idxs, bus, add_device):
 
 
 def add_device_usb(params, name_idxs, parent_bus, addr, device):
+    """
+    Wrapper to add usb device
+    """
     idx = name_idxs.get(device[0], 0) + 1
     name_idxs[device[0]] = idx
     name = "test_%s%d" % (device[0], idx)
@@ -187,16 +219,25 @@ def add_device_usb(params, name_idxs, parent_bus, addr, device):
 
 
 def add_device_usb_ehci(params, name_idxs, parent_bus, addr):
+    """
+    Creates ehci usb controller
+    """
     return add_device_usb(params, name_idxs, parent_bus,
                           addr, ('ehci', 'usb-ehci'))
 
 
 def add_device_usb_xhci(params, name_idxs, parent_bus, addr):
+    """
+    Creates xhci usb controller
+    """
     return add_device_usb(params, name_idxs, parent_bus,
                           addr, ('xhci', 'nec-usb-xhci'))
 
 
 def add_device_random(params, name_idxs, parent_bus, addr):
+    """
+    Add device of random type
+    """
     variants = (add_device_usb_ehci, add_device_usb_xhci)
     return random.choice(variants)(params, name_idxs, parent_bus, addr)
 
@@ -204,6 +245,13 @@ def add_device_random(params, name_idxs, parent_bus, addr):
 @error.context_aware
 def run_pci_devices(test, params, env):
     """
+    PCI Devices test
+    1) print outs the used setup
+    2) boots the defined VM
+    3) verifies monitor "info qtree" vs. autotest representation
+    4) verifies guest "lspci" vs. info qtree (Linux only)
+    :note: Only PCI device properties are checked
+
     :param test: kvm test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
