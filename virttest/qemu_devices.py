@@ -2036,7 +2036,7 @@ class DevContainer(object):
                 added.extend(self._insert(device))
             except DeviceError, details:
                 cleanup()
-                raise DeviceError("%s\nError occured while inserting device %s"
+                raise DeviceError("%s\nError occurred while inserting device %s"
                                   " (%s). Please check the log for details."
                                   % (details, device, devices))
         return added

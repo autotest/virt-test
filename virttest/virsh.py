@@ -1135,7 +1135,7 @@ def migrate_setspeed(domain, bandwidth, extra=None, **dargs):
     a domain which is being migrated to another host.
 
     :param domain: name/uuid/id of guest
-    :param bandwith: migration bandwidth limit in MiB/s
+    :param bandwidth: migration bandwidth limit in MiB/s
     :param dargs: standardized virsh function API keywords
     """
 

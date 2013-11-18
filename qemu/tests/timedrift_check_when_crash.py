@@ -43,7 +43,7 @@ def run_timedrift_check_when_crash(test, params, env):
     error.context("sync time in guest", logging.info)
     session.cmd(ntp_cmd)
 
-    error.context("inject nmi interupt in vm", logging.info)
+    error.context("inject nmi interrupt in vm", logging.info)
     target, cmd = re.split("\s*:\s*", nmi_cmd)
     if target == "monitor":
         vm.monitor.send_args_cmd(cmd)

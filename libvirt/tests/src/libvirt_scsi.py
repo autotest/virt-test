@@ -21,7 +21,7 @@ def run_libvirt_scsi(test, params, env):
     cdrom_type = ('yes' == params.get("libvirt_scsi_cdrom_type", "no"))
     partition_type = ('yes' == params.get("libvirt_scsi_partition_type", "no"))
     partition = params.get("libvirt_scsi_partition",
-                           "ENTER.YOUR.AVAILIBLE.PARTITION")
+                           "ENTER.YOUR.AVAILABLE.PARTITION")
     vm_name = params.get("main_vm", "virt-tests-vm1")
     # Init a VM instance and a VMXML instance.
     vm = env.get_vm(vm_name)
