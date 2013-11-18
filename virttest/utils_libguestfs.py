@@ -1131,12 +1131,16 @@ def virt_filesystems(disk_or_domain, **dargs):
     cmd = "virt-filesystems"
     # If you need to mount a disk, set is_disk to True
     is_disk = dargs.get("is_disk", False)
+    ignore_status = dargs.get("ignore_status", True)
+    debug = dargs.get("debug", False)
+    timeout = dargs.get("timeout", 60)
+
     if is_disk is True:
         cmd += " -a %s" % disk_or_domain
     else:
         cmd += " -d %s" % disk_or_domain
     cmd = get_display_type(cmd, dargs)
-    return lgf_command(cmd, **dargs)
+    return lgf_command(cmd, ignore_status, debug, timeout)
 
 
 def virt_list_partitions(disk_or_domain, long=False, total=False,
