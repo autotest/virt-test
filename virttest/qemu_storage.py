@@ -394,7 +394,8 @@ class QemuImg(storage.QemuImg):
         logging.debug("Checking image file %s", image_filename)
         qemu_img_cmd = self.image_cmd
         image_is_checkable = self.image_format in ['qcow2', 'qed']
-        if os.path.exists(image_filename) and image_is_checkable:
+
+        if storage.file_exists(params, image_filename) and image_is_checkable:
             check_img = self.support_cmd("check") and self.support_cmd("info")
             if not check_img:
                 logging.debug("Skipping image check "
@@ -446,7 +447,7 @@ class QemuImg(storage.QemuImg):
                 if params.get("backup_image", "no") == "yes":
                     self.backup_image(params, root_dir, "backup", True, True)
         else:
-            if not os.path.exists(image_filename):
+            if not storage.file_exists(params, image_filename):
                 logging.debug("Image file %s not found, skipping check",
                               image_filename)
             elif not image_is_checkable:
