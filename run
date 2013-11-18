@@ -344,13 +344,25 @@ class VirtTestRunParser(optparse.OptionParser):
         self.add_option_group(libvirt)
 
 
+def variant_only_file(filename):
+    """
+    Parse file containing flat list of items to append on an 'only' filter
+    """
+    from virttest import data_dir
+    result = []
+    fullpath = os.path.realpath(os.path.join(data_dir.get_root_dir(), filename))
+    for line in open(fullpath).readlines():
+        line = line.strip()
+        if line.startswith('#') or len(line) < 3:
+            continue
+        result.append(line)
+    return ", ".join(result)
+
+
 DEFAULT_MACHINE_TYPE = "i440fx"
 DEFAULT_GUEST_OS = "JeOS.19"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
-LIBVIRT_DEFAULT_SET = (
-    "unattended_install.import.import.default_install.aio_native, "
-    "virsh.domname, "
-    "remove_guest.without_disk")
+LIBVIRT_DEFAULT_SET = variant_only_file('libvirt/cfg/default_tests')
 LVSB_DEFAULT_SET = ("lvsb_date")
 OVS_DEFAULT_SET = ("load_module, ovs_basic")
 LIBVIRT_INSTALL = "unattended_install.import.import.default_install.aio_native"
