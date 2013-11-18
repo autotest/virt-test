@@ -6,7 +6,7 @@ automatically. Of course, customizable params is accept;
 For real lvm partition, we need to specify some params, at lest, vg_name and
 it's a real volume group on your host. If not, both pv_name and vg_name are
 required and a new volumegroup will be created on device named pv_name, But
-it will destory data on your device and it's not recommended;
+it will destroy data on your device and it's not recommended;
 
 Required params:
     params["lv_name"] lv_name like /dev/vg/lv; If not params["vg_name"]
@@ -565,7 +565,7 @@ class LVM(object):
 
     def setup(self):
         """
-        Main function to setup a lvm envrionments;
+        Main function to setup a lvm environments;
 
         :return: LogicalVolume path
         """
@@ -642,7 +642,7 @@ class EmulatedLVM(LVM):
 
     def setup_pv(self, vg):
         """
-        Setup physical volume device if exists return it driectly;
+        Setup physical volume device if exists return it directly;
         """
         pvs = []
         emulate_image_file = self.get_emulate_image_name()
@@ -669,7 +669,7 @@ class EmulatedLVM(LVM):
 
     def setup(self):
         """
-        Main function to setup a lvm envrionments;
+        Main function to setup a lvm environments;
 
         :return: LogicalVolume path
         """

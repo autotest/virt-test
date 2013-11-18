@@ -241,7 +241,7 @@ def run_pci_devices(test, params, env):
         logging.error(info_qtree)
         logging.error(qtree.get_qtree().str_qtree())
         logging.error(errors)
-        raise error.TestFail("Errors occured while comparing info qtree vs. "
+        raise error.TestFail("Errors occurred while comparing info qtree vs. "
                              "the internal representation. Please check the "
                              "log for details.")
 
