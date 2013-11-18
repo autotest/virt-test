@@ -56,23 +56,26 @@ def type_check(name, thing, expected):
     """
     is_a = type(thing)
     is_a_name = str(is_a)
-    expected_string = str(expected)
-    try:
-        it_is = issubclass(thing, expected)
-    except TypeError:
-        it_is = isinstance(thing, expected)
-    if not it_is:
-        raise ValueError('%s value is not a %s, it is a %s'
-                         % (name, expected_string, is_a_name))
+    if not isinstance(expected, list):
+        expected = [expected]
+    for e in expected:
+        try:
+            it_is = issubclass(thing, e)
+        except TypeError:
+            it_is = isinstance(thing, e)
+        if it_is:
+            return
+    raise ValueError('%s value is not any of %s, it is a %s'
+                     % (name, expected, is_a_name))
 
 
 def add_to_slots(*args):
     """
-    Return list of AccessorBase.__slots__ + args
+    Return list of AccessorBase.__all_slots__ + args
     """
     for slot in args:
         type_check('slot name', slot, str)
-    return AccessorBase.__slots__ + args
+    return AccessorBase.__all_slots__ + args
 
 
 class AccessorBase(PropCanBase):
@@ -95,22 +98,23 @@ class AccessorBase(PropCanBase):
         """
         type_check('Parameter property_name', property_name, str)
         type_check('Operation attribute', operation, str)
-        type_check('__slots__ attribute', self.__slots__, tuple)
+        type_check('__slots__ attribute', self.__all_slots__, [tuple, list])
         type_check('Parameter libvirtxml', libvirtxml, base.LibvirtXMLBase)
 
         super(AccessorBase, self).__init__()
 
-        self.dict_set('operation', operation)
-        self.dict_set('property_name', property_name)
-        self.dict_set('libvirtxml', libvirtxml)
-        for slot in self.__slots__:
-            if slot in AccessorBase.__slots__:
+        self.__dict_set__('operation', operation)
+        self.__dict_set__('property_name', property_name)
+        self.__dict_set__('libvirtxml', libvirtxml)
+
+        for slot in self.__all_slots__:
+            if slot in AccessorBase.__all_slots__:
                 continue  # already checked these
             # Don't care about value type
-            if not dargs.has_key(slot):
+            if not slot in dargs:
                 raise ValueError('Required accessor generator parameter %s'
                                  % slot)
-            self.dict_set(slot, dargs[slot])
+            self.__dict_set__(slot, dargs[slot])
 
     # Subclass expected to override this and specify parameters
     __call__ = NotImplementedError
@@ -182,7 +186,7 @@ class ForbiddenBase(AccessorBase):
     Raise LibvirtXMLAccessorError when called w/ or w/o a value arg.
     """
 
-    __slots__ = AccessorBase.__slots__
+    __slots__ = []
 
     def __call__(self, value=None):
         if value:
@@ -275,8 +279,8 @@ class AccessorGeneratorBase(object):
         """
         Set reference on objectified libvirtxml instance to callable_inst
         """
-        self.libvirtxml.super_set(self.accessor_name(operation),
-                                  callable_inst)
+        self.libvirtxml.__super_set__(self.accessor_name(operation),
+                                      callable_inst)
 
 
 # Implementation of specific accessor generator subclasses follows
@@ -350,8 +354,8 @@ class XMLElementText(AccessorGeneratorBase):
             element.text = str(value)
             self.xmltreefile().write()
 
-
     class Delter(AccessorBase):
+
         """
         Remove element and ignore if it doesn't exist (same as False)
         """
@@ -362,9 +366,9 @@ class XMLElementText(AccessorGeneratorBase):
             try:
                 element = self.element_by_parent(self.parent_xpath,
                                                  self.tag_name, create=False)
-            except (xcepts.LibvirtXMLNotFoundError, # element doesn't exist
-                    xcepts.LibvirtXMLAccessorError): # parent doesn't exist
-                pass # already gone
+            except (xcepts.LibvirtXMLNotFoundError,  # element doesn't exist
+                    xcepts.LibvirtXMLAccessorError):  # parent doesn't exist
+                pass  # already gone
             else:
                 parent = self.xmltreefile().find(self.parent_xpath)
                 if parent is not None:
@@ -446,6 +450,7 @@ class XMLElementInt(AccessorGeneratorBase):
 
 
 class XMLElementBool(AccessorGeneratorBase):
+
     """
     Class of accessor classes operating purely element existence
     """
@@ -468,8 +473,8 @@ class XMLElementBool(AccessorGeneratorBase):
                                              parent_xpath=parent_xpath,
                                              tag_name=tag_name)
 
-
     class Getter(AccessorBase):
+
         """
         Retrieve text on element
         """
@@ -486,8 +491,8 @@ class XMLElementBool(AccessorGeneratorBase):
                     xcepts.LibvirtXMLNotFoundError):
                 return False
 
-
     class Setter(AccessorBase):
+
         """
         Create element when True, delete when false
         """
@@ -501,7 +506,6 @@ class XMLElementBool(AccessorGeneratorBase):
             else:
                 delattr(self.libvirtxml, self.property_name)
             self.xmltreefile().write()
-
 
     Delter = XMLElementText.Delter
 
@@ -601,7 +605,6 @@ class XMLElementDict(AccessorGeneratorBase):
                                              parent_xpath=parent_xpath,
                                              tag_name=tag_name)
 
-
     class Getter(AccessorBase):
 
         """
@@ -636,12 +639,12 @@ class XMLElementDict(AccessorGeneratorBase):
 
 
 class XMLElementNest(AccessorGeneratorBase):
+
     """
     Class of accessor classes operating on a LibvirtXMLBase subclass
     """
 
     required_dargs = ('parent_xpath', 'tag_name', 'subclass', 'subclass_dargs')
-
 
     def __init__(self, property_name, libvirtxml, forbidden=None,
                  parent_xpath=None, tag_name=None, subclass=None,
@@ -668,8 +671,8 @@ class XMLElementNest(AccessorGeneratorBase):
                                              subclass=subclass,
                                              subclass_dargs=subclass_dargs)
 
-
     class Getter(AccessorBase):
+
         """
         Retrieve instance of subclass with it's xml set to rerooted xpath/tag
         """
@@ -690,11 +693,11 @@ class XMLElementNest(AccessorGeneratorBase):
             # Create instance of subclass to assign nested_xtf onto
             nestedinst = self.subclass(**self.subclass_dargs)
             # nestedxml.xmltreefile.restore() will fail on nested_xtf.__del__
-            nestedinst.set_xml(str(nested_xtf)) # set from string not filename!
+            nestedinst.set_xml(str(nested_xtf))  # set from string not filename!
             return nestedinst
 
-
     class Setter(AccessorBase):
+
         """
         Set attributes to value on element
         """
@@ -714,12 +717,12 @@ class XMLElementNest(AccessorGeneratorBase):
             existing_parent.append(value.xmltreefile.getroot())
             self.xmltreefile().write()
 
-
     # Nothing fancy, just make sure that part of tree doesn't exist
     Delter = XMLElementText.Delter
 
 
 class XMLElementList(AccessorGeneratorBase):
+
     """
     Class of accessor classes operating on a list of child elements
 
@@ -731,7 +734,6 @@ class XMLElementList(AccessorGeneratorBase):
     """
 
     required_dargs = ('parent_xpath', 'tag_name', 'marshal_from', 'marshal_to')
-
 
     def __init__(self, property_name, libvirtxml, forbidden=None,
                  parent_xpath=None, marshal_from=None, marshal_to=None):
@@ -759,8 +761,8 @@ class XMLElementList(AccessorGeneratorBase):
                                              marshal_from=marshal_from,
                                              marshal_to=marshal_to)
 
-
     class Getter(AccessorBase):
+
         """
         Retrieve list of values as returned by the marshal_to callable
         """
@@ -793,8 +795,8 @@ class XMLElementList(AccessorGeneratorBase):
                 index += 1
             return result
 
-
     class Setter(AccessorBase):
+
         """
         Set child elements as returned by the marshal_to callable
         """
@@ -838,8 +840,8 @@ class XMLElementList(AccessorGeneratorBase):
                 index += 1
             self.xmltreefile().write()
 
-
     class Delter(AccessorBase):
+
         """
         Remove ALL child elements for which marshal_to does NOT return None
         """

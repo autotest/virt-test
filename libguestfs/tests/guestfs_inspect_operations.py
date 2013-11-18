@@ -1,57 +1,7 @@
 import logging
 import re
 from autotest.client.shared import error
-from virttest import virt_vm, remote
-from virttest import utils_libguestfs as lgf
-
-
-class GuestfishTools(lgf.GuestfishPersistent):
-
-    """Useful Tools for Guestfish class."""
-
-    __slots__ = lgf.GuestfishPersistent.__slots__ + ('params', )
-
-    def __init__(self, params):
-        """
-        Init a persistent guestfish shellsession.
-        """
-        self.params = params
-        disk_img = params.get("disk_img")
-        ro_mode = bool(params.get("gf_ro_mode", False))
-        libvirt_domain = params.get("libvirt_domain")
-        inspector = bool(params.get("gf_inspector", False))
-        mount_options = params.get("mount_options")
-        super(GuestfishTools, self).__init__(disk_img, ro_mode,
-                                             libvirt_domain, inspector,
-                                             mount_options=mount_options)
-
-    def get_root(self):
-        """
-        Get root filesystem w/ guestfish
-        """
-        getroot_result = self.inspect_os()
-        roots_list = getroot_result.stdout.splitlines()
-        if getroot_result.exit_status or not len(roots_list):
-            logging.error("Get root failed:%s", getroot_result)
-            return (False, getroot_result)
-        return (True, roots_list[0].strip())
-
-    def analyse_release(self):
-        """
-        Analyse /etc/redhat-release
-        """
-        logging.info("Analysing /etc/redhat-release...")
-        release_result = self.cat("/etc/redhat-release")
-        logging.debug(release_result)
-        if release_result.exit_status:
-            logging.error("Cat /etc/redhat-release failed")
-            return (False, release_result)
-
-        release_type = {'rhel': "Red Hat Enterprise Linux",
-                        'fedora': "Fedora"}
-        for key in release_type:
-            if re.search(release_type[key], release_result.stdout):
-                return (True, key)
+from virttest import virt_vm, remote, utils_test
 
 
 def test_inspect_get(vm, params):
@@ -66,7 +16,7 @@ def test_inspect_get(vm, params):
 
     params['libvirt_domain'] = vm.name
     params['gf_inspector'] = True
-    gf = GuestfishTools(params)
+    gf = utils_test.libguestfs.GuestfishTools(params)
     roots, rootfs = gf.get_root()
     logging.debug("Root filesystem:%s", rootfs)
     # inspect-os will umount filesystems,reopen it later
@@ -76,7 +26,7 @@ def test_inspect_get(vm, params):
                               "in guestfish before test")
 
     fail_info = []
-    gf = GuestfishTools(params)
+    gf = utils_test.libguestfs.GuestfishTools(params)
 
     # List filesystems
     list_fs_result = gf.list_filesystems()
@@ -192,8 +142,6 @@ def test_inspect_get(vm, params):
 
     if len(fail_info):
         raise error.TestFail(fail_info)
-
-    logging.info("###############PASS##############")
 
 
 def run_guestfs_inspect_operations(test, params, env):

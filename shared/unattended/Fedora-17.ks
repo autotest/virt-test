@@ -23,7 +23,6 @@ autopart
 @development-libs
 @development-tools
 dmidecode
-scsi-target-utils
 %end
 
 %post

@@ -41,12 +41,12 @@ def run_virsh_cpu_compare(test, params, env):
                         libvirtxml.add_feature(name)
                     else:
                         libvirtxml.set_feature(feature_num, feature_name)
-                libvirtxml.dict_get('xml').write(cpu_xml_file)
+                libvirtxml.xmltreefile.write(cpu_xml_file)
             elif mode == "clear":
                 # Clear up file detail
                 cpu_xml_file.truncate(0)
             else:
-                libvirtxml.dict_get('xml').write(cpu_xml_file)
+                libvirtxml.xmltreefile.write(cpu_xml_file)
             cpu_xml_file.close()
         except (IndexError, AttributeError):
             if target == "guest":

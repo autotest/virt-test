@@ -9,6 +9,7 @@ from virttest.libvirt_xml.devices import base, librarian
 
 
 class Disk(base.TypedDeviceBase):
+
     """
     Disk device XML class
 
@@ -31,13 +32,9 @@ class Disk(base.TypedDeviceBase):
         source: libvirt_xml.devices.Disk.DiskSource instance
     """
 
-    __slots__ = base.TypedDeviceBase.__slots__ + ('device', 'rawio',
-                                                  'sgio', 'snapshot',
-                                                  'driver', 'target',
-                                                  'address', 'boot',
-                                                  'readonly', 'transient',
-                                                  'share', 'mirror', 'ready',
-                                                  'iotune', 'source')
+    __slots__ = ('device', 'rawio', 'sgio', 'snapshot', 'driver', 'target',
+                 'address', 'boot', 'readonly', 'transient', 'share',
+                 'mirror', 'ready', 'iotune', 'source')
 
     def __init__(self, type_name='file', virsh_instance=base.base.virsh):
         accessors.XMLAttribute('device', self, parent_xpath='/',
@@ -55,7 +52,7 @@ class Disk(base.TypedDeviceBase):
         accessors.XMLElementNest('address', self, parent_xpath='/',
                                  tag_name='address', subclass=self.Address,
                                  subclass_dargs={'type_name': 'drive',
-                                             'virsh_instance': virsh_instance})
+                                                 'virsh_instance': virsh_instance})
         accessors.XMLAttribute('boot', self, parent_xpath='/',
                                tag_name='boot', attribute='order')
         accessors.XMLElementBool('readonly', self, parent_xpath='/',
@@ -67,7 +64,7 @@ class Disk(base.TypedDeviceBase):
         accessors.XMLElementNest('source', self, parent_xpath='/',
                                  tag_name='source', subclass=self.DiskSource,
                                  subclass_dargs={
-                                    'virsh_instance': virsh_instance})
+                                     'virsh_instance': virsh_instance})
         ro = ['set', 'del']
         accessors.XMLElementBool('mirror', self, forbidden=ro,
                                  parent_xpath='/', tag_name='mirror')
@@ -76,7 +73,7 @@ class Disk(base.TypedDeviceBase):
         accessors.XMLElementNest('iotune', self, parent_xpath='/',
                                  tag_name='iotune', subclass=self.IOTune,
                                  subclass_dargs={
-                                             'virsh_instance': virsh_instance})
+                                     'virsh_instance': virsh_instance})
         super(Disk, self).__init__(device_tag='disk', type_name=type_name,
                                    virsh_instance=virsh_instance)
 
@@ -111,6 +108,7 @@ class Disk(base.TypedDeviceBase):
     Address = librarian.get('address')
 
     class DiskSource(base.base.LibvirtXMLBase):
+
         """
         Disk source device XML class
 
@@ -120,9 +118,7 @@ class Disk(base.TypedDeviceBase):
             hosts: list of dictionaries describing network host properties
         """
 
-        __slots__ = base.base.LibvirtXMLBase.__slots__ + ('attrs',
-                                                          'seclabels',
-                                                          'hosts',)
+        __slots__ = ('attrs', 'seclabels', 'hosts',)
 
         def __init__(self, virsh_instance=base.base.virsh):
             accessors.XMLElementDict('attrs', self, parent_xpath='/',
@@ -133,7 +129,7 @@ class Disk(base.TypedDeviceBase):
             accessors.XMLElementList('hosts', self, parent_xpath='/',
                                      marshal_from=self.marshal_from_host,
                                      marshal_to=self.marshal_to_host)
-            super(Disk.DiskSource, self).__init__(virsh_instance=virsh_instance)
+            super(self.__class__, self).__init__(virsh_instance=virsh_instance)
             self.xml = '<source/>'
 
         @staticmethod
@@ -180,6 +176,7 @@ class Disk(base.TypedDeviceBase):
             return dict(attr_dict)       # return copy of dict, not reference
 
     class IOTune(base.base.LibvirtXMLBase):
+
         """
         IOTune device XML class
 
@@ -192,16 +189,12 @@ class Disk(base.TypedDeviceBase):
             write_iops_sec: str(int)
         """
 
-        __slots__ = base.base.LibvirtXMLBase.__slots__ + ('total_bytes_sec',
-                                                          'read_bytes_sec',
-                                                          'write_bytes_sec',
-                                                          'total_iops_sec',
-                                                          'read_iops_sec',
-                                                          'write_iops_sec')
+        __slots__ = ('total_bytes_sec', 'read_bytes_sec', 'write_bytes_sec',
+                     'total_iops_sec', 'read_iops_sec', 'write_iops_sec')
 
         def __init__(self, virsh_instance=base.base.virsh):
-            for slot in self.__slots__:
-                if slot in base.base.LibvirtXMLBase.__slots__:
+            for slot in self.__all_slots__:
+                if slot in base.base.LibvirtXMLBase.__all_slots__:
                     continue    # don't add these
                 else:
                     accessors.XMLElementInt(slot, self, parent_xpath='/',

@@ -32,8 +32,12 @@ import time
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
-from virttest import aexpect, remote, utils_misc, virt_vm
+from virttest import aexpect, remote, utils_misc, virt_vm, data_dir
 import virttest
+
+import libvirt
+import qemu
+import libguestfs
 
 try:
     from virttest.staging import utils_cgroup
@@ -252,13 +256,12 @@ def get_time(session, time_command, time_filter_re, time_format):
             locale.setlocale(locale.LC_TIME, loc)
     else:
         host_time = time.time()
-        s = session.cmd_output(time_command)
+        s = session.cmd_output(time_command).strip()
         n = 0.0
         reo = None
 
         try:
             reo = re.findall(time_filter_re, s)[0]
-            s = reo[0]
             if len(reo) > 1:
                 n = float(reo[1])
         except IndexError:
@@ -271,7 +274,7 @@ def get_time(session, time_command, time_filter_re, time_format):
                           time_filter_re, s)
             raise e
 
-        guest_time = time.mktime(time.strptime(s, time_format)) + n
+        guest_time = time.mktime(time.strptime(reo, time_format)) + n
 
     return (host_time, guest_time)
 
@@ -921,7 +924,9 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     subtest_dir_specific = os.path.join(test.bindir, params.get('vm_type'),
                                         "tests")
     subtest_dir = None
-    for d in [subtest_dir_specific, subtest_dir_virt]:
+    subtest_dirs = data_dir.SubdirList(subtest_dir_virt)
+    subtest_dirs += data_dir.SubdirList(subtest_dir_specific)
+    for d in subtest_dirs:
         module_path = os.path.join(d, "%s.py" % sub_type)
         if os.path.isfile(module_path):
             subtest_dir = d
@@ -1129,3 +1134,47 @@ class BackgroundTest(object):
         Check whether the test is still alive.
         """
         return self.thread.isAlive()
+
+
+def get_image_info(image_file):
+    """
+    Get image information and put it into a dict. Image information like this:
+    *******************************
+    image: /path/vm1_6.3.img
+    file format: raw
+    virtual size: 10G (10737418240 bytes)
+    disk size: 888M
+    ....
+    ....
+    *******************************
+    And the image info dict will be like this
+    image_info_dict = { 'format':'raw',
+                        'vsize' : '10737418240'
+                        'dsize' : '931135488'
+                      }
+    TODO: Add more information to dict
+    """
+    try:
+        cmd = "qemu-img info %s" % image_file
+        image_info = utils.run(cmd, ignore_status=False).stdout.strip()
+        image_info_dict = {}
+        if image_info:
+            for line in image_info.splitlines():
+                if line.find("format") != -1:
+                    image_info_dict['format'] = line.split(':')[-1].strip()
+                elif line.find("virtual size") != -1:
+                    vsize = line.split(":")[-1].strip().split(" ")[0]
+                    vsize = utils_misc.normalize_data_size(vsize,
+                                                           order_magnitude="B",
+                                                           factor=1024)
+                    image_info_dict['vsize'] = int(float(vsize))
+                elif line.find("disk size") != -1:
+                    dsize = line.split(':')[-1].strip()
+                    dsize = utils_misc.normalize_data_size(dsize,
+                                                           order_magnitude="B",
+                                                           factor=1024)
+                    image_info_dict['dsize'] = int(float(dsize))
+        return image_info_dict
+    except (KeyError, IndexError, ValueError, error.CmdError), detail:
+        raise error.TestError("Fail to get information of %s:\n%s" %
+                              (image_file, detail))

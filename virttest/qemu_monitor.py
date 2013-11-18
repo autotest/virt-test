@@ -122,6 +122,7 @@ def create_monitor(vm, monitor_name, monitor_params):
             monitor_creator = HumanMonitor
 
     monitor_filename = get_monitor_filename(vm, monitor_name)
+    logging.info("Connecting to monitor '%s'", monitor_name)
     monitor = monitor_creator(vm, monitor_name, monitor_filename)
     monitor.verify_responsive()
 
@@ -740,7 +741,10 @@ class HumanMonitor(Monitor):
                 command = cmdline.split()[0]
                 cmdargs = " ".join(cmdline.split()[1:]).split(",")
                 for arg in cmdargs:
-                    command += " " + arg.split("=")[-1]
+                    value = "=".join(arg.split("=")[1:])
+                    if arg.split("=")[0] == "cert-subject":
+                        value = value.replace('/', ',')
+                    command += " " + value
             else:
                 command = cmdline
             cmd_output.append(self.cmd(command, timeout))
@@ -1607,7 +1611,8 @@ class QMPMonitor(Monitor):
                             value = value.strip()
                         if opt[0] == "cert-subject":
                             value = value.replace('/', ',')
-                        args[opt[0].strip()] = value
+                        if opt[0]:
+                            args[opt[0].strip()] = value
                     except:
                         logging.debug("Fail to create args, please check cmd")
                 cmd_output.append(self.cmd(command, args, timeout=timeout))

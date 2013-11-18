@@ -177,12 +177,21 @@ class VMInterfaceIndexError(VMError):
 
 class VMPortNotRedirectedError(VMAddressError):
 
-    def __init__(self, port):
+    def __init__(self, port, virtnet_nic=None):
         VMAddressError.__init__(self, port)
         self.port = port
+        self.virtnet_nic = virtnet_nic
 
     def __str__(self):
-        return "Port not redirected: %s" % self.port
+        msg = "Don't know how to connect to guest port %s" % self.port
+        if self.virtnet_nic is None:
+            return msg
+        else:
+            nic = self.virtnet_nic
+            msg += (" with networking type '%s', to destination '%s', for nic "
+                    "'%s' with mac '%s' and ip '%s'." % (nic.nettype, nic.netdst,
+                                                         nic.nic_name, nic.mac, nic.ip))
+            return msg
 
 
 class VMAddressVerificationError(VMAddressError):
@@ -687,7 +696,7 @@ class BaseVM(object):
             try:
                 return self.redirs[port]
             except KeyError:
-                raise VMPortNotRedirectedError(port)
+                raise VMPortNotRedirectedError(port, self.virtnet[nic_index])
 
     def free_mac_address(self, nic_index_or_name=0):
         """

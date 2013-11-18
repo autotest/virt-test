@@ -881,7 +881,7 @@ def umount(src, mount_point, fstype):
         return True
 
 
-def mount(src, mount_point, fstype, perm="rw"):
+def mount(src, mount_point, fstype, perm=None):
     """
     Mount the src into mount_point of the host.
 
@@ -890,6 +890,9 @@ def mount(src, mount_point, fstype, perm="rw"):
     @fstype: file system type
     @perm: mount permission
     """
+    if perm is None:
+        perm = "rw"
+
     umount(src, mount_point, fstype)
     mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
 
@@ -907,7 +910,7 @@ def mount(src, mount_point, fstype, perm="rw"):
     return is_mounted(src, mount_point, fstype, perm)
 
 
-def is_mounted(src, mount_point, fstype, perm=""):
+def is_mounted(src, mount_point, fstype, perm=None):
     """
     Check mount status from /etc/mtab
 
@@ -922,8 +925,12 @@ def is_mounted(src, mount_point, fstype, perm=""):
     :return: if the src is mounted as expect
     :rtype: Boolean
     """
+    if perm is None:
+        perm = ""
+
     mount_point = os.path.realpath(mount_point)
-    src = os.path.realpath(src)
+    if fstype not in ['nfs', 'smbfs']:
+        src = os.path.realpath(src)
     mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
     if mount_string.strip() in file("/etc/mtab").read():
         logging.debug("%s is successfully mounted", src)
@@ -1117,6 +1124,51 @@ def string_to_bitlist(data):
                 result.append(0)
             i -= 1
     return result
+
+
+def strip_console_codes(output):
+    """
+    Remove the Linux console escape and control sequences from the console
+    output. Make the output readable and can be used for result check. Now
+    only remove some basic console codes using during boot up.
+
+    :param output: The output from Linux console
+    :type output: string
+    :return: the string wihout any special codes
+    :rtype: string
+    """
+    if "\x1b" not in output:
+        return output
+
+    old_word = ""
+    return_str = ""
+    index = 0
+    output = "\x1b[m%s" % output
+    console_codes = "%G|\[m|\[[\d;]+[HJnrm]"
+    while index < len(output):
+        tmp_index = 0
+        tmp_word = ""
+        while (len(re.findall("\x1b", tmp_word)) < 2
+               and index + tmp_index < len(output)):
+            tmp_word += output[index + tmp_index]
+            tmp_index += 1
+
+        tmp_word = re.sub("\x1b", "", tmp_word)
+        index += len(tmp_word) + 1
+        if tmp_word == old_word:
+            continue
+        try:
+            special_code = re.findall(console_codes, tmp_word)[0]
+        except IndexError:
+            if index + tmp_index < len(output):
+                raise ValueError("%s is not included in the known console "
+                                 "codes list %s" % (tmp_word, console_codes))
+            continue
+        if special_code == tmp_word:
+            continue
+        old_word = tmp_word
+        return_str += tmp_word[len(special_code):]
+    return return_str
 
 
 def get_module_params(sys_path, module_name):
@@ -1950,3 +2002,41 @@ def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
                     option_dict[key].append(value)
 
     return option_dict
+
+
+def get_image_info(image_file):
+    """
+    Get image information and put it into a dict. Image information like this:
+    *******************************
+    image: /path/vm1_6.3.img
+    file format: raw
+    virtual size: 10G (10737418240 bytes)
+    disk size: 888M
+    ....
+    ....
+    *******************************
+    And the image info dict will be like this
+    image_info_dict = { 'format':'raw',
+                        'vsize' : '10737418240'
+                        'dsize' : '931135488'
+                      }
+    TODO: Add more information to dict
+    """
+    try:
+        cmd = "qemu-img info %s" % image_file
+        image_info = utils.run(cmd, ignore_status=False).stdout.strip()
+        image_info_dict = {}
+        if image_info:
+            for line in image_info.splitlines():
+                if line.find("format") != -1:
+                    image_info_dict['format'] = line.split(':')[-1].strip()
+                elif line.find("virtual size") != -1:
+                    vsize = line.split(":")[-1].strip().split(" ")[0]
+                    image_info_dict['vsize'] = int(float(normalize_data_size(vsize, "B")))
+                elif line.find("disk size") != -1:
+                    dsize = line.split(':')[-1].strip()
+                    image_info_dict['dsize'] = int(float(normalize_data_size(dsize, "B")))
+        return image_info_dict
+    except (KeyError, IndexError, error.CmdError), detail:
+        raise error.TestError("Fail to get information of %s:\n%s" %
+                              (image_file, detail))

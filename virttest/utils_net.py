@@ -121,6 +121,17 @@ class IfNotInBridgeError(NetError):
                 (self.ifname, self.details))
 
 
+class OpenflowSwitchError(NetError):
+
+    def __init__(self, brname):
+        NetError.__init__(self, brname)
+        self.brname = brname
+
+    def __str__(self):
+        return ("Only support openvswitch, make sure your env support ovs, "
+                "and your bridge %s is an openvswitch" % self.brname)
+
+
 class BRNotExistError(NetError):
 
     def __init__(self, brname, details):
@@ -190,6 +201,17 @@ class HwAddrGetError(NetError):
 
     def __str__(self):
         return "Can not get mac of interface %s" % self.ifname
+
+
+class HwOperstarteGetError(NetError):
+
+    def __init__(self, ifname, details=None):
+        NetError.__init__(self, ifname)
+        self.ifname = ifname
+        self.details = details
+
+    def __str__(self):
+        return "Get nic %s operstate error, %s" % (self.ifname, self.details)
 
 
 class VlanError(NetError):
@@ -829,6 +851,30 @@ def set_net_if_ip(if_name, ip_addr, runner=None):
         raise IfChangeAddrError(if_name, ip_addr, e)
 
 
+def get_net_if_operstate(ifname, runner=None):
+    """
+    Get linux host/guest network device operstate.
+
+    :param if_name: Name of the interface.
+    :raise: HwOperstarteGetError.
+    """
+    if runner is None:
+        runner = local_runner
+    cmd = "cat /sys/class/net/%s/operstate" % ifname
+    try:
+        operstate = runner(cmd)
+        if "up" in operstate:
+            return "up"
+        elif "down" in operstate:
+            return "down"
+        elif "unknown" in operstate:
+            return "unknown"
+        else:
+            raise HwOperstarteGetError(ifname, "operstate is not known.")
+    except error.CmdError:
+        raise HwOperstarteGetError(ifname, "run operstate cmd error.")
+
+
 def ipv6_from_mac_addr(mac_addr):
     """
     :return: Ipv6 address for communication in link range.
@@ -909,7 +955,7 @@ def find_current_bridge(iface_name, ovs=None):
     # find ifname in standard linux bridge.
     master = __bridge
     bridge = master.port_to_br(iface_name)
-    if bridge is None:
+    if bridge is None and ovs:
         master = ovs
         bridge = master.port_to_br(iface_name)
 
@@ -1010,6 +1056,28 @@ def del_from_bridge(ifname, brname, ovs=None):
         ovs.del_port(brname, _ifname)
 
 
+@__init_openvswitch
+def openflow_manager(br_name, command, flow_options=None, ovs=None):
+    """
+    Manager openvswitch flow rules
+
+    :param br_name: name of the bridge
+    :param command: manager cmd(add-flow, del-flows, dump-flows..)
+    :param flow_options: open flow options
+    :param ovs: OpenVSwitch object.
+    """
+    if ovs is None:
+        ovs = __ovs
+
+    if ovs is None or br_name not in ovs.list_br():
+        raise OpenflowSwitchError(br_name)
+
+    manager_cmd = "ovs-ofctl %s %s" % (command, br_name)
+    if flow_options:
+        manager_cmd += " %s" % flow_options
+    utils.run(manager_cmd)
+
+
 def bring_up_ifname(ifname):
     """
     Bring up an interface
@@ -1084,8 +1152,8 @@ class VirtIface(propcan.PropCan):
 
     def __getstate__(self):
         state = {}
-        for key in self.__class__.__slots__:
-            if self.has_key(key):
+        for key in self.__class__.__all_slots__:
+            if key in self:
                 state[key] = self[key]
         return state
 
@@ -1187,7 +1255,7 @@ class LibvirtIface(VirtIface):
     """
     Networking information specific to libvirt
     """
-    __slots__ = VirtIface.__slots__ + []
+    __slots__ = []
 
 
 class QemuIface(VirtIface):
@@ -1195,11 +1263,11 @@ class QemuIface(VirtIface):
     """
     Networking information specific to Qemu
     """
-    __slots__ = VirtIface.__slots__ + ['vlan', 'device_id', 'ifname', 'tapfds',
-                                       'tapfd_ids', 'netdev_id', 'tftp',
-                                       'romfile', 'nic_extra_params',
-                                       'netdev_extra_params', 'queues',
-                                       'vhostfds', 'vectors']
+    __slots__ = ['vlan', 'device_id', 'ifname', 'tapfds',
+                 'tapfd_ids', 'netdev_id', 'tftp',
+                 'romfile', 'nic_extra_params',
+                 'netdev_extra_params', 'queues', 'vhostfds',
+                 'vectors']
 
 
 class VMNet(list):
@@ -1427,7 +1495,7 @@ class ParamsNet(VMNet):
             nic_dict = {'nic_name': nic_name}
             nic_params = self.params.object_params(nic_name)
             # avoid processing unsupported properties
-            proplist = list(self.container_class.__slots__)
+            proplist = list(self.container_class().__all_slots__)
             # nic_name was already set, remove from __slots__ list copy
             del proplist[proplist.index('nic_name')]
             for propertea in proplist:
@@ -1508,7 +1576,7 @@ class DbNet(VMNet):
         except KeyError:
             entry = []
         self.unlock_db()
-        proplist = list(self.container_class.__slots__)
+        proplist = list(self.container_class().__all_slots__)
         # nic_name was already set, remove from __slots__ list copy
         del proplist[proplist.index('nic_name')]
         nic_name_list = self.nic_name_list()
@@ -1517,7 +1585,7 @@ class DbNet(VMNet):
             if nic_name in nic_name_list:
                 for propertea in proplist:
                     # only set properties in db but not in self
-                    if db_nic.has_key(propertea):
+                    if propertea in db_nic:
                         self[nic_name].set_if_none(
                             propertea, db_nic[propertea])
         if entry:

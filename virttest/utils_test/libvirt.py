@@ -21,6 +21,7 @@ import logging
 
 from autotest.client import utils
 
+
 def cpus_parser(cpulist):
     """
     Parse a list of cpu list, its syntax is a comma separated list,
@@ -126,4 +127,3 @@ def cpu_allowed_list_by_task(pid, tid):
     if result.exit_status:
         return None
     return result.stdout.strip()
-

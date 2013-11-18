@@ -330,15 +330,15 @@ class AttachDeviceBase(TestDeviceBase):
         # Command success is not enough, must also confirm activity worked
         if (cmdresult.exit_status == 0):
             if (cmdresult.stdout.count('attached successfully') or
-                cmdresult.stderr.count('attached successfully')):
+                    cmdresult.stderr.count('attached successfully')):
                 return True
         else:
             if (cmdresult.stderr.count("doesn't support option") or
-                cmdresult.stdout.count("doesn't support option")):
+                    cmdresult.stdout.count("doesn't support option")):
                 # Just skip this test
                 raise error.TestNAError
             if (cmdresult.stderr.count("XML error") or
-                cmdresult.stdout.count("XML error")):
+                    cmdresult.stdout.count("XML error")):
                 logging.error("Errant XML:")
                 xmldevice = self.device_xmls[index]
                 # All LibvirtXMLBase subclasses string-convert into raw XML

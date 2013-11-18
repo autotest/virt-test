@@ -4,6 +4,7 @@ libguestfs tools test utility functions.
 
 import logging
 import signal
+import os
 
 from autotest.client import os_dep, utils
 from autotest.client.shared import error
@@ -87,7 +88,7 @@ class LibguestfsBase(propcan.PropCanBase):
     Base class of libguestfs tools.
     """
 
-    __slots__ = ('ignore_status', 'debug', 'timeout', 'uri', 'lgf_exec')
+    __slots__ = ['ignore_status', 'debug', 'timeout', 'uri', 'lgf_exec']
 
     def __init__(self, lgf_exec="/bin/true", ignore_status=True,
                  debug=False, timeout=60, uri=None):
@@ -104,25 +105,25 @@ class LibguestfsBase(propcan.PropCanBase):
         Enforce setting ignore_status as a boolean.
         """
         if bool(ignore_status):
-            self.dict_set('ignore_status', True)
+            self.__dict_set__('ignore_status', True)
         else:
-            self.dict_set('ignore_status', False)
+            self.__dict_set__('ignore_status', False)
 
     def set_debug(self, debug):
         """
         Accessor method for 'debug' property that logs message on change
         """
         if not self.INITIALIZED:
-            self.dict_set('debug', debug)
+            self.__dict_set__('debug', debug)
         else:
-            current_setting = self.dict_get('debug')
+            current_setting = self.__dict_get__('debug')
             desired_setting = bool(debug)
             if not current_setting and desired_setting:
-                self.dict_set('debug', True)
+                self.__dict_set__('debug', True)
                 logging.debug("Libguestfs debugging enabled")
             # current and desired could both be True
             if current_setting and not desired_setting:
-                self.dict_set('debug', False)
+                self.__dict_set__('debug', False)
                 logging.debug("Libguestfs debugging disabled")
 
     def set_timeout(self, timeout):
@@ -130,11 +131,11 @@ class LibguestfsBase(propcan.PropCanBase):
         Accessor method for 'timeout' property, timeout should be digit
         """
         if type(timeout) is int:
-            self.dict_set('timeout', timeout)
+            self.__dict_set__('timeout', timeout)
         else:
             try:
                 timeout = int(str(timeout))
-                self.dict_set('timeout', timeout)
+                self.__dict_set__('timeout', timeout)
             except ValueError:
                 logging.debug("Set timeout failed.")
 
@@ -144,7 +145,7 @@ class LibguestfsBase(propcan.PropCanBase):
         """
         # self.get() would call get_uri() recursivly
         try:
-            return self.dict_get('uri')
+            return self.__dict_get__('uri')
         except KeyError:
             return None
 
@@ -159,7 +160,7 @@ class Guestfish(LibguestfsBase):
     Execute guestfish, using a new guestfish shell each time.
     """
 
-    __slots__ = LibguestfsBase.__slots__
+    __slots__ = []
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
@@ -201,10 +202,10 @@ class Guestfish(LibguestfsBase):
         (Not a guestfish session).
         command: guestfish [--options] [commands]
         """
-        guestfs_exec = self.dict_get('lgf_exec')
-        ignore_status = self.dict_get('ignore_status')
-        debug = self.dict_get('debug')
-        timeout = self.dict_get('timeout')
+        guestfs_exec = self.__dict_get__('lgf_exec')
+        ignore_status = self.__dict_get__('ignore_status')
+        debug = self.__dict_get__('debug')
+        timeout = self.__dict_get__('timeout')
         if command:
             guestfs_exec += " %s" % command
             return lgf_command(guestfs_exec, ignore_status, debug, timeout)
@@ -277,7 +278,7 @@ class GuestfishPersistent(Guestfish):
     Execute operations using persistent guestfish session.
     """
 
-    __slots__ = Guestfish.__slots__ + ('session_id', )
+    __slots__ = ['session_id']
 
     # Help detect leftover sessions
     SESSION_COUNTER = 0
@@ -312,7 +313,7 @@ class GuestfishPersistent(Guestfish):
                 # It should jump to exception followed normally
             except aexpect.ShellProcessTerminatedError:
                 self.__class__.SESSION_COUNTER -= 1
-                self.dict_del('session_id')
+                self.__dict_del__('session_id')
                 return  # guestfish session was closed normally
             # Close with 'quit' did not respond
             # So close with aexpect functions
@@ -324,7 +325,7 @@ class GuestfishPersistent(Guestfish):
                     existing.close(sig=signal.SIGTERM)
                 # Keep count:
                 self.__class__.SESSION_COUNTER -= 1
-                self.dict_del('session_id')
+                self.__dict_del__('session_id')
         except LibguestfsCmdError:
             # Allow other exceptions to be raised
             pass  # session was closed already
@@ -334,27 +335,27 @@ class GuestfishPersistent(Guestfish):
         Open new session, closing any existing
         """
         # Accessors may call this method, avoid recursion
-        guestfs_exec = self.dict_get('lgf_exec')  # Must exist, can't be None
+        guestfs_exec = self.__dict_get__('lgf_exec')  # Must exist, can't be None
         self.close_session()
         # Always create new session
         new_session = GuestfishSession(guestfs_exec)
         # Keep count
         self.__class__.SESSION_COUNTER += 1
         session_id = new_session.get_id()
-        self.dict_set('session_id', session_id)
+        self.__dict_set__('session_id', session_id)
 
     def open_session(self):
         """
         Return session with session_id in this class.
         """
         try:
-            session_id = self.dict_get('session_id')
+            session_id = self.__dict_get__('session_id')
             if session_id:
                 try:
                     return GuestfishSession(a_id=session_id)
                 except aexpect.ShellStatusError:
                     # session was already closed
-                    self.dict_del('session_id')
+                    self.__dict_del__('session_id')
                     raise LibguestfsCmdError(
                         "Open session '%s' failed." % session_id)
         except KeyError:
@@ -369,7 +370,7 @@ class GuestfishPersistent(Guestfish):
         """
         session = self.open_session()
         # Allow to raise error by default.
-        ignore_status = self.dict_get('ignore_status')
+        ignore_status = self.__dict_get__('ignore_status')
         return session.cmd_result(command, ignore_status=ignore_status)
 
     def add_drive(self, filename):
@@ -709,6 +710,26 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("cp %s %s" % (src, dest))
 
+    def part_init(self, device, parttype):
+        """
+        part-init - create an empty partition table
+
+        This creates an empty partition table on "device" of one of the
+        partition types listed below. Usually "parttype" should be either
+        "msdos" or "gpt" (for large disks).
+        """
+        return self.inner_cmd("part-init %s %s" % (device, parttype))
+
+    def part_add(self, device, prlogex, startsect, endsect):
+        """
+        part-add - add a partition to the device
+
+        This command adds a partition to "device". If there is no partition
+        table on the device, call "part_init" first.
+        """
+        cmd = "part-add %s %s %s %s" % (device, prlogex, startsect, endsect)
+        return self.inner_cmd(cmd)
+
     def checksum(self, csumtype, path):
         """
         checksum - compute MD5, SHAx or CRC checksum of file
@@ -735,6 +756,128 @@ class GuestfishPersistent(Guestfish):
         returns the list of partitions found.
         """
         return self.inner_cmd("part-list %s" % device)
+
+    def mkfs(self, fstype, device):
+        """
+        mkfs - make a filesystem
+
+        This creates a filesystem on "device" (usually a partition or LVM
+        logical volume). The filesystem type is "fstype", for example "ext3".
+        """
+        return self.inner_cmd("mkfs %s %s" % (fstype, device))
+
+    def part_disk(self, device, parttype):
+        """
+        part-disk - partition whole disk with a single primary partition
+
+        This command is simply a combination of "part_init" followed by
+        "part_add" to create a single primary partition covering
+        the whole disk.
+        """
+        return self.inner_cmd("part-disk %s %s" % (device, parttype))
+
+    def part_get_bootable(self, device, partnum):
+        """
+        part-get-bootable - return true if a partition is bootable
+
+        This command returns true if the partition "partnum" on "device"
+        has the bootable flag set.
+        """
+        return self.inner_cmd("part-get-bootable %s %s" % (device, partnum))
+
+    def part_get_mbr_id(self, device, partnum):
+        """
+        part-get-mbr-id - get the MBR type byte (ID byte) from a partition
+
+        Returns the MBR type byte (also known as the ID byte) from the
+        numbered partition "partnum".
+        """
+        return self.inner_cmd("part-get-mbr-id %s %s" % (device, partnum))
+
+    def part_get_parttype(self, device):
+        """
+        part-get-parttype - get the partition table type
+
+        This command examines the partition table on "device" and returns the
+        partition table type (format) being used.
+        """
+        return self.inner_cmd("part-get-parttype %s" % device)
+
+    def fsck(self, fstype, device):
+        """
+        fsck - run the filesystem checker
+
+        This runs the filesystem checker (fsck) on "device" which should have
+        filesystem type "fstype".
+        """
+        return self.inner_cmd("fsck %s %s" % (fstype, device))
+
+    def blockdev_getss(self, device):
+        """
+        blockdev-getss - get sectorsize of block device
+
+        This returns the size of sectors on a block device. Usually 512,
+        but can be larger for modern devices.
+        """
+        return self.inner_cmd("blockdev-getss %s" % device)
+
+    def blockdev_getsz(self, device):
+        """
+        blockdev-getsz - get total size of device in 512-byte sectors
+
+        This returns the size of the device in units of 512-byte sectors
+        (even if the sectorsize isn't 512 bytes ... weird).
+        """
+        return self.inner_cmd("blockdev-getsz %s" % device)
+
+    def blockdev_getbsz(self, device):
+        """
+        blockdev-getbsz - get blocksize of block device
+
+        This returns the block size of a device.
+        """
+        return self.inner_cmd("blockdev-getbsz %s" % device)
+
+    def blockdev_getsize64(self, device):
+        """
+        blockdev-getsize64 - get total size of device in bytes
+
+        This returns the size of the device in bytes
+        """
+        return self.inner_cmd("blockdev-getsize64 %s" % device)
+
+    def blockdev_setbsz(self, device, blocksize):
+        """
+        blockdev-setbsz - set blocksize of block device
+
+        This sets the block size of a device.
+        """
+        return self.inner_cmd("blockdev-setbsz %s %s" % (device, blocksize))
+
+    def blockdev_getro(self, device):
+        """
+        blockdev-getro - is block device set to read-only
+
+        Returns a boolean indicating if the block device is read-only
+        (true if read-only, false if not).
+        """
+        return self.inner_cmd("blockdev-getro %s" % device)
+
+    def blockdev_setro(self, device):
+        """
+        blockdev-setro - set block device to read-only
+
+        Sets the block device named "device" to read-only.
+        """
+        return self.inner_cmd("blockdev-setro %s" % device)
+
+    def blockdev_setrw(self, device):
+        """
+        blockdev-setrw - set block device to read-write
+
+        Sets the block device named "device" to read-write.
+        """
+        return self.inner_cmd("blockdev-setrw %s" % device)
 
 
 # libguestfs module functions follow #####
@@ -1040,4 +1183,49 @@ def virt_df(disk_or_domain, ignore_status=True, debug=False, timeout=60):
     virtual machine filesystems.
     """
     cmd = "virt-df %s" % disk_or_domain
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_sysprep_cmd(disk_or_domain, options=None,
+                     extra=None, ignore_status=True,
+                     debug=False, timeout=600):
+    """
+    Execute virt-sysprep command to reset or unconfigure a virtual machine.
+
+    :param disk_or_domain: a img path or a domain name.
+    :param options: the options of virt-sysprep.
+    :return: a CmdResult object.
+    """
+    if os.path.isfile(disk_or_domain):
+        disk_or_domain = "-a " + disk_or_domain
+    else:
+        disk_or_domain = "-d " + disk_or_domain
+    cmd = "virt-sysprep %s" % (disk_or_domain)
+    if options is not None:
+        cmd += " %s" % options
+    if extra is not None:
+        cmd += " %s" % extra
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_cat_cmd(disk_or_domain, file_path, options=None, ignore_status=True,
+                 debug=False, timeout=60):
+    """
+    Execute virt-cat command to print guest's file detail.
+
+    :param disk_or_domain: a img path or a domain name.
+    :param file_path: the file to print detail
+    :param options: the options of virt-cat.
+    :return: a CmdResult object.
+    """
+    # disk_or_domain and file_path are necessary parameters.
+    if os.path.isfile(disk_or_domain):
+        disk_or_domain = "-a " + disk_or_domain
+    else:
+        disk_or_domain = "-d " + disk_or_domain
+    cmd = "virt-cat %s '%s'" % (disk_or_domain, file_path)
+    if options is not None:
+        cmd += " %s" % options
+
     return lgf_command(cmd, ignore_status, debug, timeout)

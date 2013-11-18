@@ -522,7 +522,7 @@ class Node(object):
                 child.dump(indent + 3, recurse)
 
 
-match_subtitute = re.compile("\$\{(.+)\}")
+match_subtitute = re.compile("\$\{(.+?)\}")
 
 
 def _subtitution(value, d):
@@ -1584,7 +1584,7 @@ class Parser(object):
                         op = LUpdateFileMap()
                         op.set_operands(lexer.filename,
                                         ".".join(str(x)
-                                        for x in node3.name))
+                                                 for x in node3.name))
                         node3.content += [(lexer.filename,
                                            lexer.linenum,
                                            op)]
@@ -1592,7 +1592,7 @@ class Parser(object):
                         op = LUpdateFileMap()
                         op.set_operands(lexer.filename,
                                         ".".join(str(x.name)
-                                        for x in node3.name),
+                                                 for x in node3.name),
                                         "_short_name_map_file")
                         node3.content += [(lexer.filename,
                                            lexer.linenum,

@@ -17,6 +17,7 @@ More specifically:
 """
 
 import commands
+import cPickle
 import errno
 import fcntl
 import logging
@@ -30,7 +31,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
 
-from virttest import env_process, remote, storage, utils_misc, utils_test
+from virttest import env_process, remote, storage, utils_misc
 
 try:
     from virttest.staging import utils_memory
@@ -510,6 +511,18 @@ class MultihostMigration(object):
         :param vms: list of vms.
         :param source: Must be True if is source machine.
         """
+        if mig_data.is_src():
+            self._check_vms_source(mig_data)
+        else:
+            self._check_vms_dest(mig_data)
+
+    def _quick_check_vms(self, mig_data):
+        """
+        Check if vms are started correctly.
+
+        :param vms: list of vms.
+        :param source: Must be True if is source machine.
+        """
         logging.info("Try check vms %s" % (mig_data.vms_name))
         for vm in mig_data.vms_name:
             if not self.env.get_vm(vm) in mig_data.vms:
@@ -517,11 +530,6 @@ class MultihostMigration(object):
         for vm in mig_data.vms:
             logging.info("Check vm %s on host %s" % (vm.name, self.hostid))
             vm.verify_alive()
-
-        if mig_data.is_src():
-            self._check_vms_source(mig_data)
-        else:
-            self._check_vms_dest(mig_data)
 
     def prepare_for_migration(self, mig_data, migration_mode):
         """
@@ -534,11 +542,50 @@ class MultihostMigration(object):
 
         new_params['migration_mode'] = migration_mode
         new_params['start_vm'] = 'yes'
-        self.vm_lock.acquire()
-        env_process.process(self.test, new_params, self.env,
-                            env_process.preprocess_image,
-                            env_process.preprocess_vm)
-        self.vm_lock.release()
+
+        if self.params.get("migration_sync_vms", "no") == "yes":
+            if mig_data.is_src():
+                self.vm_lock.acquire()
+                env_process.process(self.test, new_params, self.env,
+                                    env_process.preprocess_image,
+                                    env_process.preprocess_vm)
+                self.vm_lock.release()
+                self._quick_check_vms(mig_data)
+
+                # Send vms configuration to dst host.
+                vms = cPickle.dumps([self.env.get_vm(vm_name)
+                                     for vm_name in mig_data.vms_name])
+
+                self.env.get_vm(mig_data.vms_name[0]).monitor.info("qtree")
+                SyncData(self.master_id(), self.hostid,
+                         mig_data.hosts, mig_data.mig_id,
+                         self.sync_server).sync(vms, timeout=240)
+            elif mig_data.is_dst():
+                # Load vms configuration from src host.
+                vms = cPickle.loads(SyncData(self.master_id(), self.hostid,
+                                             mig_data.hosts, mig_data.mig_id,
+                                             self.sync_server).sync(timeout=240)[mig_data.src])
+                for vm in vms:
+                    # Save config to env. Used for create machine.
+                    # When reuse_previous_config params is set don't check
+                    # machine.
+                    vm.address_cache = self.env.get("address_cache")
+                    self.env.register_vm(vm.name, vm)
+
+                self.vm_lock.acquire()
+                env_process.process(self.test, new_params, self.env,
+                                    env_process.preprocess_image,
+                                    env_process.preprocess_vm)
+                vms[0].monitor.info("qtree")
+                self.vm_lock.release()
+                self._quick_check_vms(mig_data)
+        else:
+            self.vm_lock.acquire()
+            env_process.process(self.test, new_params, self.env,
+                                env_process.preprocess_image,
+                                env_process.preprocess_vm)
+            self.vm_lock.release()
+            self._quick_check_vms(mig_data)
 
         self._check_vms(mig_data)
 
@@ -1189,9 +1236,8 @@ class GuestSuspend(object):
 
     @error.context_aware
     def start_suspend(self, **args):
-        supend_cmd = args.get("suspend_start_cmd")
-        error.context("Start suspend [%s]" % (supend_cmd), logging.info)
         suspend_start_cmd = args.get("suspend_start_cmd")
+        error.context("Start suspend [%s]" % (suspend_start_cmd), logging.info)
 
         session = self._get_session()
         self._open_session_list.append(session)

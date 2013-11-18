@@ -26,9 +26,12 @@ import logging
 import urlparse
 import re
 import weakref
-from autotest.client import utils, os_dep
+from autotest.client import utils
+from autotest.client import os_dep
 from autotest.client.shared import error
-from virttest import aexpect, propcan, remote
+from virttest import aexpect
+from virttest import propcan
+from virttest import remote
 
 # list of symbol names NOT to wrap as Virsh class methods
 # Everything else from globals() will become a method of Virsh class
@@ -83,7 +86,7 @@ class VirshBase(propcan.PropCanBase):
         """
         # self.get() would call get_uri() recursivly
         try:
-            return self.dict_get('uri')
+            return self.__dict_get__('uri')
         except KeyError:
             return None
 
@@ -242,7 +245,7 @@ class Virsh(VirshBase):
     Execute libvirt operations, using a new virsh shell each time.
     """
 
-    __slots__ = VirshBase.__slots__
+    __slots__ = []
 
     def __init__(self, *args, **dargs):
         """
@@ -258,7 +261,7 @@ class Virsh(VirshBase):
             if sym not in NOCLOSE and callable(ref):
                 # Adding methods, not properties, so avoid special __slots__
                 # handling.  __getattribute__ will still find these.
-                self.super_set(sym, VirshClosure(ref, self))
+                self.__super_set__(sym, VirshClosure(ref, self))
 
 
 class VirshPersistent(Virsh):
@@ -267,7 +270,7 @@ class VirshPersistent(Virsh):
     Execute libvirt operations using persistent virsh session.
     """
 
-    __slots__ = Virsh.__slots__ + ('session_id', 'remote_user', 'remote_pwd')
+    __slots__ = ('session_id', )
 
     # B/c the auto_close of VirshSession is False, we
     # need to manager the ref-count of it manully.
@@ -292,7 +295,7 @@ class VirshPersistent(Virsh):
         """
         Method to increase the counter to self.a_id in COUNTERS.
         """
-        session_id = self.dict_get("session_id")
+        session_id = self.__dict_get__("session_id")
         try:
             counter = self.__class__.COUNTERS[session_id]
         except KeyError, e:
@@ -309,7 +312,7 @@ class VirshPersistent(Virsh):
         this session, and return True.
         Else, decrease the counter in COUNTERS and return False.
         """
-        session_id = self.dict_get("session_id")
+        session_id = self.__dict_get__("session_id")
         self.__class__.COUNTERS[session_id] -= 1
         counter = self.__class__.COUNTERS[session_id]
         if counter <= 0:
@@ -330,7 +333,7 @@ class VirshPersistent(Virsh):
         If a persistent session exists, close it down.
         """
         try:
-            session_id = self.dict_get('session_id')
+            session_id = self.__dict_get__('session_id')
             if session_id:
                 try:
                     existing = VirshSession(a_id=session_id)
@@ -339,7 +342,7 @@ class VirshPersistent(Virsh):
                 except aexpect.ShellStatusError:
                     # session was already closed
                     pass  # don't check is_alive or update counter
-                self.dict_del("session_id")
+                self.__dict_del__("session_id")
         except KeyError:
             # Allow other exceptions to be raised
             pass  # session was closed already
@@ -349,14 +352,14 @@ class VirshPersistent(Virsh):
         Open new session, closing any existing
         """
         # Accessors may call this method, avoid recursion
-        virsh_exec = self.dict_get('virsh_exec')  # Must exist, can't be None
-        uri = self.dict_get('uri')  # Must exist, can be None
+        virsh_exec = self.__dict_get__('virsh_exec')  # Must exist, can't be None
+        uri = self.__dict_get__('uri')  # Must exist, can be None
         try:
-            remote_user = self.dict_get('remote_user')
+            remote_user = self.__dict_get__('remote_user')
         except KeyError:
             remote_user = "root"
         try:
-            remote_pwd = self.dict_get('remote_pwd')
+            remote_pwd = self.__dict_get__('remote_pwd')
         except KeyError:
             remote_pwd = None
 
@@ -366,7 +369,7 @@ class VirshPersistent(Virsh):
                                    remote_user=remote_user,
                                    remote_pwd=remote_pwd)
         session_id = new_session.get_id()
-        self.dict_set('session_id', session_id)
+        self.__dict_set__('session_id', session_id)
 
     def set_uri(self, uri):
         """
@@ -374,11 +377,11 @@ class VirshPersistent(Virsh):
         """
         if not self.INITIALIZED:
             # Allow __init__ to call new_session
-            self.dict_set('uri', uri)
+            self.__dict_set__('uri', uri)
         else:
             # If the uri is changing
-            if self.dict_get('uri') != uri:
-                self.dict_set('uri', uri)
+            if self.__dict_get__('uri') != uri:
+                self.__dict_set__('uri', uri)
                 self.new_session()
             # otherwise do nothing
 
@@ -389,7 +392,7 @@ class VirshConnectBack(VirshPersistent):
     Persistent virsh session connected back from a remote host
     """
 
-    __slots__ = VirshPersistent.__slots__ + ('remote_ip', )
+    __slots__ = ('remote_ip', )
 
     def new_session(self):
         """
@@ -397,15 +400,15 @@ class VirshConnectBack(VirshPersistent):
         """
 
         # Accessors may call this method, avoid recursion
-        virsh_exec = self.dict_get('virsh_exec')  # Must exist, can't be None
-        uri = self.dict_get('uri')  # Must exist, can be None
-        remote_ip = self.dict_get('remote_ip')
+        virsh_exec = self.__dict_get__('virsh_exec')  # Must exist, can't be None
+        uri = self.__dict_get__('uri')  # Must exist, can be None
+        remote_ip = self.__dict_get__('remote_ip')
         try:
-            remote_user = self.dict_get('remote_user')
+            remote_user = self.__dict_get__('remote_user')
         except KeyError:
             remote_user = 'root'
         try:
-            remote_pwd = self.dict_get('remote_pwd')
+            remote_pwd = self.__dict_get__('remote_pwd')
         except KeyError:
             remote_pwd = None
         super(VirshConnectBack, self).close_session()
@@ -415,7 +418,7 @@ class VirshConnectBack(VirshPersistent):
                                    remote_pwd=remote_pwd,
                                    ssh_remote_auth=True)
         session_id = new_session.get_id()
-        self.dict_set('session_id', session_id)
+        self.__dict_set__('session_id', session_id)
 
     @staticmethod
     def kosher_args(remote_ip, uri):
@@ -566,29 +569,18 @@ def vcpupin(name, vcpu, cpu_list, options="", **dargs):
 
 def vcpuinfo(name, **dargs):
     """
-    Retrieves the vcpuinfo command result if values not "N/A"
-
     :param name: name of domain
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
-    # Guarantee cmdresult object created
-    dargs['ignore_status'] = True
-    cmdresult = command("vcpuinfo %s" % name, **dargs)
-    if cmdresult.exit_status == 0:
-        # Non-running vm makes virsh exit(0) but have "N/A" info.
-        # on newer libvirt.  Treat this as an error.
-        if re.search(r"\s*CPU:\s+N/A\s*", cmdresult.stdout.strip()):
-            cmdresult.exit_status = -1
-            cmdresult.stdout += "\n\nvirsh.vcpuinfo inject error: N/A values\n"
-    return cmdresult
+    return command("vcpuinfo %s" % name, **dargs)
 
 
 def freecell(extra="", **dargs):
     """
     Prints the available amount of memory on the machine or within a NUMA cell.
 
-    :param dargs: extra: extra argument string to pass to command
+    :param extra: extra argument string to pass to command
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
@@ -601,12 +593,27 @@ def nodeinfo(extra="", **dargs):
     Returns basic information about the node,like number and type of CPU,
     and size of the physical memory.
 
-    :param dargs: extra: extra argument string to pass to command
+    :param extra: extra argument string to pass to command
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
     cmd_nodeinfo = "nodeinfo %s" % extra
     return command(cmd_nodeinfo, **dargs)
+
+
+def nodecpumap(extra="", **dargs):
+    """
+    Displays the node's total number of CPUs, the number of online
+    CPUs and the list of online CPUs.
+
+    :param extra: extra argument string to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nodecpumap %s" % extra
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
 
 
 def canonical_uri(option='', **dargs):
@@ -1122,6 +1129,35 @@ def migrate(name="", dest_uri="", option="", extra="", **dargs):
     return command(cmd, **dargs)
 
 
+def migrate_setspeed(domain, bandwidth, extra=None, **dargs):
+    """
+    Set the maximum migration bandwidth (in MiB/s) for
+    a domain which is being migrated to another host.
+
+    :param domain: name/uuid/id of guest
+    :param bandwith: migration bandwidth limit in MiB/s
+    :param dargs: standardized virsh function API keywords
+    """
+
+    cmd = "migrate-setspeed %s %s" % (domain, bandwidth)
+    if extra is not None:
+        cmd += " %s" % extra
+    return command(cmd, **dargs)
+
+
+def migrate_getspeed(domain, **dargs):
+    """
+    Get the maximum migration bandwidth (in MiB/s) for
+    a domain.
+
+    :param domain: name/uuid/id of guest
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
+    """
+    cmd = "migrate-getspeed %s" % domain
+    return command(cmd, **dargs).stdout.strip()
+
+
 def migrate_setmaxdowntime(domain, downtime, extra=None, **dargs):
     """
     Set maximum tolerable downtime of a domain
@@ -1488,20 +1524,16 @@ def pool_destroy(name, **dargs):
         return False
 
 
-def pool_create(xml_file, **dargs):
+def pool_create(xml_file, extra="", **dargs):
     """
     Create a pool from an xml file
 
-    :param: xml_file: file containing an XML pool description
+    :param xml_file: file containing an XML pool description
+    :param extra extra parameters to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
-    cmd = "pool-create %s" % xml_file
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError, detail:
-        logging.error("Failed to create pool: %s.", detail)
-        return False
+    return command("pool-create %s %s" % (extra, xml_file), **dargs)
 
 
 def pool_create_as(name, pool_type, target, extra="", **dargs):
@@ -1626,6 +1658,40 @@ def pool_build(name, options="", **dargs):
     :param options: options for pool-build
     """
     return command("pool-build %s %s" % (name, options), **dargs)
+
+
+def pool_dumpxml(name, extra="", to_file="", **dargs):
+    """
+    Return the pool information as an XML dump.
+
+    :param name: pool_name name
+    :param to_file: optional file to write XML output to
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
+    """
+    dargs['ignore_status'] = True
+    cmd = "pool-dumpxml %s %s" % (name, extra)
+    result = command(cmd, **dargs)
+    if to_file:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    if result.exit_status:
+        raise error.CmdError(cmd, result,
+                             "Virsh dumpxml returned non-zero exit status")
+    return result.stdout.strip()
+
+
+def pool_define(xml_path, **dargs):
+    """
+    Return True on successful pool define.
+
+    :param xml_path: XML file path
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "pool-define --file %s" % xml_path
+    return command(cmd, **dargs)
 
 
 def vol_create_as(volume_name, pool_name, capacity,
@@ -1991,10 +2057,10 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     cmd = "setmem"
     if domainarg is not None:  # Allow testing of ""
         cmd += " %s" % domainarg
-    if sizearg is not None:  # Allow testing of 0 and ""
-        cmd += " %s" % sizearg
     if domain is not None:  # Allow testing of --domain ""
         cmd += " --domain %s" % domain
+    if sizearg is not None:  # Allow testing of 0 and ""
+        cmd += " %s" % sizearg
     if size is not None:  # Allow testing of --size "" or --size 0
         if use_kilobytes:
             cmd += " --kilobytes %s" % size
@@ -2659,4 +2725,36 @@ def secret_set_value(uuid, base64, options=None, **dargs):
         cmd += " --base64 %s" % base64
     if options:
         cmd += " --%s" % options
+    return command(cmd, **dargs)
+
+
+def nodedev_create(xml_file, options=None, **dargs):
+    """
+    Return cmd result of the device to be created by an XML file
+
+    :param xml_file: device XML file
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nodedev-create %s" % xml_file
+    if options is not None:
+        cmd += " %s" % options
+
+    logging.debug("Create the device from %s", xml_file)
+    return command(cmd, **dargs)
+
+
+def nodedev_destroy(dev_name, options=None, **dargs):
+    """
+    Return cmd result of the device to be destroyed
+
+    :param dev_name: name of the device
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nodedev-destroy %s" % dev_name
+    if options is not None:
+        cmd += " %s" % options
+
+    logging.debug("Destroy the device %s on the node", dev_name)
     return command(cmd, **dargs)

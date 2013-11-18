@@ -10,7 +10,8 @@ import os
 import time
 import re
 from autotest.client.shared import error
-from virttest import utils_misc
+from virttest.aexpect import ShellCmdError
+from virttest import utils_misc, utils_spice, aexpect
 from qemu.tests import rv_clearx, rv_input
 
 
@@ -32,40 +33,27 @@ def connect_to_vm(vm_name, env, params):
     return (vm, vm_root_session)
 
 
-def install_rpms(rpms_to_install, vm_root_session):
+def install_req_pkgs(pkgsRequired, vm_root_session, params):
     """
-    Fetches rpm and installs it
-
-    :params rpms_to_install: List of rpms to install
-    :params vm_root_session: Session object of VM
-    """
-
-    for rpm in rpms_to_install:
-        logging.info("Installing %s" % rpm)
-        ret, output = vm_root_session.cmd_status_output("wget %s" % rpm)
-        if ret != 0:
-            logging.debug(output)
-        ret, output = vm_root_session.cmd_status_output("rpm -i %s" % rpm.split("/")[-1])
-        if ret != 0:
-            logging.debug(output)
-
-def check_for_required_pkgs(pkgsRequired, vm_root_session, params):
-    """
-    Checks to see if packages are installed and if not, gets the url to install them
+    Checks to see if packages are installed and if not, installs the package
 
     :params rpms_to_install: List of packages to check
     :params vm_root_session: Session object of VM
     :param params: Dictionary with test parameters.
     """
 
-    rpms_to_install = []
     for pkgName in pkgsRequired:
-        ret, output = vm_root_session.cmd_status_output("rpm -q %s" % pkgName)
-        if ret != 0:
-            logging.debug(output)
-            rpms_to_install.append(params.get(re.sub("-", "_", pkgName) + "_url"))
+        logging.info("Checking to see if %s is installed" % pkgName)
+        try:
+            vm_root_session.cmd("rpm -q %s" % pkgName)
+        except ShellCmdError:
+            rpm = params.get(re.sub("-", "_", pkgName) + "_url")
+            logging.info("Installing %s" % pkgName)
+            try:
+                vm_root_session.cmd("yum -y localinstall %s" % rpm, timeout=300)
+            except ShellCmdError:
+                logging.info("Could not install %s" % pkgName)
 
-    return rpms_to_install
 
 def build_install_qxl(vm_root_session, vm_script_path, params):
     """
@@ -76,16 +64,9 @@ def build_install_qxl(vm_root_session, vm_script_path, params):
     :param params: Dictionary with test parameters.
     """
 
-    # Remove older versions of qxl driver if they exist
-    output = vm_root_session.cmd("rm -rf /var/lib/xorg/modules/drivers/qxl_drv.so")
-    if output:
-        logging.debug(output)
-
-    # Checking to see if required rpms exist and if not, install them
+    # Checking to see if required packages exist and if not, install them
     pkgsRequired = ["libpciaccess-devel", "xorg-x11-util-macros", "xorg-x11-server-devel"]
-    rpms_to_install = check_for_required_pkgs(pkgsRequired, vm_root_session, params)
-
-    install_rpms(rpms_to_install, vm_root_session)
+    install_req_pkgs(pkgsRequired, vm_root_session, params)
 
     # latest spice-protocol is required to build qxl
     output = vm_root_session.cmd("%s -p spice-protocol" % (vm_script_path))
@@ -93,8 +74,7 @@ def build_install_qxl(vm_root_session, vm_script_path, params):
     if re.search("Return code", output):
         raise error.TestFail("spice-protocol was not installed properly")
 
-    ret, output = vm_root_session.cmd_status_output("%s -p xf86-video-qxl" % (vm_script_path))
-    logging.info(ret)
+    output = vm_root_session.cmd("%s -p xf86-video-qxl" % (vm_script_path))
     logging.info(output)
     if re.search("Return code", output):
         raise error.TestFail("qxl was not installed properly")
@@ -110,21 +90,22 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     """
 
     # Get version of spice-gtk before install
-    ret, output = vm_root_session.cmd_status_output("LD_LIBRARY_PATH=/usr/local/lib remote-viewer --spice-gtk-version")
-    if ret != 0:
-        logging.error(output)
-    else:
+    try:
+        output = vm_root_session.cmd("LD_LIBRARY_PATH=/usr/local/lib remote-viewer --spice-gtk-version")
         logging.info(output)
+    except ShellCmdError:
+        logging.error(output)
 
     pkgsRequired = ["libogg-devel", "celt051-devel", "libcacard-devel"]
-    rpms_to_install = check_for_required_pkgs(pkgsRequired, vm_root_session, params)
-
-    install_rpms(rpms_to_install, vm_root_session)
+    install_req_pkgs(pkgsRequired, vm_root_session, params)
 
     rv_input.deploy_epel_repo(vm_root_session, params)
 
-    ret, output = vm_root_session.cmd_status_output("yum -y install perl-Text-CSV pyparsing", timeout=300)
-    logging.info(output)
+    try:
+        output = vm_root_session.cmd("yum -y install perl-Text-CSV pyparsing", timeout=300)
+        logging.info(output)
+    except ShellCmdError:
+        logging.error(output)
 
     # latest spice-protocol is required to build qxl
     output = vm_root_session.cmd("%s -p spice-protocol" % (vm_script_path))
@@ -132,18 +113,17 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     if re.search("Return code", output):
         raise error.TestFail("spice-protocol was not installed properly")
 
-    ret, output = vm_root_session.cmd_status_output("%s -p spice-gtk" % (vm_script_path), timeout=300)
-    logging.info(ret)
+    output = vm_root_session.cmd("%s -p spice-gtk" % (vm_script_path), timeout=300)
     logging.info(output)
     if re.search("Return code", output):
         raise error.TestFail("spice-gtk was not installed properly")
 
     # Get version of spice-gtk after install
-    ret, output = vm_root_session.cmd_status_output("LD_LIBRARY_PATH=/usr/local/lib remote-viewer --spice-gtk-version")
-    if ret != 0:
-        logging.error(output)
-    else:
+    try:
+        output = vm_root_session.cmd("LD_LIBRARY_PATH=/usr/local/lib remote-viewer --spice-gtk-version")
         logging.info(output)
+    except ShellCmdError:
+        logging.error(output)
 
 
 def build_install_vdagent(vm_root_session, vm_script_path, params):
@@ -156,13 +136,14 @@ def build_install_vdagent(vm_root_session, vm_script_path, params):
     """
 
     # Get current version of spice-vdagent
-    output = vm_root_session.cmd_output("spice-vdagent -h")
-    logging.info(output)
+    try:
+        output = vm_root_session.cmd("spice-vdagent -h")
+        logging.info(output)
+    except ShellCmdError:
+        logging.error(output)
 
     pkgsRequired = ["libpciaccess-devel"]
-    rpms_to_install = check_for_required_pkgs(pkgsRequired, vm_root_session, params)
-
-    install_rpms(rpms_to_install, vm_root_session)
+    install_req_pkgs(pkgsRequired, vm_root_session, params)
 
     # latest spice-protocol is required to build vdagent
     output = vm_root_session.cmd("%s -p spice-protocol" % (vm_script_path))
@@ -176,14 +157,20 @@ def build_install_vdagent(vm_root_session, vm_script_path, params):
         raise error.TestFail("spice-vd-agent was not installed properly")
 
     # Restart vdagent
-    output = vm_root_session.cmd("service spice-vdagentd restart")
-    logging.info(output)
-    if re.search("fail", output, re.IGNORECASE):
+    try:
+        output = vm_root_session.cmd("service spice-vdagentd restart")
+        logging.info(output)
+        if re.search("fail", output, re.IGNORECASE):
+            raise error.TestFail("spice-vd-agent was not started properly")
+    except ShellCmdError:
         raise error.TestFail("spice-vd-agent was not started properly")
 
     # Get version number of spice-vdagent
-    output = vm_root_session.cmd_output("spice-vdagent -h")
-    logging.info(output)
+    try:
+        output = vm_root_session.cmd("spice-vdagent -h")
+        logging.info(output)
+    except ShellCmdError:
+        logging.error(output)
 
 
 def run_rv_build_install(test, params, env):

@@ -207,9 +207,17 @@ class StoragePool(object):
 
     def is_pool_active(self, name):
         """
-        Check whether pool exists on given libvirt
+        Check whether pool is active on given libvirt
         """
         if self.pool_state(name) == "active":
+            return True
+        return False
+
+    def is_pool_persistent(self, name):
+        """
+        Check whether pool is persistent
+        """
+        if self.pool_info(name)["Persistent"] == "yes":
             return True
         return False
 

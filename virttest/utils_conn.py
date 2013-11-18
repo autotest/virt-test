@@ -274,8 +274,8 @@ class ConnectionBase(propcan.PropCanBase):
         init_dict['auto_recover'] = init_dict.get('auto_recover', False)
         super(ConnectionBase, self).__init__(init_dict)
 
-        self.dict_set('client_session', None)
-        self.dict_set('server_session', None)
+        self.__dict_set__('client_session', None)
+        self.__dict_set__('server_session', None)
 
         # make a tmp dir as a workspace
         tmp_dir = tempfile.mkdtemp(dir=data_dir.get_tmp_dir())
@@ -303,7 +303,7 @@ class ConnectionBase(propcan.PropCanBase):
         """
         session_list = ['client_session', 'server_session']
         for session_name in session_list:
-            session = self.dict_get(session_name)
+            session = self.__dict_get__(session_name)
             if session is not None:
                 session.close()
             else:
@@ -356,14 +356,14 @@ class ConnectionBase(propcan.PropCanBase):
         If the client session exists,return it.
         else create a session to client and set client_session.
         """
-        client_session = self.dict_get('client_session')
+        client_session = self.__dict_get__('client_session')
 
         if (client_session is not None) and (client_session.is_alive()):
             return client_session
         else:
             client_session = self._new_client_session()
 
-        self.dict_set('client_session', client_session)
+        self.__dict_set__('client_session', client_session)
         return client_session
 
     def set_client_session(self, value):
@@ -412,14 +412,14 @@ class ConnectionBase(propcan.PropCanBase):
         If the server session exists,return it.
         else create a session to server and set server_session.
         """
-        server_session = self.dict_get('server_session')
+        server_session = self.__dict_get__('server_session')
 
         if (not server_session is None) and (server_session.is_alive()):
             return server_session
         else:
             server_session = self._new_server_session()
 
-        self.dict_set('server_session', server_session)
+        self.__dict_set__('server_session', server_session)
         return server_session
 
     def set_server_session(self, value=None):
@@ -452,10 +452,8 @@ class SSHConnection(ConnectionBase):
     SSH_KEYGEN, SSH_ADD, SSH_COPY_ID, SSH_AGENT, SHELL, SSH: tools to build
     a non-pwd connection.
     """
-    __slots__ = ConnectionBase.__slots__ + ('ssh_rsa_pub_path',
-                                            'ssh_id_rsa_path', 'SSH_KEYGEN',
-                                            'SSH_ADD', 'SSH_COPY_ID',
-                                            'SSH_AGENT', 'SHELL', 'SSH')
+    __slots__ = ('ssh_rsa_pub_path', 'ssh_id_rsa_path', 'SSH_KEYGEN',
+                 'SSH_ADD', 'SSH_COPY_ID', 'SSH_AGENT', 'SHELL', 'SSH')
 
     def __init__(self, *args, **dargs):
         """
@@ -487,7 +485,7 @@ class SSHConnection(ConnectionBase):
                               "some function of connection will fail.",
                               toolName)
                 tool = '/bin/true'
-            self.dict_set(key, tool)
+            self.__dict_set__(key, tool)
 
     def conn_check(self):
         """
@@ -595,9 +593,7 @@ class TCPConnection(ConnectionBase):
     libvirtd_conf_path: Path of libvirtd.conf, default is
                         /etc/libvirt/libvirtd.conf.
     """
-    __slots__ = ConnectionBase.__slots__ + ('tcp_port',
-                                            'remote_syslibvirtd',
-                                            'remote_libvirtdconf')
+    __slots__ = ('tcp_port', 'remote_syslibvirtd', 'remote_libvirtdconf')
 
     def __init__(self, *args, **dargs):
         """
@@ -703,13 +699,9 @@ class TLSConnection(ConnectionBase):
     sysconfig_libvirtd_path, libvirtd_conf_path: Path of libvirt config file.
     hosts_path: /etc/hosts
     """
-    __slots__ = ConnectionBase.__slots__ + ('server_cn', 'client_cn',
-                                            'CERTTOOL', 'pki_CA_dir',
-                                            'libvirt_pki_dir',
-                                            'libvirt_pki_private_dir',
-                                            'client_hosts',
-                                            'server_libvirtdconf',
-                                            'server_syslibvirtd')
+    __slots__ = ('server_cn', 'client_cn', 'CERTTOOL', 'pki_CA_dir',
+                 'libvirt_pki_dir', 'libvirt_pki_private_dir', 'client_hosts',
+                 'server_libvirtdconf', 'server_syslibvirtd')
 
     def __init__(self, *args, **dargs):
         """

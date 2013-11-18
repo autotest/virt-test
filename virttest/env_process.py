@@ -23,6 +23,7 @@ import remote
 import data_dir
 import utils_net
 import utils_disk
+import nfs
 from autotest.client import local_host
 
 
@@ -106,8 +107,11 @@ def preprocess_vm(test, params, env, name):
         else:
             if not vm.is_alive():
                 start_vm = True
-            if vm.needs_restart(name=name, params=params, basedir=test.bindir):
-                start_vm = True
+            if params.get("check_vm_needs_restart", "yes") == "yes":
+                if vm.needs_restart(name=name,
+                                    params=params,
+                                    basedir=test.bindir):
+                    start_vm = True
 
     if start_vm:
         if vm_type == "libvirt" and params.get("type") != "unattended_install":
@@ -118,10 +122,15 @@ def preprocess_vm(test, params, env, name):
             vm.start()
         else:
             # Start the VM (or restart it if it's already up)
-            vm.create(name, params, test.bindir,
-                      migration_mode=params.get("migration_mode"),
-                      migration_fd=params.get("migration_fd"),
-                      migration_exec_cmd=params.get("migration_exec_cmd_dst"))
+            if params.get("reuse_previous_config", "no") == "no":
+                vm.create(name, params, test.bindir,
+                          migration_mode=params.get("migration_mode"),
+                          migration_fd=params.get("migration_fd"),
+                          migration_exec_cmd=params.get("migration_exec_cmd_dst"))
+            else:
+                vm.create(migration_mode=params.get("migration_mode"),
+                          migration_fd=params.get("migration_fd"),
+                          migration_exec_cmd=params.get("migration_exec_cmd_dst"))
             # Update mac and IP info for assigned device
             # NeedFix: Can we find another way to get guest ip?
             if params.get("mac_changeable") == "yes":
@@ -433,6 +442,25 @@ def preprocess(test, params, env):
         iscsidev = qemu_storage.Iscsidev(params, base_dir, "iscsi")
         params["image_name"] = iscsidev.setup()
         params["image_raw_device"] = "yes"
+
+    if params.get("storage_type") == "lvm":
+        lvmdev = qemu_storage.LVMdev(params, base_dir, "lvm")
+        params["image_name"] = lvmdev.setup()
+        params["image_raw_device"] = "yes"
+        env.register_lvmdev("lvm_%s" % params["main_vm"], lvmdev)
+
+    if params.get("storage_type") == "nfs":
+        image_nfs = nfs.Nfs(params)
+        image_nfs.setup()
+        image_name_only = os.path.basename(params["image_name"])
+        params['image_name'] = os.path.join(image_nfs.mount_dir,
+                                            image_name_only)
+        for image_name in params.objects("images"):
+            name_tag = "image_name_%s" % image_name
+            if params.get(name_tag):
+                image_name_only = os.path.basename(params[name_tag])
+                params[name_tag] = os.path.join(image_nfs.mount_dir,
+                                                image_name_only)
 
     # Start tcpdump if it isn't already running
     if "address_cache" not in env:
@@ -798,6 +826,22 @@ def postprocess(test, params, env):
         except Exception, details:
             err += "\niscsi cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
+
+    if params.get("storage_type") == "lvm":
+        try:
+            lvmdev = env.get_lvmdev("lvm_%s" % params["main_vm"])
+            lvmdev.cleanup()
+        except Exception, details:
+            err += "\nLVM cleanup: %s" % str(details).replace('\\n', '\n  ')
+            logging.error(details)
+        env.unregister_lvmdev("lvm_%s" % params["main_vm"])
+
+    if params.get("storage_type") == "nfs":
+        try:
+            image_nfs = nfs.Nfs(params)
+            image_nfs.cleanup()
+        except Exception, details:
+            err += "\nnfs cleanup: %s" % str(details).replace('\\n', '\n  ')
 
     setup_pb = False
     for nic in params.get('nics', "").split():

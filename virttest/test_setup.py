@@ -1051,7 +1051,9 @@ class PciAssignable(object):
         # 'virtual function' belongs to which physical card considering
         # that if the host has more than one 82576 card. PCI_ID?
         cmd = "lspci | grep '%s' | wc -l" % self.vf_filter_re
-        return int(utils.system_output(cmd, verbose=False))
+        vf_num = int(utils.system_output(cmd, verbose=False))
+        logging.info("Found %s vf in host", vf_num)
+        return vf_num
 
     def get_same_group_devs(self, pci_id):
         """
@@ -1144,8 +1146,8 @@ class PciAssignable(object):
                               logging.info)
                 utils.run(cmd)
         re_probe = False
-        s, o = commands.getstatusoutput('lsmod | grep %s' % self.driver)
-        if s:
+        status = commands.getstatus('lsmod | grep %s' % self.driver)
+        if status:
             re_probe = True
         elif not self.check_vfs_count():
             os.system("modprobe -r %s" % self.driver)
@@ -1159,9 +1161,14 @@ class PciAssignable(object):
             cmd = "modprobe %s %s" % (self.driver, self.driver_option)
             error.context("Loading the driver '%s' with command '%s'" %
                           (self.driver, cmd), logging.info)
-            s, o = commands.getstatusoutput(cmd)
+            status = commands.getstatus(cmd)
+            dmesg = commands.getoutput("dmesg")
+            file_name = "host_dmesg_after_load_%s.txt" % self.driver
+            logging.info("Log dmesg after loading '%s' to '%s'.", self.driver,
+                         file_name)
+            utils_misc.log_line(file_name, dmesg)
             utils.system("/etc/init.d/network restart", ignore_status=True)
-            if s:
+            if status:
                 return False
             self.setup = None
             return True

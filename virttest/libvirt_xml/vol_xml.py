@@ -21,9 +21,7 @@ class VolXMLBase(base.LibvirtXMLBase):
         source: nothing
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'key',
-                                                 'capacity', 'allocation',
-                                                 'format', 'path')
+    __slots__ = ('name', 'key', 'capacity', 'allocation', 'format', 'path')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -51,7 +49,7 @@ class VolXML(VolXMLBase):
     Manipulators of a Virtual Vol through it's XML definition.
     """
 
-    __slots__ = VolXMLBase.__slots__
+    __slots__ = []
 
     def __init__(self, vol_name='default', virsh_instance=base.virsh):
         """

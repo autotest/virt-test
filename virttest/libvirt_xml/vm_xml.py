@@ -88,12 +88,10 @@ class VMXMLBase(base.LibvirtXMLBase):
     """
 
     # Additional names of attributes and dictionary-keys instances may contain
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
-                                                 'uuid', 'vcpu', 'max_mem',
-                                                 'current_mem', 'numa',
-                                                 'devices', 'seclabel',
-                                                 'cputune', 'emulatorpin',
-                                                 'cpuset', 'placement')
+    __slots__ = ('hypervisor_type', 'vm_name', 'uuid', 'vcpu', 'max_mem',
+                 'current_mem', 'numa', 'devices', 'seclabel',
+                 'cputune', 'emulatorpin', 'cpuset', 'placement',
+                 'current_vcpu')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -121,6 +119,12 @@ class VMXMLBase(base.LibvirtXMLBase):
                                 forbidden=None,
                                 parent_xpath='/',
                                 tag_name='vcpu')
+        accessors.XMLAttribute(property_name="current_vcpu",
+                               libvirtxml=self,
+                               forbidden=None,
+                               parent_xpath='/',
+                               tag_name='vcpu',
+                               attribute='current')
         accessors.XMLAttribute(property_name="placement",
                                libvirtxml=self,
                                forbidden=None,
@@ -276,7 +280,7 @@ class VMXML(VMXMLBase):
     """
 
     # Must copy these here or there will be descriptor problems
-    __slots__ = VMXMLBase.__slots__
+    __slots__ = []
 
     def __init__(self, hypervisor_type='kvm', virsh_instance=base.virsh):
         """
@@ -298,8 +302,22 @@ class VMXML(VMXMLBase):
         # TODO: Look up hypervisor_type on incoming XML
         vmxml = VMXML(virsh_instance=virsh_instance)
         vmxml['xml'] = virsh_instance.dumpxml(vm_name,
-                                              options=options).stdout.strip()
+                                              extra=options).stdout.strip()
         return vmxml
+
+    @staticmethod
+    def new_from_inactive_dumpxml(vm_name, options="", virsh_instance=virsh):
+        """
+        Return new VMXML instance of inactive domain from virsh dumpxml command
+
+        :param vm_name: Name of VM to dumpxml
+        :param options: virsh dumpxml command's options
+        :param virsh_instance: virsh module or instance to use
+        :return: New initialized VMXML instance
+        """
+        if options.find("--inactive") == -1:
+            options += " --inactive"
+        return VMXML.new_from_dumpxml(vm_name, options, virsh_instance)
 
     @staticmethod
     def get_device_class(type_name):
@@ -377,16 +395,25 @@ class VMXML(VMXMLBase):
         return vm
 
     @staticmethod
-    def set_vm_vcpus(vm_name, value, virsh_instance=base.virsh):
+    def set_vm_vcpus(vm_name, value, current=None, virsh_instance=base.virsh):
         """
-        Convenience method for updating 'vcpu' property of a defined VM
+        Convenience method for updating 'vcpu' and 'current' attribute property
+        of a defined VM
 
         :param vm_name: Name of defined vm to change vcpu elemnet data
         :param value: New data value, None to delete.
+        :param current: New current value, None will not change current value
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         if value is not None:
-            vmxml['vcpu'] = value  # call accessor method to change XML
+            if current is not None:
+                if current > value:
+                    raise xcepts.LibvirtXMLError(
+                        "The cpu current value %s is larger than max number %s"
+                        % (current, value))
+                else:
+                    vmxml['vcpu'] = value  # call accessor method to change XML
+                    vmxml['current_vcpu'] = current
         else:  # value is None
             del vmxml.vcpu
         vmxml.undefine()
@@ -466,7 +493,7 @@ class VMXML(VMXMLBase):
         """
         Get a dict with primary serial features.
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         primary_serial = xmltreefile.find('devices').find('serial')
         serial_features = {}
         serial_type = primary_serial.get('type')
@@ -491,7 +518,7 @@ class VMXML(VMXMLBase):
         # TODO: More features
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
-        xmltreefile = vmxml.dict_get('xml')
+        xmltreefile = vmxml.__dict_get__('xml')
         try:
             serial = vmxml.get_primary_serial()['serial']
         except AttributeError:
@@ -529,7 +556,7 @@ class VMXML(VMXMLBase):
         vmxml = VMXML.new_from_dumpxml(vm_name)
 
         try:
-            exist = vmxml.dict_get('xml').find('devices').findall('channel')
+            exist = vmxml.__dict_get__('xml').find('devices').findall('channel')
             findc = 0
             for ec in exist:
                 if ec.find('target').get('name') == "org.qemu.guest_agent.0":
@@ -602,7 +629,7 @@ class VMXML(VMXMLBase):
         :param: vm_name: Name of defined vm to get mac
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
-        xmltreefile = vmxml.dict_get('xml')
+        xmltreefile = vmxml.__dict_get__('xml')
         try:
             iface = xmltreefile.find('devices').find('interface')
             return iface.find('mac').get('address')
@@ -616,7 +643,7 @@ class VMXML(VMXMLBase):
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, options=options,
                                        virsh_instance=virsh_instance)
-        xmltreefile = vmxml.dict_get('xml')
+        xmltreefile = vmxml.__dict_get__('xml')
         iftune_params = {}
         bandwidth = None
         try:
@@ -637,7 +664,7 @@ class VMXML(VMXMLBase):
         """
         Return VM's net from XML definition, None if not set
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         net_nodes = xmltreefile.find('devices').findall('interface')
         nets = {}
         for node in net_nodes:
@@ -670,7 +697,7 @@ class VMXML(VMXMLBase):
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
         vmxml.check_cpu_mode(mode)
-        xmltreefile = vmxml.dict_get('xml')
+        xmltreefile = vmxml.__dict_get__('xml')
         try:
             cpu = xmltreefile.find('/cpu')
             logging.debug("Current cpu mode is '%s'!", cpu.get('mode'))
@@ -683,6 +710,20 @@ class VMXML(VMXMLBase):
         vmxml.undefine()
         vmxml.define()
 
+    def add_device(self, value):
+        """
+        Add a device into VMXML.
+
+        :param value: instalce of device in libvirt_xml/devices/
+        """
+        devices = self.get_devices()
+        for device in devices:
+            if device == value:
+                logging.debug("Device %s is already in VM %s.", value, self)
+                return
+        devices.append(value)
+        self.set_devices(devices)
+
 
 class VMCPUXML(VMXML):
 
@@ -691,7 +732,7 @@ class VMCPUXML(VMXML):
     """
 
     # Must copy these here or there will be descriptor problems
-    __slots__ = VMXML.__slots__ + ('model', 'vendor', 'feature_list',)
+    __slots__ = ('model', 'vendor', 'feature_list',)
 
     def __init__(self, virsh_instance=virsh, vm_name='', mode='host-model'):
         """
@@ -714,15 +755,15 @@ class VMCPUXML(VMXML):
         super(VMCPUXML, self).__init__(virsh_instance=virsh_instance)
         # Setup some bare-bones XML to build upon
         self.set_cpu_mode(vm_name, mode)
-        self['xml'] = self.dict_get('virsh').dumpxml(vm_name,
-                                                     extra="--update-cpu").stdout.strip()
+        self['xml'] = self.__dict_get__('virsh').dumpxml(vm_name,
+                                                         extra="--update-cpu").stdout.strip()
 
     def get_feature_list(self):
         """
         Accessor method for feature_list property (in __slots__)
         """
         feature_list = []
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         for feature_node in xmltreefile.findall('/cpu/feature'):
             feature_list.append(feature_node)
         return feature_list
@@ -747,7 +788,7 @@ class VMCPUXML(VMXML):
 
         :param num: Assigned feature number
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         count = len(self.feature_list)
         if num >= count:
             raise xcepts.LibvirtXMLError("Remove %d from %d features"
@@ -793,6 +834,6 @@ class VMCPUXML(VMXML):
 
         :param num: Assigned feature number
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         cpu_node = xmltreefile.find('/cpu')
         xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})

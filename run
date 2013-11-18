@@ -174,6 +174,11 @@ class VirtTestRunParser(optparse.OptionParser):
         except ValueError:
             qemu_bin_path = "Could not find one"
 
+        if os.getuid() == 0:
+            nettype_default = 'bridge'
+        else:
+            nettype_default = 'user'
+
         general = optparse.OptionGroup(self, 'General Options')
         general.add_option("-v", "--verbose", action="store_true",
                            dest="verbose", help="Exhibit debug messages")
@@ -250,6 +255,11 @@ class VirtTestRunParser(optparse.OptionParser):
                            help=("Enable only type specific tests. Shared"
                                  " tests will not be tested."))
 
+        general.add_option("--run-dropin", action="store_true", dest="dropin",
+                           default=False,
+                           help=("Run tests present on the drop in dir on the "
+                                 "host. Incompatible with --tests."))
+
         self.add_option_group(general)
 
         qemu = optparse.OptionGroup(self, 'Options specific to the qemu test')
@@ -268,7 +278,7 @@ class VirtTestRunParser(optparse.OptionParser):
                         help=("Accelerator used to run qemu (kvm or tcg). "
                               "Default: kvm"))
         qemu.add_option("--nettype", action="store", dest="nettype",
-                        default="user",
+                        default=nettype_default,
                         help=("QEMU network option (bridge, user or none). "
                               "Default: %default"))
         qemu.add_option("--netdst", action="store", dest="netdst",
@@ -580,7 +590,11 @@ class VirtTestApp(object):
     def _process_tests(self):
         if not self.options.config:
             if self.options.type:
-                if self.options.tests:
+                if self.options.tests and self.options.dropin:
+                    print("Option --tests and --run-dropin can't be set at "
+                          "the same time")
+                    sys.exit(1)
+                elif self.options.tests:
                     tests = self.options.tests.split(" ")
                     if self.options.type == 'libvirt':
                         if self.options.install_guest:
@@ -588,6 +602,16 @@ class VirtTestApp(object):
                         if self.options.remove_guest:
                             tests.append(LIBVIRT_REMOVE)
                     self.cartesian_parser.only_filter(", ".join(tests))
+                elif self.options.dropin:
+                    from virttest import data_dir
+                    dropin_tests = os.listdir(os.path.join(data_dir.get_root_dir(), "dropin"))
+                    if len(dropin_tests) <= 1:
+                        _restore_stdout()
+                        print("No drop in tests detected, aborting. "
+                              "Make sure you have scripts on the 'dropin' "
+                              "directory")
+                        sys.exit(1)
+                    self.cartesian_parser.only_filter("dropin")
                 else:
                     if self.options.type == 'qemu':
                         self.cartesian_parser.only_filter(QEMU_DEFAULT_SET)
@@ -655,7 +679,6 @@ class VirtTestApp(object):
         self._process_qemu_img()
         self._process_bridge_mode()
         self._process_only_type_specific()
-
 
     def _process_options(self):
         """

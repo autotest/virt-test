@@ -143,7 +143,7 @@ def run_migration_with_dst_problem(test, params, env):
         disks = session.cmd("ls %s" % disk_path).split("\n")
         session.close()
         disk = filter(lambda x: x.endswith(disk_serial), disks)
-        if disk is []:
+        if not disk:
             return None
         return os.path.join(disk_path, disk[0])
 

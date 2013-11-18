@@ -488,6 +488,28 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
+        def add_security(help_text, sec_type, sec_label=None, sec_relabel=None):
+            """
+            Return security options for install command.
+            """
+            if has_option(help_text, "security"):
+                result = " --security"
+                if sec_type == 'static':
+                    if sec_label is None:
+                        raise ValueError("Seclabel is not setted for static.")
+                    result += " type=static,label=%s" % (sec_label)
+                elif sec_type == 'dynamic':
+                    result += " type=dynamic"
+                else:
+                    raise ValueError("Security type %s is not supported."
+                                     % sec_type)
+                if sec_relabel is not None:
+                    result += ",relabel=%s" % sec_relabel
+            else:
+                result = ""
+
+            return result
+
         def add_nic(help_text, nic_params):
             """
             Return additional command line params based on dict-like nic_params
@@ -806,6 +828,14 @@ class VM(virt_vm.BaseVM):
 
         virt_install_cmd += " --noautoconsole"
 
+        sec_type = params.get("sec_type", None)
+        if sec_type:
+            sec_label = params.get("sec_label", None)
+            sec_relabel = params.get("sec_relabel", None)
+            virt_install_cmd += add_security(help_text, sec_type=sec_type,
+                                             sec_label=sec_label,
+                                             sec_relabel=sec_relabel)
+
         return virt_install_cmd
 
     def get_serial_console_filename(self, name):
@@ -825,11 +855,10 @@ class VM(virt_vm.BaseVM):
                 self.params.objects("isa_serials")]
 
     def setup_serial_ports(self):
-        if self.serial_ports is not None:
-            return   # Assume they're already set up
-        self.serial_ports = []
-        for serial in self.params.objects("isa_serials"):
-            self.serial_ports.append(serial)
+        if self.serial_ports is None:
+            self.serial_ports = []
+            for serial in self.params.objects("isa_serials"):
+                self.serial_ports.append(serial)
         if self.serial_console is None:
             # Attempt to setup serial0
             try:
@@ -1174,7 +1203,6 @@ class VM(virt_vm.BaseVM):
         self.setup_serial_ports()
         return result
 
-
     def attach_interface(self, option="", ignore_status=False,
                          debug=False):
         """
@@ -1194,29 +1222,6 @@ class VM(virt_vm.BaseVM):
                                       uri=self.connect_uri,
                                       ignore_status=ignore_status,
                                       debug=debug)
-
-    def attach_disk(self, source, target, extra=""):
-        """
-        Attach a disk to VM.
-        """
-        cmd_result = virsh.attach_disk(self.name, source=source,
-                                       target=target,
-                                       extra=extra,
-                                       uri=self.connect_uri)
-        if cmd_result.exit_status:
-            raise error.TestFail("Attach disk %s to %s on VM %s failed."
-                                 % (source, target, self.name))
-
-    def detach_disk(self, target, extra=""):
-        """
-        Detach a disk from VM.
-        """
-        cmd_result = virsh.detach_disk(self.name, target=target,
-                                       extra=extra,
-                                       uri=self.connect_uri)
-        if cmd_result.exit_status:
-            raise error.TestFail("Dettach disk %s from VM %s failed."
-                                 % (target, self.name))
 
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """

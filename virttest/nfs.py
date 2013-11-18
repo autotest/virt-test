@@ -6,8 +6,13 @@ import re
 import os
 import logging
 from autotest.client import os_dep
-from autotest.client.shared import utils, service, error
-import utils_misc
+from autotest.client.shared import utils, error
+from virttest import utils_misc
+
+try:
+    from autotest.client.shared import service
+except ImportError:
+    from virttest.staging import service
 
 
 def nfs_exported():

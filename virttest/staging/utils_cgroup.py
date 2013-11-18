@@ -345,7 +345,8 @@ class Cgroup(object):
             pwd = self.cgroups[pwd]
         try:
             # Remove tailing '\n' from each line
-            ret = [_[:-1] for _ in open(os.path.join(pwd, prop), 'r')]
+            file_link = os.path.join(pwd, prop)
+            ret = [_[:-1].replace("\t", " ") for _ in open(file_link, 'r')]
             if ret:
                 return ret
             else:

@@ -140,6 +140,8 @@ class VM(virt_vm.BaseVM):
             self.instance = state['instance']
         self.qemu_command = ''
         self.start_time = 0.0
+        self.last_boot_index = 0
+        self.last_driver_index = 0
 
     def verify_alive(self):
         """
@@ -465,7 +467,7 @@ class VM(virt_vm.BaseVM):
             cmd += _add_option("iobase", "0x402")
             return cmd
 
-        def add_log_anaconda(devices):
+        def add_log_anaconda(devices, pci_bus='pci.0'):
             chardev_id = "anacondalog_chardev_%s" % self.instance
             vioser_id = "anacondalog_vioser_%s" % self.instance
             filename = "/tmp/anaconda-%s" % self.instance
@@ -477,7 +479,7 @@ class VM(virt_vm.BaseVM):
             dev.set_param("server", 'NO_EQUAL_STRING')
             dev.set_param("nowait", 'NO_EQUAL_STRING')
             devices.insert(dev)
-            dev = QDevice('virtio-serial-pci', parent_bus={'type': 'pci'})
+            dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
             dev.set_param("id", vioser_id)
             devices.insert(dev)
             dev = QDevice('virtserialport')
@@ -501,7 +503,7 @@ class VM(virt_vm.BaseVM):
 
         def add_nic(devices, vlan, model=None, mac=None, device_id=None,
                     netdev_id=None, nic_extra_params=None, pci_addr=None,
-                    bootindex=None, queues=1, vectors=None):
+                    bootindex=None, queues=1, vectors=None, pci_bus='pci.0'):
             if model == 'none':
                 return
             if devices.has_option("device"):
@@ -517,7 +519,7 @@ class VM(virt_vm.BaseVM):
                 # value by parsing the xml file, i.e. counting all the
                 # pci devices and store the number.
                 if model != 'spapr-vlan':
-                    dev.parent_bus = {'type': 'pci'}
+                    dev.parent_bus = pci_bus
                     dev.set_param('addr', pci_addr)
                 if nic_extra_params:
                     nic_extra_params = (_.split('=', 1) for _ in
@@ -644,20 +646,21 @@ class VM(virt_vm.BaseVM):
         def add_uuid(devices, uuid):
             return " -uuid '%s'" % uuid
 
-        def add_pcidevice(devices, host, params, device_driver="pci-assign"):
+        def add_pcidevice(devices, host, params, device_driver="pci-assign",
+                          pci_bus='pci.0'):
             if device_driver == "pci-assign":
                 if (devices.has_device("pci-assign") or
                    devices.has_device("kvm-pci-assign")):
-                    dev = QDevice(device_driver, parent_bus={'type': 'pci'})
+                    dev = QDevice(device_driver, parent_bus=pci_bus)
                 else:
                     dev = qemu_devices.QCustomDevice('pcidevice',
-                                                     parent_bus={'type': 'pci'})
+                                                     parent_bus=pci_bus)
             else:
                 if devices.has_device(device_driver):
-                    dev = QDevice(device_driver, parent_bus={'type': 'pci'})
+                    dev = QDevice(device_driver, parent_bus=pci_bus)
                 else:
                     dev = qemu_devices.QCustomDevice('pcidevice',
-                                                     parent_bus={'type': 'pci'})
+                                                     parent_bus=pci_bus)
             help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
             pcidevice_help = utils.system_output(help_cmd)
             dev.set_param('host', host)
@@ -760,7 +763,7 @@ class VM(virt_vm.BaseVM):
                 host_ip = utils_net.get_host_ip_address(self.params)
                 self.spice_options['listening_addr'] = "ipv4"
                 spice_opts.append("addr=%s" % host_ip)
-                #set_value("addr=%s", "listening_addr", )
+                # set_value("addr=%s", "listening_addr", )
             elif optget("listening_addr") == "ipv6":
                 host_ip = utils_net.get_host_ip_address(self.params)
                 host_ip_ipv6 = utils_misc.convert_ipv4_to_ipv6(host_ip)
@@ -1002,6 +1005,7 @@ class VM(virt_vm.BaseVM):
         have_ahci = False
         have_virtio_scsi = False
         virtio_scsi_pcis = []
+        pci_bus = {'aobject': params.get('pci_bus', 'pci.0')}
 
         # init value by default.
         # PCI addr 0,1,2 are taken by PCI/ISA/IDE bridge and the GPU.
@@ -1015,16 +1019,16 @@ class VM(virt_vm.BaseVM):
         ide_unit = 0
         vdisk = 0
         scsi_disk = 0
-        global_image_bootindex = 0
+        self.last_boot_index = 0
         if params.get("kernel"):
-            global_image_bootindex = 1
+            self.last_boot_index = 1
 
         qemu_binary = utils_misc.get_qemu_binary(params)
 
         self.qemu_binary = qemu_binary
         support_cpu_model = commands.getoutput("%s -cpu \\?" % qemu_binary)
 
-        index_global = 0
+        self.last_driver_index = 0
         # init the dict index_in_use
         for key in params.keys():
             if 'drive_index' in key:
@@ -1087,9 +1091,9 @@ class VM(virt_vm.BaseVM):
         vga = params.get("vga")
         if vga:
             if vga != 'none':
-                devices.insert(StrDev('VGA-%s' % vga, {'addr': 2},
+                devices.insert(StrDev('VGA-%s' % vga,
                                       cmdline=add_vga(vga),
-                                      parent_bus={'type': 'pci'}))
+                                      parent_bus={'aobject': 'pci.0'}))
             else:
                 devices.insert(StrDev('VGA-none', cmdline=add_vga(vga)))
 
@@ -1099,12 +1103,17 @@ class VM(virt_vm.BaseVM):
                 devices.insert(StrDev('qxl',
                                       cmdline=add_qxl(qxl_dev_nr, qxl_dev_memory)))
         elif params.get('defaults', 'no') != 'no':  # by default add cirrus
-            devices.insert(StrDev('VGA-cirrus', {'addr': 2},
+            devices.insert(StrDev('VGA-cirrus',
                                   cmdline=add_vga(vga),
-                                  parent_bus={'type': 'pci'}))
+                                  parent_bus={'aobject': 'pci.0'}))
 
         # When old scsi fmt is used, new device with lowest pci_addr is created
         devices.hook_fill_scsi_hbas(params)
+
+        # Additional PCI RC/switch/bridges
+        for pcic in params.objects("pci_controllers"):
+            devs = devices.pcic_by_params(pcic, params.object_params(pcic))
+            devices.insert(devs)
 
         # -soundhw addresses are always the lowest after scsi
         soundhw = params.get("soundcards")
@@ -1113,7 +1122,7 @@ class VM(virt_vm.BaseVM):
                 for sndcard in ('AC97', 'ES1370', 'intel-hda'):
                     # Add all dummy PCI devices and the actuall command below
                     devices.insert(StrDev("SND-%s" % sndcard,
-                                          parent_bus={'type': 'pci'}))
+                                          parent_bus=pci_bus))
                 devices.insert(StrDev('SoundHW',
                                       cmdline="-soundhw %s" % soundhw))
             else:
@@ -1121,14 +1130,14 @@ class VM(virt_vm.BaseVM):
                 for sound_device in soundhw.split(","):
                     if "hda" in sound_device:
                         devices.insert(QDevice('intel-hda',
-                                               parent_bus={'type': 'pci'}))
+                                               parent_bus=pci_bus))
                         devices.insert(QDevice('hda-duplex'))
                     elif sound_device in ["es1370", "ac97"]:
                         devices.insert(QDevice(sound_device.upper(),
-                                               parent_bus={'type': 'pci'}))
+                                               parent_bus=pci_bus))
                     else:
                         devices.insert(QDevice(sound_device,
-                                               parent_bus={'type': 'pci'}))
+                                               parent_bus=pci_bus))
 
         # Add monitors
         for monitor_name in params.objects("monitors"):
@@ -1171,7 +1180,7 @@ class VM(virt_vm.BaseVM):
                     bus = 0
             # Add virtio_serial_pcis
             for i in range(no_virtio_serial_pcis, bus + 1):
-                dev = QDevice('virtio-serial-pci', parent_bus={'type': 'pci'})
+                dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
                 dev.set_param('id', 'virtio_serial_pci%d' % i)
                 devices.insert(dev)
                 no_virtio_serial_pcis += 1
@@ -1191,7 +1200,7 @@ class VM(virt_vm.BaseVM):
         # Add logging
         devices.insert(StrDev('isa-log', cmdline=add_log_seabios(devices)))
         if params.get("anaconda_log", "no") == "yes":
-            add_log_anaconda(devices)
+            add_log_anaconda(devices, pci_bus)
 
         # Add USB controllers
         usbs = params.objects("usbs")
@@ -1213,9 +1222,9 @@ class VM(virt_vm.BaseVM):
                 if drive_index:
                     index = drive_index
                 else:
-                    index_global = get_index(index_global)
-                    index = str(index_global)
-                    index_global += 1
+                    self.last_driver_index = get_index(self.last_driver_index)
+                    index = str(self.last_driver_index)
+                    self.last_driver_index += 1
             else:
                 index = None
             image_bootindex = None
@@ -1223,16 +1232,16 @@ class VM(virt_vm.BaseVM):
             if not re.search("boot=on\|off", devices.get_help_text(),
                              re.MULTILINE):
                 if image_boot in ['yes', 'on', True]:
-                    image_bootindex = str(global_image_bootindex)
-                    global_image_bootindex += 1
+                    image_bootindex = str(self.last_boot_index)
+                    self.last_boot_index += 1
                 image_boot = "unused"
                 image_bootindex = image_params.get('bootindex',
                                                    image_bootindex)
             else:
                 if image_boot in ['yes', 'on', True]:
-                    if global_image_bootindex > 0:
+                    if self.last_boot_index > 0:
                         image_boot = False
-                    global_image_bootindex += 1
+                    self.last_boot_index += 1
             image_params = params.object_params(image_name)
             if image_params.get("boot_drive") == "no":
                 continue
@@ -1305,7 +1314,7 @@ class VM(virt_vm.BaseVM):
                 add_nic(devices, vlan, nic_model, mac,
                         device_id, netdev_id, nic_extra,
                         nic_params.get("nic_pci_addr"),
-                        bootindex, queues, vectors)
+                        bootindex, queues, vectors, pci_bus)
 
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 cmd = add_net(devices, vlan, nettype, ifname, tftp,
@@ -1318,7 +1327,8 @@ class VM(virt_vm.BaseVM):
                 device_driver = nic_params.get("device_driver", "pci-assign")
                 pci_id = vm.pa_pci_ids[iov]
                 add_pcidevice(devices, pci_id, params=nic_params,
-                              device_driver=device_driver)
+                              device_driver=device_driver,
+                              pci_bus=pci_bus)
                 iov += 1
 
         mem = params.get("mem")
@@ -1428,9 +1438,9 @@ class VM(virt_vm.BaseVM):
                 if drive_index:
                     index = drive_index
                 else:
-                    index_global = get_index(index_global)
-                    index = str(index_global)
-                    index_global += 1
+                    self.last_driver_index = get_index(self.last_driver_index)
+                    index = str(self.last_driver_index)
+                    self.last_driver_index += 1
             else:
                 index = None
             image_bootindex = None
@@ -1438,16 +1448,16 @@ class VM(virt_vm.BaseVM):
             if not re.search("boot=on\|off", devices.get_help_text(),
                              re.MULTILINE):
                 if image_boot in ['yes', 'on', True]:
-                    image_bootindex = str(global_image_bootindex)
-                    global_image_bootindex += 1
+                    image_bootindex = str(self.last_boot_index)
+                    self.last_boot_index += 1
                 image_boot = "unused"
                 image_bootindex = image_params.get(
                     'bootindex', image_bootindex)
             else:
                 if image_boot in ['yes', 'on', True]:
-                    if global_image_bootindex > 0:
+                    if self.last_boot_index > 0:
                         image_boot = False
-                    global_image_bootindex += 1
+                    self.last_boot_index += 1
             iso = image_params.get("cdrom")
             if iso or image_params.get("cdrom_without_file") == "yes":
                 devs = devices.cdroms_define_by_params(cdrom, image_params,
@@ -1544,12 +1554,12 @@ class VM(virt_vm.BaseVM):
                     "listening_addr"
                 )
 
-            for skey in spice_keys:
-                value = params.get(skey, None)
-                if value:
-                    self.spice_options[skey] = value
+                for skey in spice_keys:
+                    value = params.get(skey, None)
+                    if value:
+                        self.spice_options[skey] = value
 
-            cmd += add_spice()
+                cmd += add_spice()
         if cmd:
             devices.insert(StrDev('display', cmdline=cmd))
 
@@ -1617,7 +1627,7 @@ class VM(virt_vm.BaseVM):
 
             devices.insert(StrDev('fsdev', cmdline=cmd))
 
-            dev = QDevice('virtio-9p-pci', parent_bus={'type': 'pci'})
+            dev = QDevice('virtio-9p-pci', parent_bus=pci_bus)
             dev.set_param('fsdev', 'local1')
             dev.set_param('mount_tag', 'autotest_tag')
             devices.insert(dev)
@@ -1710,6 +1720,10 @@ class VM(virt_vm.BaseVM):
                 if nic.vhostfds:
                     for i in nic.vhostfds.split(':'):
                         os.close(int(i))
+                if nic.ifname and nic.ifname not in utils_net.get_net_if():
+                    _, br_name = utils_net.find_current_bridge(nic.ifname)
+                    if br_name == nic.netdst:
+                        utils_net.del_from_bridge(nic.ifname, nic.netdst)
         except TypeError:
             pass
 
@@ -1809,11 +1823,19 @@ class VM(virt_vm.BaseVM):
             redir_names = params.objects("redirs")
             host_ports = utils_misc.find_free_ports(
                 5000, 6000, len(redir_names))
+
+            old_redirs = None
+            if self.redirs:
+                old_redirs = self.redirs
+
             self.redirs = {}
             for i in range(len(redir_names)):
                 redir_params = params.object_params(redir_names[i])
                 guest_port = int(redir_params.get("guest_port"))
                 self.redirs[guest_port] = host_ports[i]
+
+            if self.redirs != old_redirs:
+                self.devices = None
 
             # Generate basic parameter values for all NICs and create TAP fd
             for nic in self.virtnet:
@@ -1860,6 +1882,10 @@ class VM(virt_vm.BaseVM):
                         nic.mac = mac_source.get_mac_address(nic.nic_name)
                     if nic.ifname in utils_net.get_net_if():
                         self.virtnet.generate_ifname(nic.nic_name)
+                    elif (utils_net.find_current_bridge(nic.ifname)[1]
+                            == nic.netdst):
+                        utils_net.del_from_bridge(nic.ifname, nic.netdst)
+
                     if nic.nettype in ['bridge', 'network', 'macvtap']:
                         self._nic_tap_add_helper(nic)
                     if ((nic_params.get("vhost") == 'vhost=on') and
@@ -1970,6 +1996,8 @@ class VM(virt_vm.BaseVM):
             self.process = aexpect.run_bg(qemu_command, None,
                                           logging.info, "[qemu output] ",
                                           auto_close=False)
+            logging.info("Created qemu process with parent PID %d",
+                         self.process.get_pid())
             self.start_time = time.time()
 
             # test doesn't need to hold tapfd's open
@@ -2260,6 +2288,10 @@ class VM(virt_vm.BaseVM):
             if nic.nettype == 'macvtap':
                 tap = utils_net.Macvtap(nic.ifname)
                 tap.delete()
+            elif nic.ifname and nic.ifname not in utils_net.get_net_if():
+                _, br_name = utils_net.find_current_bridge(nic.ifname)
+                if br_name == nic.netdst:
+                    utils_net.del_from_bridge(nic.ifname, nic.netdst)
 
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
@@ -2940,6 +2972,7 @@ class VM(virt_vm.BaseVM):
                             "spice_migrate_info",
                             "client_migrate_info"]
 
+                cmdline = ""
                 for command in commands:
                     try:
                         self.monitor.verify_supported_cmd(command)
@@ -2957,7 +2990,8 @@ class VM(virt_vm.BaseVM):
                     if cert_subj:
                         cmdline += ",cert-subject=%s" % cert_subj
                     break
-                self.monitor.send_args_cmd(cmdline)
+                if cmdline:
+                    self.monitor.send_args_cmd(cmdline)
 
             if protocol in ["tcp", "rdma", "x-rdma"]:
                 if local:
