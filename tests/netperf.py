@@ -314,10 +314,10 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
                 normal = thu / cpu
                 if ret.get('rx_pkts') and ret.get('irq_inj'):
-                    ret['tpkt_per_exit'] = float(
+                    ret['rpkt_per_exit'] = float(
                         ret['rx_pkts']) / float(ret['irq_inj'])
                 if ret.get('tx_pkts') and ret.get('io_exit'):
-                    ret['rpkt_per_irq'] = float(
+                    ret['tpkt_per_irq'] = float(
                         ret['tx_pkts']) / float(ret['io_exit'])
                 ret['size'] = int(i)
                 ret['sessions'] = int(j)
