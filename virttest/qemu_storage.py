@@ -109,23 +109,24 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " %s" % self.size
 
-        image_dirname = os.path.dirname(self.image_filename)
-        if image_dirname and not os.path.isdir(image_dirname):
-            e_msg = ("Parent directory of the image file %s does "
-                     "not exist" % self.image_filename)
-            logging.error(e_msg)
-            logging.error("This usually means a serious setup error.")
-            logging.error("Please verify if your data dir contains the "
-                          "expected directory structure")
-            logging.error("Backing data dir: %s",
-                          data_dir.get_backing_data_dir())
-            logging.error("Directory structure:")
-            for root, _, _ in os.walk(data_dir.get_backing_data_dir()):
-                logging.error(root)
+        if (params.get("image_backend", "filesystem") != "filesystem"):
+            image_dirname = os.path.dirname(self.image_filename)
+            if image_dirname and not os.path.isdir(image_dirname):
+                e_msg = ("Parent directory of the image file %s does "
+                         "not exist" % self.image_filename)
+                logging.error(e_msg)
+                logging.error("This usually means a serious setup error.")
+                logging.error("Please verify if your data dir contains the "
+                              "expected directory structure")
+                logging.error("Backing data dir: %s",
+                              data_dir.get_backing_data_dir())
+                logging.error("Directory structure:")
+                for root, _, _ in os.walk(data_dir.get_backing_data_dir()):
+                    logging.error(root)
 
-            logging.warning("We'll try to proceed by creating the dir. "
-                            "Other errors may ensue")
-            os.makedirs(image_dirname)
+                logging.warning("We'll try to proceed by creating the dir. "
+                                "Other errors may ensue")
+                os.makedirs(image_dirname)
 
         msg = "Create image by command: %s" % qemu_img_cmd
         error.context(msg, logging.info)

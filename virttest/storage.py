@@ -33,12 +33,40 @@ def preprocess_images(bindir, params, env):
             image_obj.clone_image(params, vm_name, image, bindir)
 
 
+def preprocess_image_backend(bindir, params, env):
+    gluster_image = params.get("gluster_brick")
+    if gluster_image:
+        return gluster.create_gluster_vol(params)
+
+    return True
+
+
+
 def postprocess_images(bindir, params):
     for vm in params.get("vms").split():
         vm_params = params.object_params(vm)
         for image in vm_params.get("master_images_clone").split():
             image_obj = QemuImg(params, bindir, image)
             image_obj.rm_cloned_image(params, vm, image, bindir)
+
+
+def file_exists(params, filename_path):
+    """
+    Check if image_filename exists.
+
+    :param params: Dictionary containing the test parameters.
+    :param filename_path: path to file
+    :type filename_path: str
+    :param root_dir: Base directory for relative filenames.
+    :type root_dir: str
+
+    :return: True if image file exists else False
+    """
+    gluster_image = params.get("gluster_brick")
+    if gluster_image:
+        return gluster.file_exists(params, filename_path)
+
+    return os.path.exists(filename_path)
 
 
 def get_image_blkdebug_filename(params, root_dir):
@@ -62,6 +90,29 @@ def get_image_blkdebug_filename(params, root_dir):
 
 
 def get_image_filename(params, root_dir):
+    """
+    Generate an image path from params and root_dir.
+
+    :param params: Dictionary containing the test parameters.
+    :param root_dir: Base directory for relative filenames.
+    :param image_name: Force name of image.
+    :param image_format: Format for image.
+
+    :note: params should contain:
+           image_name -- the name of the image file, without extension
+           image_format -- the format of the image (qcow2, raw etc)
+    :raise VMDeviceError: When no matching disk found (in indirect method).
+    """
+    gluster_image = params.get("gluster_brick")
+    if gluster_image:
+        image_name = params.get("image_name", "image")
+        image_format = params.get("image_format", "qcow2")
+        return gluster.get_image_filename(params, image_name, image_format)
+
+    return get_image_filename_filesytem(params, root_dir)
+
+
+def get_image_filename_filesytem(params, root_dir):
     """
     Generate an image path from params and root_dir.
 
@@ -122,19 +173,16 @@ def get_image_filename(params, root_dir):
                                             "selector = '%s'" %
                                             (re_name, matching_images,
                                              indirect_image_select))
+
     image_format = params.get("image_format", "qcow2")
-    gluster_image = params.get("gluster_brick")
     if params.get("image_raw_device") == "yes":
         return image_name
     if image_format:
         image_filename = "%s.%s" % (image_name, image_format)
     else:
         image_filename = image_name
-    if gluster_image:
-        image_filename = gluster.get_image_filename(params, image_name,
-                                                    image_format)
-    else:
-        image_filename = utils_misc.get_path(root_dir, image_filename)
+
+    image_filename = utils_misc.get_path(root_dir, image_filename)
     return image_filename
 
 
@@ -172,6 +220,7 @@ class QemuImg(object):
         self.image_blkdebug_filename = get_image_blkdebug_filename(params,
                                                                    root_dir)
         image_chain = params.get("image_chain")
+        self.root_dir = root_dir
         self.base_tag = None
         self.snapshot_tag = None
         if image_chain:
