@@ -93,6 +93,16 @@ def define_new_vm(vm_name, new_name):
         return False
 
 
+def umount_fs(mountpoint):
+    if os.path.ismount(mountpoint):
+        us, uo = commands.getstatusoutput("umount -l %s" % mountpoint)
+        if us:
+            logging.debug("Umount %s failed", mountpoint)
+            return False
+    logging.debug("Umount %s successfully", mountpoint)
+    return True
+
+
 def cleanup_vm(vm_name=None, disk=None):
     """
     Cleanup the vm with its disk deleted.
@@ -303,7 +313,8 @@ class VirtTools(object):
         return (True, mountpoint)
 
     def write_file_with_guestmount(self, mountpoint, path,
-                                   content=None, vm_ref=None):
+                                   content=None, vm_ref=None,
+                                   cleanup=True):
         """
         Write content to file with guestmount
         """
@@ -316,7 +327,7 @@ class VirtTools(object):
             return (False, gmo)
 
         # file's path on host's mountpoint
-        file_path = "%s/%s" % (mountpoint, path)
+        file_path = os.path.join(mountpoint, path)
         if content is None:
             content = "This is a temp file with guestmount."
         try:
@@ -326,10 +337,27 @@ class VirtTools(object):
         except IOError, detail:
             logging.error(detail)
             return (False, detail)
-        logging.info("Create file %s successfully", path)
+        logging.info("Create file %s successfully", file_path)
         # Cleanup created file
-        utils.run("rm -f %s" % file_path, ignore_status=True)
+        if cleanup:
+            utils.run("rm -f %s" % file_path, ignore_status=True)
         return (True, file_path)
+
+    def format(self, filesystem=None, partition=None, lvm=None):
+        # Only useful after attaching, otherwise, it will be None.
+        disk_path = self.params.get("added_disk_path")
+        result = lgf.virt_format(disk_path, filesystem,
+                                 lvm=lvm, partition=partition,
+                                 debug=True, ignore_status=True)
+        return result
+
+    def get_filesystems_info(self, vm_ref=None):
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        result = lgf.virt_filesystems(vm_ref, long_format=True,
+                                      debug=True, all=True,
+                                      ignore_status=True)
+        return result
 
 
 class GuestfishTools(lgf.GuestfishPersistent):
@@ -379,7 +407,6 @@ class GuestfishTools(lgf.GuestfishPersistent):
         for key in release_type:
             if re.search(release_type[key], release_result.stdout):
                 return (True, key)
-
 
     def write_file(self, path, content):
         """
