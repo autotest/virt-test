@@ -1320,3 +1320,63 @@ def virt_cat_cmd(disk_or_domain, file_path, options=None, ignore_status=True,
         cmd += " %s" % options
 
     return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_tar_in(disk_or_domain, tar_file, destination, is_disk=False,
+                ignore_status=True, debug=False, timeout=60):
+    """
+    "virt-tar-in" unpacks an uncompressed tarball into a virtual machine
+    disk image or named libvirt domain.
+    """
+    cmd = "virt-tar-in"
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
+    cmd += " %s %s" % (tar_file, destination)
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_tar_out(disk_or_domain, directory, tar_file, is_disk=False,
+                 ignore_status=True, debug=False, timeout=60):
+    """
+    "virt-tar-out" packs a virtual machine disk image directory into a tarball.
+    """
+    cmd = "virt-tar-out"
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
+    cmd += " %s %s" % (directory, tar_file)
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_copy_in(disk_or_domain, file, destination, is_disk=False,
+                 ignore_status=True, debug=False, timeout=60):
+    """
+    "virt-copy-in" copies files and directories from the local disk into a
+    virtual machine disk image or named libvirt domain.
+    #TODO: expand file to files
+    """
+    cmd = "virt-copy-in"
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
+    cmd += " %s %s" % (file, destination)
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_copy_out(disk_or_domain, file_path, localdir, is_disk=False,
+                  ignore_status=True, debug=False, timeout=60):
+    """
+    "virt-copy-out" copies files and directories out of a virtual machine
+    disk image or named libvirt domain.
+    """
+    cmd = "virt-copy-out"
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
+    cmd += " %s %s" % (file_path, localdir)
+    return lgf_command(cmd, ignore_status, debug, timeout)
