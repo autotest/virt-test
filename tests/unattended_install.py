@@ -766,21 +766,7 @@ class UnattendedInstallConfig(object):
             self.preseed_initrd()
 
         if self.params.get("vm_type") == "libvirt":
-            if self.vm.driver_type == 'qemu':
-                # Virtinstall command needs files "vmlinuz" and "initrd.img"
-                os.chdir(self.image_path)
-                base_kernel = os.path.basename(self.kernel)
-                base_initrd = os.path.basename(self.initrd)
-                if base_kernel != 'vmlinuz':
-                    utils.run("mv %s vmlinuz" % base_kernel, verbose=DEBUG)
-                if base_initrd != 'initrd.img':
-                    utils.run("mv %s initrd.img" % base_initrd, verbose=DEBUG)
-                if (self.params.get('unattended_delivery_method') !=
-                        'integrated'):
-                    i.close()
-                    utils_disk.cleanup(self.cdrom_cd1_mount)
-            elif ((self.vm.driver_type == 'xen') and
-                  (self.params.get('hvm_or_pv') == 'pv')):
+            if self.vm.is_xen():
                 logging.debug("starting unattended content web server")
 
                 self.url_auto_content_port = utils_misc.find_free_port(8100,
@@ -813,6 +799,19 @@ class UnattendedInstallConfig(object):
                                                (self.url_auto_content_ip,
                                                 self.url_auto_content_port),
                                                 self.kernel_params)
+            else:
+                # Virtinstall command needs files "vmlinuz" and "initrd.img"
+                os.chdir(self.image_path)
+                base_kernel = os.path.basename(self.kernel)
+                base_initrd = os.path.basename(self.initrd)
+                if base_kernel != 'vmlinuz':
+                    utils.run("mv %s vmlinuz" % base_kernel, verbose=DEBUG)
+                if base_initrd != 'initrd.img':
+                    utils.run("mv %s initrd.img" % base_initrd, verbose=DEBUG)
+                if (self.params.get('unattended_delivery_method') !=
+                        'integrated'):
+                    i.close()
+                    utils_disk.cleanup(self.cdrom_cd1_mount)
 
     @error.context_aware
     def setup_url_auto(self):

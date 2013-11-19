@@ -139,9 +139,6 @@ class VM(virt_vm.BaseVM):
         # This structure can used in usb hotplug/unplug test.
         self.usb_dev_dict = {}
         self.logsessions = {}
-        self.driver_type = 'qemu'
-        self.params['driver_type_' + self.name] = self.driver_type
-        # virtnet init depends on vm_type/driver_type being set w/in params
         super(VM, self).__init__(name, params)
         # un-overwrite instance attribute, virtnet db lookups depend on this
         if state:

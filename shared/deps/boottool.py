@@ -1279,8 +1279,6 @@ class Grubby(object):
         :param position: where to insert the new entry in the bootloader
                 config file (default 'end', other valid input 'start', or
                 # of the title)
-        :param xen_hypervisor: xen hypervisor image file (valid only when
-                xen mode is enabled)
         """
         if title in self.get_titles():
             self.remove_kernel(title)

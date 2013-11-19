@@ -74,10 +74,6 @@ def run(test, params, env):
         regex = r'\s+\[--size\]\s+'
         return bool(not virsh.has_command_help_match('setmaxmem', regex))
 
-    def is_xen_host():
-        check_cmd = "ls /dev/kvm"
-        return utils.run(check_cmd, ignore_status=True).exit_status
-
     def is_in_range(actual, expected, error_percent):
         deviation = 100 - (100 * (float(actual) / float(expected)))
         logging.debug("Deviation: %0.2f%%", float(deviation))
@@ -130,7 +126,7 @@ def run(test, params, env):
         logging.info("Running test on newer libvirt")
         use_kilobytes = False
 
-    xen_host = is_xen_host()
+    xen_host = vm.is_xen()
     if xen_host:
         logging.info("Running on xen host, %s offset is allowed.", delta_per)
 

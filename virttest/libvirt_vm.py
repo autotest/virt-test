@@ -129,15 +129,13 @@ class VM(virt_vm.BaseVM):
         self.vnclisten = "0.0.0.0"
         self.connect_uri = normalize_connect_uri(params.get("connect_uri",
                                                             "default"))
-        if self.connect_uri:
-            self.driver_type = virsh.driver(uri=self.connect_uri)
-        else:
-            self.driver_type = 'qemu'
-        self.params['driver_type_' + self.name] = self.driver_type
-        # virtnet init depends on vm_type/driver_type being set w/in params
-        super(VM, self).__init__(name, params)
-        logging.info("Libvirt VM '%s', driver '%s', uri '%s'",
-                     self.name, self.driver_type, self.connect_uri)
+
+    def is_xen(self):
+        """Return true if this is a xen VM"""
+        if virsh.driver(uri=self.connect_uri) == 'xen':
+            if self.params.get('hvm_or_pv', 'hvm') == 'pv':
+                return True
+        return False
 
     def verify_alive(self):
         """
@@ -754,8 +752,7 @@ class VM(virt_vm.BaseVM):
 
         unattended_integrated = (params.get('unattended_delivery_method') !=
                                  'integrated')
-        xen_pv = self.driver_type == 'xen' and params.get('hvm_or_pv') == 'pv'
-        if unattended_integrated and not xen_pv:
+        if unattended_integrated and not self.is_xen():
             for cdrom in params.objects("cdroms"):
                 cdrom_params = params.object_params(cdrom)
                 iso = cdrom_params.get("cdrom")
@@ -1036,10 +1033,8 @@ class VM(virt_vm.BaseVM):
                 break
             cdrom_params = params.object_params(cdrom)
             iso = cdrom_params.get("cdrom")
-            xen_pv = (self.driver_type == 'xen' and
-                      params.get('hvm_or_pv') == 'pv')
             iso_is_ks = os.path.basename(iso) == 'ks.iso'
-            if xen_pv and iso_is_ks:
+            if self.is_xen() and iso_is_ks:
                 continue
             if iso:
                 iso = utils_misc.get_path(data_dir.get_data_dir(), iso)

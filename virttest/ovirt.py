@@ -104,7 +104,6 @@ class VMManager(virt_vm.BaseVM):
         self.root_dir = root_dir
         self.address_cache = address_cache
         self.vnclisten = "0.0.0.0"
-        self.driver_type = "v2v"
 
         super(VMManager, self).__init__(self.name, params)
         (self.api, self.version) = connect(params)
