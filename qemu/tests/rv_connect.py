@@ -204,10 +204,6 @@ def launch_rv(client_vm, guest_vm, params):
     if menu == "yes":
         utils_spice.wait_timeout(1)
         str_input(client_vm, line)
-        client_vm.send_key("tab")
-        client_vm.send_key("tab")
-        client_vm.send_key("tab")
-        client_vm.send_key("kp_enter")
 
     # client waits for user entry (authentication) if spice_password is set
     # use qemu monitor password if set, else check if the normal password is
