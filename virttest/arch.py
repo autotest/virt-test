@@ -55,6 +55,8 @@ else:
 
 def get_kvm_module_list():
     if ARCH == 'x86_64':
-        return ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+        arch_convert = {'GenuineIntel': 'intel', 'AuthenticAMD': 'amd'}
+        host_cpu_type = utils_misc.get_cpu_vendor(verbose=False)
+        return ["kvm", "kvm-%s" % arch_convert[host_cpu_type]]
     elif ARCH == 'ppc64':
         return ["kvm"]
