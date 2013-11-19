@@ -288,7 +288,7 @@ class PoolXML(PoolXMLBase):
             xml_file = tempfile.mktemp(dir="/tmp")
             virsh_instance.pool_dumpxml(name, to_file=xml_file)
             return xml_file
-        except Exception as detail:
+        except Exception, detail:
             if os.path.exists(xml_file):
                 os.remove(xml_file)
             logging.error("Failed to backup xml file:\n%s", detail)
