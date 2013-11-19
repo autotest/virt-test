@@ -581,189 +581,6 @@ def get_vendor_from_pci_id(pci_id):
     return re.sub(":", " ", commands.getoutput(cmd))
 
 
-class Flag(str):
-
-    """
-    Class for easy merge cpuflags.
-    """
-    aliases = {}
-
-    def __new__(cls, flag):
-        if flag in Flag.aliases:
-            flag = Flag.aliases[flag]
-        return str.__new__(cls, flag)
-
-    def __eq__(self, other):
-        s = set(self.split("|"))
-        o = set(other.split("|"))
-        if s & o:
-            return True
-        else:
-            return False
-
-    def __str__(self):
-        return self.split("|")[0]
-
-    def __repr__(self):
-        return self.split("|")[0]
-
-    def __hash__(self, *args, **kwargs):
-        return 0
-
-
-kvm_map_flags_to_test = {
-    Flag('avx'): set(['avx']),
-    Flag('sse3|pni'): set(['sse3']),
-    Flag('ssse3'): set(['ssse3']),
-    Flag('sse4.1|sse4_1|sse4.2|sse4_2'): set(['sse4']),
-    Flag('aes'): set(['aes', 'pclmul']),
-    Flag('pclmuldq'): set(['pclmul']),
-    Flag('pclmulqdq'): set(['pclmul']),
-    Flag('rdrand'): set(['rdrand']),
-    Flag('sse4a'): set(['sse4a']),
-    Flag('fma4'): set(['fma4']),
-    Flag('xop'): set(['xop']),
-}
-
-
-kvm_map_flags_aliases = {
-    'sse4_1': 'sse4.1',
-    'sse4_2': 'sse4.2',
-    'pclmuldq': 'pclmulqdq',
-    'sse3': 'pni',
-    'ffxsr': 'fxsr_opt',
-    'xd': 'nx',
-    'i64': 'lm',
-           'psn': 'pn',
-           'clfsh': 'clflush',
-           'dts': 'ds',
-           'htt': 'ht',
-           'CMPXCHG8B': 'cx8',
-           'Page1GB': 'pdpe1gb',
-           'LahfSahf': 'lahf_lm',
-           'ExtApicSpace': 'extapic',
-           'AltMovCr8': 'cr8_legacy',
-           'cr8legacy': 'cr8_legacy'
-}
-
-
-def kvm_flags_to_stresstests(flags):
-    """
-    Covert [cpu flags] to [tests]
-
-    :param cpuflags: list of cpuflags
-    :return: Return tests like string.
-    """
-    tests = set([])
-    for f in flags:
-        tests |= kvm_map_flags_to_test[f]
-    param = ""
-    for f in tests:
-        param += "," + f
-    return param
-
-
-def get_cpu_flags():
-    """
-    Returns a list of the CPU flags
-    """
-    flags_re = re.compile(r'^flags\s*:(.*)')
-    for line in open('/proc/cpuinfo').readlines():
-        match = flags_re.match(line)
-        if match:
-            return match.groups()[0].split()
-    return []
-
-
-def get_cpu_vendor(cpu_flags=[], verbose=True):
-    """
-    Returns the name of the CPU vendor, either intel, amd or unknown
-    """
-    if not cpu_flags:
-        cpu_flags = get_cpu_flags()
-
-    if 'vmx' in cpu_flags:
-        vendor = 'intel'
-    elif 'svm' in cpu_flags:
-        vendor = 'amd'
-    elif ARCH == 'ppc64':
-        vendor = 'ibm'
-    else:
-        vendor = 'unknown'
-
-    if verbose:
-        logging.debug("Detected CPU vendor as '%s'", vendor)
-    return vendor
-
-
-def get_support_machine_type(qemu_binary="/usr/libexec/qemu-kvm"):
-    """
-    Get the machine type the host support,return a list of machine type
-    """
-    o = utils.system_output("%s -M ?" % qemu_binary)
-    s = re.findall("(\S*)\s*RHEL\s", o)
-    c = re.findall("(RHEL.*PC)", o)
-    return (s, c)
-
-
-def get_cpu_model():
-    """
-    Get cpu model from host cpuinfo
-    """
-    def _make_up_pattern(flags):
-        """
-        Update the check pattern to a certain order and format
-        """
-        pattern_list = re.split(",", flags.strip())
-        pattern_list.sort()
-        pattern = r"(\b%s\b)" % pattern_list[0]
-        for i in pattern_list[1:]:
-            pattern += r".+(\b%s\b)" % i
-        return pattern
-
-    cpu_types = {"amd": ["Opteron_G5", "Opteron_G4", "Opteron_G3",
-                         "Opteron_G2", "Opteron_G1"],
-                 "intel": ["Haswell", "SandyBridge", "Westmere",
-                           "Nehalem", "Penryn", "Conroe"]}
-    cpu_type_re = {"Opteron_G5":
-                   "f16c,fma,tbm",
-                   "Opteron_G4":
-                   "avx,xsave,aes,sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3,sse4a",
-                   "Opteron_G3": "cx16,sse4a",
-                   "Opteron_G2": "cx16",
-                   "Opteron_G1": "",
-                   "Haswell":
-                   "fsgsbase,bmi1,hle,avx2,smep,bmi2,erms,invpcid,rtm",
-                   "SandyBridge":
-                   "avx,xsave,aes,sse4_2|sse4.2,sse4.1|sse4_1,cx16,ssse3",
-                   "Westmere": "aes,sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3",
-                   "Nehalem": "sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3",
-                   "Penryn": "sse4.1|sse4_1,cx16,ssse3",
-                   "Conroe": "ssse3"}
-
-    flags = get_cpu_flags()
-    flags.sort()
-    cpu_flags = " ".join(flags)
-    vendor = get_cpu_vendor(flags)
-
-    cpu_model = ""
-    if cpu_flags:
-        for cpu_type in cpu_types.get(vendor):
-            pattern = _make_up_pattern(cpu_type_re.get(cpu_type))
-            if re.findall(pattern, cpu_flags):
-                cpu_model = cpu_type
-                break
-    else:
-        logging.warn("Can not get cpu flags from cpuinfo")
-
-    if cpu_model:
-        cpu_type_list = cpu_types.get(vendor)
-        cpu_support_model = cpu_type_list[cpu_type_list.index(cpu_model):]
-        cpu_model = ",".join(cpu_support_model)
-
-    return cpu_model
-
-
 def get_archive_tarball_name(source_dir, tarball_name, compression):
     '''
     Get the name for a tarball file, based on source, name and compression
@@ -1548,6 +1365,133 @@ class NumaNode(object):
             logging.info("    %s: %s" % (i, self.dict[i]))
 
 
+class Flag(str):
+    """
+    Class for easy merge cpuflags.
+    """
+    aliases = {}
+
+    def __new__(cls, flag):
+        if flag in Flag.aliases:
+            flag = Flag.aliases[flag]
+        return str.__new__(cls, flag)
+
+    def __eq__(self, other):
+        s = set(self.split("|"))
+        o = set(other.split("|"))
+        if s & o:
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        return self.split("|")[0]
+
+    def __repr__(self):
+        return self.split("|")[0]
+
+    def __hash__(self, *args, **kwargs):
+        return 0
+
+
+kvm_map_flags_to_test = {
+            Flag('avx')                        :set(['avx']),
+            Flag('sse3|pni')                   :set(['sse3']),
+            Flag('ssse3')                      :set(['ssse3']),
+            Flag('sse4.1|sse4_1|sse4.2|sse4_2'):set(['sse4']),
+            Flag('aes')                        :set(['aes','pclmul']),
+            Flag('pclmuldq')                   :set(['pclmul']),
+            Flag('pclmulqdq')                  :set(['pclmul']),
+            Flag('rdrand')                     :set(['rdrand']),
+            Flag('sse4a')                      :set(['sse4a']),
+            Flag('fma4')                       :set(['fma4']),
+            Flag('xop')                        :set(['xop']),
+            }
+
+
+kvm_map_flags_aliases = {
+           'sse4_1'              :'sse4.1',
+           'sse4_2'              :'sse4.2',
+           'pclmuldq'            :'pclmulqdq',
+           'sse3'                :'pni',
+           'ffxsr'               :'fxsr_opt',
+           'xd'                  :'nx',
+           'i64'                 :'lm',
+           'psn'                 :'pn',
+           'clfsh'               :'clflush',
+           'dts'                 :'ds',
+           'htt'                 :'ht',
+           'CMPXCHG8B'           :'cx8',
+           'Page1GB'             :'pdpe1gb',
+           'LahfSahf'            :'lahf_lm',
+           'ExtApicSpace'        :'extapic',
+           'AltMovCr8'           :'cr8_legacy',
+           'cr8legacy'           :'cr8_legacy'
+            }
+
+
+def kvm_flags_to_stresstests(flags):
+    """
+    Covert [cpu flags] to [tests]
+
+    @param cpuflags: list of cpuflags
+    @return: Return tests like string.
+    """
+    tests = set([])
+    for f in flags:
+        tests |= kvm_map_flags_to_test[f]
+    param = ""
+    for f in tests:
+        param += ","+f
+    return param
+
+
+def get_cpu_flags(cpu_info=""):
+    """
+    Returns a list of the CPU flags
+    """
+    cpu_flags_re = "flags\s+:\s+([\w\s]+)\n"
+    if not cpu_info:
+        fd = open("/proc/cpuinfo")
+        cpu_info = fd.read()
+        fd.close()
+    cpu_flag_lists = re.findall(cpu_flags_re, cpu_info)
+    if not cpu_flag_lists:
+        return []
+    cpu_flags = cpu_flag_lists[0]
+    return cpu_flags.strip().split('\s+')
+
+
+
+def get_cpu_vendor(cpu_info="", verbose=True):
+    """
+    Returns the name of the CPU vendor
+    """
+    vendor_re = "vendor_id\s+:\s+(\w+)"
+    if not cpu_info:
+        fd = open("/proc/cpuinfo")
+        cpu_info = fd.read()
+        fd.close()
+    vendor = re.findall(vendor_re, cpu_info)
+    if not vendor:
+        vendor = 'unknown'
+    else:
+        vendor = vendor[0]
+    if verbose:
+        logging.debug("Detected CPU vendor as '%s'", vendor)
+    return vendor
+
+
+def get_support_machine_type(qemu_binary="/usr/libexec/qemu-kvm"):
+    """
+    Get the machine type the host support,return a list of machine type
+    """
+    o = utils.system_output("%s -M ?" % qemu_binary)
+    s = re.findall("(\S*)\s*RHEL\s", o)
+    c = re.findall("(RHEL.*PC)", o)
+    return (s, c)
+
+
 def get_host_cpu_models():
     """
     Get cpu model from host cpuinfo
@@ -1575,9 +1519,6 @@ def get_host_cpu_models():
     if ARCH == 'ppc64':
         return ['POWER7']
 
-    vendor_re = "vendor_id\s+:\s+(\w+)"
-    cpu_flags_re = "flags\s+:\s+([\w\s]+)\n"
-
     cpu_types = {"AuthenticAMD": ["Opteron_G5", "Opteron_G4", "Opteron_G3",
                                   "Opteron_G2", "Opteron_G1"],
                  "GenuineIntel": ["SandyBridge", "Westmere", "Nehalem",
@@ -1599,13 +1540,13 @@ def get_host_cpu_models():
     cpu_info = fd.read()
     fd.close()
 
-    vendor = re.findall(vendor_re, cpu_info)[0]
-    cpu_flags = re.findall(cpu_flags_re, cpu_info)
+    cpu_flags = " ".join(get_cpu_flags(cpu_info))
+    vendor = get_cpu_vendor(cpu_info)
 
     cpu_model = None
     cpu_support_model = []
     if cpu_flags:
-        cpu_flags = _cpu_flags_sort(cpu_flags[0])
+        cpu_flags = _cpu_flags_sort(cpu_flags)
         for cpu_type in cpu_types.get(vendor):
             pattern = _make_up_pattern(cpu_type_re.get(cpu_type))
             if re.findall(pattern, cpu_flags):
