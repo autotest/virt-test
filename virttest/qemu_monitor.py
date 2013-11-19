@@ -1119,8 +1119,10 @@ class QMPMonitor(Monitor):
 
             # Read greeting message
             end_time = time.time() + 20
+            output_str = ""
             while time.time() < end_time:
                 for obj in self._read_objects():
+                    output_str += str(obj)
                     if "QMP" in obj:
                         self._greeting = obj
                         break
@@ -1128,7 +1130,8 @@ class QMPMonitor(Monitor):
                     break
                 time.sleep(0.1)
             else:
-                raise MonitorProtocolError("No QMP greeting message received")
+                raise MonitorProtocolError("No QMP greeting message received."
+                                           " Output so far: %s" % output_str)
 
             # Issue qmp_capabilities
             self.cmd("qmp_capabilities")

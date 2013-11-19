@@ -1460,8 +1460,7 @@ class VM(virt_vm.BaseVM):
             if autoconsole:
                 self.setup_serial_ports()
         else:
-            raise virt_vm.VMStartError(self.name, "libvirt domain failed "
-                                                  "to start")
+            raise virt_vm.VMStartError(self.name, result.stderr.strip())
 
     def wait_for_shutdown(self, count=60):
         """
