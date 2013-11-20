@@ -37,6 +37,7 @@ except ImportError:
 
 _screendump_thread = None
 _screendump_thread_termination_event = None
+_tcpdump_thread = None
 
 
 def preprocess_image(test, params, image_name):
@@ -465,33 +466,32 @@ def preprocess(test, params, env):
     # Start tcpdump if it isn't already running
     if "address_cache" not in env:
         env["address_cache"] = {}
-    if "tcpdump" in env and not env["tcpdump"].is_alive():
-        env["tcpdump"].close()
-        del env["tcpdump"]
-    if "tcpdump" not in env and params.get("run_tcpdump", "yes") == "yes":
+
+    if params.get("run_tcpdump", "yes") == "yes":
+        global _tcpdump_thread
         cmd = "%s -npvi any 'port 68'" % utils_misc.find_command("tcpdump")
         if params.get("remote_preprocess") == "yes":
             login_cmd = ("ssh -o UserKnownHostsFile=/dev/null -o \
                          PreferredAuthentications=password -p %s %s@%s" %
                          (port, username, address))
-            env["tcpdump"] = aexpect.ShellSession(
+            _tcpdump_thread = aexpect.ShellSession(
                 login_cmd,
                 output_func=_update_address_cache,
                 output_params=(env["address_cache"],))
-            remote.handle_prompts(env["tcpdump"], username, password, prompt)
-            env["tcpdump"].sendline(cmd)
+            remote.handle_prompts(_tcpdump_thread, username, password, prompt)
+            _tcpdump_thread.sendline(cmd)
         else:
-            env["tcpdump"] = aexpect.Tail(
+            _tcpdump_thread = aexpect.Tail(
                 command=cmd,
                 output_func=_tcpdump_handler,
                 output_params=(env["address_cache"], "tcpdump.log",))
 
-        if utils_misc.wait_for(lambda: not env["tcpdump"].is_alive(),
+        if utils_misc.wait_for(lambda: not _tcpdump_thread.is_alive(),
                                0.1, 0.1, 1.0):
             logging.warn("Could not start tcpdump")
-            logging.warn("Status: %s" % env["tcpdump"].get_status())
+            logging.warn("Status: %s" % _tcpdump_thread.get_status())
             logging.warn("Output:" + utils_misc.format_str_for_message(
-                env["tcpdump"].get_output()))
+                _tcpdump_thread.get_output()))
 
     # Destroy and remove VMs that are no longer needed in the environment
     requested_vms = params.objects("vms")
@@ -776,10 +776,11 @@ def postprocess(test, params, env):
                 except Exception:
                     pass
 
-    # Terminate tcpdump if no VMs are alive
-    if not living_vms and "tcpdump" in env:
-        env["tcpdump"].close()
-        del env["tcpdump"]
+    # Terminate tcpdump thread
+    global _tcpdump_thread
+    if _tcpdump_thread is not None:
+        _tcpdump_thread.close()
+        _tcpdump_thread = None
 
     if params.get("setup_hugepages") == "yes":
         try:
