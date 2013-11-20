@@ -38,7 +38,7 @@ from virttest import remote
 NOCLOSE = globals().keys() + [
     'NOCLOSE', 'SCREENSHOT_ERROR_COUNT', 'VIRSH_COMMAND_CACHE',
     'VIRSH_EXEC', 'VirshBase', 'VirshClosure', 'VirshSession', 'Virsh',
-    'VirshPersistent', 'VIRSH_COMMAND_GROUP_CACHE',
+    'VirshPersistent', 'VirshConnectBack', 'VIRSH_COMMAND_GROUP_CACHE',
     'VIRSH_COMMAND_GROUP_CACHE_NO_DETAIL',
 ]
 
@@ -1135,7 +1135,7 @@ def migrate_setspeed(domain, bandwidth, extra=None, **dargs):
     a domain which is being migrated to another host.
 
     :param domain: name/uuid/id of guest
-    :param bandwith: migration bandwidth limit in MiB/s
+    :param bandwidth: migration bandwidth limit in MiB/s
     :param dargs: standardized virsh function API keywords
     """
 

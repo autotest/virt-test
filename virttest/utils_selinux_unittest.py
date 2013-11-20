@@ -3,6 +3,7 @@
 Unittests for utils_libvirtd module.
 """
 import unittest
+
 import common
 from virttest import utils_selinux
 from autotest.client import os_dep

@@ -1,15 +1,9 @@
 #!/usr/bin/python
 import unittest
 
-try:
-    import autotest.common as common
-except ImportError:
-    import common
-
+import common
 from autotest.client.utils import CmdResult
-from virttest import libvirt_storage, virsh
-
-VIRSH_EXEC = virsh.VIRSH_EXEC
+import libvirt_storage, virsh
 
 # The output of virsh.pool_list with only default pool
 _DEFAULT_POOL = ("Name                 State      Autostart\n"
@@ -86,12 +80,27 @@ class PoolTestBase(unittest.TestCase):
         _pools_output = _DEFAULT_POOL
         return True
 
+    class bogusVirshFailureException(unittest.TestCase.failureException):
+
+        def __init__(self, *args, **dargs):
+            self.virsh_args = args
+            self.virsh_dargs = dargs
+
+        def __str__(self):
+            msg = ("Codepath under unittest attempted call to un-mocked virsh"
+                   " method, with args: '%s' and dargs: '%s'"
+                   % (self.virsh_args, self.virsh_dargs))
+
     def setUp(self):
+        # Make all virsh commands fail the test unconditionally
+        for symbol in dir(virsh):
+            if symbol not in virsh.NOCLOSE:
+                # Exceptions are callable
+                setattr(virsh, symbol, self.bogusVirshFailureException)
         # To avoid not installed libvirt packages
-        self.bogus_virsh = virsh.Virsh(virsh_exec=virsh.VIRSH_EXEC,
+        self.bogus_virsh = virsh.Virsh(virsh_exec='/bin/false',
                                        uri='qemu:///system', debug=True,
                                        ignore_status=True)
-
         # Use defined virsh methods above
         self.bogus_virsh.__super_set__('pool_list', self._pool_list)
         self.bogus_virsh.__super_set__('pool_info', self._pool_info)

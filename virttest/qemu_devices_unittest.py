@@ -10,6 +10,7 @@ __author__ = """Lukas Doktor (ldoktor@redhat.com)"""
 import re
 import unittest
 import os
+
 import common
 from autotest.client.shared.test_utils import mock
 import qemu_devices

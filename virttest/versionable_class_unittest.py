@@ -3,10 +3,8 @@
 import unittest
 import cPickle
 import sys
-try:
-    import autotest.common as common
-except ImportError:
-    import common
+
+import common
 from autotest.client.shared import base_utils
 from autotest.client.shared.test_utils import mock
 from versionable_class import Manager, factory, VersionableClass

@@ -316,13 +316,3 @@ class PropCan(PropCanBase):
         """
         if value:
             self[key] = value
-
-    def __str__(self):
-        """
-        Guarantee return of string format dictionary representation
-        """
-        acceptable_types = (str, unicode, int, float, long)
-        return str(dict([(key, value) for key, value in self.items()
-                         if issubclass(type(value), acceptable_types)]))
-
-    __repr__ = __str__

@@ -7,7 +7,7 @@ def run_libvirt_bench_domstate_switch_by_groups(test, params, env):
     Test steps:
 
     1) Get the params from params.
-    2) Devide vms into two groups and run sub test for each group.
+    2) Divide vms into two groups and run sub test for each group.
     3) clean up.
     """
     # Get VMs.
@@ -15,7 +15,7 @@ def run_libvirt_bench_domstate_switch_by_groups(test, params, env):
     if len(vms) < 2:
         raise error.TestNAError("We need at least 2 vms for this test.")
     timeout = params.get("LB_domstate_switch_loop_time", 600)
-    # Devide vms into two groups.
+    # Divide vms into two groups.
     odd_group_vms = []
     even_group_vms = []
     for index in range(len(vms)):
