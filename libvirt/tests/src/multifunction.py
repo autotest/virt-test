@@ -7,6 +7,20 @@ from virttest.libvirt_xml import xcepts, vm_xml
 from virttest.libvirt_xml.devices import disk
 
 
+class MFError(Exception):
+    pass
+
+
+class MFCheckDiskError(MFError):
+
+    def __init__(self, output):
+        super(MFCheckDiskError, self).__init__(output)
+        self.output = output
+
+    def __str__(self):
+        return ("Check disk in vm failed:\n%s" % self.output)
+
+
 def cleanup_vm(vm_name=None, disk_removed=None):
     """
     Cleanup the vm with its disk deleted.
@@ -193,7 +207,7 @@ def check_disk(vm, target_dev, part_size):
     session = vm.wait_for_login()
     device = "/dev/%s" % target_dev
     if session.cmd_status("ls %s" % device):
-        raise error.TestFail("Can not find '%s' in guest." % device)
+        raise MFCheckDiskError("Can not find '%s' in guest." % device)
     else:
         if session.cmd_status("which parted"):
             logging.error("Did not find command 'parted' in guest, SKIP...")
@@ -204,13 +218,13 @@ def check_disk(vm, target_dev, part_size):
                                               % (device, part_size), timeout=5)
     logging.debug("Create part:\n:%s\n%s", output1, output2)
     if ret1 or ret2:
-        raise error.TestFail("Create partition for '%s' failed." % device)
+        raise MFCheckDiskError("Create partition for '%s' failed." % device)
 
     if session.cmd_status("mkfs.ext3 %s1" % device):
-        raise error.TestFail("Format created partition failed.")
+        raise MFCheckDiskError("Format created partition failed.")
 
     if session.cmd_status("mount %s1 /mnt" % device):
-        raise error.TestFail("Can not mount '%s' to /mnt." % device)
+        raise MFCheckDiskError("Can not mount '%s' to /mnt." % device)
 
 
 def run_multifunction(test, params, env):
@@ -232,6 +246,7 @@ def run_multifunction(test, params, env):
         disk_count = int(params.get("mf_added_devices_count", 1))
         disk_size = params.get("mf_added_devices_size", "50M")
         status_error = "yes" == params.get("status_error", "no")
+        check_disk_error = "yes" == params.get("mf_check_disk_error", "no")
         target_list = []
         index = 0
         while len(target_list) < disk_count:
@@ -266,7 +281,16 @@ def run_multifunction(test, params, env):
 
         # Login to check attached devices
         for target_dev in target_list:
-            check_disk(new_vm, target_dev, disk_size)
+            try:
+                check_disk(new_vm, target_dev, disk_size)
+            except MFCheckDiskError, detail:
+                if check_disk_error:
+                    logging.debug("Check disk failed as expected:\n%s", detail)
+                    return
+                else:
+                    raise
+            if check_disk_error:
+                raise error.TestFail("Check disk didn't fail as expected.")
     finally:
         if new_vm.is_alive():
             new_vm.destroy()
