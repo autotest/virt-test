@@ -15,9 +15,8 @@ def run_boot_cpu_model(test, params, env):
     :param params: Dictionary with the test parameters
 
     """
-    host_flags = utils_misc.get_cpu_flags()
-    cpu_vendor = utils_misc.get_cpu_vendor(host_flags)
-    host_model = utils_misc.get_cpu_model()
+    cpu_vendor = utils_misc.get_cpu_vendor()
+    host_model = utils_misc.get_host_cpu_models()
 
     model_list = params.get("cpu_model")
     if not model_list:
@@ -25,7 +24,7 @@ def run_boot_cpu_model(test, params, env):
             raise error.TestError("unknow cpu vendor")
         else:
             model_list = params.get("cpu_model_%s" % cpu_vendor,
-                                    host_model.split(",")[-1])
+                                    host_model[-1])
 
     if model_list:
         model_list = model_list.split(" ")
@@ -45,5 +44,7 @@ def run_boot_cpu_model(test, params, env):
                     logging.info("shutdown guest successfully")
             else:
                 if params.get("enable_check", "no") == "yes":
-                    raise error.TestWarn("Can not test %s model on %s host, pls"
-                                         " use %s host" % (model, host_model.split(",")[0], model))
+                    raise error.TestWarn("Can not test %s model on %s host, "
+                                         "pls use %s host" % (model,
+                                                              host_model[0],
+                                                              model))

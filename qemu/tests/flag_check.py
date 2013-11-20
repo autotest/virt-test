@@ -138,9 +138,9 @@ def run_flag_check(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     # Get qemu model
-    host_cpumodel = utils_misc.get_cpu_model()
+    host_cpumodel = utils_misc.get_host_cpu_models()
     if guest_cpumodel not in host_cpumodel:
-        qemu_model = host_cpumodel.split(",")[0]
+        qemu_model = host_cpumodel[0]
     else:
         qemu_model = guest_cpumodel
     error.context("Get model %s support flags" % qemu_model, logging.info)
