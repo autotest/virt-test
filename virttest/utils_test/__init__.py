@@ -1204,13 +1204,13 @@ class BackgroundTest(object):
         """
         self.thread.start()
 
-    def join(self, timeout=600):
+    def join(self, timeout=600, ignore_status=False):
         """
         Wait for the join of thread and raise its exception if any.
         """
         self.thread.join(timeout)
         # pylint: disable=E0702
-        if self.exception:
+        if self.exception and (not ignore_status):
             raise self.exception
 
     def is_alive(self):
