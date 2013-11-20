@@ -272,7 +272,7 @@ def run_multifunction(test, params, env):
                     raise error.TestFail("Attach device %s failed."
                                          % target_dev)
             else:
-                if status_error:
+                if status_error and not check_disk_error:
                     fail_info.append("Attach %s successfully "
                                      "but not expected." % target_dev)
         if len(fail_info):
