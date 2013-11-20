@@ -20,6 +20,7 @@ import cartesian_config
 import arch
 import funcatexit
 import version
+import aexpect
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -900,4 +901,6 @@ def run_tests(parser, options):
     job_elapsed_time = job_end_time - job_start_time
     _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed)
 
+    # Finish any remaining tcpdump threads floating around
+    aexpect.kill_tail_threads()
     return not failed
