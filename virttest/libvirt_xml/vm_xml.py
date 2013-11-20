@@ -340,10 +340,10 @@ class VMXML(VMXMLBase):
             return False
         return True
 
-    def sync(self):
+    def sync(self, options=None):
         """Rebuild VM with the config file."""
         backup = self.new_from_dumpxml(self.vm_name)
-        if not self.undefine():
+        if not self.undefine(options):
             raise xcepts.LibvirtXMLError("Failed to undefine %s.", self.vm_name)
         if not self.define():
             backup.define()
@@ -724,6 +724,21 @@ class VMXML(VMXMLBase):
                 return
         devices.append(value)
         self.set_devices(devices)
+
+    @staticmethod
+    def add_security_info(vmxml, passwd):
+        """
+        Add passwd for graphic
+
+        :param vmxml: instance of VMXML
+        :param passwd: Password you want to set
+        """
+        devices = vmxml.devices
+        graphics_index = devices.index(devices.by_device_tag('graphics')[0])
+        graphics = devices[graphics_index]
+        graphics.passwd = passwd
+        vmxml.devices = devices
+        vmxml.define()
 
 
 class VMCPUXML(VMXML):

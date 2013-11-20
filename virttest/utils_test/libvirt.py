@@ -17,9 +17,11 @@ More specifically:
 """
 
 import re
+import os
 import logging
-
+from virttest import virsh, xml_utils
 from autotest.client import utils
+from virttest.libvirt_xml import vm_xml
 
 
 def cpus_parser(cpulist):
@@ -127,3 +129,35 @@ def cpu_allowed_list_by_task(pid, tid):
     if result.exit_status:
         return None
     return result.stdout.strip()
+
+
+def clean_up_snapshots(vm_name, snapshot_list=[]):
+    """
+    Do recovery after snapshot
+
+    :param vm_name: Name of domain
+    :param snapshot_list: The list of snapshot name you want to remove
+    """
+    if not snapshot_list:
+        # Get all snapshot names from virsh snapshot-list
+        snapshot_list = virsh.snapshot_list(vm_name)
+
+        # Get snapshot disk path
+        for snap_name in snapshot_list:
+            # Delete useless disk snapshot file if exists
+            snap_xml = virsh.snapshot_dumpxml(vm_name,
+                                              snap_name).stdout.strip()
+            xtf_xml = xml_utils.XMLTreeFile(snap_xml)
+            disks_path = xtf_xml.findall('disks/disk/source')
+            for disk in disks_path:
+                os.system('rm -f %s' % disk.get('file'))
+            # Delete snapshots of vm
+            virsh.snapshot_delete(vm_name, snap_name)
+    else:
+        # Get snapshot disk path from domain xml because
+        # there is no snapshot info with the name
+        dom_xml = vm_xml.VMXML.new_from_dumpxml(vm_name).xmltreefile
+        disk_path = dom_xml.find('devices/disk/source').get('file')
+        for name in snapshot_list:
+            snap_disk_path = disk_path.split(".")[0] + "." + name
+            os.system('rm -f %s' % snap_disk_path)

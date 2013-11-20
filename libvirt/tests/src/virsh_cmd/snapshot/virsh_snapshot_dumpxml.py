@@ -7,41 +7,6 @@ from virttest import virsh, utils_test
 from virttest.libvirt_xml import vm_xml
 
 
-def recovery_from_snapshot(vmxml, snap_name_list):
-    """
-    Do recovery after snapshot
-
-    :param vmxml: VMXML object with recovery xml in it
-    :param snap_name_list: The list of snapshot name you want to remove
-    """
-    vmxml.undefine("--snapshots-metadata")
-    vmxml.define()
-    logging.debug("xml is %s", vmxml.__dict_get__('xml'))
-
-    # Delete useless disk snapshot file
-    dom_xml = vmxml.__dict_get__('xml')
-    disk_path = dom_xml.find('devices/disk/source').get('file')
-    for name in snap_name_list:
-        snap_disk_path = disk_path.split(".")[0] + "." + name
-        os.system('rm -f %s' % snap_disk_path)
-
-
-def add_security_info(vmxml, passwd):
-    """
-    Add passwd for graphic
-
-    :param vmxml: instance of VMXML
-    :param passwd: Password you want to set
-    """
-
-    devices = vmxml.devices
-    graphics_index = devices.index(devices.by_device_tag('graphics')[0])
-    graphics = devices[graphics_index]
-    graphics.passwd = passwd
-    vmxml.devices = devices
-    vmxml.define()
-
-
 def get_snap_createtime(vm_name, snap_name):
     """
     Get the snap_name's create time from snap_list
@@ -156,7 +121,8 @@ def run_virsh_snapshot_dumpxml(test, params, env):
             vm = env.get_vm(vm_name)
             if vm.is_alive():
                 vm.destroy()
-            add_security_info(vm_xml.VMXML.new_from_dumpxml(vm_name), passwd)
+            vm_xml.VMXML.add_security_info(
+                         vm_xml.VMXML.new_from_dumpxml(vm_name), passwd)
             vm.start()
             if secu_opt is not None:
                 opt_dict['passwd'] = passwd
@@ -206,5 +172,6 @@ def run_virsh_snapshot_dumpxml(test, params, env):
         snapshot_dumpxml_check(output, opt_dict)
 
     finally:
-        # Recovery from backup xml
-        recovery_from_snapshot(vmxml_backup, snap_name.split())
+        # Recovery
+        utils_test.libvirt.clean_up_snapshots(vm_name)
+        vmxml_backup.sync("--snapshots-metadata")
