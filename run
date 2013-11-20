@@ -152,6 +152,10 @@ def _find_default_qemu_paths(options_qemu=None):
 
     return [qemu_bin_path, qemu_img_path, qemu_io_path]
 
+
+SUPPORTED_LOG_LEVELS = [
+    "debug", "info", "warning", "error", "critical"]
+
 SUPPORTED_TEST_TYPES = [
     'qemu', 'libvirt', 'libguestfs', 'openvswitch', 'v2v', 'lvsb']
 
@@ -259,6 +263,13 @@ class VirtTestRunParser(optparse.OptionParser):
                            default=False,
                            help=("Run tests present on the drop in dir on the "
                                  "host. Incompatible with --tests."))
+
+        general.add_option("--log-level", action="store", dest="log_level",
+                           default="debug",
+                           help=("Set log level for top level log file."
+                                 " Supported levels: " +
+                                 ", ".join(SUPPORTED_LOG_LEVELS) +
+                                 ". Default: %default"))
 
         self.add_option_group(general)
 
@@ -700,6 +711,15 @@ class VirtTestApp(object):
                                        " ".join(SUPPORTED_TEST_TYPES)))
                 sys.exit(1)
 
+        if self.options.log_level not in SUPPORTED_LOG_LEVELS:
+            _restore_stdout()
+            print("Invalid log level '%s'. Valid log levels: %s. "
+                  "Aborting..." % (self.options.log_level,
+                                   " ".join(SUPPORTED_LOG_LEVELS)))
+            sys.exit(1)
+        num_level = getattr(logging, self.options.log_level.upper(), None)
+        self.options.log_level = num_level
+
         if self.options.datadir:
             data_dir.set_backing_data_dir(self.options.datadir)
 
@@ -741,9 +761,10 @@ class VirtTestApp(object):
         try:
             from virttest import standalone_test
 
-            standalone_test.reset_logging()
-            standalone_test.configure_console_logging()
             self._process_options()
+            standalone_test.reset_logging()
+            standalone_test.configure_console_logging(
+                loglevel=self.options.log_level)
             standalone_test.bootstrap_tests(self.options)
             ok = standalone_test.run_tests(self.cartesian_parser, self.options)
 
