@@ -22,51 +22,70 @@ class EnvSaveError(Exception):
     pass
 
 
-def _update_address_cache(address_cache, lock, line):
-    lock.acquire()
-    try:
-        if re.search("Your.IP", line, re.IGNORECASE):
-            matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
-            if matches:
-                address_cache["last_seen"] = matches[0]
+def lock_safe(function):
+    """
+    Get the environment safe lock, run the function, then release the lock.
 
-        if re.search("Client.Ethernet.Address", line, re.IGNORECASE):
-            matches = re.findall(r"\w*:\w*:\w*:\w*:\w*:\w*", line)
-            if matches and address_cache.get("last_seen"):
-                mac_address = matches[0].lower()
-                last_time = address_cache.get("time_%s" % mac_address, 0)
-                last_ip = address_cache.get("last_seen")
-                cached_ip = address_cache.get(mac_address)
+    Unfortunately, it only works if the 1st argument of the function is an
+    Env instance. This is mostly to save up code.
 
-                if (time.time() - last_time > 5 or cached_ip != last_ip):
-                    logging.debug("(address cache) DHCP lease OK: %s --> %s",
-                                  mac_address, address_cache.get("last_seen"))
-
-                address_cache[mac_address] = address_cache.get("last_seen")
-                address_cache["time_%s" % mac_address] = time.time()
-                del address_cache["last_seen"]
-            elif matches:
-                address_cache["last_seen_mac"] = matches[0]
-
-        if re.search("Requested.IP", line, re.IGNORECASE):
-            matches = matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
-            if matches and address_cache.get("last_seen_mac"):
-                ip_address = matches[0]
-                mac_address = address_cache.get("last_seen_mac")
-                last_time = address_cache.get("time_%s" % mac_address, 0)
-
-                if time.time() - last_time > 10:
-                    logging.debug("(address cache) DHCP lease OK: %s --> %s",
-                                  mac_address, ip_address)
-
-                address_cache[mac_address] = ip_address
-                address_cache["time_%s" % mac_address] = time.time()
-                del address_cache["last_seen_mac"]
-    finally:
-        lock.release()
+    :param function: Function to wrap.
+    """
+    def wrapper(*args, **kwargs):
+        env = args[0]
+        env.save_lock.acquire()
+        try:
+            return function(*args, **kwargs)
+        finally:
+            env.save_lock.release()
+    wrapper.__name__ = function.__name__
+    wrapper.__doc__ = function.__doc__
+    wrapper.__dict__.update(function.__dict__)
+    return wrapper
 
 
-def _tcpdump_handler(address_cache, filename, lock, line):
+@lock_safe
+def _update_address_cache(env, line):
+    if re.search("Your.IP", line, re.IGNORECASE):
+        matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
+        if matches:
+            env["address_cache"]["last_seen"] = matches[0]
+
+    if re.search("Client.Ethernet.Address", line, re.IGNORECASE):
+        matches = re.findall(r"\w*:\w*:\w*:\w*:\w*:\w*", line)
+        if matches and env["address_cache"].get("last_seen"):
+            mac_address = matches[0].lower()
+            last_time = env["address_cache"].get("time_%s" % mac_address, 0)
+            last_ip = env["address_cache"].get("last_seen")
+            cached_ip = env["address_cache"].get(mac_address)
+
+            if (time.time() - last_time > 5 or cached_ip != last_ip):
+                logging.debug("(address cache) DHCP lease OK: %s --> %s",
+                              mac_address, env["address_cache"].get("last_seen"))
+
+            env["address_cache"][mac_address] = env["address_cache"].get("last_seen")
+            env["address_cache"]["time_%s" % mac_address] = time.time()
+            del env["address_cache"]["last_seen"]
+        elif matches:
+            env["address_cache"]["last_seen_mac"] = matches[0]
+
+    if re.search("Requested.IP", line, re.IGNORECASE):
+        matches = matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
+        if matches and env["address_cache"].get("last_seen_mac"):
+            ip_address = matches[0]
+            mac_address = env["address_cache"].get("last_seen_mac")
+            last_time = env["address_cache"].get("time_%s" % mac_address, 0)
+
+            if time.time() - last_time > 10:
+                logging.debug("(address cache) DHCP lease OK: %s --> %s",
+                              mac_address, ip_address)
+
+            env["address_cache"][mac_address] = ip_address
+            env["address_cache"]["time_%s" % mac_address] = time.time()
+            del env["address_cache"]["last_seen_mac"]
+
+
+def _tcpdump_handler(env, filename, line):
     """
     Helper for handler tcpdump output.
 
@@ -79,7 +98,7 @@ def _tcpdump_handler(address_cache, filename, lock, line):
     except Exception, reason:
         logging.warn("Can't log tcpdump output, '%s'", reason)
 
-    _update_address_cache(address_cache, lock, line)
+    _update_address_cache(env, line)
 
 
 class Env(UserDict.IterableUserDict):
@@ -200,6 +219,7 @@ class Env(UserDict.IterableUserDict):
             self.register_vm(name, vm)
             return vm
 
+    @lock_safe
     def register_vm(self, name, vm):
         """
         Register a VM in this Env object.
@@ -209,6 +229,7 @@ class Env(UserDict.IterableUserDict):
         """
         self.data["vm__%s" % name] = vm
 
+    @lock_safe
     def unregister_vm(self, name):
         """
         Remove a given VM.
@@ -217,6 +238,7 @@ class Env(UserDict.IterableUserDict):
         """
         del self.data["vm__%s" % name]
 
+    @lock_safe
     def register_syncserver(self, port, server):
         """
         Register a Sync Server in this Env object.
@@ -226,6 +248,7 @@ class Env(UserDict.IterableUserDict):
         """
         self.data["sync__%s" % port] = server
 
+    @lock_safe
     def unregister_syncserver(self, port):
         """
         Remove a given Sync Server.
@@ -242,6 +265,7 @@ class Env(UserDict.IterableUserDict):
         """
         return self.data.get("sync__%s" % port)
 
+    @lock_safe
     def register_lvmdev(self, name, lvmdev):
         """
         Register lvm device object into env;
@@ -251,6 +275,7 @@ class Env(UserDict.IterableUserDict):
         """
         self.data["lvmdev__%s" % name] = lvmdev
 
+    @lock_safe
     def unregister_lvmdev(self, name):
         """
         Remove lvm device object from env;
@@ -284,7 +309,7 @@ class Env(UserDict.IterableUserDict):
             self._tcpdump = aexpect.ShellSession(
                     login_cmd,
                     output_func=_update_address_cache,
-                    output_params=(self.data["address_cache"], self.save_lock,))
+                    output_params=(self,))
 
             remote.handle_prompts(self._tcpdump, username, password, prompt)
             self._tcpdump.sendline(cmd)
@@ -292,9 +317,7 @@ class Env(UserDict.IterableUserDict):
         else:
             self._tcpdump = aexpect.Tail(command=cmd,
                                          output_func=_tcpdump_handler,
-                                         output_params=(self.data["address_cache"],
-                                                        "tcpdump.log",
-                                                        self.save_lock,))
+                                         output_params=(self, "tcpdump.log"))
 
         if utils_misc.wait_for(lambda: not self._tcpdump.is_alive(),
                                0.1, 0.1, 1.0):

@@ -192,16 +192,16 @@ class TestEnv(unittest.TestCase):
         env = utils_env.Env(filename=self.envfilename)
 
         def update_env(env):
+            @utils_env.lock_safe
+            def _update_env(env, key, value):
+                env["changing_dict"][key] = value
+
             if not "changing_dict" in env:
                 env["changing_dict"] = {}
             while True:
                 key = "%s" % utils_misc.generate_random_string(length=10)
                 value = "%s" % utils_misc.generate_random_string(length=10)
-                env.save_lock.acquire()
-                try:
-                    env["changing_dict"][key] = value
-                finally:
-                    env.save_lock.release()
+                _update_env(env, key, value)
                 if termination_event.isSet():
                     break
 
