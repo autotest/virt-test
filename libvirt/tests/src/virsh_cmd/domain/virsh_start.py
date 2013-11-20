@@ -1,5 +1,5 @@
 from autotest.client.shared import error
-from virttest import remote, libvirt_vm, virsh, libvirt_xml, utils_libvirtd
+from virttest import virsh, libvirt_xml, utils_libvirtd
 
 
 class StartError(Exception):
@@ -54,15 +54,6 @@ def run_virsh_start(test, params, env):
     pre_operation = params.get("vs_pre_operation", "")
     status_error = params.get("status_error", "no")
 
-    # get the params for remote test
-    remote_ip = params.get("remote_ip", "ENTER.YOUR.REMOTE.IP")
-    remote_password = params.get(
-        "remote_password", "ENTER.YOUR.REMOTE.PASSWORD")
-    local_ip = params.get("local_ip", "ENTER.YOUR.LOCAL.IP")
-    if pre_operation == "remote" and (remote_ip.count("ENTER.YOUR.") or
-                                      local_ip.count("ENTER.YOUR.")):
-        raise error.TestNAError("Remote test parameters not configured")
-
     try:
         # prepare before start vm
         if libvirtd_state == "on":
@@ -80,19 +71,7 @@ def run_virsh_start(test, params, env):
 
         # do the start operation
         try:
-            if pre_operation == "remote":
-                # get remote session
-                session = remote.wait_for_login("ssh", remote_ip, "22", "root",
-                                                remote_password, "#")
-                # get uri of local
-                uri = libvirt_vm.complete_uri(local_ip)
-
-                cmd = "virsh -c %s start %s" % (uri, vm_name)
-                status, output = session.cmd_status_output(cmd)
-                if status:
-                    raise StartError(vm_name, output)
-            else:
-                do_virsh_start(vm_name)
+            do_virsh_start(vm_name)
 
             # start vm successfully
             if status_error == "yes":

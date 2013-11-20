@@ -1,7 +1,7 @@
 import re
 import logging
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh, remote, utils_libvirtd
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_reboot(test, params, env):
@@ -24,9 +24,6 @@ def run_virsh_reboot(test, params, env):
     vm_ref = params.get("reboot_vm_ref")
     status_error = params.get("status_error")
     extra = params.get("reboot_extra")
-    remote_ip = params.get("remote_ip", "REMOTE.EXAMPLE.COM")
-    local_ip = params.get("local_ip", "LOCAL.EXAMPLE.COM")
-    remote_pwd = params.get("remote_pwd", "password")
     domid = vm.get_id()
     domuuid = vm.get_uuid()
     if libvirtd == "off":
@@ -42,32 +39,15 @@ def run_virsh_reboot(test, params, env):
         vm_ref = hex(int(domid))
     elif vm_ref.find("invalid") != -1:
         vm_ref = params.get(vm_ref)
-    elif vm_ref == "remote_name":
-        if remote_ip.count("EXAMPLE.COM") or local_ip.count("EXAMPLE.COM"):
-            raise error.TestNAError("remote_ip and/or local_ip parameters not "
-                                    "changed from default values")
-        complete_uri = libvirt_vm.complete_uri(local_ip)
-        try:
-            session = remote.remote_login("ssh", remote_ip, "22", "root",
-                                          remote_pwd, "#")
-            session.cmd_output('LANG=C')
-            command = "virsh -c %s reboot %s" % (complete_uri, vm_name)
-            status, output = session.cmd_status_output(command,
-                                                       internal_timeout=5)
-            session.close()
-        # FIXME: Catch specific exception
-        except Exception, detail:
-            logging.error("Exception: %s", str(detail))
-            status = -1
-    if vm_ref != "remote_name":
-        vm_ref = "%s %s" % (vm_ref, extra)
-        cmdresult = virsh.reboot(vm_ref, ignore_status=True, debug=True)
-        status = cmdresult.exit_status
-        if status:
-            logging.debug("Error status, command output: %s", cmdresult.stdout)
-            if not virsh.has_command_help_match('reboot', '\s+--mode\s+'):
-                # old libvirt doesn't support reboot
-                status = -2
+
+    vm_ref = "%s %s" % (vm_ref, extra)
+    cmdresult = virsh.reboot(vm_ref, ignore_status=True, debug=True)
+    status = cmdresult.exit_status
+    if status:
+        logging.debug("Error status, command output: %s", cmdresult.stdout)
+        if not virsh.has_command_help_match('reboot', '\s+--mode\s+'):
+            # old libvirt doesn't support reboot
+            status = -2
     output = virsh.dom_list(ignore_status=True).stdout.strip()
 
     # recover libvirtd service start
