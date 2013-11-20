@@ -3,6 +3,7 @@ import unittest
 import time
 import logging
 import os
+import threading
 
 import common
 import utils_env
@@ -179,6 +180,38 @@ class TestEnv(unittest.TestCase):
         env.unregister_syncserver(444)
         sync4 = env.get_syncserver(444)
         assert sync4 is None
+
+    def test_locking(self):
+        """
+        1) Create an env file.
+        2) Create a thread that creates a dict as one of env's elements, and
+           keeps updating it.
+        3) Try to save the environment.
+
+        Right now, the unittest is supposed to fail, as there is no locking
+        in the env class. Later on, a fix for this issue will be introduced.
+        """
+        termination_event = threading.Event()
+        env = utils_env.Env(filename=self.envfilename)
+
+        def update_env(env):
+            if not "changing_dict" in env:
+                env["changing_dict"] = {}
+            while True:
+                key = "%s" % utils_misc.generate_random_string(length=10)
+                value = "%s" % utils_misc.generate_random_string(length=10)
+                env["changing_dict"][key] = value
+                if termination_event.isSet():
+                    break
+
+        changing_thread = threading.Thread(target=update_env,
+                                           args=(env,))
+        changing_thread.start()
+        time.sleep(0.3)
+        try:
+            env.save()
+        finally:
+            termination_event.set()
 
 if __name__ == '__main__':
     unittest.main()
