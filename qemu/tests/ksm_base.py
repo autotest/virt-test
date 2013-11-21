@@ -8,6 +8,9 @@ from autotest.client.shared import error
 from virttest import aexpect, utils_test, utils_misc, data_dir
 
 
+TMPFS_OVERHEAD = 0.0022
+
+
 @error.context_aware
 def run_ksm_base(test, params, env):
     """
@@ -64,6 +67,7 @@ def run_ksm_base(test, params, env):
         return (match, data)
 
     timeout = float(params.get("login_timeout", 240))
+    guest_script_overhead = int(params.get("guest_script_overhead", 5))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
@@ -79,9 +83,11 @@ def run_ksm_base(test, params, env):
     get_free_mem_cmd = params.get("get_free_mem_cmd",
                                   "grep MemFree /proc/meminfo")
     free_mem = vm.get_memory_size(get_free_mem_cmd)
+    max_mem = int(free_mem / (1 + TMPFS_OVERHEAD) - guest_script_overhead)
+    
     # Keep test from OOM killer
-    if free_mem < shared_mem:
-        shared_mem = free_mem
+    if max_mem < shared_mem:
+        shared_mem = max_mem
     fill_timeout = int(shared_mem) / 10
     query_cmd = params.get("query_cmd")
     query_regex = params.get("query_regex")
