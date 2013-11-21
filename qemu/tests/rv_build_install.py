@@ -12,7 +12,7 @@ import re
 from autotest.client.shared import error
 from virttest.aexpect import ShellCmdError
 from virttest import utils_misc, utils_spice, aexpect
-from qemu.tests import rv_clearx, rv_input
+from qemu.tests import rv_input
 
 
 def connect_to_vm(vm_name, env, params):
@@ -220,5 +220,3 @@ def run_rv_build_install(test, params, env):
     else:
         logging.info("Not supported right now")
         raise error.TestFail("Incorrect Test_Setup")
-
-    rv_clearx.run_rv_clearx(test, params, env)
