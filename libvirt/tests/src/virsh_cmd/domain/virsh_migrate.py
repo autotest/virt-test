@@ -79,7 +79,7 @@ def run_virsh_migrate(test, params, env):
     if not vm_xmlfile_bak:
         logging.error("Backing up xmlfile failed.")
 
-    src_uri = vm.connect_uri
+    src_uri = params.get("virsh_migrate_connect_uri")
     dest_uri = params.get("virsh_migrate_desturi")
     # Identify easy config. mistakes early
     warning_text = ("Migration VM %s URI %s appears problematic "
@@ -88,10 +88,10 @@ def run_virsh_migrate(test, params, env):
                     "fully-qualified network-based style.")
 
     if src_uri.count('///') or src_uri.count('EXAMPLE'):
-        logging.warning(warning_text % ('source', src_uri))
+        raise error.TestNAError(warning_text % ('source', src_uri))
 
     if dest_uri.count('///') or dest_uri.count('EXAMPLE'):
-        logging.warning(warning_text % ('destination', dest_uri))
+        raise error.TestNAError(warning_text % ('destination', dest_uri))
 
     vm_ref = params.get("vm_ref", vm.name)
     options = params.get("virsh_migrate_options")
