@@ -136,6 +136,7 @@ def run_physical_resources_check(test, params, env):
     def verify_machine_type():
         f_fail = []
         cmd = params.get("check_machine_type_cmd")
+        fail_log = ""
 
         if cmd is None:
             return f_fail
