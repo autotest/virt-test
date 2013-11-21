@@ -402,7 +402,7 @@ class Interface(object):
         """
         Get the status information of the Interface
         """
-        spl_re = re.compile("\s+")
+        spl_re = re.compile(r"\s+")
 
         fp = open(PROCFS_NET_PATH)
         # Skip headers
@@ -540,10 +540,10 @@ class Bridge(object):
         """
         Get bridge list.
         """
-        ebr_i = re.compile("^(\S+).*?\s+$", re.MULTILINE)
-        br_i = re.compile("^(\S+).*?(\S+)$", re.MULTILINE)
-        nbr_i = re.compile("^\s+(\S+)$", re.MULTILINE)
-        out_line = (utils.run("brctl show", verbose=False).stdout.splitlines())
+        ebr_i = re.compile(r"^(\S+).*?\s+$", re.MULTILINE)
+        br_i = re.compile(r"^(\S+).*?(\S+)$", re.MULTILINE)
+        nbr_i = re.compile(r"^\s+(\S+)$", re.MULTILINE)
+        out_line = (utils.run(r"brctl show", verbose=False).stdout.splitlines())
         result = dict()
         bridge = None
         iface = None
@@ -782,7 +782,7 @@ def get_net_if(runner=None):
         runner = local_runner
     cmd = "ip link"
     result = runner(cmd)
-    return re.findall("^\d+: (\S+?)[@:].*$", result, re.MULTILINE)
+    return re.findall(r"^\d+: (\S+?)[@:].*$", result, re.MULTILINE)
 
 
 def get_sorted_net_if():
@@ -1874,7 +1874,7 @@ def verify_ip_address_ownership(ip, macs, timeout=10.0):
     # Get the name of the bridge device for arping
     o = commands.getoutput("%s route get %s" %
                            (utils_misc.find_command("ip"), ip))
-    dev = re.findall("dev\s+\S+", o, re.IGNORECASE)
+    dev = re.findall(r"dev\s+\S+", o, re.IGNORECASE)
     if not dev:
         return False
     dev = dev[0].split()[-1]
@@ -1958,7 +1958,7 @@ def get_linux_ifname(session, mac_address=""):
             return None
 
     # Try ifconfig first
-    i = _process_output("ifconfig -a", "(\w+)\s+Link.*%s" % mac_address)
+    i = _process_output("ifconfig -a", r"(\w+)\s+Link.*%s" % mac_address)
     if i is not None:
         return i
 
@@ -2026,7 +2026,7 @@ def update_mac_ip_address(vm, params, timeout=None):
         except Exception, e:
             logging.warn(e)
         nics = params.get("nics")
-        nic_minimum = len(re.split("\s+", nics.strip()))
+        nic_minimum = len(re.split(r"\s+", nics.strip()))
         if len(macs_ips) == nic_minimum:
             break
         i += 1
