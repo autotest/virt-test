@@ -2,7 +2,14 @@ import cPickle
 import UserDict
 import os
 import logging
+import re
+import time
+
+import utils_misc
 import virt_vm
+import aexpect
+import remote
+import threading
 
 ENV_VERSION = 1
 
@@ -13,6 +20,85 @@ def get_env_version():
 
 class EnvSaveError(Exception):
     pass
+
+
+def lock_safe(function):
+    """
+    Get the environment safe lock, run the function, then release the lock.
+
+    Unfortunately, it only works if the 1st argument of the function is an
+    Env instance. This is mostly to save up code.
+
+    :param function: Function to wrap.
+    """
+    def wrapper(*args, **kwargs):
+        env = args[0]
+        env.save_lock.acquire()
+        try:
+            return function(*args, **kwargs)
+        finally:
+            env.save_lock.release()
+    wrapper.__name__ = function.__name__
+    wrapper.__doc__ = function.__doc__
+    wrapper.__dict__.update(function.__dict__)
+    return wrapper
+
+
+@lock_safe
+def _update_address_cache(env, line):
+    if re.search("Your.IP", line, re.IGNORECASE):
+        matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
+        if matches:
+            env["address_cache"]["last_seen"] = matches[0]
+
+    if re.search("Client.Ethernet.Address", line, re.IGNORECASE):
+        matches = re.findall(r"\w*:\w*:\w*:\w*:\w*:\w*", line)
+        if matches and env["address_cache"].get("last_seen"):
+            mac_address = matches[0].lower()
+            last_time = env["address_cache"].get("time_%s" % mac_address, 0)
+            last_ip = env["address_cache"].get("last_seen")
+            cached_ip = env["address_cache"].get(mac_address)
+
+            if (time.time() - last_time > 5 or cached_ip != last_ip):
+                logging.debug("(address cache) DHCP lease OK: %s --> %s",
+                              mac_address, env["address_cache"].get("last_seen"))
+
+            env["address_cache"][mac_address] = env["address_cache"].get("last_seen")
+            env["address_cache"]["time_%s" % mac_address] = time.time()
+            del env["address_cache"]["last_seen"]
+        elif matches:
+            env["address_cache"]["last_seen_mac"] = matches[0]
+
+    if re.search("Requested.IP", line, re.IGNORECASE):
+        matches = matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
+        if matches and env["address_cache"].get("last_seen_mac"):
+            ip_address = matches[0]
+            mac_address = env["address_cache"].get("last_seen_mac")
+            last_time = env["address_cache"].get("time_%s" % mac_address, 0)
+
+            if time.time() - last_time > 10:
+                logging.debug("(address cache) DHCP lease OK: %s --> %s",
+                              mac_address, ip_address)
+
+            env["address_cache"][mac_address] = ip_address
+            env["address_cache"]["time_%s" % mac_address] = time.time()
+            del env["address_cache"]["last_seen_mac"]
+
+
+def _tcpdump_handler(env, filename, line):
+    """
+    Helper for handler tcpdump output.
+
+    :params address_cache: address cache path.
+    :params filename: Log file name for tcpdump message.
+    :params line: Tcpdump output message.
+    """
+    try:
+        utils_misc.log_line(filename, line)
+    except Exception, reason:
+        logging.warn("Can't log tcpdump output, '%s'", reason)
+
+    _update_address_cache(env, line)
 
 
 class Env(UserDict.IterableUserDict):
@@ -35,6 +121,9 @@ class Env(UserDict.IterableUserDict):
         UserDict.IterableUserDict.__init__(self)
         empty = {"version": version}
         self._filename = filename
+        self._tcpdump = None
+        self._params = None
+        self.save_lock = threading.RLock()
         if filename:
             try:
                 if os.path.isfile(filename):
@@ -72,9 +161,13 @@ class Env(UserDict.IterableUserDict):
         filename = filename or self._filename
         if filename is None:
             raise EnvSaveError("No filename specified for this env file")
-        f = open(filename, "w")
-        cPickle.dump(self.data, f)
-        f.close()
+        self.save_lock.acquire()
+        try:
+            f = open(filename, "w")
+            cPickle.dump(self.data, f)
+            f.close()
+        finally:
+            self.save_lock.release()
 
     def get_all_vms(self):
         """
@@ -90,12 +183,11 @@ class Env(UserDict.IterableUserDict):
         """
         Destroy all objects registered in this Env object.
         """
+        self.stop_tcpdump()
         for key in self.data:
             try:
                 if key.startswith("vm__"):
                     self.data[key].destroy(gracefully=False)
-                elif key == "tcpdump":
-                    self.data[key].close()
             except Exception:
                 pass
         self.data = {}
@@ -127,6 +219,7 @@ class Env(UserDict.IterableUserDict):
             self.register_vm(name, vm)
             return vm
 
+    @lock_safe
     def register_vm(self, name, vm):
         """
         Register a VM in this Env object.
@@ -136,6 +229,7 @@ class Env(UserDict.IterableUserDict):
         """
         self.data["vm__%s" % name] = vm
 
+    @lock_safe
     def unregister_vm(self, name):
         """
         Remove a given VM.
@@ -144,6 +238,7 @@ class Env(UserDict.IterableUserDict):
         """
         del self.data["vm__%s" % name]
 
+    @lock_safe
     def register_syncserver(self, port, server):
         """
         Register a Sync Server in this Env object.
@@ -153,6 +248,7 @@ class Env(UserDict.IterableUserDict):
         """
         self.data["sync__%s" % port] = server
 
+    @lock_safe
     def unregister_syncserver(self, port):
         """
         Remove a given Sync Server.
@@ -169,6 +265,7 @@ class Env(UserDict.IterableUserDict):
         """
         return self.data.get("sync__%s" % port)
 
+    @lock_safe
     def register_lvmdev(self, name, lvmdev):
         """
         Register lvm device object into env;
@@ -178,6 +275,7 @@ class Env(UserDict.IterableUserDict):
         """
         self.data["lvmdev__%s" % name] = lvmdev
 
+    @lock_safe
     def unregister_lvmdev(self, name):
         """
         Remove lvm device object from env;
@@ -194,3 +292,55 @@ class Env(UserDict.IterableUserDict):
         :return: lvmdev object
         """
         return self.data.get("lvmdev__%s" % name)
+
+    def _start_tcpdump(self):
+        port = self._params.get('shell_port')
+        prompt = self._params.get('shell_prompt')
+        address = self._params.get('ovirt_node_address')
+        username = self._params.get('ovirt_node_user')
+        password = self._params.get('ovirt_node_password')
+
+        cmd = "%s -npvi any 'port 68'" % utils_misc.find_command("tcpdump")
+        if self._params.get("remote_preprocess") == "yes":
+            login_cmd = ("ssh -o UserKnownHostsFile=/dev/null -o "
+                         "PreferredAuthentications=password -p %s %s@%s" %
+                         (port, username, address))
+
+            self._tcpdump = aexpect.ShellSession(
+                    login_cmd,
+                    output_func=_update_address_cache,
+                    output_params=(self,))
+
+            remote.handle_prompts(self._tcpdump, username, password, prompt)
+            self._tcpdump.sendline(cmd)
+
+        else:
+            self._tcpdump = aexpect.Tail(command=cmd,
+                                         output_func=_tcpdump_handler,
+                                         output_params=(self, "tcpdump.log"))
+
+        if utils_misc.wait_for(lambda: not self._tcpdump.is_alive(),
+                               0.1, 0.1, 1.0):
+            logging.warn("Could not start tcpdump")
+            logging.warn("Status: %s", self._tcpdump.get_status())
+            msg = utils_misc.format_str_for_message(self._tcpdump.get_output())
+            logging.warn("Output: %s", msg)
+
+    def start_tcpdump(self, params):
+        self._params = params
+
+        if "address_cache" not in self.data:
+            self.data["address_cache"] = {}
+
+        if self._tcpdump is None:
+            self._start_tcpdump()
+        else:
+            if not self._tcpdump.is_alive():
+                del self._tcpdump
+                self._start_tcpdump()
+
+    def stop_tcpdump(self):
+        if self._tcpdump is not None:
+            self._tcpdump.close()
+            del self._tcpdump
+            self._tcpdump = None
