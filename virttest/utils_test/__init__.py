@@ -192,16 +192,36 @@ def get_time(session, time_command, time_filter_re, time_format):
     :return: A tuple containing the host time and guest time.
     """
     if re.findall("ntpdate|w32tm", time_command):
-        o = session.cmd(time_command)
+        output = session.cmd(time_command)
         if re.match('ntpdate', time_command):
-            offset = re.findall('offset (.*) sec', o)[0]
-            host_main, host_mantissa = re.findall(time_filter_re, o)[0]
-            host_time = (time.mktime(time.strptime(host_main, time_format)) +
-                         float("0.%s" % host_mantissa))
+            try:
+                offset = re.findall('offset (.*) sec', output)[0]
+            except IndexError:
+                msg = "Fail to get guest time offset. Command "
+                msg += "'%s', output: %s" % (time_command, output)
+                raise error.TestError(msg)
+            try:
+                host_main, host_mantissa = re.findall(time_filter_re, output)[0]
+                host_time = (time.mktime(time.strptime(host_main, time_format)) +
+                             float("0.%s" % host_mantissa))
+            except Exception:
+                msg = "Fail to get host time. Command '%s', " % time_command
+                msg += "output: %s" % output
+                raise error.TestError(msg)
             guest_time = host_time - float(offset)
         else:
-            guest_time = re.findall(time_filter_re, o)[0]
-            offset = re.findall("o:(.*)s", o)[0]
+            try:
+                guest_time = re.findall(time_filter_re, output)[0]
+            except IndexError:
+                msg = "Fail to get guest time. Command '%s', " % time_command
+                msg += "output: %s" % output
+                raise error.TestError(msg)
+            try:
+                offset = re.findall("o:(.*)s", output)[0]
+            except IndexError:
+                msg = "Fail to get guest time offset. Command "
+                msg += "'%s', output: %s" % (time_command, output)
+                raise error.TestError(msg)
             if re.match('PM', guest_time):
                 hour = re.findall('\d+ (\d+):', guest_time)[0]
                 hour = str(int(hour) + 12)
