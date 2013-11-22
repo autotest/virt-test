@@ -31,6 +31,8 @@ KVM_TEST_LOGGING
 @basic-desktop
 @fonts
 @Smart Card Support
+gnome-utils
+python-imaging
 NetworkManager
 ntpdate
 watchdog
