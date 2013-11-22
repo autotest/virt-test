@@ -242,7 +242,7 @@ class VM(virt_vm.BaseVM):
         """
         return virsh.dumpxml(self.name, uri=self.connect_uri).stdout.strip()
 
-    def backup_xml(self):
+    def backup_xml(self, active=False):
         """
         Backup the guest's xmlfile.
         """
@@ -251,7 +251,9 @@ class VM(virt_vm.BaseVM):
         try:
             xml_file = tempfile.mktemp(dir="/tmp")
 
-            virsh.dumpxml(self.name, to_file=xml_file, uri=self.connect_uri)
+            extra = "" if active else "--inactive"
+            virsh.dumpxml(self.name, extra=extra,
+                          to_file=xml_file, uri=self.connect_uri)
             return xml_file
         except Exception, detail:
             if os.path.exists(xml_file):
