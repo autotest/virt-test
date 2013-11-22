@@ -49,15 +49,17 @@ def preprocess_image(test, params, image_name):
     """
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
 
+    if not storage.preprocess_image_backend(base_dir, params, image_name):
+        logging.error("Backend can't be prepared correctly.")
+
     image_filename = storage.get_image_filename(params,
                                                 base_dir)
 
     create_image = False
-
     if params.get("force_create_image") == "yes":
         create_image = True
     elif (params.get("create_image") == "yes" and not
-          os.path.exists(image_filename)):
+          storage.file_exists(params, image_filename)):
         create_image = True
 
     if params.get("backup_image_before_testing", "no") == "yes":
