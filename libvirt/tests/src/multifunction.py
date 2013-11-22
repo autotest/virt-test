@@ -7,6 +7,20 @@ from virttest.libvirt_xml import xcepts, vm_xml
 from virttest.libvirt_xml.devices import disk
 
 
+class MFError(Exception):
+    pass
+
+
+class MFCheckDiskError(MFError):
+
+    def __init__(self, output):
+        super(MFCheckDiskError, self).__init__(output)
+        self.output = output
+
+    def __str__(self):
+        return ("Check disk in vm failed:\n%s" % self.output)
+
+
 def cleanup_vm(vm_name=None, disk_removed=None):
     """
     Cleanup the vm with its disk deleted.
@@ -21,6 +35,73 @@ def cleanup_vm(vm_name=None, disk_removed=None):
             os.remove(disk_removed)
     except IOError:
         pass
+
+
+def prepare_disk_params(target_list, params):
+    """
+    Prepare params lists for creating disk xml.
+
+    :param target_list: devices which need disk xml.
+    :param params: base slot/func value in config file.
+    """
+    addr_multifunction = params.get("mf_addr_multifunction")
+    addr_type = params.get("mf_addr_type")
+    base_domain = params.get("mf_addr_domain", "0x0000")
+    base_bus = params.get("mf_addr_bus", "0x00")
+    base_slot = params.get("mf_addr_slot", "0x0a")
+    base_function = params.get("mf_addr_function", "0x0")
+    # slot_metric: the metric which slot will increase.
+    # func_metric: the metric which func will increase.
+    try:
+        slot_metric = int(params.get("mf_slot_metric", 0))
+    except ValueError, detail:    # illegal metric
+        logging.warn(detail)
+        slot_metric = 0
+    try:
+        func_metric = int(params.get("mf_func_metric", 0))
+    except ValueError, detail:    # illegal metric
+        logging.warn(detail)
+        func_metric = 0
+
+    disk_params_dict = {}
+    for target_dev in target_list:
+        disk_params = {}
+        disk_params['addr_multifunction'] = addr_multifunction
+        disk_params['addr_type'] = addr_type
+        # Do not support increated metric of domain and bus yet
+        disk_params['addr_domain'] = base_domain
+        disk_params['addr_bus'] = base_bus
+        disk_params['addr_slot'] = base_slot
+        disk_params['addr_function'] = base_function
+
+        # Convert string hex to number hex for operation
+        try:
+            base_slot = int(base_slot, 16)
+            base_function = int(base_function, 16)
+        except ValueError:
+            pass  # Can not convert, use original string
+
+        # Increase slot/func for next target_dev
+        if slot_metric:
+            try:
+                base_slot += slot_metric
+            except TypeError, detail:
+                logging.warn(detail)
+        if func_metric:
+            try:
+                base_function += func_metric
+            except TypeError, detail:
+                logging.warn(detail)
+
+        # Convert number hex back to string hex if necessary
+        try:
+            base_slot = hex(base_slot)
+            base_function = hex(base_function)
+        except TypeError:
+            pass   # Can not convert, directly pass
+
+        disk_params_dict[target_dev] = disk_params
+    return disk_params_dict
 
 
 def create_disk_xml(params):
@@ -126,7 +207,7 @@ def check_disk(vm, target_dev, part_size):
     session = vm.wait_for_login()
     device = "/dev/%s" % target_dev
     if session.cmd_status("ls %s" % device):
-        raise error.TestFail("Can not find '%s' in guest." % device)
+        raise MFCheckDiskError("Can not find '%s' in guest." % device)
     else:
         if session.cmd_status("which parted"):
             logging.error("Did not find command 'parted' in guest, SKIP...")
@@ -137,13 +218,13 @@ def check_disk(vm, target_dev, part_size):
                                               % (device, part_size), timeout=5)
     logging.debug("Create part:\n:%s\n%s", output1, output2)
     if ret1 or ret2:
-        raise error.TestFail("Create partition for '%s' failed." % device)
+        raise MFCheckDiskError("Create partition for '%s' failed." % device)
 
     if session.cmd_status("mkfs.ext3 %s1" % device):
-        raise error.TestFail("Format created partition failed.")
+        raise MFCheckDiskError("Format created partition failed.")
 
     if session.cmd_status("mount %s1 /mnt" % device):
-        raise error.TestFail("Can not mount '%s' to /mnt." % device)
+        raise MFCheckDiskError("Can not mount '%s' to /mnt." % device)
 
 
 def run_multifunction(test, params, env):
@@ -165,6 +246,7 @@ def run_multifunction(test, params, env):
         disk_count = int(params.get("mf_added_devices_count", 1))
         disk_size = params.get("mf_added_devices_size", "50M")
         status_error = "yes" == params.get("status_error", "no")
+        check_disk_error = "yes" == params.get("mf_check_disk_error", "no")
         target_list = []
         index = 0
         while len(target_list) < disk_count:
@@ -173,13 +255,13 @@ def run_multifunction(test, params, env):
                 target_list.append(target_dev)
             index += 1
 
-        disk_params = {}
-        disk_params['addr_multifunction'] = params.get("mf_addr_multifunction")
-        disk_params['addr_type'] = params.get("mf_addr_type")
-        # According disk count, increasing target_dev vdb->vdc->vdd...
+        disk_params_dict = prepare_disk_params(target_list, params)
+        # To record failed attach
+        fail_info = []
         for target_dev in target_list:
             result = attach_additional_device(new_vm_name, disk_size,
-                                              target_dev, disk_params)
+                                              target_dev,
+                                              disk_params_dict[target_dev])
             if result.exit_status:
                 if status_error:
                     # Attach fail is expected.
@@ -190,14 +272,25 @@ def run_multifunction(test, params, env):
                     raise error.TestFail("Attach device %s failed."
                                          % target_dev)
             else:
-                if status_error:
-                    raise error.TestFail("Attach %s successfully "
-                                         "but not expected." % target_dev)
+                if status_error and not check_disk_error:
+                    fail_info.append("Attach %s successfully "
+                                     "but not expected." % target_dev)
+        if len(fail_info):
+            raise error.TestFail(fail_info)
         logging.debug("New VM XML:\n%s", new_vm.get_xml())
 
         # Login to check attached devices
         for target_dev in target_list:
-            check_disk(new_vm, target_dev, disk_size)
+            try:
+                check_disk(new_vm, target_dev, disk_size)
+            except MFCheckDiskError, detail:
+                if check_disk_error:
+                    logging.debug("Check disk failed as expected:\n%s", detail)
+                    return
+                else:
+                    raise
+            if check_disk_error:
+                raise error.TestFail("Check disk didn't fail as expected.")
     finally:
         if new_vm.is_alive():
             new_vm.destroy()
