@@ -1985,17 +1985,17 @@ class VM(virt_vm.BaseVM):
                 proxy_helper_cmd += " -n"
 
                 logging.info("Running Proxy Helper:\n%s", proxy_helper_cmd)
-                self.process = aexpect.run_bg(proxy_helper_cmd, None,
-                                              logging.info,
-                                              "[9p proxy helper]",
-                                              auto_close=False)
+                self.process = aexpect.run_tail(proxy_helper_cmd, None,
+                                                logging.info,
+                                                "[9p proxy helper]",
+                                                auto_close=False)
 
             logging.info("Running qemu command (reformatted):\n%s",
                          qemu_command.replace(" -", " \\\n    -"))
             self.qemu_command = qemu_command
-            self.process = aexpect.run_bg(qemu_command, None,
-                                          logging.info, "[qemu output] ",
-                                          auto_close=False)
+            self.process = aexpect.run_tail(qemu_command, None,
+                                            logging.info, "[qemu output] ",
+                                            auto_close=False)
             logging.info("Created qemu process with parent PID %d",
                          self.process.get_pid())
             self.start_time = time.time()
