@@ -53,14 +53,14 @@ def _wait(filename):
 
 
 def _get_filenames(base_dir, a_id):
-    return [os.path.join(base_dir, s + a_id) for s in
-            "shell-pid-", "status-", "output-", "inpipe-",
-            "lock-server-running-", "lock-client-starting-",
-            "server-log-"]
+    return [os.path.join(base_dir, a_id, s) for s in
+            "shell-pid", "status", "output", "inpipe",
+            "lock-server-running", "lock-client-starting",
+            "server-log"]
 
 
 def _get_reader_filename(base_dir, a_id, reader):
-    return os.path.join(base_dir, "outpipe-%s-%s" % (reader, a_id))
+    return os.path.join(base_dir, a_id, "outpipe-%s" % reader)
 
 
 # The following is the server part of the module.
@@ -484,9 +484,11 @@ class Spawn(object):
         self.a_id = a_id or utils_misc.generate_random_string(8)
         self.log_file = None
 
+        base_dir = os.path.join(BASE_DIR, self.a_id)
+
         # Define filenames for communication with server
         try:
-            os.makedirs(BASE_DIR)
+            os.makedirs(base_dir)
         except Exception:
             pass
         (self.shell_pid_filename,
