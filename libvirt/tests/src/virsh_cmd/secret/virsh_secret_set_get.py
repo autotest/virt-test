@@ -30,6 +30,9 @@ def check_secret(params):
     if os.access(base64_file, os.R_OK):
         base64_encoded_string = open(base64_file, 'r').read().strip()
         secret_decoded_string = base64.b64decode(base64_encoded_string)
+    else:
+        logging.error("Did not find base64_file: %s", base64_file)
+        return False
 
     if secret_string and secret_string != secret_decoded_string:
         logging.error("To expect %s value is %s",
@@ -220,7 +223,7 @@ def run_virsh_secret_set_get(test, params, env):
         if usage_volume and sec_list:
             for sec in sec_list:
                 if usage_volume in sec[1]:
-                    uuid = sec[0]
+                    uuid = sec[0].lstrip()
                     no_specified_uuid = True
             logging.debug("Secret uuid is %s", uuid)
 
