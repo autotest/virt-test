@@ -392,7 +392,7 @@ class VirshConnectBack(VirshPersistent):
     Persistent virsh session connected back from a remote host
     """
 
-    __slots__ = ('remote_ip', )
+    __slots__ = ('remote_ip', 'remote_pwd')
 
     def new_session(self):
         """
@@ -400,7 +400,6 @@ class VirshConnectBack(VirshPersistent):
         """
 
         # Accessors may call this method, avoid recursion
-        virsh_exec = self.__dict_get__('virsh_exec')  # Must exist, can't be None
         uri = self.__dict_get__('uri')  # Must exist, can be None
         remote_ip = self.__dict_get__('remote_ip')
         try:
@@ -412,6 +411,18 @@ class VirshConnectBack(VirshPersistent):
         except KeyError:
             remote_pwd = None
         super(VirshConnectBack, self).close_session()
+        # Get virsh_exec on remote host.
+        remote_session = remote.wait_for_login("ssh",
+                                               remote_ip,
+                                               "22",
+                                               remote_user,
+                                               remote_pwd,
+                                               prompt='[\#\$]')
+        status, output = remote_session.cmd_status_output("which virsh")
+        if status:
+            raise error.TestFail("No virsh command in remote host %s." %
+                                 remote_ip)
+        virsh_exec = output.strip()
         new_session = VirshSession(virsh_exec, uri, a_id=None,
                                    remote_ip=remote_ip,
                                    remote_user=remote_user,
