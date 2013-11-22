@@ -4,7 +4,7 @@ from autotest.client.shared import error
 from virttest import virsh, libvirt_xml
 
 
-def reset_domain(vm, vm_state):
+def reset_domain(vm, vm_state, needs_agent=False):
     """
     Set domain vcpu number to 4 and current vcpu as 1
 
@@ -15,9 +15,30 @@ def reset_domain(vm, vm_state):
         vm.destroy()
     vm_xml = libvirt_xml.VMXML()
     vm_xml.set_vm_vcpus(vm.name, 4, 1)
+    if needs_agent:
+        logging.debug("Attempting to set agent channel")
+        vm_xml.set_agent_channel(vm.name)
     if not vm_state == "shut off":
         vm.start()
-        vm.wait_for_login()
+        session = vm.wait_for_login()
+        if needs_agent:
+            # Check if qemu-ga already started automatically
+            cmd = "rpm -q qemu-guest-agent || yum install -y qemu-guest-agent"
+            stat_install = session.cmd_status(cmd, 300)
+            if stat_install != 0:
+                xml_recover(vmxml_backup)
+                raise error.TestFail("Fail to install qemu-guest-agent, make"
+                                     "sure that you have usable repo in guest")
+
+            # Check if qemu-ga already started
+            stat_ps = session.cmd_status("ps aux |grep [q]emu-ga")
+            if stat_ps != 0:
+                session.cmd("qemu-ga -d")
+                # Check if the qemu-ga really started
+                stat_ps = session.cmd_status("ps aux |grep [q]emu-ga")
+                if stat_ps != 0:
+                    xml_recover(vmxml_backup)
+                    raise error.TestFail("Fail to run qemu-ga in guest")
 
 
 def chk_output_running(output, expect_out, options):
@@ -144,7 +165,7 @@ def run_virsh_vcpucount(test, params, env):
         raise error.TestNAError("Options exceeds 2 is not supported")
 
     # Prepare domain
-    reset_domain(vm, pre_vm_state)
+    reset_domain(vm, pre_vm_state, (options == "--guest"))
 
     # Perform guest vcpu hotplug
     for i in range(len(set_option)):
@@ -160,7 +181,8 @@ def run_virsh_vcpucount(test, params, env):
         vcpucount_status = result.exit_status
 
         if "--guest" in options:
-            if result.stderr.count("doesn't support option"):
+            if result.stderr.count("doesn't support option") or \
+               result.stderr.count("command guest-get-vcpus has not been found"):
                 raise error.TestNAError("Option %s is not supported" % options)
 
         # Reset domain
