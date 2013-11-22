@@ -241,7 +241,8 @@ class GuestfishSession(aexpect.ShellSession):
         """
         Send a guestfish command and return its exit status and output.
 
-        :param cmd: guestfish command to send (must not contain newline characters)
+        :param cmd: guestfish command to send
+                    (must not contain newline characters)
         :param timeout: The duration (in seconds) to wait for the prompt to
                 return
         :param internal_timeout: The timeout to pass to read_nonblocking
@@ -267,8 +268,8 @@ class GuestfishSession(aexpect.ShellSession):
         stderr = ''  # no way to retrieve this separately
         result = utils.CmdResult(cmd, stdout, stderr, exit_status)
         if not ignore_status and exit_status:
-            raise error.CmdError(cmd, result,
-                                 "Guestfish Command returned non-zero exit status")
+            raise error.CmdError(cmd, result, "Guestfish Command returned "
+                                              "non-zero exit status")
         return result
 
 
@@ -335,7 +336,8 @@ class GuestfishPersistent(Guestfish):
         Open new session, closing any existing
         """
         # Accessors may call this method, avoid recursion
-        guestfs_exec = self.__dict_get__('lgf_exec')  # Must exist, can't be None
+        # Must exist, can't be None
+        guestfs_exec = self.__dict_get__('lgf_exec')
         self.close_session()
         # Always create new session
         new_session = GuestfishSession(guestfs_exec)
@@ -606,7 +608,8 @@ class GuestfishPersistent(Guestfish):
         inspect-get-major-version - get major version of inspected operating
         system
 
-        This returns the major version number of the inspected operating system.
+        This returns the major version number of the inspected
+        operating system.
         """
         return self.inner_cmd("inspect-get-major-version %s" % root)
 
@@ -1054,7 +1057,8 @@ def virt_list_partitions_cmd(disk_or_domain, long=False, total=False,
 def guestmount(disk_or_domain, mountpoint, inspector=False,
                readonly=False, **dargs):
     """
-    guestmount - Mount a guest filesystem on the host using FUSE and libguestfs.
+    guestmount - Mount a guest filesystem on the host using FUSE
+                 and libguestfs.
 
     @param disk_or_domain: a disk or a domain to be mounted
            If you need to mount a disk, set is_disk to True in dargs
@@ -1131,12 +1135,16 @@ def virt_filesystems(disk_or_domain, **dargs):
     cmd = "virt-filesystems"
     # If you need to mount a disk, set is_disk to True
     is_disk = dargs.get("is_disk", False)
+    ignore_status = dargs.get("ignore_status", True)
+    debug = dargs.get("debug", False)
+    timeout = dargs.get("timeout", 60)
+
     if is_disk is True:
         cmd += " -a %s" % disk_or_domain
     else:
         cmd += " -d %s" % disk_or_domain
     cmd = get_display_type(cmd, dargs)
-    return lgf_command(cmd, **dargs)
+    return lgf_command(cmd, ignore_status, debug, timeout)
 
 
 def virt_list_partitions(disk_or_domain, long=False, total=False,
@@ -1228,4 +1236,41 @@ def virt_cat_cmd(disk_or_domain, file_path, options=None, ignore_status=True,
     if options is not None:
         cmd += " %s" % options
 
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_format(disk, filesystem=None, format=None, lvm=None,
+                partition=None, wipe=False, ignore_status=False,
+                debug=False, timeout=60):
+    """
+    Virt-format takes an existing disk file (or it can be a host partition,
+    LV etc), erases all data on it, and formats it as a blank disk.
+    """
+    cmd = "virt-format -a %s" % disk
+    if filesystem is not None:
+        cmd += " --filesystem=%s" % filesystem
+    if format is not None:
+        cmd += " --format=%s" % format
+    if lvm is not None:
+        cmd += " --lvm=%s" % lvm
+    if partition is not None:
+        cmd += " --partition=%s" % partition
+    if wipe is True:
+        cmd += " --wipe"
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_inspector2(disk_or_domain, is_disk=False, ignore_status=True,
+                    debug=False, timeout=30):
+    """
+    virt-inspector2 examines a virtual machine or disk image and tries to
+    determine the version of the operating system and other information
+    about the virtual machine.
+    """
+    cmd = "virt-inspector2"
+    # If you need to mount a disk, set is_disk to True
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
     return lgf_command(cmd, ignore_status, debug, timeout)

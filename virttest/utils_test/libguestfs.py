@@ -3,7 +3,8 @@ import os
 import logging
 import commands
 from autotest.client.shared import error, utils
-from virttest import virsh, virt_vm, libvirt_vm, data_dir, utils_net
+from virttest import virsh, virt_vm, libvirt_vm, data_dir
+from virttest import utils_net, xml_utils
 from virttest.libvirt_xml import vm_xml, xcepts
 from virttest import utils_libguestfs as lgf
 
@@ -21,6 +22,16 @@ class VTAttachError(VTError):
 
     def __str__(self):
         return ("Attach command failed:%s\n%s" % (self.cmd, self.output))
+
+
+class XMLParseError(VTError):
+    def __init__(self, cmd, output):
+        super(XMLParseError, self).__init__(cmd, output)
+        self.cmd = cmd
+        self.output = output
+
+    def __str__(self):
+        return ("Parse XML with '%s' failed:%s" % (self.cmd, self.output))
 
 
 def primary_disk_virtio(vm):
@@ -91,6 +102,16 @@ def define_new_vm(vm_name, new_name):
     except xcepts.LibvirtXMLError, detail:
         logging.error(detail)
         return False
+
+
+def umount_fs(mountpoint):
+    if os.path.ismount(mountpoint):
+        us, uo = commands.getstatusoutput("umount -l %s" % mountpoint)
+        if us:
+            logging.debug("Umount %s failed", mountpoint)
+            return False
+    logging.debug("Umount %s successfully", mountpoint)
+    return True
 
 
 def cleanup_vm(vm_name=None, disk=None):
@@ -303,7 +324,8 @@ class VirtTools(object):
         return (True, mountpoint)
 
     def write_file_with_guestmount(self, mountpoint, path,
-                                   content=None, vm_ref=None):
+                                   content=None, vm_ref=None,
+                                   cleanup=True):
         """
         Write content to file with guestmount
         """
@@ -316,7 +338,7 @@ class VirtTools(object):
             return (False, gmo)
 
         # file's path on host's mountpoint
-        file_path = "%s/%s" % (mountpoint, path)
+        file_path = os.path.join(mountpoint, path)
         if content is None:
             content = "This is a temp file with guestmount."
         try:
@@ -326,10 +348,90 @@ class VirtTools(object):
         except IOError, detail:
             logging.error(detail)
             return (False, detail)
-        logging.info("Create file %s successfully", path)
+        logging.info("Create file %s successfully", file_path)
         # Cleanup created file
-        utils.run("rm -f %s" % file_path, ignore_status=True)
+        if cleanup:
+            utils.run("rm -f %s" % file_path, ignore_status=True)
         return (True, file_path)
+
+    def format(self, filesystem=None, partition=None, lvm=None):
+        # Only useful after attaching, otherwise, it will be None.
+        disk_path = self.params.get("added_disk_path")
+        result = lgf.virt_format(disk_path, filesystem,
+                                 lvm=lvm, partition=partition,
+                                 debug=True, ignore_status=True)
+        return result
+
+    def get_filesystems_info(self, vm_ref=None):
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        result = lgf.virt_filesystems(vm_ref, long_format=True,
+                                      debug=True, all=True,
+                                      ignore_status=True)
+        return result
+
+    def cat(self, filename, vm_ref=None):
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        result = lgf.virt_cat_cmd(vm_ref, filename, debug=True,
+                                  ignore_status=True)
+        return result
+
+    def list_df(self, vm_ref=None):
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        result = lgf.virt_df(vm_ref, debug=True, ignore_status=True)
+        return result
+
+    def get_vm_info_with_inspector(self, vm_ref=None):
+        """
+        Return a dict includes os information.
+        """
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        # A dict to include system information
+        sys_info = {}
+        result = lgf.virt_inspector2(vm_ref, ignore_status=True)
+        if result.exit_status:
+            logging.error("Get %s information with inspector2 failed:\n%s",
+                          vm_ref, result)
+            return sys_info
+        # Analyse output to get information
+        try:
+            xmltreefile = xml_utils.XMLTreeFile(result.stdout)
+            os_root = xmltreefile.find("operatingsystem")
+            if os_root is None:
+                raise XMLParseError("operatingsystem", os_root)
+        except (IOError, XMLParseError), detail:
+            logging.error(detail)
+            return sys_info
+        sys_info['root'] = os_root.findtext("root")
+        sys_info['name'] = os_root.findtext("name")
+        sys_info['arch'] = os_root.findtext("arch")
+        sys_info['distro'] = os_root.findtext("distro")
+        sys_info['release'] = os_root.findtext("product_name")
+        sys_info['major_version'] = os_root.findtext("major_version")
+        sys_info['minor_version'] = os_root.findtext("minor_version")
+        sys_info['hostname'] = os_root.findtext("hostname")
+        # filesystems and mountpoints are dict to restore detail info
+        mountpoints = {}
+        for node in os_root.find("mountpoints"):
+            mp_device = node.get("dev")
+            if mp_device is not None:
+                mountpoints[mp_device] = node.text
+        sys_info['mountpoints'] = mountpoints
+        filesystems = {}
+        for node in os_root.find("filesystems"):
+            fs_detail = {}
+            fs_device = node.get("dev")
+            if fs_device is not None:
+                fs_detail['type'] = node.findtext("type")
+                fs_detail['label'] = node.findtext("label")
+                fs_detail['uuid'] = node.findtext("uuid")
+                filesystems[fs_device] = fs_detail
+        sys_info['filesystems'] = filesystems
+        logging.debug("VM information:\n%s", sys_info)
+        return sys_info
 
 
 class GuestfishTools(lgf.GuestfishPersistent):
@@ -379,7 +481,6 @@ class GuestfishTools(lgf.GuestfishPersistent):
         for key in release_type:
             if re.search(release_type[key], release_result.stdout):
                 return (True, key)
-
 
     def write_file(self, path, content):
         """
