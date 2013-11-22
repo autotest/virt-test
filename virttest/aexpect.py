@@ -847,6 +847,10 @@ class Tail(Spawn):
             while True:
                 global _thread_kill_requested
                 if _thread_kill_requested:
+                    try:
+                        os.close(fd)
+                    except:
+                        pass
                     return
                 try:
                     # See if there's any data to read from the pipe
