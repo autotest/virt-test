@@ -115,7 +115,7 @@ def run_virsh_snapshot_dumpxml(test, params, env):
                 snap_opt = snap_opt + " " + opt_name[opt]
 
         # Do xml backup for final recovery
-        vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name)
+        vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name, "--inactive")
         # Add passwd in guest graphics
         if passwd is not None:
             vm = env.get_vm(vm_name)

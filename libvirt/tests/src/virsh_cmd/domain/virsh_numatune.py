@@ -170,7 +170,7 @@ def run_virsh_numatune(test, params, env):
     # Run test case
     vm_name = params.get("vms")
     vm = env.get_vm(vm_name)
-    original_vm_xml = libvirt_xml.VMXML.new_from_dumpxml(vm_name)
+    original_vm_xml = libvirt_xml.VMXML.new_from_dumpxml(vm_name, "--inactive")
     cgconfig_service = utils_cgroup.CgconfigService()
     status_error = params.get("status_error", "no")
     libvirtd = params.get("libvirtd", "on")
@@ -214,9 +214,5 @@ def run_virsh_numatune(test, params, env):
             cgconfig_service.cgconfig_start()
             utils_libvirtd.libvirtd_restart()
     finally:
-        vm.destroy()
-        # Restore guest, first remove existing
-        original_vm_xml.undefine()
-        # Recover based on original XML
-        original_vm_xml.define()
-        # leave vm down, next test will start if needed
+        # Restore guest
+        original_vm_xml.sync()

@@ -31,7 +31,7 @@ def run_svirt_save_restore(test, params, env):
     # Get variables about VM and get a VM object and VMXML instance.
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
-    vmxml = VMXML.new_from_dumpxml(vm_name)
+    vmxml = VMXML.new_from_dumpxml(vm_name, "--inactive")
     backup_xml = vmxml.copy()
 
     # Get varialbles about image.

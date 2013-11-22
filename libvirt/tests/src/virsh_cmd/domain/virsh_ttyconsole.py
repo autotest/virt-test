@@ -51,7 +51,7 @@ def run_virsh_ttyconsole(test, params, env):
     virsh_dargs = {'ignore_status': True, 'uri': uri}
 
     # A backup of original vm
-    vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name)
+    vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name, "--inactive")
     if vm.is_alive():
         vm.destroy()
     # Config vm for tty console

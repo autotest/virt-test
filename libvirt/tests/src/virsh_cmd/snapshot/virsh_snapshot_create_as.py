@@ -149,7 +149,7 @@ def run_virsh_snapshot_create_as(test, params, env):
     logging.debug("option_dict is %s", option_dict)
 
     # A backup of original vm
-    vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name)
+    vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name, "--inactive")
     logging.debug("original xml is %s", vmxml_backup)
 
     # Generate empty image for negative test
