@@ -92,7 +92,7 @@ def run_virsh_update_device(test, params, env):
     create_attach_xml(update_xmlfile, tmp_iso)
     vm_xml = os.path.join(test.tmpdir, "vm_xml")
     virsh.dumpxml(vm_name, extra="", to_file=vm_xml)
-    vmxml_before = libvirt_xml.VMXML.new_from_dumpxml(vm_name)
+    vmxml_before = libvirt_xml.VMXML.new_from_dumpxml(vm_name, "--inactive")
 
     if vm_ref == "id":
         vm_ref = domid

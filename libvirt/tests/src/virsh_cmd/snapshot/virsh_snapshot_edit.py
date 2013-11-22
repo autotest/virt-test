@@ -23,7 +23,7 @@ def run_virsh_snapshot_edit(test, params, env):
     snap_create_opt2 = params.get("snapshot_create_option2", "")
 
     # Do xml backup for final recovery
-    vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name)
+    vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name, "--inactive")
 
     def edit_snap_xml(dom_name, edit_opts, edit_cmd):
         """

@@ -128,7 +128,7 @@ def run_virsh_console(test, params, env):
     domid = ""
 
     # A backup of original vm
-    vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name)
+    vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name, "--inactive")
     if vm.is_alive():
         vm.destroy()
     xml_console_config(vm_name)

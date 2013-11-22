@@ -129,7 +129,7 @@ def run_virsh_attach_detach_disk(test, params, env):
         device_source = os.path.join(test.virtdir, device_source_name)
     else:
         device_source = device_source_name
-    virsh.dumpxml(vm_name, extra="", to_file=vm_xml_file)
+    virsh.dumpxml(vm_name, extra="--inactive", to_file=vm_xml_file)
 
     # Create virtual device file.
     create_device_file(device_source)
