@@ -879,6 +879,91 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("blockdev-setrw %s" % device)
 
+    def vgcreate(self, volgroup, physvols):
+        """
+        vgcreate - create an LVM volume group
+
+        This creates an LVM volume group called "volgroup" from the
+        non-empty list of physical volumes "physvols".
+        """
+        return self.inner_cmd("vgcreate %s %s" % (volgroup, physvols))
+
+    def vgs(self):
+        """
+        vgs - list the LVM volume groups (VGs)
+
+        List all the volumes groups detected.
+        """
+        return self.inner_cmd("vgs")
+
+    def vgrename(self, volgroup, newvolgroup):
+        """
+        vgrename - rename an LVM volume group
+
+        Rename a volume group "volgroup" with the new name "newvolgroup".
+        """
+        return self.inner_cmd("vgrename %s %s" % (volgroup, newvolgroup))
+
+    def vgremove(self, vgname):
+        """
+        vgremove - remove an LVM volume group
+
+        Remove an LVM volume group "vgname", (for example "VG").
+        """
+        return self.inner_cmd("vgremove %s" % vgname)
+
+    def lvcreate(self, logvol, volgroup, mbytes):
+        """
+        lvcreate - create an LVM logical volume
+
+        This creates an LVM logical volume called "logvol" on the
+        volume group "volgroup", with "size" megabytes.
+        """
+        return self.inner_cmd("lvcreate %s %s %s" % (logvol, volgroup, mbytes))
+
+    def lvuuid(self, device):
+        """
+        lvuuid - get the UUID of a logical volume
+
+        This command returns the UUID of the LVM LV "device".
+        """
+        return self.inner_cmd("lvuuid %s" % device)
+
+    def lvm_canonical_lv_name(self, lvname):
+        """
+        lvm-canonical-lv-name - get canonical name of an LV
+
+        This converts alternative naming schemes for LVs that you might
+        find to the canonical name.
+        """
+        return self.inner_cmd("lvm-canonical-lv-name %s" % lvname)
+
+    def lvremove(self, device):
+        """
+        lvremove - remove an LVM logical volume
+
+        Remove an LVM logical volume "device", where "device" is the path
+        to the LV, such as "/dev/VG/LV".
+        """
+        return self.inner_cmd("lvremove %s" % device)
+
+    def lvresize(self, device, mbytes):
+        """
+        lvresize - resize an LVM logical volume
+
+        This resizes (expands or shrinks) an existing LVM logical volume to
+        "mbytes".
+        """
+        return self.inner_cmd("lvresize %s %s" % (device, mbytes))
+
+    def lvs(self):
+        """
+        lvs - list the LVM logical volumes (LVs)
+
+        List all the logical volumes detected.
+        """
+        return self.inner_cmd("lvs")
+
 
 # libguestfs module functions follow #####
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
