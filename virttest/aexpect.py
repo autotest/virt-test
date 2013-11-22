@@ -190,13 +190,6 @@ if __name__ == "__main__":
         # Wait for the client to finish initializing
         _wait(lock_client_starting_filename)
 
-        # Delete FIFOs
-        for filename in [inpipe_filename]:
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
-
         # Close all files and pipes
         output_file.close()
         os.close(inpipe_fd)
