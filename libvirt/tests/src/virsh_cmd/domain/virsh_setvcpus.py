@@ -21,7 +21,7 @@ def run_virsh_setvcpus(test, params, env):
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
     xml_file = params.get("setvcpus_xml_file", "vm.xml")
-    virsh.dumpxml(vm_name, extra="", to_file=xml_file)
+    virsh.dumpxml(vm_name, extra="--inactive", to_file=xml_file)
     tmp_file = params.get("setvcpus_tmp_file", "tmp.xml")
     pre_vm_state = params.get("setvcpus_pre_vm_state")
     command = params.get("setvcpus_command", "setvcpus")

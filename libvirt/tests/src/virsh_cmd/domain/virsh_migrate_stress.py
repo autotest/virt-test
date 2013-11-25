@@ -37,7 +37,7 @@ def set_cpu_memory(vm_name, cpu, memory):
     """
     Change vms' cpu and memory.
     """
-    vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
+    vmxml = vm_xml.VMXML.new_from_inactive_dumpxml(vm_name)
     vmxml.vcpu = cpu
     # To avoid exceeded current memory
     vmxml.max_mem = memory
