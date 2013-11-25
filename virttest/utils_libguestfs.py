@@ -1136,7 +1136,9 @@ def virt_filesystems(disk_or_domain, **dargs):
     else:
         cmd += " -d %s" % disk_or_domain
     cmd = get_display_type(cmd, dargs)
-    return lgf_command(cmd, **dargs)
+    return lgf_command(cmd, ignore_status=dargs.get('ignore_status', True),
+                       debug=dargs.get('debug', False),
+                       timeout=dargs.get('timeout', 60))
 
 
 def virt_list_partitions(disk_or_domain, long=False, total=False,
