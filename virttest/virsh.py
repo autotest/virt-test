@@ -1496,6 +1496,18 @@ def net_autostart(network, extra="", **dargs):
     return command("net-autostart %s %s" % (network, extra), **dargs)
 
 
+def net_info(network, extra="", **dargs):
+    """
+    Get network infomation
+
+    :param network: name/parameter for network option/argument
+    :param extra: extra parameters to pass to command.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("net-info %s %s" % (network, extra), **dargs)
+
+
 def pool_info(name, **dargs):
     """
     Returns basic information about the storage pool.
