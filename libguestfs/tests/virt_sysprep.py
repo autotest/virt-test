@@ -4,6 +4,7 @@ from autotest.client.shared import error
 from virttest import libvirt_vm, virsh, remote, aexpect, virt_vm, utils_misc
 from virttest.libvirt_xml import vm_xml
 import virttest.utils_libguestfs as lgf
+from virttest.utils_test import libguestfs
 from autotest.client import utils
 
 
@@ -140,6 +141,7 @@ def run_virt_sysprep(test, params, env):
     sysprep_target = params.get("sysprep_target", 'guest')
     sysprep_hostname = params.get("sysprep_hostname", 'sysprep_test')
     vm_name = params.get("main_vm", "virt-tests-vm1")
+    file_system = params.get("sysprep_file_system", "ext3")
     vm = env.get_vm(vm_name)
     disks = vm.get_disk_devices()
     if len(disks):
@@ -151,6 +153,11 @@ def run_virt_sysprep(test, params, env):
             raise error.TestNAError("This test case needs qcow2 format image.")
     else:
         raise error.TestError("Can not get disk of %s" % vm_name)
+    vt = libguestfs.VirtTools(vm, params)
+    fs_type = vt.get_primary_disk_fs_type()
+    if fs_type != file_system:
+        raise error.TestNAError("This test case gets wrong disk file system."
+                                "get: %s, expected: %s" % (fs_type, file_system))
 
     # Do some prepare action
     vm_clone_name = "%s_clone" % vm_name
@@ -165,7 +172,8 @@ def run_virt_sysprep(test, params, env):
     dargs['ignore_status'] = True
     clone_result = lgf.virt_clone_cmd(vm_name, newname=vm_clone_name, **dargs)
     if clone_result.exit_status:
-        raise error.TestFail("virt-clone failed.")
+        raise error.TestFail("virt-clone failed:%s"
+                             % clone_result.stderr.strip())
     try:
         # Modify network to make sure the clone guest can be logging.
         modify_network(vm_clone_name, first_nic)
