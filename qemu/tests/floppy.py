@@ -106,7 +106,7 @@ def run_floppy(test, params, env):
             vm.verify_alive()
             self.session = vm.wait_for_login(timeout=login_timeout)
 
-            self.dest_dir = params["mount_dir"]
+            self.dest_dir = params.get("mount_dir")
             # If mount_dir specified, treat guest as a Linux OS
             # Some Linux distribution does not load floppy at boot and Windows
             # needs time to load and init floppy driver

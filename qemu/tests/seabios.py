@@ -19,6 +19,12 @@ def run_seabios(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+    def get_output(session_obj):
+        """
+        Use the function to short the lines in the scripts
+        """
+        return session_obj.get_stripped_output()
+
     error.context("Start guest with sga bios")
     vm = env.get_vm(params["main_vm"])
     # Since the seabios is displayed in the beginning of guest boot,
@@ -40,33 +46,33 @@ def run_seabios(test, params, env):
         error.context("Display and check the SGABIOS info", logging.info)
         info_check = lambda: (len(info_list) ==
                               len([x for x in info_list
-                                   if x in vm.serial_console.get_output()]))
+                                  if x in get_output(vm.serial_console)]))
 
         if not utils_misc.wait_for(info_check, timeout, 1):
-            raise error.TestFail("Cound not get sgabios message. The output"
-                                 " is %s" % vm.serial_console.get_output())
+            err_msg = "Cound not get sgabios message. The output"
+            err_msg += " is %s" % get_output(vm.serial_console)
+            raise error.TestFail(err_msg)
 
     if restart_key:
         error.context("Restart vm and check it's ok", logging.info)
         boot_menu = lambda: re.search(boot_menu_hint,
-                                      seabios_session.get_output())
+                                      get_output(seabios_session))
         if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
             raise error.TestFail("Could not get boot menu message.")
 
-        seabios_text = seabios_session.get_output()
+        seabios_text = get_output(seabios_session)
         headline = seabios_text.split("\n")[0] + "\n"
         headline_count = seabios_text.count(headline)
 
         vm.send_key(restart_key)
-        reboot_check = lambda: (seabios_session.get_output().count(headline)
+        reboot_check = lambda: (get_output(seabios_session).count(headline)
                                 > headline_count)
 
         if not utils_misc.wait_for(reboot_check, timeout, 1):
             raise error.TestFail("Could not restart the vm")
 
     error.context("Display and check the boot menu order", logging.info)
-    boot_menu = lambda: re.search(boot_menu_hint,
-                                  seabios_session.get_output())
+    boot_menu = lambda: re.search(boot_menu_hint, get_output(seabios_session))
     if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
         raise error.TestFail("Could not get boot menu message.")
 
@@ -74,7 +80,7 @@ def run_seabios(test, params, env):
     vm.send_key(boot_menu_key)
 
     get_list = lambda: re.findall("^\d+\. (.*)\s",
-                                  seabios_session.get_output(), re.M)
+                                  get_output(seabios_session), re.M)
     boot_list = utils_misc.wait_for(get_list, timeout, 1)
 
     if not boot_list:
