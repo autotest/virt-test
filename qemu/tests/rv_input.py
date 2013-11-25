@@ -3,7 +3,9 @@ rv_input.py - test keyboard inputs through spice
 
 Requires: Two VMs - client and guest and remote-viewer session
           from client VM to guest VM created by rv_connect test.
-          Deployed wxPython on guest VM.
+          Deployed PyGTK on guest VM.
+
+          Presumes the numlock state at startup is 'OFF'.
 """
 
 import logging
@@ -13,57 +15,21 @@ from virttest.aexpect import ShellCmdError
 from virttest import utils_misc, utils_spice, aexpect
 
 
-def deploy_epel_repo(guest_session, params):
+def install_pygtk(guest_session, params):
     """
-    Deploy epel repository to RHEL VM If It's RHEL6 or 5.
+    Install PyGTK to a VM with yum package manager.
 
     :param guest_session - ssh session to guest VM
     :param params
     """
 
-    # Check existence of epel repository
-    cmd = ("if [ ! -f /etc/yum.repos.d/epel.repo ]; then echo"
-           " \"NeedsInstall\"; fi")
-    output = guest_session.cmd(cmd, timeout=10)
-    # Install epel repository If needed
-    if "NeedsInstall" in output:
-        arch = guest_session.cmd("arch")
-        if "i686" in arch:
-            arch = "i386"
-        else:
-            arch = arch[:-1]
-        if "release 5" in guest_session.cmd("cat /etc/redhat-release"):
-            cmd = ("yum -y localinstall http://download.fedoraproject.org/"
-                   "pub/epel/5/%s/epel-release-5-4.noarch.rpm 2>&1" % arch)
-            logging.info("Installing epel repository to %s",
-                         params.get("guest_vm"))
-            guest_session.cmd(cmd, print_func=logging.info, timeout=90)
-        elif "release 6" in guest_session.cmd("cat /etc/redhat-release"):
-            cmd = ("yum -y localinstall http://download.fedoraproject.org/"
-                   "pub/epel/6/%s/epel-release-6-8.noarch.rpm 2>&1" % arch)
-            logging.info("Installing epel repository to %s",
-                         params.get("guest_vm"))
-            guest_session.cmd(cmd, print_func=logging.info, timeout=90)
-        else:
-            raise Exception("Unsupported RHEL guest")
-
-
-def install_wxpython(guest_session, params):
-    """
-    Install wxPython to a VM with yum package manager.
-    Requires epel repository for RHEL guest.
-
-    :param guest_session - ssh session to guest VM
-    :param params
-    """
-
-    cmd = "rpm -q wxPython"
+    cmd = "rpm -q pygtk2"
     try:
         guest_session.cmd(cmd)
     except ShellCmdError:
-        cmd = "yum -y install wxPython --nogpgcheck > /dev/null"
-        logging.info("Installing wxPython package to %s",
-                     params.get("guest_vm"))
+        cmd = "yum -y install pygtk2 --nogpgcheck > /dev/null"
+        logging.info("Installing pygtk2 package to %s",
+                    params.get("guest_vm"))
         guest_session.cmd(cmd, timeout=60)
 
 
@@ -143,7 +109,7 @@ def test_leds_and_esc_keys(client_vm, guest_session, params):
     :param params
     """
 
-    # Run wxPython form catching KeyEvents on guest
+    #Run PyGTK form catching KeyEvents on guest
     run_test_form(guest_session, params)
     utils_spice.wait_timeout(3)
 
@@ -174,7 +140,7 @@ def test_nonus_layout(client_vm, guest_session, params):
     :param params
     """
 
-    # Run wxPython form catching KeyEvents on guest
+    #Run PyGTK form catching KeyEvents on guest
     run_test_form(guest_session, params)
     utils_spice.wait_timeout(3)
 
@@ -212,7 +178,16 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
     :param params
     """
 
-    # Run wxPython form catching KeyEvents on guest
+    # Turn numlock on RHEL6 on before the test begins:
+    grep_ver_cmd = "grep -o 'release [[:digit:]]' /etc/redhat-release"
+    rhel_ver = guest_session.cmd(grep_ver_cmd).strip()
+
+    logging.info("RHEL version: #{0}#".format(rhel_ver))
+
+    if rhel_ver == "release 6":
+        client_vm.send_key('num_lock')
+
+    #Run PyGTK form catching KeyEvents on guest
     run_test_form(guest_session, params)
     utils_spice.wait_timeout(3)
 
@@ -224,10 +199,10 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
         utils_spice.wait_timeout(0.3)
 
     guest_vm.migrate()
-    utils_spice.wait_timeout(5)
+    utils_spice.wait_timeout(8)
 
-    # Tested keys after migration
-    test_keys = ['a', 'kp_1']
+    #Tested keys after migration
+    test_keys = ['a', 'kp_1', 'caps_lock', 'num_lock']
     logging.info("Sending leds keys to client machine after migration")
     for key in test_keys:
         client_vm.send_key(key)
@@ -244,33 +219,38 @@ def analyze_results(file_path, test_type):
     """
 
     if test_type == "type_and_func_keys":
-        # List of expected keycodes from guest machine
-        correct_keycodes = ['27', '49', '50', '51', '52', '53', '54', '55',
-                            '56', '57', '48', '45', '61', '8', '9', '113',
-                            '119', '101', '114', '116', '121', '117', '105',
-                            '111', '112', '91', '93', '13', '97', '115', '100',
-                            '102', '103', '104', '106', '107', '108', '59',
-                            '39', '96', '92', '122', '120', '99', '118', '98',
-                            '110', '109', '44', '46', '47', '32', '340', '341',
-                            '342', '343', '344', '345', '346', '347', '348',
-                            '349']
+        #List of expected keycodes from guest machine
+        correct_keycodes = ['65307', '49', '50', '51', '52', '53', '54', '55',
+                            '56', '57', '48', '45', '61', '65288', '65289',
+                            '113', '119', '101', '114', '116', '121', '117',
+                            '105', '111', '112', '91', '93', '65293', '97',
+                            '115', '100', '102', '103', '104', '106', '107',
+                            '108', '59', '39', '96', '92', '122', '120', '99',
+                            '118', '98', '110', '109', '44', '46', '47', '32',
+                            '65470', '65471', '65472', '65473', '65474',
+                             '65475', '65476', '65477', '65478', '65479']
     elif test_type == "leds_and_esc_keys":
-        correct_keycodes = ['97', '65', '49', '312', '97', '65', '65', '1',
-                            '3', '22', '120', '322', '127', '313', '312', '366',
-                            '367', '315', '317', '316', '314']
+        correct_keycodes = ['97', '65509', '65', '65509', '65407', '65457',
+                            '65407', '65436', '97', '65505', '65', '65506',
+                            '65', '65507', '97', '65507', '99', '65507', '118',
+                            '65513', '120', '65379', '65535', '65360', '65367',
+                            '65365', '65366', '65362', '65364', '65363',
+                            '65361']
     elif test_type == "nonus_layout":
-        correct_keycodes = ['253', '225', '237', '233', '35', '38', '64',
-                            '223', '252', '64', '181']
+        correct_keycodes = ['253', '225', '237', '233', '65027', '35', '65027',
+                            '38', '65027', '64', '223', '252', '65027', '64',
+                            '65027', '181']
     elif test_type == "leds_migration":
-        correct_keycodes = ['97', '312', '65', '49', '65', '49']
+        correct_keycodes = ['97', '65457', '65509', '65407', '65', '65436',
+                            '65', '65436', '65509', '65407']
 
     # Read caught keycodes on guest machine
     fileobj = open(file_path, "r")
     keycodes = fileobj.read()
     fileobj.close()
 
-    # Compare caught keycodes with expected keycodes
-    test_keycodes = keycodes.split(",")
+    #Compare caught keycodes with expected keycodes
+    test_keycodes = keycodes.split()
     logging.info("Caught keycodes:%s", test_keycodes)
     for i in range(len(correct_keycodes)):
         if not (test_keycodes[i] == correct_keycodes[i]):
@@ -298,14 +278,8 @@ def run_rv_input(test, params, env):
     guest_session = guest_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)))
     guest_root_session = guest_vm.wait_for_login(
-        timeout=int(params.get("login_timeout", 360)),
-        username="root", password="123456")
-    try:
-        guest_session.cmd("! test -e /etc/redhat-release")
-    except ShellCmdError:
-        deploy_epel_repo(guest_root_session, params)
-
-    # utils_spice.launch_startx(guest_vm)
+              timeout=int(params.get("login_timeout", 360)),
+              username="root", password="123456")
 
     # Verify that gnome is now running on the guest
     try:
@@ -315,7 +289,7 @@ def run_rv_input(test, params, env):
 
     guest_session.cmd("export DISPLAY=:0.0")
 
-    install_wxpython(guest_root_session, params)
+    install_pygtk(guest_root_session, params)
 
     deploy_test_form(test, guest_vm, params)
 

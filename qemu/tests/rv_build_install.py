@@ -11,8 +11,7 @@ import time
 import re
 from autotest.client.shared import error
 from virttest.aexpect import ShellCmdError
-from virttest import utils_misc, utils_spice, aexpect
-from qemu.tests import rv_clearx, rv_input
+from virttest import utils_misc, utils_spice
 
 
 def connect_to_vm(vm_name, env, params):
@@ -31,7 +30,6 @@ def connect_to_vm(vm_name, env, params):
         username="root", password="123456")
     logging.info("VM %s is up and running" % vm_name)
     return (vm, vm_root_session)
-
 
 def install_req_pkgs(pkgsRequired, vm_root_session, params):
     """
@@ -54,7 +52,6 @@ def install_req_pkgs(pkgsRequired, vm_root_session, params):
             except ShellCmdError:
                 logging.info("Could not install %s" % pkgName)
 
-
 def build_install_qxl(vm_root_session, vm_script_path, params):
     """
     Build and install QXL in the VM
@@ -65,7 +62,8 @@ def build_install_qxl(vm_root_session, vm_script_path, params):
     """
 
     # Checking to see if required packages exist and if not, install them
-    pkgsRequired = ["libpciaccess-devel", "xorg-x11-util-macros", "xorg-x11-server-devel"]
+    pkgsRequired = ["libpciaccess-devel", "xorg-x11-util-macros",
+                    "xorg-x11-server-devel"]
     install_req_pkgs(pkgsRequired, vm_root_session, params)
 
     # latest spice-protocol is required to build qxl
@@ -79,7 +77,6 @@ def build_install_qxl(vm_root_session, vm_script_path, params):
     if re.search("Return code", output):
         raise error.TestFail("qxl was not installed properly")
 
-
 def build_install_spicegtk(vm_root_session, vm_script_path, params):
     """
     Build and install spice-gtk in the VM
@@ -91,7 +88,8 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
 
     # Get version of spice-gtk before install
     try:
-        output = vm_root_session.cmd("LD_LIBRARY_PATH=/usr/local/lib remote-viewer --spice-gtk-version")
+        output = vm_root_session.cmd("LD_LIBRARY_PATH=/usr/local/lib"
+                                     " remote-viewer --spice-gtk-version")
         logging.info(output)
     except ShellCmdError:
         logging.error(output)
@@ -99,10 +97,11 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     pkgsRequired = ["libogg-devel", "celt051-devel", "libcacard-devel"]
     install_req_pkgs(pkgsRequired, vm_root_session, params)
 
-    rv_input.deploy_epel_repo(vm_root_session, params)
+    utils_spice.deploy_epel_repo(vm_root_session, params)
 
     try:
-        output = vm_root_session.cmd("yum -y install perl-Text-CSV pyparsing", timeout=300)
+        output = vm_root_session.cmd("yum -y install perl-Text-CSV pyparsing",
+                                     timeout=300)
         logging.info(output)
     except ShellCmdError:
         logging.error(output)
@@ -113,18 +112,19 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     if re.search("Return code", output):
         raise error.TestFail("spice-protocol was not installed properly")
 
-    output = vm_root_session.cmd("%s -p spice-gtk" % (vm_script_path), timeout=300)
+    output = vm_root_session.cmd("%s -p spice-gtk" % (vm_script_path),
+                                 timeout=300)
     logging.info(output)
     if re.search("Return code", output):
         raise error.TestFail("spice-gtk was not installed properly")
 
     # Get version of spice-gtk after install
     try:
-        output = vm_root_session.cmd("LD_LIBRARY_PATH=/usr/local/lib remote-viewer --spice-gtk-version")
+        output = vm_root_session.cmd("LD_LIBRARY_PATH=/usr/local/lib"
+                                     " remote-viewer --spice-gtk-version")
         logging.info(output)
     except ShellCmdError:
         logging.error(output)
-
 
 def build_install_vdagent(vm_root_session, vm_script_path, params):
     """
@@ -171,7 +171,6 @@ def build_install_vdagent(vm_root_session, vm_script_path, params):
         logging.info(output)
     except ShellCmdError:
         logging.error(output)
-
 
 def run_rv_build_install(test, params, env):
     """
@@ -221,4 +220,4 @@ def run_rv_build_install(test, params, env):
         logging.info("Not supported right now")
         raise error.TestFail("Incorrect Test_Setup")
 
-    rv_clearx.run_rv_clearx(test, params, env)
+    utils_spice.clear_interface(vm)
