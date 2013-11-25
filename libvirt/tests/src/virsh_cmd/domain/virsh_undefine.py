@@ -35,7 +35,7 @@ def run_virsh_undefine(test, params, env):
     vm_uuid = vm.get_uuid()
 
     # Back up xml file.Xen host has no guest xml file to define a guset.
-    virsh.dumpxml(vm_name, extra="", to_file=xml_file)
+    virsh.dumpxml(vm_name, extra="--inactive", to_file=xml_file)
 
     # Confirm how to reference a VM.
     if vm_ref == "vm_name":

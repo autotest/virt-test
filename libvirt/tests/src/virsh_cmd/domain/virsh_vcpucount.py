@@ -133,7 +133,7 @@ def run_virsh_vcpucount(test, params, env):
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
     xml_file = params.get("vcpucount_xml_file", "vm.xml")
-    virsh.dumpxml(vm_name, extra="", to_file=xml_file)
+    virsh.dumpxml(vm_name, extra="--inactive", to_file=xml_file)
     pre_vm_state = params.get("vcpucount_pre_vm_state")
     options = params.get("vcpucount_options")
     status_error = params.get("status_error")

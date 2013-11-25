@@ -42,7 +42,7 @@ def run_libvirt_network_bandwidth(test, params, env):
     nettype = params.get('nettype')
     netdst = params.get('netdst')
 
-    vm_xml = VMXML.new_from_dumpxml(vm_name)
+    vm_xml = VMXML.new_from_inactive_dumpxml(vm_name)
     vm_xml_backup = vm_xml.copy()
 
     # This test assume that VM is using default network.

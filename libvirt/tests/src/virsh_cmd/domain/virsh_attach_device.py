@@ -667,7 +667,8 @@ def run_virsh_attach_device(test, params, env):
         if test_params.main_vm.is_alive():
             test_params.main_vm.destroy(gracefully=True)
     # Capture backup of original XML early in test
-    test_params.vmxml = VMXML.new_from_dumpxml(test_params.main_vm.name)
+    test_params.vmxml = VMXML.new_from_inactive_dumpxml(
+            test_params.main_vm.name)
     # All devices should share same access state
     test_params.virsh = virsh.Virsh(ignore_status=True)
     logging.info("Creating %d test device instances", len(test_params.devs))

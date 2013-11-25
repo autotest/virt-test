@@ -28,7 +28,7 @@ def run_svirt_attach_disk(test, params, env):
     # Get variables about VM and get a VM object and VMXML instance.
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
-    vmxml = VMXML.new_from_dumpxml(vm_name)
+    vmxml = VMXML.new_from_inactive_dumpxml(vm_name)
     backup_xml = vmxml.copy()
     # Get varialbles about image.
     img_label = params.get('svirt_attach_disk_disk_label')

@@ -675,9 +675,6 @@ def postprocess(test, params, env):
         _screendump_thread.join(10)
         _screendump_thread = None
 
-    # Terminate the tcpdump thread
-    env.stop_tcpdump()
-
     # Warn about corrupt PPM files
     for f in glob.glob(os.path.join(test.debugdir, "*.ppm")):
         if not ppm_utils.image_verify_ppm_file(f):
@@ -739,6 +736,9 @@ def postprocess(test, params, env):
         if destroy and not vm.is_dead():
             logging.debug('Image of VM %s was removed, destroing it.', vm.name)
             vm.destroy()
+
+    # Terminate the tcpdump thread
+    env.stop_tcpdump()
 
     # Kill all aexpect tail threads
     aexpect.kill_tail_threads()
