@@ -107,7 +107,7 @@ def run_whql_env_setup(test, params, env):
     if nic_cmd:
         for index, nic in enumerate(re.split("\s+", params.get("nics"))):
             setup_params = params.get("nic_setup_params_%s" % nic, "")
-            if params.get("platform", "") == "x86_64":
+            if params.get("vm_arch_name", "") == "x86_64":
                 nic_cmd = re.sub("set", "set_64", nic_cmd)
             cmd_list.append("%s %s %s" % (nic_cmd, str(index + 1),
                                           setup_params))
