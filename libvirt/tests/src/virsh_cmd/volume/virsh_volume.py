@@ -115,7 +115,7 @@ def run_virsh_volume(test, params, env):
         volume_detail = None
         found = False
         for line in output.stdout.splitlines():
-            match = re.search(rg, line)
+            match = re.search(rg, line.lstrip())
             if match is not None:
                 vol['name'] = match.group(1)
                 vol['path'] = match.group(2)
