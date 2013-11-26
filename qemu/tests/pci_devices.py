@@ -7,14 +7,16 @@ This is a autotest/virt-test test for testing PCI devices in various PCI setups
 """
 from autotest.client.shared import error
 from virttest import env_process
-from virttest import qemu_devices
 from virttest import qemu_qtree
 import logging
 import random
+import re
 
 
 class PCIBusInfo:
-
+    """
+    Structured info about PCI bus
+    """
     def __init__(self, device):
         self.name = device.aobject
         if device.child_bus:
@@ -28,7 +30,10 @@ class PCIBusInfo:
             self.last = 32      # (last + 1)
 
 
-def verify_qdev_vs_qtree(qdev, qtree):
+def process_qdev(qdev):
+    """
+    Get PCI devices from qemu_devices representation
+    """
     qdev_devices = {}
     qdev_devices_noid = []
     for bus in qdev.get_buses({'type': ('PCI', 'PCIE')}):
@@ -44,30 +49,59 @@ def verify_qdev_vs_qtree(qdev, qtree):
             dev = {'id': dev_id,
                    'type': device.get_param('driver'),
                    'bus': device.get_param('bus'),
-                   'addr': addr
-                   }
+                   'addr': addr}
             if dev_id is None:
                 qdev_devices_noid.append(dev)
             else:
                 qdev_devices[dev_id] = dev
+    return (qdev_devices, qdev_devices_noid)
 
+
+def process_qtree(qtree):
+    """
+    Get PCI devices from qtree
+    """
     qtree_devices = {}
     qtree_devices_noid = []
+    qtree_pciinfo = []
     for node in qtree.get_nodes():
         if node.parent and node.parent.qtree.get('type') in ('PCI', 'PCIE'):
             dev_id = node.qtree.get('id')
             dev = {'id': dev_id,
                    'type': node.qtree.get('type'),
                    'bus': node.parent.qtree.get('id'),
-                   'addr': node.qtree.get('addr')
-                   }
+                   'addr': node.qtree.get('addr')}
             if dev_id is None:
                 # HOOK for VGA
-                if dev['type'] == 'VGA':
+                if 'vga' in dev['type'].lower():
                     dev['type'] = None
                 qtree_devices_noid.append(dev)
             else:
                 qtree_devices[dev_id] = dev
+
+            qtree_pciinfo.append({'class_addr': node.qtree.get('class_addr'),
+                                  'class_pciid': node.qtree.get('class_pciid')
+                                  })
+    return (qtree_devices, qtree_devices_noid, qtree_pciinfo)
+
+
+def process_lspci(lspci):
+    """
+    Get info about PCI devices from lspci
+    """
+    lspci = re.findall(r'(\w\w:\w\w.\w) "[^"]+ \[\w{4}\]" "[^"]+ '
+                       r'\[(\w{4})\]" "[^"]+ \[(\w{4})\].*', lspci)
+    return [{'class_addr': info[0],
+             'class_pciid': "%s:%s" % (info[1], info[2])}
+            for info in lspci]
+
+
+def verify_qdev_vs_qtree(qdev_info, qtree_info):
+    """
+    Compare qemu_devices and qtree devices
+    """
+    qdev_devices, qdev_devices_noid = qdev_info
+    qtree_devices, qtree_devices_noid = qtree_info[:2]
 
     errors = ""
     for dev_id, device in qtree_devices.iteritems():
@@ -99,7 +133,26 @@ def verify_qdev_vs_qtree(qdev, qtree):
     return errors
 
 
+def verify_lspci(info_lspci, info_qtree):
+    """
+    Compare lspci and qtree info
+    """
+    errors = ""
+    for lspci_dev in info_lspci:
+        if lspci_dev not in info_qtree:
+            errors += "Device %s is in lspci but not in qtree\n" % lspci_dev
+
+    for qtree_dev in info_qtree:
+        if qtree_dev not in info_lspci:
+            errors += "Device %s is in qtree but not in lspci\n" % qtree_dev
+
+    return errors
+
+
 def add_bus(qdev, params, bus_type, name, parent_bus):
+    """
+    Define new bus in params
+    """
     if bus_type == 'bridge':
         if parent_bus.type is True:    # PCI
             bus_type = 'pci-bridge'
@@ -118,17 +171,26 @@ def add_bus(qdev, params, bus_type, name, parent_bus):
 
 
 def add_devices_first(params, name_idxs, bus, add_device):
+    """
+    Define new device and set it to the first available port
+    """
     params, name_idxs = add_device(params, name_idxs, bus.name, bus.first)
     return params, name_idxs
 
 
 def add_devices_all(params, name_idxs, bus, add_device):
+    """
+    Fill all available slots of certain bus with devices
+    """
     for addr in xrange(bus.first, bus.last):
         params, name_idxs = add_device(params, name_idxs, bus.name, addr)
     return params, name_idxs
 
 
 def add_devices_random(params, name_idxs, bus, add_device):
+    """
+    Define three devices in first, last and random ports of the given bus
+    """
     params, name_idxs = add_device(params, name_idxs, bus.name, bus.first)
     params, name_idxs = add_device(params, name_idxs, bus.name,
                                    random.randrange(bus.first + 1,
@@ -138,6 +200,9 @@ def add_devices_random(params, name_idxs, bus, add_device):
 
 
 def add_device_usb(params, name_idxs, parent_bus, addr, device):
+    """
+    Wrapper to add usb device
+    """
     idx = name_idxs.get(device[0], 0) + 1
     name_idxs[device[0]] = idx
     name = "test_%s%d" % (device[0], idx)
@@ -154,16 +219,25 @@ def add_device_usb(params, name_idxs, parent_bus, addr, device):
 
 
 def add_device_usb_ehci(params, name_idxs, parent_bus, addr):
+    """
+    Creates ehci usb controller
+    """
     return add_device_usb(params, name_idxs, parent_bus,
                           addr, ('ehci', 'usb-ehci'))
 
 
 def add_device_usb_xhci(params, name_idxs, parent_bus, addr):
+    """
+    Creates xhci usb controller
+    """
     return add_device_usb(params, name_idxs, parent_bus,
                           addr, ('xhci', 'nec-usb-xhci'))
 
 
 def add_device_random(params, name_idxs, parent_bus, addr):
+    """
+    Add device of random type
+    """
     variants = (add_device_usb_ehci, add_device_usb_xhci)
     return random.choice(variants)(params, name_idxs, parent_bus, addr)
 
@@ -171,6 +245,13 @@ def add_device_random(params, name_idxs, parent_bus, addr):
 @error.context_aware
 def run_pci_devices(test, params, env):
     """
+    PCI Devices test
+    1) print outs the used setup
+    2) boots the defined VM
+    3) verifies monitor "info qtree" vs. autotest representation
+    4) verifies guest "lspci" vs. info qtree (Linux only)
+    :note: Only PCI device properties are checked
+
     :param test: kvm test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
@@ -234,16 +315,34 @@ def run_pci_devices(test, params, env):
     qtree = qemu_qtree.QtreeContainer()
 
     error.context("Verify qtree vs. qemu devices", logging.info)
-    info_qtree = vm.monitor.info('qtree', False)
-    qtree.parse_info_qtree(info_qtree)
-    errors = verify_qdev_vs_qtree(vm.devices, qtree)
-    if errors:
-        logging.error(info_qtree)
+    _info_qtree = vm.monitor.info('qtree', False)
+    qtree.parse_info_qtree(_info_qtree)
+    info_qdev = process_qdev(vm.devices)
+    info_qtree = process_qtree(qtree)
+    errors = ""
+    err = verify_qdev_vs_qtree(info_qdev, info_qtree)
+    if err:
+        logging.error(_info_qtree)
         logging.error(qtree.get_qtree().str_qtree())
-        logging.error(errors)
-        raise error.TestFail("Errors occurred while comparing info qtree vs. "
-                             "the internal representation. Please check the "
-                             "log for details.")
+        logging.error(vm.devices.str_bus_long())
+        logging.error(err)
+        errors += "qdev vs. qtree, "
 
     error.context("Verify VM booted properly.", logging.info)
-    vm.wait_for_login()
+    session = vm.wait_for_login()
+
+    error.context("Verify lspci vs. qtree", logging.info)
+    if params.get('lspci_cmd'):
+        _info_lspci = session.cmd_output(params['lspci_cmd'])
+        info_lspci = process_lspci(_info_lspci)
+        err = verify_lspci(info_lspci, info_qtree[2])
+        if err:
+            logging.error(_info_lspci)
+            logging.error(_info_qtree)
+            logging.error(err)
+            errors += "qtree vs. lspci, "
+
+    error.context("Results")
+    if errors:
+        raise error.TestFail("Errors occurred while comparing %s. Please check"
+                             " the log for details." % errors[:-2])
