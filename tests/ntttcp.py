@@ -28,7 +28,7 @@ def run_ntttcp(test, params, env):
     results_path = os.path.join(test.resultsdir,
                                 'raw_output_%s' % test.iteration)
     platform = "x86"
-    if params.get("platform") == "x86_64":
+    if "64" in params["vm_arch_name"]:
         platform = "x64"
     buffers = params.get("buffers").split()
     buf_num = params.get("buf_num", 200000)

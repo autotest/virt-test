@@ -23,7 +23,7 @@ def run_virtual_nic_send_buffer(test, params, env):
         Linux guest env setup, install udt, set env and iptables
         """
         lib_path = "/usr/lib64"
-        if params.get("platform", 64) == 32:
+        if '64' not in params.get("vm_arch_name", 'x86_64'):
             lib_path = "/usr/lib"
         cmd = r"git clone %s udt-git; " % params.get("udt_url")
         cmd += r"cd udt-git/udt4; make; make install; "

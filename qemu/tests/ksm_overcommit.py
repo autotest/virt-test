@@ -141,7 +141,8 @@ def run_ksm_overcommit(test, params, env):
             _execute_allocator(cmd, vm, lsessions[i], 60 * perf_ratio)
 
             cmd = "mem.value_fill(%d)" % skeys[0]
-            _execute_allocator(cmd, vm, lsessions[i], 120 * perf_ratio)
+            _execute_allocator(cmd, vm, lsessions[i],
+                               fill_base_timeout * 2 * perf_ratio)
 
             # Let ksm_overcommit_guest.py do its job
             # (until shared mem reaches expected value)
@@ -182,7 +183,7 @@ def run_ksm_overcommit(test, params, env):
 
         cmd = "mem.static_random_fill()"
         data = _execute_allocator(cmd, lvms[0], lsessions[0],
-                                  120 * perf_ratio)[1]
+                                  fill_base_timeout * 2 * perf_ratio)[1]
 
         r_msg = data.splitlines()[-1]
         logging.debug("Return message of static_random_fill: %s", r_msg)
@@ -311,7 +312,8 @@ def run_ksm_overcommit(test, params, env):
             _execute_allocator(cmd, vm, lsessions[i], 60 * perf_ratio)
 
             cmd = "mem.value_fill(%d)" % (skeys[0])
-            _execute_allocator(cmd, vm, lsessions[i], 90 * perf_ratio)
+            _execute_allocator(cmd, vm, lsessions[i],
+                               fill_base_timeout * perf_ratio)
 
         # Wait until ksm_overcommit_guest.py merges pages (3 * ksm_size / 3)
         shm = 0
@@ -339,7 +341,7 @@ def run_ksm_overcommit(test, params, env):
         for i in range(0, max_alloc):
             cmd = "mem.static_random_fill()"
             data = _execute_allocator(cmd, vm, lsessions[i],
-                                      90 * perf_ratio)[1]
+                                      fill_base_timeout * perf_ratio)[1]
 
             data = data.splitlines()[-1]
             logging.debug(data)
@@ -362,7 +364,7 @@ def run_ksm_overcommit(test, params, env):
         for i in range(0, max_alloc):
             cmd = "mem.value_fill(%d)" % skeys[0]
             data = _execute_allocator(cmd, vm, lsessions[i],
-                                      120 * perf_ratio)[1]
+                                      fill_base_timeout * 2 * perf_ratio)[1]
         logging.debug(utils_test.get_memory_info([vm]))
         logging.info("Phase 2d: PASS")
 
@@ -377,7 +379,7 @@ def run_ksm_overcommit(test, params, env):
         for i in range(0, max_alloc):
             cmd = "mem.static_random_fill(96)"
             data = _execute_allocator(cmd, vm, lsessions[i],
-                                      60 * perf_ratio)[1]
+                                      fill_base_timeout * perf_ratio)[1]
 
             data = data.splitlines()[-1]
             out = int(data.split()[4])
@@ -484,7 +486,7 @@ def run_ksm_overcommit(test, params, env):
         overcommit = 1
         mem = host_mem
         # 32bit system adjustment
-        if not params['image_name'].endswith("64"):
+        if "64" not in params.get("vm_arch_name"):
             logging.debug("Probably i386 guest architecture, "
                           "max allocator mem = 2G")
             # Guest can have more than 2G but
@@ -585,6 +587,7 @@ def run_ksm_overcommit(test, params, env):
     # ksm_size: amount of memory used by allocator
     ksm_size = mem - guest_reserve
     logging.debug("Memory used by allocator on guests = %dM", ksm_size)
+    fill_base_timeout = ksm_size / 10
 
     # Creating the first guest
     env_process.preprocess_vm(test, params, env, vm_name)
