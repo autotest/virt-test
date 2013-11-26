@@ -398,13 +398,14 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
     def setup_gagent_in_host(self, params, vm):
         error.context("Install qemu guest agent package on host", logging.info)
         gagent_host_install_cmd = params["gagent_host_install_cmd"]
-        utils.run(gagent_host_install_cmd, params.get("login_timeout", 360))
+        utils.run(gagent_host_install_cmd,
+                  float(params.get("login_timeout", 360)))
 
         error.context("Install dependence packages on host", logging.info)
         gagent_host_dep_install_cmd = params.get("gagent_host_dep_install_cmd",
                                                  "")
         utils.run(gagent_host_dep_install_cmd,
-                  params.get("login_timeout", 360))
+                  float(params.get("login_timeout", 360)))
 
         error.context("Copy necessary DLLs to guest", logging.info)
         gagent_guest_dir = params["gagent_guest_dir"]
