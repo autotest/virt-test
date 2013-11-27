@@ -2966,11 +2966,12 @@ class DevContainer(object):
         :param params: Disk params (params.object_params(name))
         """
         iso = image_params.get('cdrom')
+        image_params['image_name'] = ""
         if iso:
             image_params['image_name'] = os.path.join(data_dir.get_data_dir(),
                                                       image_params.get('cdrom')
                                                       )
-            image_params['image_raw_device'] = 'yes'
+        image_params['image_raw_device'] = 'yes'
         cd_format = image_params.get('cd_format')
         if cd_format is None or cd_format is 'ide':
             if not self.get_buses({'atype': 'ide'}):
