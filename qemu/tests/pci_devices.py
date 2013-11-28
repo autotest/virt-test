@@ -11,6 +11,7 @@ from virttest import qemu_qtree
 import logging
 import random
 import re
+import time
 
 
 class PCIBusInfo:
@@ -314,6 +315,10 @@ def run_pci_devices(test, params, env):
     params['start_vm'] = 'yes'
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
+
+    # PCI devices are initialized by firmware, which might require some time
+    # to setup. Wait 10s before getting the qtree.
+    time.sleep(10)
     qtree = qemu_qtree.QtreeContainer()
 
     error.context("Verify qtree vs. qemu devices", logging.info)
