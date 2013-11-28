@@ -145,12 +145,13 @@ def run_virsh_domfstrim(test, params, env):
             Do full map check
             :return: True or False
             """
-            global full_size
             full_size = get_diskmap_size()
             return (ori_size < full_size)
 
         if not utils_misc.wait_for(_full_mapped, timeout=30):
             raise error.TestError("Scsi map is not updated after dd command.")
+
+        full_size = get_diskmap_size()
 
         # Remove disk content in guest
         guest_session.cmd("rm -rf /home/test/*")
