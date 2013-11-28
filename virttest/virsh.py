@@ -2789,3 +2789,21 @@ def nodedev_destroy(dev_name, options=None, **dargs):
 
     logging.debug("Destroy the device %s on the node", dev_name)
     return command(cmd, **dargs)
+
+
+def domfstrim(name, minimum=None, mountpoint=None, options="", **dargs):
+    """
+    Do fstrim on domain's mounted filesystems
+
+    :param name: name of domain
+    :param options: options maybe --minimum <number>, --mountpoint <string>
+    :return: CmdResult object
+    """
+    cmd = "domfstrim %s" % name
+    if minimum is not None:
+        cmd += " --minimum %s" % minimum
+    if mountpoint is not None:
+        cmd += " --mountpoint %s" % mountpoint
+
+    cmd += " %s" % options
+    return command(cmd, **dargs)
