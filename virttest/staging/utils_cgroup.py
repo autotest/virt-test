@@ -18,10 +18,7 @@ from tempfile import mkdtemp
 from autotest.client import utils
 from autotest.client.shared import error
 
-try:
-    from autotest.client.shared import service
-except ImportError:
-    import service
+import service
 
 
 class Cgroup(object):
@@ -682,7 +679,7 @@ class CgconfigService(object):
     """
 
     def __init__(self):
-        self._service_manager = service.SpecificServiceManager("cgconfig")
+        self._service_manager = service.Factory.create_service("cgconfig")
 
     def _service_cgconfig_control(self, action):
         """
