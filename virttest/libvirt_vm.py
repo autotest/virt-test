@@ -251,7 +251,11 @@ class VM(virt_vm.BaseVM):
         try:
             xml_file = tempfile.mktemp(dir="/tmp")
 
-            extra = "" if active else "--inactive"
+            if active:
+                extra = ""
+            else:
+                extra = "--inactive"
+
             virsh.dumpxml(self.name, extra=extra,
                           to_file=xml_file, uri=self.connect_uri)
             return xml_file
