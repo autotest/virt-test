@@ -25,7 +25,7 @@ def run_libvirt_scsi(test, params, env):
     vm_name = params.get("main_vm", "virt-tests-vm1")
     # Init a VM instance and a VMXML instance.
     vm = env.get_vm(vm_name)
-    vmxml = VMXML.new_from_dumpxml(vm_name)
+    vmxml = VMXML.new_from_inactive_dumpxml(vm_name)
     # Keep a backup of xml to restore it in cleanup.
     backup_xml = vmxml.copy()
     # Add a scsi controller if there is not.
