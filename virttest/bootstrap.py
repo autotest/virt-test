@@ -532,7 +532,8 @@ def set_defcon(datadir, imagesdir, isosdir, tmpdir):
     return made_changes
 
 
-def verify_selinux(datadir, imagesdir, isosdir, tmpdir, interactive):
+def verify_selinux(datadir, imagesdir, isosdir, tmpdir,
+                   interactive, selinux=False):
     """
     Verify/Set/Warn about SELinux and default file contexts for testing.
 
@@ -541,6 +542,7 @@ def verify_selinux(datadir, imagesdir, isosdir, tmpdir, interactive):
     :param isosdir: Abs. path to data/isos directory
     :param tmpdir: Abs. path to virt-test tmp dir
     :param interactive: True if running from console
+    :param selinux: Whether setup SELinux contexts for shared/data
     """
     # datadir can be a symlink, but these must not have any
     imagesdir = os.path.realpath(imagesdir)
@@ -552,11 +554,14 @@ def verify_selinux(datadir, imagesdir, isosdir, tmpdir, interactive):
         if utils_selinux.get_status() == 'enforcing':
             # Check if default contexts are set
             if not haz_defcon(datadir, imagesdir, isosdir, tmpdir):
-                if interactive:
-                    answer = utils.ask("Setup all undefined default SELinux "
-                                       "contexts for shared/data/?")
+                if selinux:
+                    answer = "y"
                 else:
-                    answer = "n"
+                    if interactive:
+                        answer = utils.ask("Setup all undefined default SE"
+                                           "Linux contexts for shared/data/?")
+                    else:
+                        answer = "n"
             else:
                 answer = "n"
             if answer.lower() == "y":
@@ -598,10 +603,13 @@ def verify_selinux(datadir, imagesdir, isosdir, tmpdir, interactive):
         logging.info("Please manually verify default file contexts before")
         logging.info("testing with SELinux enabled and enforcing.")
     if needs_relabel:
-        if interactive:
-            answer = utils.ask("Relabel from default contexts?")
+        if selinux:
+            answer = "y"
         else:
-            answer = "n"
+            if interactive:
+                answer = utils.ask("Relabel from default contexts?")
+            else:
+                answer = "n"
         if answer.lower() == 'y':
             changes = utils_selinux.apply_defcon(datadir, False)
             changes += utils_selinux.apply_defcon(imagesdir, True)
@@ -613,7 +621,8 @@ def verify_selinux(datadir, imagesdir, isosdir, tmpdir, interactive):
 
 def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
               check_modules, online_docs_url, restore_image=False,
-              download_image=True, interactive=True, verbose=False):
+              download_image=True, interactive=True, selinux=False,
+              verbose=False):
     """
     Common virt test assistant module.
 
@@ -628,6 +637,8 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
             wiki page.
     :param restore_image: Whether to restore the image from the pristine.
     :param interactive: Whether to ask for confirmation.
+    :param verbose: Verbose output.
+    :param selinux: Whether setup SELinux contexts for shared/data
 
     :raise error.CmdError: If JeOS image failed to uncompress
     :raise ValueError: If 7za was not found
@@ -673,7 +684,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
                            os.path.join(datadir, 'images'),
                            os.path.join(datadir, 'isos'),
                            data_dir.get_tmp_dir(),
-                           interactive)
+                           interactive, selinux)
 
     # lvsb test doesn't use any shared configs
     elif test_name == 'lvsb':
@@ -684,7 +695,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
                            os.path.join(datadir, 'images'),
                            os.path.join(datadir, 'isos'),
                            data_dir.get_tmp_dir(),
-                           interactive)
+                           interactive, selinux)
     else:  # Some other test
         create_config_files(test_dir, shared_dir, interactive, step)
         create_subtests_cfg(test_name)
