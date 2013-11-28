@@ -26,6 +26,11 @@ def run_boot_cpu_model(test, params, env):
             model_list = params.get("cpu_model_%s" % cpu_vendor,
                                     host_model[-1])
 
+    extra_flags = params.get("cpu_model_flags_%s" % cpu_vendor, "")
+    if extra_flags:
+        cpu_flags = params.get("cpu_model_flags", "") + extra_flags
+        params["cpu_model_flags"] = cpu_flags
+
     if model_list:
         model_list = model_list.split(" ")
         for model in model_list:
