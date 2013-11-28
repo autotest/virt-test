@@ -644,6 +644,26 @@ def bootstrap_tests(options):
     return True
 
 
+def _cleanup(env_filename, version):
+    cleanup_begin = time.time()
+    cleanup_ok = False
+    try:
+        logging.info("Shutting down all VMs and cleaning env...")
+        print_stdout(bcolors.HEADER + "CLEANUP:" + bcolors.ENDC, end=False)
+        env = utils_env.Env(filename=env_filename, version=Test.env_version)
+        env.destroy()
+        logging.info("")
+        cleanup_ok = True
+    finally:
+        cleanup_end = time.time()
+        cleanup_elapsed = cleanup_end - cleanup_begin
+
+    if cleanup_ok:
+        print_pass(cleanup_elapsed)
+    else:
+        print_fail(cleanup_elapsed)
+
+
 def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
     """
     Print to stdout and run log stats of our test job.
@@ -896,6 +916,8 @@ def run_tests(parser, options):
             print_pass(t_elapsed)
 
         status_dct[dct.get("name")] = current_status
+
+    _cleanup(env_filename, version=Test.env_version)
 
     job_end_time = time.time()
     job_elapsed_time = job_end_time - job_start_time
