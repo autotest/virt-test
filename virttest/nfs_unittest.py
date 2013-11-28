@@ -10,10 +10,7 @@ from autotest.client.shared import utils
 from virttest import nfs
 from virttest import utils_misc
 
-try:
-    from autotest.client.shared import service
-except ImportError:
-    from virttest.staging import service
+from virttest.staging import service
 
 
 class FakeService(object):
@@ -41,7 +38,7 @@ class nfs_test(unittest.TestCase):
         os_dep.command.expect_call("mount")
         os_dep.command.expect_call("service")
         os_dep.command.expect_call("exportfs")
-        service.SpecificServiceManager.expect_call("nfs").and_return(
+        service.Factory.create_service.expect_call("nfs").and_return(
             FakeService("nfs"))
         mount_src = self.nfs_params.get("nfs_mount_src")
         export_dir = (self.nfs_params.get("export_dir")
@@ -83,7 +80,7 @@ class nfs_test(unittest.TestCase):
         self.god.stub_function(utils_misc, "is_mounted")
         self.god.stub_function(utils_misc, "mount")
         self.god.stub_function(utils_misc, "umount")
-        self.god.stub_function(service, "SpecificServiceManager")
+        self.god.stub_function(service.Factory, "create_service")
         attr = getattr(nfs, "Exportfs")
         setattr(attr, "already_exported", False)
         mock_class = self.god.create_mock_class_obj(attr, "Exportfs")
