@@ -924,10 +924,11 @@ class PciAssignable(object):
         :rtype: string
         """
         for pf in self.pf_vf_info:
-            if vf_id in pf.get('vf_ids'):
-                return pf['ethname'], pf["vf_ids"].index(vf_id)
+            for vf_info in pf.get('vf_ids'):
+                if vf_id == vf_info["vf_id"]:
+                    return pf['ethname'], pf["vf_ids"].index(vf_info)
         raise ValueError("Could not find vf id '%s' in '%s'" % (vf_id,
-                                                                self.pf_vf_info))
+                                                               self.pf_vf_info))
 
     def get_pf_vf_info(self):
         """
@@ -958,9 +959,12 @@ class PciAssignable(object):
             re_vfn = "(virtfn[0-9])"
             paths = re.findall(re_vfn, txt)
             for path in paths:
+                vf_info = {}
                 f_path = os.path.join(d_link, path)
                 vf_id = os.path.basename(os.path.realpath(f_path))
-                vf_ids.append(vf_id)
+                vf_info["vf_id"] = vf_id
+                vf_info["occupied"] = False
+                vf_ids.append(vf_info)
             pf_info["vf_ids"] = vf_ids
             pf_vf_dict.append(pf_info)
         if_out = utils.system_output("ifconfig -a")
@@ -976,18 +980,67 @@ class PciAssignable(object):
                     pf["ethname"] = eth
         return pf_vf_dict
 
+    def _get_vf_pci_id(self, name=None):
+        """
+        Get the VF PCI ID from PF set by name.
+        It returns the first free VF, if no name matched.
+
+        :param name: Name of the PCI device.
+        :type name: string
+        :return: pci id of the PF device.
+        :rtype: string
+        """
+        vf_id = None
+        if self.pf_vf_info:
+            if name:
+                for pf in self.pf_vf_info:
+                    if ("ethname" in pf and name == pf["ethname"] and
+                         not pf["occupied"]):
+                        pf_id = pf["pf_id"]
+                        for vf_info in pf["vf_ids"]:
+                            if (not vf_info["occupied"] and
+                                not self.is_binded_to_stub(vf_info["vf_id"])):
+                                vf_info["occupied"] = True
+                                vf_id = vf_info["vf_id"]
+                                break
+                    if vf_id:
+                        break
+            if not vf_id:
+                for pf in self.pf_vf_info:
+                    if not pf["occupied"]:
+                        for vf_info in pf["vf_ids"]:
+                            if (not vf_info["occupied"] and
+                                not self.is_binded_to_stub(vf_info["vf_id"])):
+                                vf_info["occupied"] = True
+                                vf_id = vf_info["vf_id"]
+                                break
+                    if vf_id:
+                        break
+        return vf_id
+
     def get_vf_devs(self):
         """
-        Get all unused VFs PCI IDs.
+        Get VFs PCI IDs requested by self.devices.
+        It will try to get VF from PF set by device name.
 
         :return: List of all available PCI IDs for Virtual Functions.
         :rtype: List of string
         """
         vf_ids = []
-        for pf in self.pf_vf_info:
-            if pf["occupied"]:
-                continue
-            for vf_id in pf["vf_ids"]:
+        device_names = []
+        num = 0
+        if self.pf_vf_info:
+            for pf in self.pf_vf_info:
+                device_names.append(pf['ethname'])
+        for device in self.devices:
+            if device['type'] == 'vf':
+                name = device.get('name', None)
+                if not name:
+                    name = device_names[num % len(device_names)]
+                    num += 1
+                else:
+                    num = device_names.index(name) + 1
+                vf_id = self._get_vf_pci_id(name)
                 if not self.is_binded_to_stub(vf_id):
                     vf_ids.append(vf_id)
         return vf_ids

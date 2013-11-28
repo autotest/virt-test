@@ -1887,11 +1887,12 @@ class VM(virt_vm.BaseVM):
                     # Virtual Functions (VF) assignable devices
                     if pa_type == "vf":
                         self.pci_assignable.add_device(device_type=pa_type,
-                                                       mac=mac)
+                                                       mac=mac,
+                                            name=nic_params.get("device_name"))
                     # Physical NIC (PF) assignable devices
                     elif pa_type == "pf":
                         self.pci_assignable.add_device(device_type=pa_type,
-                                                       name=nic_params.get("device_name"))
+                                            name=nic_params.get("device_name"))
                     else:
                         raise virt_vm.VMBadPATypeError(pa_type)
                 else:
