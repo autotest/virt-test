@@ -633,8 +633,7 @@ def __init_openvswitch(func):
                 if (not __ovs.check()):
                     raise Exception("Check of OpenVSwitch failed.")
             except Exception, e:
-                logging.debug("System not support OpenVSwitch:")
-                logging.debug(e)
+                logging.debug("Host does not support OpenVSwitch: %s", e)
 
         return func(*args, **kargs)
     return wrap_init
