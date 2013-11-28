@@ -266,7 +266,7 @@ def get_time(session, time_command, time_filter_re, time_format):
         try:
             try:
                 locale.setlocale(locale.LC_TIME, "C")
-                guest_time = time.mktime(time.strptime(s, time_format))
+                guest_time = time.mktime(time.strptime(str_time, time_format))
                 guest_time += float(diff.split(" ")[0])
             except Exception, err:
                 logging.debug("(time_format, time_string): (%s, %s)",
