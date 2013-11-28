@@ -912,9 +912,10 @@ class RemoteRunner(object):
     on local.
     """
 
-    def __init__(self, client, host, port, username, password, prompt,
-                 linesep="\n", log_filename=None, timeout=240,
-                 internal_timeout=10):
+    def __init__(self, client="ssh", host=None, port="22", username="root",
+                 password=None, prompt=r"[\#\$]\s*$", linesep="\n",
+                 log_filename=None, timeout=240, internal_timeout=10,
+                 session=None):
         """
         Initialization of RemoteRunner. Init a session login to remote host or
         guest.
@@ -929,15 +930,22 @@ class RemoteRunner(object):
                 (e.g. '\\n' or '\\r\\n')
         :param log_filename: If specified, log all output to this file
         :param timeout: Total time duration to wait for a successful login
-        :param internal_timeout: The maximal time duration (in seconds) to wait for
-                each step of the login procedure (e.g. the "Are you sure" prompt
-                or the password prompt)
+        :param internal_timeout: The maximal time duration (in seconds) to wait
+                for each step of the login procedure (e.g. the "Are you sure"
+                prompt or the password prompt)
+        :param session: An existing session
         :see: wait_for_login()
         :raise: Whatever wait_for_login() raises
         """
-        self.session = wait_for_login(client, host, port, username, password,
-                                      prompt, linesep, log_filename,
-                                      timeout, internal_timeout)
+        if session is None:
+            if host is None:
+                raise error.TestError("Neither host, nor session was defined!")
+            self.session = wait_for_login(client, host, port, username,
+                                          password, prompt, linesep,
+                                          log_filename, timeout,
+                                          internal_timeout)
+        else:
+            self.session = session
         # Init stdout pipe and stderr pipe.
         self.stdout_pipe = tempfile.mktemp()
         self.stderr_pipe = tempfile.mktemp()
