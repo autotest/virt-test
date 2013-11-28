@@ -804,3 +804,14 @@ class Factory(object):
                                        command_generator,
                                        result_parser,
                                        run)
+    @staticmethod
+    def create_service(service_name=None, run=utils.run):
+        """
+        # Unified interface for generic and specific service manager.
+        
+        :return: _SpecificServiceManager if service_name is not None,
+                _GenericServiceManager if service_name is None.
+        """
+        if service_name:
+            return Factory.create_specific_service(service_name, run)
+        return Factory.create_generic_service(run)
