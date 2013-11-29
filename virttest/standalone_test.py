@@ -9,9 +9,11 @@ import glob
 import shutil
 from autotest.client.shared import error
 from autotest.client import utils
+import aexpect
 import utils_misc
 import utils_params
 import utils_env
+import utils_net
 import env_process
 import data_dir
 import bootstrap
@@ -644,25 +646,13 @@ def bootstrap_tests(options):
     return True
 
 
-def _cleanup(env_filename, version):
-    cleanup_begin = time.time()
-    cleanup_ok = False
-    try:
-        logging.info("Shutting down all VMs and cleaning env...")
-        print_stdout(bcolors.HEADER + "CLEANUP:" + bcolors.ENDC, end=False)
-        env = utils_env.Env(filename=env_filename, version=Test.env_version)
-        env.destroy()
-        logging.info("")
-        cleanup_ok = True
-    finally:
-        cleanup_end = time.time()
-        cleanup_elapsed = cleanup_end - cleanup_begin
-
-    if cleanup_ok:
-        print_pass(cleanup_elapsed)
-    else:
-        print_fail(cleanup_elapsed)
-
+def _cleanup_env(env_filename, version):
+    logging.info("Cleaning virt-test temp files...")
+    env = utils_env.Env(filename=env_filename, version=Test.env_version)
+    env.destroy()
+    aexpect.clean_tmp_files()
+    utils_net.clean_tmp_files()
+    logging.info("")
 
 def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
     """
@@ -747,22 +737,12 @@ def run_tests(parser, options):
     logging.info(version.get_pretty_version_info())
     logging.info("")
 
-    logging.debug("Cleaning up previous job tmp files")
     d = parser.get_dicts().next()
     env_filename = os.path.join(data_dir.get_root_dir(),
                                 options.type, d.get("env", "env"))
-    env = utils_env.Env(env_filename, Test.env_version)
-    env.destroy()
-    try:
-        address_pool_files = glob.glob("/tmp/address_pool*")
-        for address_pool_file in address_pool_files:
-            os.remove(address_pool_file)
-        aexpect_tmp = "/tmp/aexpect_spawn/"
-        if os.path.isdir(aexpect_tmp):
-            shutil.rmtree("/tmp/aexpect_spawn/")
-    except (IOError, OSError):
-        pass
-    logging.debug("")
+    _cleanup_env(env_filename, version=Test.env_version)
+
+    d = parser.get_dicts().next()
 
     if options.restore_image_between_tests:
         logging.debug("Creating first backup of guest image")
@@ -917,7 +897,7 @@ def run_tests(parser, options):
 
         status_dct[dct.get("name")] = current_status
 
-    _cleanup(env_filename, version=Test.env_version)
+    _cleanup_env(env_filename, version=Test.env_version)
 
     job_end_time = time.time()
     job_elapsed_time = job_end_time - job_start_time
