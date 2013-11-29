@@ -288,11 +288,13 @@ class VirtTools(object):
         inspector = "yes" == self.params.get("gm_inspector", "yes")
         readonly = "yes" == self.params.get("gm_readonly", "no")
         special_mountpoints = self.params.get("special_mountpoints", [])
+        is_disk = "yes" == self.params.get("gm_is_disk", "no")
         options = {}
         options['ignore_status'] = True
         options['debug'] = True
         options['timeout'] = int(self.params.get("timeout", 240))
         options['special_mountpoints'] = special_mountpoints
+        options['is_disk'] = is_disk
         result = lgf.guestmount(disk_or_domain, mountpoint,
                                 inspector, readonly, **options)
         if result.exit_status:
