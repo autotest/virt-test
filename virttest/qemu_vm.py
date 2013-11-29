@@ -1727,6 +1727,26 @@ class VM(virt_vm.BaseVM):
         except TypeError:
             pass
 
+    def create_serial_console(self):
+        """
+        Establish a session with the serial console.
+
+        Let's consider the first serial port as serial console.
+        Note: requires a version of netcat that supports -U
+        """
+        try:
+            tmp_serial = self.serial_ports[0]
+        except IndexError:
+            raise virt_vm.VMConfigMissingError(self.name, "isa_serial")
+
+        self.serial_console = aexpect.ShellSession(
+            "nc -U %s" % self.get_serial_console_filename(tmp_serial),
+            auto_close=False,
+            output_func=utils_misc.log_line,
+            output_params=("serial-%s-%s.log" % (tmp_serial, self.name),),
+            prompt=self.params.get("shell_prompt", "[\#\$]"))
+        del tmp_serial
+
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None,
                timeout=CREATE_TIMEOUT, migration_mode=None,
@@ -2105,21 +2125,7 @@ class VM(virt_vm.BaseVM):
                                               r"\w+\s+(\d+)\s.*\[vhost-%s\]")
             self.vhost_threads = self.get_vhost_threads(vhost_thread_pattern)
 
-            # Establish a session with the serial console
-            # Let's consider the first serial port as serial console.
-            # Note: requires a version of netcat that supports -U
-            try:
-                tmp_serial = self.serial_ports[0]
-            except IndexError:
-                raise virt_vm.VMConfigMissingError(name, "isa_serial")
-
-            self.serial_console = aexpect.ShellSession(
-                "nc -U %s" % self.get_serial_console_filename(tmp_serial),
-                auto_close=False,
-                output_func=utils_misc.log_line,
-                output_params=("serial-%s-%s.log" % (tmp_serial, name),),
-                prompt=self.params.get("shell_prompt", "[\#\$]"))
-            del tmp_serial
+            self.create_serial_console()
 
             for key, value in self.logs.items():
                 outfile = "%s-%s.log" % (key, name)

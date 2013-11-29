@@ -973,6 +973,28 @@ class BaseVM(object):
                                verbose, timeout)
         utils_misc.close_log_file(log_filename)
 
+    def create_serial_console(self):
+        """
+        Establish a session with the serial console.
+
+        Let's consider the first serial port as serial console.
+        Note: requires a version of netcat that supports -U
+        """
+        raise NotImplementedError
+
+    def cleanup_serial_console(self):
+        """
+        Close serial console and associated log file
+        """
+        if self.serial_console is not None:
+            self.serial_console.close()
+            self.serial_console = None
+        if hasattr(self, "migration_file"):
+            try:
+                os.unlink(self.migration_file)
+            except OSError:
+                pass
+
     @error.context_aware
     def serial_login(self, timeout=LOGIN_TIMEOUT,
                      username=None, password=None):
@@ -995,17 +1017,7 @@ class BaseVM(object):
 
         # Some times need recreate the serial_console.
         if not os.path.exists(self.serial_console.inpipe_filename):
-            try:
-                tmp_serial = self.serial_ports[0]
-            except IndexError:
-                raise self.VMConfigMissingError(self.name, "isa_serial")
-            self.serial_console = aexpect.ShellSession(
-                "nc -U %s" % self.get_serial_console_filename(tmp_serial),
-                auto_close=False,
-                output_func=utils_misc.log_line,
-                output_params=("serial-%s-%s.log" % (tmp_serial, self.name),),
-                prompt=self.params.get("shell_prompt", "[\#\$]"))
-            del tmp_serial
+            self.create_serial_console()
 
         self.serial_console.set_linesep(linesep)
         self.serial_console.set_status_test_command(status_test_command)
