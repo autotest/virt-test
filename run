@@ -781,6 +781,7 @@ class VirtTestApp(object):
             ok = standalone_test.run_tests(self.cartesian_parser, self.options)
 
         except KeyboardInterrupt:
+            standalone_test.cleanup_env(self.cartesian_parser, self.options)
             pid = os.getpid()
             os.kill(pid, signal.SIGTERM)
 
