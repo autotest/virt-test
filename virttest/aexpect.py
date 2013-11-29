@@ -112,8 +112,9 @@ if __name__ == "__main__":
                 new_stack = (1 + len(command) / 2072576) * 8196
                 command = "ulimit -s %s\nulimit -n 819200\n%s" % (new_stack,
                                                                   command)
+            tmp_dir = os.path.join(BASE_DIR, a_id)
             tmp_file = tempfile.mktemp(suffix='.sh',
-                                       prefix='autotest', dir="/tmp")
+                                       prefix='aexpect-', dir=tmp_dir)
             fd_cmd = open(tmp_file, "w")
             fd_cmd.write(command)
             fd_cmd.close()
