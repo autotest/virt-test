@@ -14,7 +14,7 @@ import fcntl
 import tempfile
 import logging
 
-BASE_DIR = os.path.join('/tmp', 'aexpect_spawn')
+BASE_DIR = os.path.join('/tmp', 'aexpect')
 
 # The following helper functions are shared by the server and the client.
 
