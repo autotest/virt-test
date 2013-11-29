@@ -770,7 +770,7 @@ def local_runner_status(cmd, timeout=None):
     return utils.run(cmd, verbose=False, timeout=timeout).exit_status
 
 
-def get_net_if(runner=None):
+def get_net_if(runner=None, state=None):
     """
     :param runner: command runner.
     :param div_phy_virt: if set true, will return a tuple division real
@@ -779,9 +779,13 @@ def get_net_if(runner=None):
     """
     if runner is None:
         runner = local_runner
+    if state is None:
+        state = ".*"
     cmd = "ip link"
     result = runner(cmd)
-    return re.findall(r"^\d+: (\S+?)[@:].*$", result, re.MULTILINE)
+    return re.findall(r"^\d+: (\S+?)[@:].*state %s.*$" % (state),
+                      result,
+                      re.MULTILINE)
 
 
 def get_sorted_net_if():
