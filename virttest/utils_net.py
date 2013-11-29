@@ -1682,6 +1682,14 @@ class DbNet(VMNet):
 
 ADDRESS_POOL_FILENAME = os.path.join("/tmp", "address_pool")
 
+def clean_tmp_files():
+    """
+    Remove the base adress pool filename.
+    """
+    if os.path.isfile(ADDRESS_POOL_FILENAME):
+        os.unlink(ADDRESS_POOL_FILENAME)
+
+
 class VirtNet(DbNet, ParamsNet):
 
     """
