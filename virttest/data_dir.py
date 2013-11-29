@@ -7,6 +7,7 @@ import sys
 import tempfile
 import glob
 import logging
+import shutil
 
 _ROOT_PATH = os.path.join(sys.modules[__name__].__file__, "..", "..")
 ROOT_DIR = os.path.abspath(_ROOT_PATH)
@@ -145,6 +146,12 @@ def get_tmp_dir():
 
 def get_download_dir():
     return DOWNLOAD_DIR
+
+
+def clean_tmp_files():
+    if os.path.isdir(TMP_DIR):
+        shutil.rmtree(TMP_DIR, ignore_errors=True)
+
 
 if __name__ == '__main__':
     print "root dir:         " + ROOT_DIR

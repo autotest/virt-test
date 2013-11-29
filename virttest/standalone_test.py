@@ -660,6 +660,7 @@ def cleanup_env(parser, options):
     env.destroy()
     aexpect.clean_tmp_files()
     utils_net.clean_tmp_files()
+    data_dir.clean_tmp_files()
     logging.info("")
 
 def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
