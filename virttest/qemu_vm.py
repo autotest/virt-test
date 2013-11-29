@@ -67,6 +67,7 @@ class ImageUnbootableError(virt_vm.VMError):
         return ("VM '%s' can't bootup from image,"
                 " check your boot disk image file." % self.name)
 
+CREATE_LOCK_FILENAME = os.path.join('/tmp', 'virt-test-vm-create.lock')
 
 class VM(virt_vm.BaseVM):
 
@@ -1835,7 +1836,7 @@ class VM(virt_vm.BaseVM):
 
         # Make sure the following code is not executed by more than one thread
         # at the same time
-        lockfile = open("/tmp/kvm-autotest-vm-create.lock", "w+")
+        lockfile = open(CREATE_LOCK_FILENAME, "w+")
         fcntl.lockf(lockfile, fcntl.LOCK_EX)
 
         try:
@@ -2151,6 +2152,7 @@ class VM(virt_vm.BaseVM):
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
+            os.unlink(CREATE_LOCK_FILENAME)
 
     def wait_for_status(self, status, timeout, first=0.0, step=1.0, text=None):
         """
