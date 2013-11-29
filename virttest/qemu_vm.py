@@ -112,6 +112,7 @@ class VM(virt_vm.BaseVM):
             self.vcpu_threads = []
             self.vhost_threads = []
             self.devices = None
+            self.logs = {}
 
         self.name = name
         self.params = params
@@ -129,7 +130,6 @@ class VM(virt_vm.BaseVM):
         # }
         # This structure can used in usb hotplug/unplug test.
         self.usb_dev_dict = {}
-        self.logs = {}
         self.logsessions = {}
         self.driver_type = 'qemu'
         self.params['driver_type_' + self.name] = self.driver_type
