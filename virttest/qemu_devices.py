@@ -2854,6 +2854,7 @@ class DevContainer(object):
             devices[-1].set_param("scsi", scsi, bool)
             if bus is not None:
                 devices[-1].set_param('addr', hex(bus))
+                bus = None
         elif fmt in ('usb1', 'usb2', 'usb3'):
             devices[-1].set_param('driver', 'usb-storage')
             devices[-1].set_param('port', unit)
