@@ -13,8 +13,16 @@ import termios
 import fcntl
 import tempfile
 import logging
+import shutil
 
 BASE_DIR = os.path.join('/tmp', 'aexpect')
+
+def clean_tmp_files():
+    """
+    Remove all aexpect temporary files.
+    """
+    if os.path.isdir(BASE_DIR):
+        shutil.rmtree(BASE_DIR, ignore_errors=True)
 
 # The following helper functions are shared by the server and the client.
 
@@ -234,8 +242,6 @@ import re
 import threading
 import logging
 import utils_misc
-import shutil
-
 
 class ExpectError(Exception):
 
