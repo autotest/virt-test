@@ -221,6 +221,14 @@ def add_device_usb(params, name_idxs, parent_bus, addr, device):
     return params, name_idxs
 
 
+def add_device_usb_uhci(params, name_idxs, parent_bus, addr):
+    """
+    Creates ehci usb controller
+    """
+    return add_device_usb(params, name_idxs, parent_bus,
+                          addr, ('uhci', 'ich9-usb-uhci1'))
+
+
 def add_device_usb_ehci(params, name_idxs, parent_bus, addr):
     """
     Creates ehci usb controller
@@ -264,7 +272,8 @@ def add_device_random(params, name_idxs, parent_bus, addr):
     """
     Add device of random type
     """
-    variants = (add_device_usb_ehci, add_device_usb_xhci, add_virtio_disk)
+    variants = (add_device_usb_uhci, add_device_usb_ehci, add_device_usb_xhci,
+                add_virtio_disk)
     return random.choice(variants)(params, name_idxs, parent_bus, addr)
 
 
@@ -330,7 +339,8 @@ def run_pci_devices(test, params, env):
     add_devices = {'first': add_devices_first,
                    'all': add_devices_all}.get(test_devices,
                                                add_devices_random)
-    add_device = {'ehci': add_device_usb_ehci,
+    add_device = {'uhci': add_device_usb_uhci,
+                  'ehci': add_device_usb_ehci,
                   'xhci': add_device_usb_xhci,
                   'virtio_disk': add_virtio_disk,
                   }.get(test_device_type, add_device_random)
