@@ -2835,3 +2835,76 @@ def domfstrim(name, minimum=None, mountpoint=None, options="", **dargs):
 
     cmd += " %s" % options
     return command(cmd, **dargs)
+
+
+def nwfilter_dumpxml(name, options="", to_file=None, **dargs):
+    """
+    Do dumpxml for network filter.
+
+    :param name: the name or uuid of filter.
+    :param options: extra options to nwfilter-dumpxml cmd.
+    :param to_file: optional file to write XML output to.
+    :param dargs: standardized virsh function API keywords
+    :return: Cmdobject of virsh nwfilter-dumpxml.
+    """
+    cmd = ('nwfilter-dumpxml %s %s' % (name, options))
+    result = command(cmd, **dargs)
+    if to_file is not None:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+
+    return result
+
+
+def nwfilter_define(xml_file, options="", **dargs):
+    """
+    Return True on successful network filter define.
+
+    :param xml_file: network filter XML file
+    :param options: extra options to nwfilter-define cmd.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nwfilter-define --file %s %s" % (xml_file, options)
+    return command(cmd, **dargs)
+
+
+def nwfilter_undefine(name, options="", **dargs):
+    """
+    Return cmd result of network filter undefine.
+
+    :param name: network filter name or uuid
+    :param options: extra options to nwfilter-undefine cmd.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nwfilter-undefine %s %s" % (name, options)
+    return command(cmd, **dargs)
+
+
+def nwfilter_list(options="", **dargs):
+    """
+    Get list of network filters.
+
+    :param options: extra options
+    :param dargs: standardized virsh function API keywords
+    :return: list of network filters
+    """
+    cmd = "nwfilter-list %s" % options
+    result = command(cmd, **dargs)
+
+    return result
+
+
+def nwfilter_edit(name, options="", **dargs):
+    """
+    Edit the XML configuration for a network filter.
+
+    :param name: network filter name or uuid.
+    :param options: extra options to nwfilter-edit cmd.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nwfilter-edit %s %s" % (name, options)
+    return command(cmd, **dargs)
