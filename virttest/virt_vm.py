@@ -3,6 +3,7 @@ import time
 import glob
 import os
 import re
+import socket
 from autotest.client.shared import error
 import utils_misc
 import utils_net
@@ -627,7 +628,8 @@ class BaseVM(object):
         nic = self.virtnet[index]
         # TODO: Determine port redirection in use w/o checking nettype
         if nic.nettype not in ['bridge', 'macvtap']:
-            return "localhost"
+            hostname = socket.gethostname()
+            return socket.gethostbyname(hostname)
         if not nic.has_key('mac') and self.params.get('vm_type') == 'libvirt':
             # Look it up from xml
             nic.mac = self.get_virsh_mac_address(index)
