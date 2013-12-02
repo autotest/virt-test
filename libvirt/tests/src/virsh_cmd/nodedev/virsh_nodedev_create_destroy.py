@@ -238,7 +238,7 @@ def run_virsh_nodedev_create_destroy(test, params, env):
 
     # No HBA or no vHBA supporting
     if not vport_ops_list:
-        raise error.TestFail("No HBAs to support vHBA on the host!")
+        raise error.TestNAError("No HBAs to support vHBA on the host!")
 
     # Check ports connectivity
     port_state_dict = check_port_connectivity(vport_ops_list)
@@ -249,7 +249,7 @@ def run_virsh_nodedev_create_destroy(test, params, env):
 
     # No online port is available
     if not port_online_list:
-        raise error.TestFail("No port is active!")
+        raise error.TestNAError("No port is active!")
 
     if dev_name:
         # Negative testing for creating device
