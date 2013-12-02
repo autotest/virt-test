@@ -161,8 +161,10 @@ def run_virsh_setmem(test, params, env):
     # Prepare libvirtd status
     if libvirt == "off":
         utils_libvirtd.libvirtd_stop()
-    else:  # make sure it's running
-        utils_libvirtd.libvirtd_restart()
+    else:
+        if not utils_libvirtd.libvirtd_is_running() and \
+           not utils_libvirtd.libvirtd_start():
+            raise error.TestFail("Cannot start libvirtd")
 
     if status_error == "yes" or old_libvirt_fail == "yes":
         logging.info("Error Test: Expecting an error to occur!")
