@@ -573,6 +573,13 @@ class Bridge(object):
     def list_br(self):
         return self.get_structure().keys()
 
+    def list_iface(self):
+        interface_list = []
+        dict_s = self.get_structure()
+        for key in dict_s.keys():
+            interface_list += dict_s.get(key)
+        return list(set(interface_list))
+
     def port_to_br(self, port_name):
         """
         Return bridge which contain port.
