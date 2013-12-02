@@ -707,8 +707,11 @@ class Spawn(object):
         self._close_reader_fds()
         self.reader_fds = {}
         # Remove all used files
-        base_dir = os.path.join(BASE_DIR, self.a_id)
-        shutil.rmtree(base_dir, ignore_errors=True)
+        for filename in (_get_filenames(BASE_DIR, self.a_id)):
+            try:
+                os.unlink(filename)
+            except OSError:
+                pass
 
 
     def set_linesep(self, linesep):
