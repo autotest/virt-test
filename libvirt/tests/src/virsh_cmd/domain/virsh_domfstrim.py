@@ -23,6 +23,12 @@ def run_virsh_domfstrim(test, params, env):
         raise error.TestNAError("This version of libvirt does not support "
                                 "the domfstrim test")
 
+    try:
+        utils_misc.find_command("lsscsi")
+    except ValueError:
+        raise error.TestNAError("Command 'lsscsi' is missing. You must "
+                                "install it.")
+
     vm_name = params.get("main_vm", "virt-tests-vm1")
     status_error = ("yes" == params.get("status_error", "no"))
     minimum = params.get("domfstrim_minimum")
