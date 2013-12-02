@@ -1607,6 +1607,7 @@ class DbNet(VMNet):
             del self.db
             if hasattr(self, 'lock'):
                 utils_misc.unlock_file(self.lock)
+                os.unlink(self.db_lockfile)
                 del self.lock
             else:
                 raise DbNoLockError
@@ -1679,6 +1680,15 @@ class DbNet(VMNet):
         except AttributeError:
             raise DbNoLockError
 
+ADDRESS_POOL_FILENAME = os.path.join("/tmp", "address_pool")
+
+def clean_tmp_files():
+    """
+    Remove the base adress pool filename.
+    """
+    if os.path.isfile(ADDRESS_POOL_FILENAME):
+        os.unlink(ADDRESS_POOL_FILENAME)
+
 
 class VirtNet(DbNet, ParamsNet):
 
@@ -1690,7 +1700,7 @@ class VirtNet(DbNet, ParamsNet):
     # and take steps to preserve or update it as appropriate.
 
     def __init__(self, params, vm_name, db_key,
-                 db_filename="/tmp/address_pool"):
+                 db_filename=ADDRESS_POOL_FILENAME):
         """
         Load networking info. from db, then from params, then update db.
 

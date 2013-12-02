@@ -860,43 +860,37 @@ class VM(virt_vm.BaseVM):
         return [self.get_serial_console_filename(_) for _ in
                 self.params.objects("isa_serials")]
 
+    def create_serial_console(self):
+        """
+        Establish a session with the serial console.
+
+        The libvirt version uses virsh console to manage it.
+        """
+        try:
+            cmd = 'virsh'
+            if self.connect_uri:
+                cmd += ' --uri=%s' % self.connect_uri
+            cmd += (" console %s %s" % (self.name, self.serial_ports[0]))
+        except IndexError:
+            raise virt_vm.VMConfigMissingError(self.name, "isa_serial")
+        output_func = utils_misc.log_line  # Because qemu-kvm uses this
+        # Because qemu-kvm hard-codes this
+        output_filename = self.get_serial_console_filename(self.serial_ports[0])
+        output_params = (output_filename,)
+        prompt = self.params.get("shell_prompt", "[\#\$]")
+        self.serial_console = aexpect.ShellSession(command=cmd, auto_close=False,
+                                                   output_func=output_func,
+                                                   output_params=output_params)
+        # Cause serial_console.close() to close open log file
+        self.serial_console.set_log_file(output_filename)
+
     def setup_serial_ports(self):
         if self.serial_ports is None:
             self.serial_ports = []
             for serial in self.params.objects("isa_serials"):
                 self.serial_ports.append(serial)
         if self.serial_console is None:
-            # Attempt to setup serial0
-            try:
-                cmd = 'virsh'
-                if self.connect_uri:
-                    cmd += ' --uri=%s' % self.connect_uri
-                cmd += (" console %s %s" % (self.name, self.serial_ports[0]))
-            except IndexError:
-                raise virt_vm.VMConfigMissingError(self.name, "isa_serial")
-            output_func = utils_misc.log_line  # Because qemu-kvm uses this
-            # Because qemu-kvm hard-codes this
-            output_filename = self.get_serial_console_filename(self.serial_ports[0])
-            output_params = (output_filename,)
-            prompt = self.params.get("shell_prompt", "[\#\$]")
-            self.serial_console = aexpect.ShellSession(command=cmd, auto_close=False,
-                                                       output_func=output_func,
-                                                       output_params=output_params)
-            # Cause serial_console.close() to close open log file
-            self.serial_console.set_log_file(output_filename)
-
-    def cleanup_serial_console(self):
-        """
-        Close serial console and associated log file
-        """
-        if self.serial_console is not None:
-            self.serial_console.close()
-            self.serial_console = None
-        if hasattr(self, "migration_file"):
-            try:
-                os.unlink(self.migration_file)
-            except OSError:
-                pass
+            self.create_serial_console()
 
     def set_root_serial_console(self, device, remove=False):
         """

@@ -67,6 +67,7 @@ class ImageUnbootableError(virt_vm.VMError):
         return ("VM '%s' can't bootup from image,"
                 " check your boot disk image file." % self.name)
 
+CREATE_LOCK_FILENAME = os.path.join('/tmp', 'virt-test-vm-create.lock')
 
 class VM(virt_vm.BaseVM):
 
@@ -112,6 +113,7 @@ class VM(virt_vm.BaseVM):
             self.vcpu_threads = []
             self.vhost_threads = []
             self.devices = None
+            self.logs = {}
 
         self.name = name
         self.params = params
@@ -129,7 +131,6 @@ class VM(virt_vm.BaseVM):
         # }
         # This structure can used in usb hotplug/unplug test.
         self.usb_dev_dict = {}
-        self.logs = {}
         self.logsessions = {}
         self.driver_type = 'qemu'
         self.params['driver_type_' + self.name] = self.driver_type
@@ -1727,6 +1728,26 @@ class VM(virt_vm.BaseVM):
         except TypeError:
             pass
 
+    def create_serial_console(self):
+        """
+        Establish a session with the serial console.
+
+        Let's consider the first serial port as serial console.
+        Note: requires a version of netcat that supports -U
+        """
+        try:
+            tmp_serial = self.serial_ports[0]
+        except IndexError:
+            raise virt_vm.VMConfigMissingError(self.name, "isa_serial")
+
+        self.serial_console = aexpect.ShellSession(
+            "nc -U %s" % self.get_serial_console_filename(tmp_serial),
+            auto_close=False,
+            output_func=utils_misc.log_line,
+            output_params=("serial-%s-%s.log" % (tmp_serial, self.name),),
+            prompt=self.params.get("shell_prompt", "[\#\$]"))
+        del tmp_serial
+
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None,
                timeout=CREATE_TIMEOUT, migration_mode=None,
@@ -1815,7 +1836,7 @@ class VM(virt_vm.BaseVM):
 
         # Make sure the following code is not executed by more than one thread
         # at the same time
-        lockfile = open("/tmp/kvm-autotest-vm-create.lock", "w+")
+        lockfile = open(CREATE_LOCK_FILENAME, "w+")
         fcntl.lockf(lockfile, fcntl.LOCK_EX)
 
         try:
@@ -2105,21 +2126,7 @@ class VM(virt_vm.BaseVM):
                                               r"\w+\s+(\d+)\s.*\[vhost-%s\]")
             self.vhost_threads = self.get_vhost_threads(vhost_thread_pattern)
 
-            # Establish a session with the serial console
-            # Let's consider the first serial port as serial console.
-            # Note: requires a version of netcat that supports -U
-            try:
-                tmp_serial = self.serial_ports[0]
-            except IndexError:
-                raise virt_vm.VMConfigMissingError(name, "isa_serial")
-
-            self.serial_console = aexpect.ShellSession(
-                "nc -U %s" % self.get_serial_console_filename(tmp_serial),
-                auto_close=False,
-                output_func=utils_misc.log_line,
-                output_params=("serial-%s-%s.log" % (tmp_serial, name),),
-                prompt=self.params.get("shell_prompt", "[\#\$]"))
-            del tmp_serial
+            self.create_serial_console()
 
             for key, value in self.logs.items():
                 outfile = "%s-%s.log" % (key, name)
@@ -2145,6 +2152,7 @@ class VM(virt_vm.BaseVM):
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
+            os.unlink(CREATE_LOCK_FILENAME)
 
     def wait_for_status(self, status, timeout, first=0.0, step=1.0, text=None):
         """

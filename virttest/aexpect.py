@@ -13,8 +13,16 @@ import termios
 import fcntl
 import tempfile
 import logging
+import shutil
 
-BASE_DIR = os.path.join('/tmp', 'aexpect_spawn')
+BASE_DIR = os.path.join('/tmp', 'aexpect')
+
+def clean_tmp_files():
+    """
+    Remove all aexpect temporary files.
+    """
+    if os.path.isdir(BASE_DIR):
+        shutil.rmtree(BASE_DIR, ignore_errors=True)
 
 # The following helper functions are shared by the server and the client.
 
@@ -112,8 +120,9 @@ if __name__ == "__main__":
                 new_stack = (1 + len(command) / 2072576) * 8196
                 command = "ulimit -s %s\nulimit -n 819200\n%s" % (new_stack,
                                                                   command)
+            tmp_dir = os.path.join(BASE_DIR, a_id)
             tmp_file = tempfile.mktemp(suffix='.sh',
-                                       prefix='autotest', dir="/tmp")
+                                       prefix='aexpect-', dir=tmp_dir)
             fd_cmd = open(tmp_file, "w")
             fd_cmd.write(command)
             fd_cmd.close()
@@ -233,7 +242,6 @@ import re
 import threading
 import logging
 import utils_misc
-
 
 class ExpectError(Exception):
 
@@ -699,11 +707,9 @@ class Spawn(object):
         self._close_reader_fds()
         self.reader_fds = {}
         # Remove all used files
-        for filename in (_get_filenames(BASE_DIR, self.a_id)):
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
+        base_dir = os.path.join(BASE_DIR, self.a_id)
+        shutil.rmtree(base_dir, ignore_errors=True)
+
 
     def set_linesep(self, linesep):
         """
