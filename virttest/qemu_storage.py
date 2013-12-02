@@ -337,18 +337,13 @@ class QemuImg(storage.QemuImg):
 
         return supports_cmd
 
-    def compare_images(self, image1, image2):
+    def compare_images(self, image1, image2, verbose=True):
         """
         Compare 2 images using the appropriate tools for each virt backend.
 
-        :param params: Dictionary containing the test parameters.
-        :param root_dir: Base directory for relative filenames.
-
-        :note: params should contain:
-               image_name -- the name of the image file, without extension
-               image_format -- the format of the image (qcow2, raw etc)
-
-        :raise VMImageCheckError: In case qemu-img check fails on the image.
+        :param image1: image path of first image
+        :param image2: image path of second image
+        :param verbose: Record output in debug file or not
         """
         compare_images = self.support_cmd("compare")
         if not compare_images:
@@ -358,6 +353,9 @@ class QemuImg(storage.QemuImg):
             logging.info("Comparing images %s and %s", image1, image2)
             compare_cmd = "%s compare %s %s" % (self.image_cmd, image1, image2)
             rv = utils.run(compare_cmd, ignore_status=True)
+
+            if verbose:
+                logging.debug("Output from command: %s" % rv.stdout)
 
             if rv.exit_status == 0:
                 logging.info("Compared images are equal")
