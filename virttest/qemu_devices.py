@@ -2311,8 +2311,8 @@ class DevContainer(object):
             """
             # TODO: Add all supported devices (AHCI, ...) and
             # verify that PCIE works as pci bus (ranges, etc...)
-            logging.warn('Using Q35 machine which is not yet fullytested on '
-                         'virt-test. False errors might occur.')
+            logging.warn('Using Q35 machine type, which was not extensively '
+                         'tested on virt-test. False errors might occur')
             devices = []
             bus = (QPCIBus('pcie.0', 'PCIE', 'pci.0'),
                    QStrictCustomBus(None, [['chassis'], [256]], '_PCI_CHASSIS',
@@ -2391,8 +2391,8 @@ class DevContainer(object):
             :param cmd: If set uses "-M $cmd" to force this machine type
             :return: List of added devices (including default buses)
             """
-            logging.warn('isa/unknown machine type is not supported by '
-                         'autotest, false errors might occur.')
+            logging.warn('Machine type isa/unknown is not supported by '
+                         'virt-test. False errors might occur')
             devices = []
             devices.append(QStringDevice('machine', cmdline=cmd))
             return devices
@@ -2430,13 +2430,12 @@ class DevContainer(object):
                     elif 'isapc' not in machine_type:   # i440FX
                         devices = machine_i440FX(False)
                     else:   # isapc (or other)
-                        logging.warn('isa/unknown machine type is not '
-                                     'supported byautotest, false errors '
-                                     'might occur.')
+                        logging.warn('Machine isa/unknown is not supported by '
+                                     'virt-test. False errors might occur')
                         devices = machine_other(False)
             if not devices:
-                logging.warn("Unable to find the default machine type, using"
-                             "i440FX.")
+                logging.warn('Unable to find the default machine type, using '
+                             'i440FX')
                 devices = machine_i440FX(False)
 
         # reserve pci.0 addresses

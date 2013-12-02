@@ -1894,23 +1894,27 @@ class VM(virt_vm.BaseVM):
                     if nic_params.get('netdst') == 'private':
                         nic.netdst = (test_setup.
                                       PrivateBridgeConfig(nic_params).brname)
+
                     nic = self.add_nic(**dict(nic))  # implied add_netdev
+
                     if mac_source:
                         # Will raise exception if source doesn't
                         # have cooresponding nic
                         logging.debug("Copying mac for nic %s from VM %s"
                                       % (nic.nic_name, mac_source.name))
                         nic.mac = mac_source.get_mac_address(nic.nic_name)
+
                     if nic.ifname in utils_net.get_net_if():
                         self.virtnet.generate_ifname(nic.nic_name)
-                    elif (utils_net.find_current_bridge(nic.ifname)[1]
-                            == nic.netdst):
+                    elif (utils_net.find_current_bridge(nic.ifname)[1] ==
+                          nic.netdst):
                         utils_net.del_from_bridge(nic.ifname, nic.netdst)
 
                     if nic.nettype in ['bridge', 'network', 'macvtap']:
                         self._nic_tap_add_helper(nic)
+
                     if ((nic_params.get("vhost") == 'vhost=on') and
-                            (nic_params.get("enable_vhostfd", "yes") == "yes")):
+                        (nic_params.get("enable_vhostfd", "yes") == "yes")):
                         vhostfds = []
                         for i in xrange(int(nic.queues)):
                             vhostfds.append(str(os.open("/dev/vhost-net",
@@ -1920,6 +1924,7 @@ class VM(virt_vm.BaseVM):
                         logging.info("Assuming dependencies met for "
                                      "user mode nic %s, and ready to go"
                                      % nic.nic_name)
+
                     self.virtnet.update_db()
 
             # Find available VNC port, if needed

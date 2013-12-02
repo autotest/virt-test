@@ -17,7 +17,7 @@ def run_yonit_bitmap(test, params, env):
 
       1. If the process exits before test timeout, that means the benchmark
       exits unexpectedly, and BSOD may have happened, which can be verified
-      from the screenshot saved by kvm-autotest framework.
+      from the screenshot saved by virt-test.
       2. If just timeout happen, this test passes, i.e. the guest stays
       good while running the benchmark in the given time.
 
