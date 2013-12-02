@@ -785,7 +785,6 @@ class PciAssignable(object):
         self.name_list = []
         self.devices_requested = 0
         self.pf_vf_info = []
-        self.dev_unbind_drivers = {}
         self.dev_drivers = {}
         self.vf_filter_re = vf_filter_re
         self.pf_filter_re = pf_filter_re
@@ -872,24 +871,36 @@ class PciAssignable(object):
         drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
         if self.device_driver in os.readlink(drv_path):
             error.context("Release device %s to host" % pci_id, logging.info)
-            driver = self.dev_unbind_drivers[pci_id]
+            driver = self.dev_drivers[pci_id]
             cmd = "echo '%s' > %s/new_id" % (vendor_id, driver)
             logging.info("Run command in host: %s" % cmd)
-            if os.system(cmd):
+            try:
+                status = os.system(cmd)
+            except Exception, err:
+                logging.error("Command '%s' fail with exception: %s", cmd, err)
+            if status:
                 return False
 
             stub_path = os.path.join(base_dir,
                                      "drivers/%s" % self.device_driver)
             cmd = "echo '%s' > %s/unbind" % (pci_id, stub_path)
             logging.info("Run command in host: %s" % cmd)
-            if os.system(cmd):
+            try:
+                status = os.system(cmd)
+            except Exception, err:
+                logging.error("Command '%s' fail with exception: %s", cmd, err)
+            if status:
                 return False
 
-            driver = self.dev_unbind_drivers[pci_id]
             cmd = "echo '%s' > %s/bind" % (pci_id, driver)
             logging.info("Run command in host: %s" % cmd)
-            if os.system(cmd):
+            try:
+                status = os.system(cmd)
+            except Exception, err:
+                logging.error("Command '%s' fail with exception: %s", cmd, err)
+            if status:
                 return False
+
         if self.is_binded_to_stub(pci_id):
             return False
         return True
@@ -1031,7 +1042,8 @@ class PciAssignable(object):
         num = 0
         if self.pf_vf_info:
             for pf in self.pf_vf_info:
-                device_names.append(pf['ethname'])
+                if 'ethname' in pf:
+                    device_names.append(pf['ethname'])
         for device in self.devices:
             if device['type'] == 'vf':
                 name = device.get('name', None)
@@ -1099,7 +1111,6 @@ class PciAssignable(object):
             dev_ids.append(dev_id)
             unbind_driver = os.path.realpath(os.path.join(base_dir,
                                              "devices/%s/driver" % dev_id))
-            self.dev_unbind_drivers[dev_id] = unbind_driver
         if len(dev_ids) != len(devices):
             logging.error("Did not get enough PCI Device")
         return dev_ids
@@ -1352,7 +1363,13 @@ class PciAssignable(object):
         """
         try:
             for pci_id in self.dev_drivers:
-                if not self._release_dev(pci_id):
+                try:
+                    status = self._release_dev(pci_id)
+                except Exception, err:
+                    msg = "Failed to release device %s to host." % pci_id
+                    msg += "Got exception: %s" % err
+                    logging.error(msg)
+                if not status:
                     logging.error(
                         "Failed to release device %s to host", pci_id)
                 else:
@@ -1361,6 +1378,6 @@ class PciAssignable(object):
                 self.sr_iov_cleanup()
                 self.devices = []
                 self.devices_requested = 0
-                self.dev_unbind_drivers = {}
+                self.dev_drivers = {}
         except Exception:
             return
