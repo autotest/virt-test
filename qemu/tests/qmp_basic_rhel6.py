@@ -184,7 +184,7 @@ def run_qmp_basic_rhel6(test, params, env):
         Check that QMP's "id" key is correctly handled.
         """
         # The "id" key must be echoed back in error responses
-        id_key = "kvm-autotest"
+        id_key = "virt-test"
         resp = monitor.cmd_qmp("eject", {"foobar": True}, q_id=id_key)
         check_error_resp(resp)
         check_str_key(resp, "id", id_key)
