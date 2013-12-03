@@ -84,6 +84,7 @@ class QemuImg(storage.QemuImg):
             preallocated = params.get("preallocated", "off")
             encrypted = params.get("encrypted", "off")
             image_extra_params = params.get("image_extra_params", "")
+            has_backing_file = params.get('has_backing_file')
 
             qemu_img_cmd += " -o "
             if preallocated != "off":
@@ -94,6 +95,15 @@ class QemuImg(storage.QemuImg):
 
             if image_cluster_size is not None:
                 qemu_img_cmd += "cluster_size=%s," % image_cluster_size
+
+            if has_backing_file == "yes":
+                backing_param = params.object_params("backing_file")
+                backing_file = storage.get_image_filename(backing_param,
+                                                          self.root_dir)
+                backing_fmt = backing_param.get("image_format")
+                qemu_img_cmd += "backing_file=%s," % backing_file
+
+                qemu_img_cmd += "backing_fmt=%s," % backing_fmt
 
             if image_extra_params:
                 qemu_img_cmd += "%s," % image_extra_params
@@ -109,23 +119,24 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " %s" % self.size
 
-        image_dirname = os.path.dirname(self.image_filename)
-        if image_dirname and not os.path.isdir(image_dirname):
-            e_msg = ("Parent directory of the image file %s does "
-                     "not exist" % self.image_filename)
-            logging.error(e_msg)
-            logging.error("This usually means a serious setup error.")
-            logging.error("Please verify if your data dir contains the "
-                          "expected directory structure")
-            logging.error("Backing data dir: %s",
-                          data_dir.get_backing_data_dir())
-            logging.error("Directory structure:")
-            for root, _, _ in os.walk(data_dir.get_backing_data_dir()):
-                logging.error(root)
+        if (params.get("image_backend", "filesystem") != "filesystem"):
+            image_dirname = os.path.dirname(self.image_filename)
+            if image_dirname and not os.path.isdir(image_dirname):
+                e_msg = ("Parent directory of the image file %s does "
+                         "not exist" % self.image_filename)
+                logging.error(e_msg)
+                logging.error("This usually means a serious setup error.")
+                logging.error("Please verify if your data dir contains the "
+                              "expected directory structure")
+                logging.error("Backing data dir: %s",
+                              data_dir.get_backing_data_dir())
+                logging.error("Directory structure:")
+                for root, _, _ in os.walk(data_dir.get_backing_data_dir()):
+                    logging.error(root)
 
-            logging.warning("We'll try to proceed by creating the dir. "
-                            "Other errors may ensue")
-            os.makedirs(image_dirname)
+                logging.warning("We'll try to proceed by creating the dir. "
+                                "Other errors may ensue")
+                os.makedirs(image_dirname)
 
         msg = "Create image by command: %s" % qemu_img_cmd
         error.context(msg, logging.info)
@@ -381,7 +392,8 @@ class QemuImg(storage.QemuImg):
         logging.debug("Checking image file %s", image_filename)
         qemu_img_cmd = self.image_cmd
         image_is_checkable = self.image_format in ['qcow2', 'qed']
-        if os.path.exists(image_filename) and image_is_checkable:
+
+        if storage.file_exists(params, image_filename) and image_is_checkable:
             check_img = self.support_cmd("check") and self.support_cmd("info")
             if not check_img:
                 logging.debug("Skipping image check "
@@ -433,7 +445,7 @@ class QemuImg(storage.QemuImg):
                 if params.get("backup_image", "no") == "yes":
                     self.backup_image(params, root_dir, "backup", True, True)
         else:
-            if not os.path.exists(image_filename):
+            if not storage.file_exists(params, image_filename):
                 logging.debug("Image file %s not found, skipping check",
                               image_filename)
             elif not image_is_checkable:
