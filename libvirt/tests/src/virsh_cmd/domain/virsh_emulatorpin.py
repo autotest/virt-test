@@ -18,17 +18,13 @@ def get_emulatorpin_from_cgroup(params):
     Get a list of domain-specific per block stats from cgroup blkio controller.
     :params: the parameter dictionary
     """
-    vm_name = params.get("main_vm")
-    qemu_path = params.get("qemu_path")
 
-    if not qemu_path:
-        # qemu_path defaults "/libvirt/qemu/" on RHEL6.y
-        qemu_path = "/libvirt/qemu/"
+    vm = params.get("vm")
 
-    cpuset_path = utils_cgroup.get_cgroup_mountpoint("cpuset") + \
-        qemu_path + vm_name
+    cpuset_path = \
+        utils_cgroup.resolve_task_cgroup_path(vm.get_pid(), "cpuset")
 
-    cpuset_file = os.path.join(cpuset_path, "emulator/cpuset.cpus")
+    cpuset_file = os.path.join(cpuset_path, "cpuset.cpus")
 
     try:
         f_emulatorpin_params = open(cpuset_file, "rU")
