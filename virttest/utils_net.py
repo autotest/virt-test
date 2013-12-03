@@ -1611,7 +1611,6 @@ class DbNet(VMNet):
             del self.db
             if hasattr(self, 'lock'):
                 utils_misc.unlock_file(self.lock)
-                os.unlink(self.db_lockfile)
                 del self.lock
             else:
                 raise DbNoLockError
@@ -1685,11 +1684,14 @@ class DbNet(VMNet):
             raise DbNoLockError
 
 ADDRESS_POOL_FILENAME = os.path.join("/tmp", "address_pool")
+ADDRESS_POOL_LOCK_FILENAME = ADDRESS_POOL_FILENAME + ".lock"
 
 def clean_tmp_files():
     """
     Remove the base adress pool filename.
     """
+    if os.path.isfile(ADDRESS_POOL_LOCK_FILENAME):
+        os.unlink(ADDRESS_POOL_LOCK_FILENAME)
     if os.path.isfile(ADDRESS_POOL_FILENAME):
         os.unlink(ADDRESS_POOL_FILENAME)
 

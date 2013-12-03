@@ -22,6 +22,7 @@ import cartesian_config
 import arch
 import funcatexit
 import version
+import qemu_vm
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -661,6 +662,7 @@ def cleanup_env(parser, options):
     aexpect.clean_tmp_files()
     utils_net.clean_tmp_files()
     data_dir.clean_tmp_files()
+    qemu_vm.clean_tmp_files()
     logging.info("")
 
 def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
