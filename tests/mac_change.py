@@ -1,7 +1,7 @@
-import logging
 import re
+import logging
 from autotest.client.shared import error
-from virttest import utils_misc, utils_net
+from virttest import utils_misc, utils_net, utils_test
 
 
 @error.context_aware
@@ -12,6 +12,7 @@ def run(test, params, env):
     1) Get a new mac from pool, and the old mac addr of guest.
     2) Set new mac in guest and regain new IP.
     3) Re-log into guest with new MAC.
+    4) File transfer between host and guest. optional
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -108,6 +109,10 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=timeout)
         if not session.is_responsive():
             raise error.TestFail("The new session is not responsive.")
+        if params.get("file_transfer", "no") == "yes":
+            error.context("File transfer between host and guest.",
+                          logging.info)
+            utils_test.run_file_transfer(test, params, env)
     finally:
         if os_type == "windows":
             clean_cmd_pattern = params.get("clean_cmd")
