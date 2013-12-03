@@ -99,7 +99,7 @@ def _import_autotest_modules():
     2) Import the libraries system wide. For this to work, the
        autotest-framework package for the given distro must be installed.
     """
-    autotest_dir = os.environ.get('AUTOTEST_PATH')
+    autotest_dir = os.path.abspath(os.environ.get('AUTOTEST_PATH'))
     if autotest_dir is not None:
         client_dir = os.path.join(autotest_dir, 'client')
         setup_modules_path = os.path.join(client_dir, 'setup_modules.py')
