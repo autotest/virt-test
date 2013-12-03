@@ -73,6 +73,197 @@ def compose_disk_options(test, params, opt_names):
 
         return opt_disk[0] + "file=" + spec_disk + left_opt
 
+def check_snapslist(vm_name, options, option_dict, output,
+                    snaps_before, snaps_list):
+        no_metadata = options.find("--no-metadata")
+        fdisks = "disks"
+
+        # command with print-xml will not really create snapshot
+        if options.find("print-xml") >= 0:
+            xtf = xml_utils.XMLTreeFile(output)
+
+            # With --print-xml there isn't new snapshot created
+            if len(snaps_before) != len(snaps_list):
+                raise error.TestFail("--print-xml create new snapshot")
+
+        else:
+            # The following does not check with print-xml
+            get_sname = output.split()[2]
+
+            # check domain/snapshot xml depends on if have metadata
+            if no_metadata < 0:
+                output_dump = virsh.snapshot_dumpxml(vm_name,
+                              get_sname).stdout.strip()
+            else:
+                output_dump = virsh.dumpxml(vm_name).stdout.strip()
+                fdisks = "devices"
+
+            xtf = xml_utils.XMLTreeFile(output_dump)
+
+            find = 0
+            for snap in snaps_list:
+                if snap == get_sname:
+                    find = 1
+                    break
+
+            # Should find snap in snaplist without --no-metadata
+            if (find == 0 and no_metadata < 0):
+                raise error.TestFail("Can not find snapshot %s!"
+                                     % get_sname)
+            # Should not find snap in list without metadata
+            elif (find == 1 and no_metadata >= 0):
+                raise error.TestFail("Can find snapshot metadata even "
+                                     "if have --no-metadata")
+            elif (find == 0 and no_metadata >= 0):
+                logging.info("Can not find snapshot %s as no-metadata "
+                             "is given" % get_sname)
+
+                # Check snapshot only in qemu-img
+                if (options.find("--disk-only") < 0 and
+                    options.find("--memspec") < 0):
+                    ret = check_snap_in_image(vm_name, get_sname)
+
+                    if ret is False:
+                        raise error.TestFail("No snap info in image")
+
+            else:
+                logging.info("Find snapshot %s in snapshot list."
+                             % get_sname)
+
+            # Check if the disk file exist when disk-only is given
+            if options.find("disk-only") >= 0:
+                for disk in xtf.find(fdisks).findall('disk'):
+                    diskpath = disk.find('source').get('file')
+                    if os.path.isfile(diskpath):
+                        logging.info("disk file %s exist" % diskpath)
+                        os.remove(diskpath)
+                    else:
+                        raise error.TestFail("Can not find disk %s"
+                                             % diskpath)
+
+            # Check if the guest is halted when 'halt' is given
+            if options.find("halt") >= 0:
+                domstate = virsh.domstate(vm_name)
+                if re.match("shut off", domstate.stdout):
+                    logging.info("Domain is halted after create "
+                                 "snapshot")
+                else:
+                    raise error.TestFail("Domain is not halted after "
+                                         "snapshot created")
+
+        # Check the snapshot xml regardless of having print-xml or not
+        if (options.find("name") >= 0 and no_metadata < 0):
+            if xtf.findtext('name') == option_dict["name"]:
+                logging.info("get snapshot name same as set")
+            else:
+                raise error.TestFail("Get wrong snapshot name %s" %
+                                     xtf.findtext('name'))
+
+        if (options.find("description") >= 0 and no_metadata < 0):
+            desc = xtf.findtext('description')
+            if desc == option_dict["description"]:
+                logging.info("get snapshot description same as set")
+            else:
+                raise error.TestFail("Get wrong description on xml")
+
+        if options.find("diskspec") >= 0:
+            if isinstance(option_dict['diskspec'], list):
+                index = len(option_dict['diskspec'])
+            else:
+                index = 1
+
+            disks = xtf.find(fdisks).findall('disk')
+
+            for num in range(index):
+                if isinstance(option_dict['diskspec'], list):
+                    option_disk = option_dict['diskspec'][num]
+                else:
+                    option_disk = option_dict['diskspec']
+
+                option_disk = "name=" + option_disk
+                disk_dict = utils_misc.valued_option_dict(option_disk,
+                                                                  ",", 0, "=")
+                logging.debug("disk_dict is %s", disk_dict)
+
+                # For no metadata snapshot do not check name and
+                # snapshot
+                if no_metadata < 0:
+                    dname = disks[num].get('name')
+                    logging.debug("dname is %s", dname)
+                    if dname == disk_dict['name']:
+                        logging.info("get disk%d name same as set in "
+                                     "diskspec", num)
+                    else:
+                        raise error.TestFail("Get wrong disk%d name %s"
+                                             % num, dname)
+
+                    if option_disk.find('snapshot=') >= 0:
+                        dsnap = disks[num].get('snapshot')
+                        logging.debug("dsnap is %s", dsnap)
+                        if dsnap == disk_dict['snapshot']:
+                            logging.info("get disk%d snapshot type same"
+                                         " as set in diskspec", num)
+                        else:
+                            raise error.TestFail("Get wrong disk%d "
+                                                 "snapshot type %s" %
+                                                 num, dsnap)
+
+                if option_disk.find('driver=') >= 0:
+                    dtype = disks[num].find('driver').get('type')
+                    if dtype == disk_dict['driver']:
+                        logging.info("get disk%d driver type same as "
+                                     "set in diskspec", num)
+                    else:
+                        raise error.TestFail("Get wrong disk%d driver "
+                                             "type %s" % num, dtype)
+
+                if option_disk.find('file=') >= 0:
+                    sfile = disks[num].find('source').get('file')
+                    if sfile == disk_dict['file']:
+                        logging.info("get disk%d source file same as "
+                                     "set in diskspec", num)
+                    else:
+                        raise error.TestFail("Get wrong disk%d source "
+                                             "file %s" % num, sfile)
+
+        # For memspec check if the xml is same as setting
+        # Also check if the mem file exists
+        if options.find("memspec") >= 0:
+            memspec = option_dict['memspec']
+            if re.search('file=', option_dict['memspec']) < 0:
+                memspec = 'file=' + option_dict['memspec']
+
+            mem_dict = utils_misc.valued_option_dict(memspec, ",", 0,
+                                                             "=")
+            logging.debug("mem_dict is %s", mem_dict)
+
+            if no_metadata < 0:
+                if memspec.find('snapshot=') >= 0:
+                    snap = xtf.find('memory').get('snapshot')
+                    if snap == mem_dict['snapshot']:
+                        logging.info("get memory snapshot type same as"
+                                     " set in diskspec")
+                    else:
+                        raise error.TestFail("Get wrong memory snapshot"
+                                             " type on print xml")
+
+                memfile = xtf.find('memory').get('file')
+                if memfile == mem_dict['file']:
+                    logging.info("get memory file same as set in "
+                                 "diskspec")
+                else:
+                    raise error.TestFail("Get wrong memory file on "
+                                         "print xml %s", memfile)
+
+            if options.find("print-xml") < 0:
+                if os.path.isfile(mem_dict['file']):
+                    logging.info("memory file generated")
+                    os.remove(mem_dict['file'])
+                else:
+                    raise error.TestFail("Fail to generate memory file"
+                                         " %s", mem_dict['file'])
+
+
 
 def run_virsh_snapshot_create_as(test, params, env):
     """
@@ -157,7 +348,7 @@ def run_virsh_snapshot_create_as(test, params, env):
         bad_disk = os.path.join(test.virtdir, bad_disk)
         os.open(bad_disk, os.O_RDWR | os.O_CREAT)
 
-    # Gererate external disk
+    # Generate external disk
     if external_disk is not None:
         external_disk = os.path.join(test.virtdir, external_disk)
         commands.getoutput("qemu-img create -f qcow2 %s 1G" % external_disk)
@@ -234,208 +425,12 @@ def run_virsh_snapshot_create_as(test, params, env):
                 snaps_list = virsh.snapshot_list(vm_name)
                 logging.debug("snaps_list is %s", snaps_list)
 
-                no_metadata = options.find("--no-metadata")
-                fdisks = "disks"
-
-                # command with print-xml will not really create snapshot
-                if options.find("print-xml") >= 0:
-                    xtf = xml_utils.XMLTreeFile(output)
-
-                    # With --print-xml there isn't new snapshot created
-                    if len(snaps_before) != len(snaps_list):
-                        xml_recover(vmxml_backup)
-                        raise error.TestFail("--print-xml create new snapshot")
-
-                else:
-                    # The following does not check with print-xml
-                    get_sname = output.split()[2]
-
-                    # check domain/snapshot xml depends on if have metadata
-                    if no_metadata < 0:
-                        output_dump = virsh.snapshot_dumpxml(
-                            vm_name, get_sname).stdout.strip()
-                    else:
-                        output_dump = virsh.dumpxml(vm_name).stdout.strip()
-                        fdisks = "devices"
-
-                    xtf = xml_utils.XMLTreeFile(output_dump)
-
-                    find = 0
-                    for snap in snaps_list:
-                        if snap == get_sname:
-                            find = 1
-                            break
-
-                    # Should find snap in snaplist without --no-metadata
-                    if (find == 0 and no_metadata < 0):
-                        xml_recover(vmxml_backup)
-                        raise error.TestFail("Can not find snapshot %s!"
-                                             % get_sname)
-                    # Should not find snap in list without metadata
-                    elif (find == 1 and no_metadata >= 0):
-                        xml_recover(vmxml_backup)
-                        raise error.TestFail("Can find snapshot metadata even "
-                                             "if have --no-metadata")
-                    elif (find == 0 and no_metadata >= 0):
-                        logging.info("Can not find snapshot %s as no-metadata "
-                                     "is given" % get_sname)
-
-                        # Check snapshot only in qemu-img
-                        if (options.find("--disk-only") < 0
-                                and options.find("--memspec") < 0):
-                            ret = check_snap_in_image(vm_name, get_sname)
-
-                            if ret is False:
-                                xml_recover(vmxml_backup)
-                                raise error.TestFail("No snap info in image")
-
-                    else:
-                        logging.info("Find snapshot %s in snapshot list."
-                                     % get_sname)
-
-                    # Check if the disk file exist when disk-only is given
-                    if options.find("disk-only") >= 0:
-                        for disk in xtf.find(fdisks).findall('disk'):
-                            diskpath = disk.find('source').get('file')
-                            if os.path.isfile(diskpath):
-                                logging.info("disk file %s exist" % diskpath)
-                                os.remove(diskpath)
-                            else:
-                                xml_recover(vmxml_backup)
-                                raise error.TestFail("Can not find disk %s"
-                                                     % diskpath)
-
-                    # Check if the guest is halted when 'halt' is given
-                    if options.find("halt") >= 0:
-                        domstate = virsh.domstate(vm_name)
-                        if re.match("shut off", domstate.stdout):
-                            logging.info("Domain is halted after create "
-                                         "snapshot")
-                        else:
-                            xml_recover(vmxml_backup)
-                            raise error.TestFail("Domain is not halted after "
-                                                 "snapshot created")
-
-                # Check the snapshot xml regardless of having print-xml or not
-                if (options.find("name") >= 0 and no_metadata < 0):
-                    if xtf.findtext('name') == option_dict["name"]:
-                        logging.info("get snapshot name same as set")
-                    else:
-                        xml_recover(vmxml_backup)
-                        raise error.TestFail("Get wrong snapshot name %s" %
-                                             xtf.findtext('name'))
-
-                if (options.find("description") >= 0 and no_metadata < 0):
-                    desc = xtf.findtext('description')
-                    if desc == option_dict["description"]:
-                        logging.info("get snapshot description same as set")
-                    else:
-                        xml_recover(vmxml_backup)
-                        raise error.TestFail("Get wrong description on xml")
-
-                if options.find("diskspec") >= 0:
-                    if isinstance(option_dict['diskspec'], list):
-                        index = len(option_dict['diskspec'])
-                    else:
-                        index = 1
-
-                    disks = xtf.find(fdisks).findall('disk')
-
-                    for num in range(index):
-                        if isinstance(option_dict['diskspec'], list):
-                            option_disk = option_dict['diskspec'][num]
-                        else:
-                            option_disk = option_dict['diskspec']
-
-                        option_disk = "name=" + option_disk
-                        disk_dict = utils_misc.valued_option_dict(option_disk,
-                                                                  ",", 0, "=")
-                        logging.debug("disk_dict is %s", disk_dict)
-
-                        # For no metadata snapshot do not check name and
-                        # snapshot
-                        if no_metadata < 0:
-                            dname = disks[num].get('name')
-                            logging.debug("dname is %s", dname)
-                            if dname == disk_dict['name']:
-                                logging.info("get disk%d name same as set in "
-                                             "diskspec", num)
-                            else:
-                                xml_recover(vmxml_backup)
-                                raise error.TestFail("Get wrong disk%d name %s"
-                                                     % num, dname)
-
-                            if option_disk.find('snapshot=') >= 0:
-                                dsnap = disks[num].get('snapshot')
-                                logging.debug("dsnap is %s", dsnap)
-                                if dsnap == disk_dict['snapshot']:
-                                    logging.info("get disk%d snapshot type same"
-                                                 " as set in diskspec", num)
-                                else:
-                                    xml_recover(vmxml_backup)
-                                    raise error.TestFail("Get wrong disk%d "
-                                                         "snapshot type %s" %
-                                                         num, dsnap)
-
-                        if option_disk.find('driver=') >= 0:
-                            dtype = disks[num].find('driver').get('type')
-                            if dtype == disk_dict['driver']:
-                                logging.info("get disk%d driver type same as "
-                                             "set in diskspec", num)
-                            else:
-                                xml_recover(vmxml_backup)
-                                raise error.TestFail("Get wrong disk%d driver "
-                                                     "type %s" % num, dtype)
-
-                        if option_disk.find('file=') >= 0:
-                            sfile = disks[num].find('source').get('file')
-                            if sfile == disk_dict['file']:
-                                logging.info("get disk%d source file same as "
-                                             "set in diskspec", num)
-                            else:
-                                xml_recover(vmxml_backup)
-                                raise error.TestFail("Get wrong disk%d source "
-                                                     "file %s" % num, sfile)
-
-                # For memspec check if the xml is same as setting
-                # Also check if the mem file exists
-                if options.find("memspec") >= 0:
-                    memspec = option_dict['memspec']
-                    if re.search('file=', option_dict['memspec']) < 0:
-                        memspec = 'file=' + option_dict['memspec']
-
-                    mem_dict = utils_misc.valued_option_dict(memspec, ",", 0,
-                                                             "=")
-                    logging.debug("mem_dict is %s", mem_dict)
-
-                    if no_metadata < 0:
-                        if memspec.find('snapshot=') >= 0:
-                            snap = xtf.find('memory').get('snapshot')
-                            if snap == mem_dict['snapshot']:
-                                logging.info("get memory snapshot type same as"
-                                             " set in diskspec")
-                            else:
-                                xml_recover(vmxml_backup)
-                                raise error.TestFail("Get wrong memory snapshot"
-                                                     " type on print xml")
-
-                        memfile = xtf.find('memory').get('file')
-                        if memfile == mem_dict['file']:
-                            logging.info("get memory file same as set in "
-                                         "diskspec")
-                        else:
-                            xml_recover(vmxml_backup)
-                            raise error.TestFail("Get wrong memory file on "
-                                                 "print xml %s", memfile)
-
-                    if options.find("print-xml") < 0:
-                        if os.path.isfile(mem_dict['file']):
-                            logging.info("memory file generated")
-                            os.remove(mem_dict['file'])
-                        else:
-                            xml_recover(vmxml_backup)
-                            raise error.TestFail("Fail to generate memory file"
-                                                 " %s", mem_dict['file'])
+                try:
+                    check_snapslist(vm_name, options, option_dict, output,
+                                    snaps_before, snaps_list)
+                except Exception, details:
+                    xml_recover(vmxml_backup)
+                    raise error.TestFail(details)
 
     # Environment clean
     if options.find("quiesce") >= 0 and start_ga == "yes":
