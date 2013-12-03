@@ -2157,7 +2157,6 @@ class VM(virt_vm.BaseVM):
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
-            os.unlink(CREATE_LOCK_FILENAME)
 
     def wait_for_status(self, status, timeout, first=0.0, step=1.0, text=None):
         """
