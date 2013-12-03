@@ -1611,7 +1611,6 @@ class DbNet(VMNet):
             del self.db
             if hasattr(self, 'lock'):
                 utils_misc.unlock_file(self.lock)
-                os.unlink(self.db_lockfile)
                 del self.lock
             else:
                 raise DbNoLockError
