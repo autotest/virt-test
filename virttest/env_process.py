@@ -7,6 +7,7 @@ import glob
 import threading
 import shutil
 import sys
+import copy
 from autotest.client import utils
 from autotest.client.shared import error
 import aexpect
@@ -85,6 +86,7 @@ def preprocess_vm(test, params, env, name):
     target = params.get('target')
     if not vm:
         vm = env.create_vm(vm_type, target, name, params, test.bindir)
+    old_vm = copy.copy(vm)
 
     remove_vm = False
     if params.get("force_remove_vm") == "yes":
@@ -95,6 +97,7 @@ def preprocess_vm(test, params, env, name):
 
     start_vm = False
     update_virtnet = False
+    gracefully_kill = params.get("kill_vm_gracefully") == "yes"
 
     if params.get("migration_mode"):
         start_vm = True
@@ -111,6 +114,8 @@ def preprocess_vm(test, params, env, name):
                                     params=params,
                                     basedir=test.bindir):
                     start_vm = True
+                    old_vm.destroy(gracefully=gracefully_kill,
+                                   free_mac_addresses=False)
                     update_virtnet = True
 
     if start_vm:
@@ -144,8 +149,8 @@ def preprocess_vm(test, params, env, name):
     else:       # VM is alive and we don't care
         if params.get("kill_vm_before_test") == "yes":
             # Destroy the VM if kill_vm_before_test = "yes".
-            vm.destroy(gracefully=params.get("kill_vm_gracefully") == "yes",
-                       free_mac_addresses=False)
+            old_vm.destroy(gracefully=gracefully_kill,
+                           free_mac_addresses=False)
         else:
             # VM is alive and we just need to open the serial console
             vm.create_serial_console()
