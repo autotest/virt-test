@@ -94,10 +94,12 @@ def preprocess_vm(test, params, env, name):
         vm.remove()
 
     start_vm = False
+    update_virtnet = False
 
     if params.get("restart_vm") == "yes":
         if vm.is_alive():
             vm.destroy(gracefully=True, free_mac_addresses=False)
+        update_virtnet = True
         start_vm = True
     elif params.get("migration_mode"):
         start_vm = True
@@ -114,6 +116,7 @@ def preprocess_vm(test, params, env, name):
                                     params=params,
                                     basedir=test.bindir):
                     start_vm = True
+                    update_virtnet = True
 
     if start_vm:
         if vm_type == "libvirt" and params.get("type") != "unattended_install":
@@ -123,6 +126,9 @@ def preprocess_vm(test, params, env, name):
             vm.params = params
             vm.start()
         else:
+            if update_virtnet:
+                vm.update_vm_id()
+                vm.virtnet = utils_net.VirtNet(params, name, vm.instance)
             # Start the VM (or restart it if it's already up)
             if params.get("reuse_previous_config", "no") == "no":
                 vm.create(name, params, test.bindir,
