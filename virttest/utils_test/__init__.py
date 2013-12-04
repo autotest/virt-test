@@ -501,7 +501,7 @@ def run_file_transfer(test, params, env):
 
 
 def run_autotest(vm, session, control_path, timeout,
-                 outputdir, params, copy_only=False):
+                 outputdir, params, copy_only=False, control_args=None):
     """
     Run an autotest control file inside a guest (linux only utility).
 
@@ -514,6 +514,7 @@ def run_autotest(vm, session, control_path, timeout,
     :param copy_only: If copy_only is True, copy the autotest to guest and
             return the command which need to run test on guest, without
             executing it.
+    :param control_args: The arguments for control file.
 
     The following params is used by the migration
     :param params: Test params used in the migration test
@@ -740,8 +741,9 @@ def run_autotest(vm, session, control_path, timeout,
 
     # Check copy_only.
     if copy_only:
-        return ("%s/autotest-local --verbose %s/control" %
-                (destination_autotest_path, destination_autotest_path))
+        return ("%s/autotest-local --args=\"%s\" --verbose %s/control" %
+                (destination_autotest_path, control_args,
+                 destination_autotest_path))
 
     # Run the test
     logging.info("Running autotest control file %s on guest, timeout %ss",
@@ -756,7 +758,9 @@ def run_autotest(vm, session, control_path, timeout,
 
                 bg = utils.InterruptedThread(session.cmd_output,
                                              kwargs={
-                                                 'cmd': "./autotest control",
+                                                 'cmd': "./autotest --args="
+                                                        "\"%s\" control" %
+                                                        (control_args),
                                                  'timeout': timeout,
                                                  'print_func': logging.info})
 
@@ -767,7 +771,8 @@ def run_autotest(vm, session, control_path, timeout,
                                  "migration")
                     vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
             else:
-                session.cmd_output("./autotest-local --verbose control",
+                session.cmd_output("./autotest-local --args=\"%s\" --verbose"
+                                   " control" % (control_args),
                                    timeout=timeout,
                                    print_func=logging.info)
         finally:
