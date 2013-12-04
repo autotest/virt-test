@@ -100,6 +100,7 @@ def run_virsh_migrate(test, params, env):
     status_error = params.get("status_error", 'no')
     libvirtd_state = params.get("virsh_migrate_libvirtd_state", 'on')
     src_state = params.get("virsh_migrate_src_state", "running")
+    migrate_uri = params.get("virsh_migrate_migrateuri", None)
     dest_xmlfile = ""
 
     # Direct migration is supported only for Xen in libvirt
@@ -107,6 +108,12 @@ def run_virsh_migrate(test, params, env):
         if params.get("driver_type") is not "xen":
             raise error.TestNAError("Direct migration is supported only for "
                                     "Xen in libvirt.")
+
+    # Add migrateuri if exists and check for default example
+    if migrate_uri:
+        if migrate_uri.count("EXAMPLE"):
+            raise error.TestNAError("Set up the migrate_uri.")
+        extra = ("%s --migrateuri=%s" %(extra, migrate_uri))
 
     exception = False
     try:
