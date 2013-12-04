@@ -661,8 +661,22 @@ class BaseVM(object):
         # for this guest
         macs = self.virtnet.mac_list()
 
+        # SR-IOV card may not in same subnet with the card used by host by
+        # default. So arp check cannot work.
+        # At this situation verify_ip_address_ownership will raise
+        # VMAddressVerificationError even IP and mac match.
+        # So do not raise VMAddressVerificationError when SR-IOV used.
+        nic_params = self.params.object_params(nic.nic_name)
+        ignore_ip_address_verify = nic_params.get("pci_assignable") != "no"
+
         if not utils_net.verify_ip_address_ownership(arp_ip, macs):
-            raise VMAddressVerificationError(nic.mac, arp_ip)
+            if ignore_ip_address_verify:
+                msg = "Could not verify DHCP lease: %s --> %s." % (nic.mac,
+                                                                   arp_ip)
+                msg += " Maybe %s is not in same subnet with host." % arp_ip
+                logging.error(msg)
+            else:
+                raise VMAddressVerificationError(nic.mac, arp_ip)
         logging.debug('Found/Verified IP %s for VM %s NIC %s' % (
             arp_ip, self.name, str(index)))
         return arp_ip
