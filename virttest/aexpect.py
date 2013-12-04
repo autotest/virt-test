@@ -755,6 +755,7 @@ def kill_tail_threads():
     """
     global _thread_kill_requested
     _thread_kill_requested = True
+
     for t in threading.enumerate():
         if hasattr(t, "name") and t.name.startswith("tail_thread"):
             t.join(10)
@@ -779,7 +780,8 @@ class Tail(Spawn):
 
     def __init__(self, command=None, a_id=None, auto_close=False, echo=False,
                  linesep="\n", termination_func=None, termination_params=(),
-                 output_func=None, output_params=(), output_prefix=""):
+                 output_func=None, output_params=(), output_prefix="",
+                 thread_name=None):
         """
         Initialize the class and run command as a child process.
 
@@ -805,6 +807,7 @@ class Tail(Spawn):
         :param output_params: Parameters to send to output_func before the
                 output line.
         :param output_prefix: String to prepend to lines sent to output_func.
+        :param thread_name: Name of thread to better identify hanging threads.
         """
         # Add a reader and a close hook
         self._add_reader("tail")
@@ -813,6 +816,11 @@ class Tail(Spawn):
 
         # Init the superclass
         Spawn.__init__(self, command, a_id, auto_close, echo, linesep)
+        if thread_name is None:
+            self.thread_name = ("tail_thread_%s_%s") % (self.a_id,
+                                                        str(command)[:10])
+        else:
+            self.thread_name = thread_name
 
         # Remember some attributes
         self.termination_func = termination_func
@@ -834,7 +842,8 @@ class Tail(Spawn):
                                               self.termination_params,
                                               self.output_func,
                                               self.output_params,
-                                              self.output_prefix)
+                                              self.output_prefix,
+                                              self.thread_name)
 
     def set_termination_func(self, termination_func):
         """
@@ -962,7 +971,7 @@ class Tail(Spawn):
 
     def _start_thread(self):
         self.tail_thread = threading.Thread(target=self._tail,
-                                            name="tail_thread_%s" % self.a_id)
+                                            name=self.thread_name)
         self.tail_thread.start()
 
     def _join_thread(self):
@@ -985,7 +994,8 @@ class Expect(Tail):
 
     def __init__(self, command=None, a_id=None, auto_close=True, echo=False,
                  linesep="\n", termination_func=None, termination_params=(),
-                 output_func=None, output_params=(), output_prefix=""):
+                 output_func=None, output_params=(), output_prefix="",
+                 thread_name=None):
         """
         Initialize the class and run command as a child process.
 
@@ -1018,7 +1028,7 @@ class Expect(Tail):
         # Init the superclass
         Tail.__init__(self, command, a_id, auto_close, echo, linesep,
                       termination_func, termination_params,
-                      output_func, output_params, output_prefix)
+                      output_func, output_params, output_prefix, thread_name)
 
     def __reduce__(self):
         return self.__class__, (self.__getinitargs__())
@@ -1260,7 +1270,8 @@ class ShellSession(Expect):
     def __init__(self, command=None, a_id=None, auto_close=True, echo=False,
                  linesep="\n", termination_func=None, termination_params=(),
                  output_func=None, output_params=(), output_prefix="",
-                 prompt=r"[\#\$]\s*$", status_test_command="echo $?"):
+                 thread_name=None, prompt=r"[\#\$]\s*$",
+                 status_test_command="echo $?"):
         """
         Initialize the class and run command as a child process.
 
@@ -1294,7 +1305,7 @@ class ShellSession(Expect):
         # Init the superclass
         Expect.__init__(self, command, a_id, auto_close, echo, linesep,
                         termination_func, termination_params,
-                        output_func, output_params, output_prefix)
+                        output_func, output_params, output_prefix, thread_name)
 
         # Remember some attributes
         self.prompt = prompt
