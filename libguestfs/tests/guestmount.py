@@ -20,9 +20,12 @@ def run_guestmount(test, params, env):
     """
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
+    start_vm = "yes" == params.get("start_vm", "no")
 
-    if vm.is_alive():
+    if vm.is_alive() and not start_vm:
         vm.destroy()
+    elif vm.is_dead() and start_vm:
+        vm.start()
 
     # Create a file to vm with guestmount
     content = "This is file for guestmount test."
@@ -32,7 +35,12 @@ def run_guestmount(test, params, env):
     readonly = "no" == params.get("gm_readonly", "no")
     special_mount = "yes" == params.get("gm_mount", "no")
     vt = utils_test.libguestfs.VirtTools(vm, params)
-
+    vm_ref = params.get("gm_vm_ref")
+    is_disk = "yes" == params.get("gm_is_disk", "no")
+    # Automatically get disk if no disk specified.
+    if is_disk and vm_ref is None:
+        vm_ref = utils_test.libguestfs.get_primary_disk(vm)
+ 
     if special_mount:
         # Get root filesystem before test
         params['libvirt_domain'] = params.get("main_vm")
@@ -46,9 +54,10 @@ def run_guestmount(test, params, env):
         logging.info("Root filesystem is:%s", rootfs)
         params['special_mountpoints'] = [rootfs]
 
-    writes, writeo = vt.write_file_with_guestmount(mountpoint, path, content)
+    writes, writeo = vt.write_file_with_guestmount(mountpoint, path, content,
+                                                   vm_ref)
     if umount_fs(mountpoint) is False:
-        logging.error("Umount vm's filesytem failed.")
+        logging.error("Umount vm's filesystem failed.")
 
     if status_error:
         if writes:
