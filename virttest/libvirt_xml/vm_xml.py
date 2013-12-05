@@ -343,6 +343,10 @@ class VMXML(VMXMLBase):
     def sync(self, options=None):
         """Rebuild VM with the config file."""
         backup = self.new_from_dumpxml(self.vm_name)
+        if self.virsh.is_alive(self.vm_name):
+            if not self.virsh.destroy(self.vm_name):
+                raise xcepts.LibvirtXMLError("Failed to destroy %s.",
+                                             self.vm_name)
         if not self.undefine(options):
             raise xcepts.LibvirtXMLError("Failed to undefine %s.", self.vm_name)
         if not self.define():
