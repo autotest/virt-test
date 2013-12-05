@@ -297,6 +297,7 @@ class Bcolors(object):
         self.SKIP = ''
         self.FAIL = ''
         self.ERROR = ''
+        self.WARN = ''
         self.ENDC = ''
 
 # Instantiate bcolors to be used in the functions below.
