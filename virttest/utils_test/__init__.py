@@ -33,6 +33,7 @@ from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
 from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net, storage
+from virttest.libvirt_xml import vm_xml, xcepts
 import virttest
 
 import libvirt
@@ -1267,3 +1268,36 @@ def get_image_info(image_file):
     except (KeyError, IndexError, ValueError, error.CmdError), detail:
         raise error.TestError("Fail to get information of %s:\n%s" %
                               (image_file, detail))
+
+
+def load_python_module(path, name, type_list):
+    """
+    Returns named xml element's handler class
+
+    :param path: the xml module path
+    :param name: the xml module name
+    :param type_list: the supported type list of xml module names
+    :return: the named xml element's handler class
+    """
+    # Module names and tags are always all lower-case
+    name = str(name).lower()
+    errmsg = ("Unknown/unsupported type '%s', supported types %s"
+              % (str(name), type_list))
+    if name not in type_list:
+        raise xcepts.LibvirtXMLError(errmsg)
+    try:
+        filename, pathname, description = imp.find_module(name,
+                                                          [path])
+        mod_obj = imp.load_module(name, filename, pathname, description)
+        # Enforce capitalized class names
+        return getattr(mod_obj, name.capitalize())
+    except TypeError, detail:
+        raise xcepts.LibvirtXMLError(errmsg + ': %s' % str(detail))
+    except ImportError, detail:
+        raise xcepts.LibvirtXMLError("Can't find module %s in %s: %s"
+                                     % (name, pathname, str(detail)))
+    except AttributeError, detail:
+        raise xcepts.LibvirtXMLError("Can't find class %s in %s module in "
+                                     "%s: %s"
+                                     % (name.capitalize(), name, pathname,
+                                        str(detail)))
