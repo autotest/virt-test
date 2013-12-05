@@ -25,8 +25,10 @@ def run_autotest_regression(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+    github_repo = 'git://github.com/autotest/autotest.git'
+
     step_failures = []
-    autotest_repo = params['autotest_repo']
+    autotest_repo = params.get('autotest_repo', github_repo)
     autotest_branch = params['autotest_branch']
     autotest_commit = params['autotest_commit']
     password = params['password']
@@ -51,8 +53,13 @@ def run_autotest_regression(test, params, env):
     step1 = "autotest-server-install"
     try:
         installer_file = "install-autotest-server.sh"
-        installer_url = ("https://raw.github.com/autotest/autotest/master"
-                         "/contrib/%s" % installer_file)
+
+        if autotest_repo == github_repo:
+            installer_url = ("https://raw.github.com/autotest/autotest/%s"
+                             "/contrib/%s" % (autotest_branch, installer_file))
+        else:
+            installer_url = ("https://raw.github.com/autotest/autotest/master"
+                             "/contrib/%s" % installer_file)
 
         # Download the install script and execute it
         download_cmd = ("python -c 'from urllib2 import urlopen; "
