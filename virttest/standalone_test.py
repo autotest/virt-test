@@ -660,6 +660,8 @@ def cleanup_env(parser, options):
                                 options.type, d.get("env", "env"))
     env = utils_env.Env(filename=env_filename, version=Test.env_version)
     env.destroy()
+    # Kill all tail_threads which env constructor recreate.
+    aexpect.kill_tail_threads()
     aexpect.clean_tmp_files()
     utils_net.clean_tmp_files()
     data_dir.clean_tmp_files()
