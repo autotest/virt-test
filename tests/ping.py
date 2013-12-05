@@ -35,6 +35,11 @@ def run_ping(test, params, env):
     error.context("Login to guest", logging.info)
     session = vm.wait_for_login(timeout=timeout)
 
+    # most of linux distribution don't add IP configuration for extra nics,
+    # so get IP for extra nics via pre_cmd;
+    if params.get("pre_cmd"):
+        session.cmd(params["pre_cmd"], timeout=600)
+
     if ping_ext_host:
         default_host = "www.redhat.com"
         ext_host_get_cmd = params.get("ext_host_get_cmd", "")
