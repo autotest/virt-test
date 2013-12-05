@@ -623,6 +623,10 @@ def get_cgroup_mountpoint(controller):
     cgconf_txt = f_cgcon.read()
     f_cgcon.close()
     mntpt = re.findall(r"\s(\S*cgroup/\S*,*%s,*\S*)" % controller, cgconf_txt)
+    for mnt in mntpt:
+        ctlers = mnt.strip().split('/')[-1].split(',')
+        if controller in ctlers:
+            return mnt
     return mntpt[0]
 
 
