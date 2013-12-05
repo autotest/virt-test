@@ -6,7 +6,6 @@ import logging
 import time
 import re
 import random
-import commands
 import math
 from autotest.client.shared import error, utils
 from autotest.client import kvm_control, os_dep
@@ -1143,8 +1142,8 @@ class PciAssignable(object):
                 logging.debug("Can not enable the interrupt remapping support")
         lnk = "/sys/module/vfio_iommu_type1/parameters/allow_unsafe_interrupts"
         if self.device_driver == "vfio-pci":
-            s, o = commands.getstatusoutput('lsmod | grep vfio')
-            if s:
+            status = utils.system('lsmod | grep vfio', ignore_status=True)
+            if status:
                 logging.info("Load vfio-pci module.")
                 cmd = "modprobe vfio-pci"
                 utils.run(cmd)
@@ -1155,7 +1154,8 @@ class PciAssignable(object):
                               logging.info)
                 utils.run(cmd)
         re_probe = False
-        status = commands.getstatus('lsmod | grep %s' % self.driver)
+        status = utils.system("lsmod | grep %s" % self.driver,
+                              ignore_status=True)
         if status:
             re_probe = True
         elif not self.check_vfs_count():
@@ -1170,8 +1170,8 @@ class PciAssignable(object):
             cmd = "modprobe %s %s" % (self.driver, self.driver_option)
             error.context("Loading the driver '%s' with command '%s'" %
                           (self.driver, cmd), logging.info)
-            status = commands.getstatus(cmd)
-            dmesg = commands.getoutput("dmesg")
+            status = utils.system(cmd, ignore_status=True)
+            dmesg = utils.system_output("dmesg", ignore_status=True)
             file_name = "host_dmesg_after_load_%s.txt" % self.driver
             logging.info("Log dmesg after loading '%s' to '%s'.", self.driver,
                          file_name)
@@ -1207,8 +1207,9 @@ class PciAssignable(object):
                                       kvm_param)
 
         re_probe = False
-        s = commands.getstatusoutput('lsmod | grep %s' % self.driver)[0]
-        if s:
+        status = utils.system('lsmod | grep %s' % self.driver,
+                              ignore_status=True)
+        if status:
             cmd = "modprobe -r %s" % self.driver
             logging.info("Running host command: %s" % cmd)
             os.system(cmd)
@@ -1221,9 +1222,9 @@ class PciAssignable(object):
             cmd = "modprobe %s" % self.driver
             msg = "Loading the driver '%s' without option" % self.driver
             error.context(msg, logging.info)
-            s = commands.getstatusoutput(cmd)[0]
+            status = utils.system(cmd, ignore_status=True)
             utils.system("/etc/init.d/network restart", ignore_status=True)
-            if s:
+            if status:
                 return False
             return True
 
