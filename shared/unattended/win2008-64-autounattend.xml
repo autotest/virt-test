@@ -103,6 +103,16 @@
 					<Order>2</Order>
 					<Path>cmd /c reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v FilterAdministratorToken /t REG_DWORD /d 0 /f</Path>
 				</RunSynchronousCommand>
+				<RunSynchronousCommand wcm:action="add">
+					<Description>SataBootable</Description>
+					<Order>3</Order>
+					<Path>cmd /c reg add HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\Msahci /v Start /t REG_DWORD /d 0 /f</Path>
+				</RunSynchronousCommand>
+				<RunSynchronousCommand wcm:action="add">
+					<Description>SataBootable</Description>
+					<Order>4</Order>
+					<Path>cmd /c reg add HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\IastorV /v Start /t REG_DWORD /d 0 /f</Path>
+				</RunSynchronousCommand>
 			</RunSynchronous>
 		</component>
 		<component name="Microsoft-Windows-International-Core"
