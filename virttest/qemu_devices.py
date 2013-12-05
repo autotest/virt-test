@@ -705,7 +705,7 @@ class QDevice(QCustomDevice):
         out = monitor.info("qtree", debug=False)
         if "unknown command" in out:       # Old qemu don't have info qtree
             return out
-        dev_id_name = 'id "%s"' % self.aid
+        dev_id_name = 'id "%s"' % self.get_qid()
         if dev_id_name in out:
             return False
         else:
@@ -715,7 +715,7 @@ class QDevice(QCustomDevice):
         out = monitor.info("qtree", debug=False)
         if "unknown command" in out:       # Old qemu don't have info qtree
             return out
-        dev_id_name = 'id "%s"' % self.aobject
+        dev_id_name = 'id "%s"' % self.get_qid()
         if dev_id_name in out:
             return True
         else:
