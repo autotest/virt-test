@@ -1,4 +1,3 @@
-# TODO: Why VM recreation doesn't work?
 """
 Collection of virtio_console and virtio_serialport tests.
 
@@ -20,6 +19,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 from virttest import qemu_virtio_port, env_process, utils_test, utils_misc
 from virttest import funcatexit
+from virttest import qemu_devices
 
 
 EXIT_EVENT = threading.Event()
@@ -1632,21 +1632,80 @@ def run_virtio_console(test, params, env):
         """
         # TODO: QMP
         # TODO: check qtree for device presence
-        pause = int(params.get("virtio_console_pause", 10))
+        pause = float(params.get("virtio_console_pause", 0.1))
         vm = get_vm_with_ports()
+        monitor = vm.monitors[0]
         idx = 1
-        for i in xrange(int(params.get("virtio_console_loops", 2))):
+        err = ""
+        booted = False
+        error.context("Hotplug while booting", logging.info)
+        for i in xrange(int(params.get("virtio_console_loops", 10))):
             error.context("Hotpluging virtio_pci (iteration %d)" % i)
-            ret = vm.monitors[0].cmd("device_add virtio-serial-pci,"
-                                     "id=virtio_serial_pci%d" % (idx))
+            vm.devices.set_dirty()
+            new_dev = qemu_devices.QDevice("virtio-serial-pci",
+                                           {'id': 'virtio_serial_pci%d' % idx},
+                                           parent_bus={'aobject': 'pci.0'})
+
+            # Hotplug
+            out = new_dev.hotplug(monitor)
+            if out:
+                err += "\nHotplug monitor output: " + out
+
+            # Pause
             time.sleep(pause)
-            ret += vm.monitors[0].cmd("device_del virtio_serial_pci%d"
-                                      % (idx))
+            ver_out = new_dev.verify_hotplug(out, monitor)
+            if ver_out is False:
+                err += ("\nDevice is not in qtree %ss after hotplug:\n%s"
+                        % (pause, monitor.info("qtree")))
+
+            # Unplug
+            out = new_dev.unplug(monitor)
+            if out:
+                err += "\nUnplug monitor output: " + out
+
+            # Pause
             time.sleep(pause)
-            if ret != "":
+            ver_out = new_dev.verify_unplug(out, monitor)
+            if booted:
+                deathline = time.time() + 5
+            else:
+                deathline = time.time() + 30
+            while time.time() < deathline:
+                if ver_out is True:
+                    break       # Unplugged successfully
+                elif "unknown command" in out:
+                    logging.warn("Can't verify if the device was removed "
+                                 "because info qtree is unsupported. Waiting"
+                                 "10s and hoping it's sufficient.")
+                    time.sleep(10)
+                    if not booted:      # Let's do another round, just in case
+                        booted = True
+                        continue
+                    break
+                if not booted:
+                    # When kernel doesn't answer to ACPI unplug event, pci is
+                    # not unplugged. We have to resend the unplug cmd.
+                    out = new_dev.unplug(monitor)
+                time.sleep(pause)
+                ver_out = new_dev.verify_unplug(out, monitor)
+            else:
+                logging.error(monitor.info("qtree"))
+                if err:
+                    logging.error("Device not unplugged after 20s.\nHotplug "
+                                  "errors:%s", err)
+                raise error.TestFail("Device not unplugged after 20s. "
+                                     "Iteration %s" % i)
+
+            if err != "":
+                logging.error(monitor.info("qtree"))
                 raise error.TestFail("Error occurred while hotpluging virtio-"
-                                     "pci. Iteration %s, monitor output:\n%s"
-                                     % (i, ret))
+                                     "pci. Iteration %s, monitor output:%s"
+                                     % (i, err))
+
+            vm.devices.set_clean()
+            if not booted:   # Kernel should be booted when we get here
+                error.context("Hotplug on booted system", logging.info)
+                booted = True
 
     #
     # Destructive tests
