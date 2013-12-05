@@ -1333,6 +1333,7 @@ class VM(virt_vm.BaseVM):
             else:
                 device_driver = nic_params.get("device_driver", "pci-assign")
                 pci_id = vm.pa_pci_ids[iov]
+                pci_id = ":".join(pci_id.split(":")[1:])
                 add_pcidevice(devices, pci_id, params=nic_params,
                               device_driver=device_driver,
                               pci_bus=pci_bus)
