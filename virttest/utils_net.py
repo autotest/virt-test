@@ -2031,30 +2031,33 @@ def update_mac_ip_address(vm, params, timeout=None):
     session = vm.wait_for_serial_login(timeout=360)
     end_time = time.time() + timeout
     macs_ips = []
-    i = 0
+    num = 0
     while time.time() < end_time:
         try:
-            if i % 3 == 0:
+            if num % 3 == 0 and num != 0:
                 session.cmd(restart_network)
-            o = session.cmd_status_output(network_query)[1]
-            macs_ips = re.findall(mac_ip_filter, o)
+            output = session.cmd_status_output(network_query)[1]
+            macs_ips = re.findall(mac_ip_filter, output, re.S)
             # Get nics number
-        except Exception, e:
-            logging.warn(e)
+        except Exception, err:
+            logging.error(err)
         nics = params.get("nics")
         nic_minimum = len(re.split(r"\s+", nics.strip()))
         if len(macs_ips) == nic_minimum:
             break
-        i += 1
+        num += 1
         time.sleep(5)
     if len(macs_ips) < nic_minimum:
-        logging.warn("Not all nics get ip address")
+        logging.error("Not all nics get ip address")
 
-    for (mac, ip) in macs_ips:
-        vlan = macs_ips.index((mac, ip))
+    for (_ip, mac) in macs_ips:
+        vlan = macs_ips.index((_ip, mac))
+        # _ip, mac are in different sequence in Fedora and RHEL guest.
+        if re.match(".\d+\.\d+\.\d+\.\d+", mac):
+            _ip, mac = mac, _ip
         if "-" in mac:
             mac = mac.replace("-", ".")
-        vm.address_cache[mac.lower()] = ip
+        vm.address_cache[mac.lower()] = _ip
         vm.virtnet.set_mac_address(vlan, mac)
 
 
