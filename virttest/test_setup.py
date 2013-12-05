@@ -965,7 +965,7 @@ class PciAssignable(object):
             pf_info["vf_ids"] = vf_ids
             pf_vf_dict.append(pf_info)
         if_out = utils.system_output("ifconfig -a")
-        re_ethname = "(\w+): "
+        re_ethname = "\w+(?=: flags)|eth[0-9](?=\s*Link)"
         ethnames = re.findall(re_ethname, if_out)
         for eth in ethnames:
             cmd = "ethtool -i %s | awk '/bus-info/ {print $2}'" % eth
