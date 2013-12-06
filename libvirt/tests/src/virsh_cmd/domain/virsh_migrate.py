@@ -76,8 +76,8 @@ def run_virsh_migrate(test, params, env):
     vm.verify_alive()
 
     # For safety reasons, we'd better back up  xmlfile.
-    vm_xmlfile_bak = vm.backup_xml()
-    if not vm_xmlfile_bak:
+    orig_config_xml = vm_xml.VMXML.new_from_inactive_dumpxml(vm_name)
+    if not orig_config_xml:
         logging.error("Backing up xmlfile failed.")
 
     src_uri = params.get("virsh_migrate_connect_uri")
@@ -286,17 +286,13 @@ def run_virsh_migrate(test, params, env):
         cleanup_dest(vm, src_uri)
 
     # Recover source (just in case).
-    # vm.connect_uri has been set back to src_uri in cleanup_dest().
-    if not virsh.domain_exists(vm_name, uri=src_uri):
-        vm.define(vm_xmlfile_bak)
-    else:
-        # if not vm.shutdown():
-        vm.destroy()
+    # Simple sync cannot be used here, because the vm may not exists and
+    # it cause the sync to fail during the internal backup.
+    vm.destroy()
+    vm.undefine()
+    orig_config_xml.define()
 
     # Cleanup source.
-    if os.path.exists(vm_xmlfile_bak):
-        os.remove(vm_xmlfile_bak)
-        logging.info("%s removed." % vm_xmlfile_bak)
     if os.path.exists(dest_xmlfile):
         os.remove(dest_xmlfile)
 
