@@ -1029,22 +1029,26 @@ class PciAssignable(object):
                         break
         return vf_id
 
-    def get_vf_devs(self):
+    def get_vf_devs(self, devices):
         """
         Get VFs PCI IDs requested by self.devices.
         It will try to get VF from PF set by device name.
 
+        :param devices: List of device dict that contain PF VF information.
+        :type devices: List of dict
         :return: List of all available PCI IDs for Virtual Functions.
         :rtype: List of string
         """
         vf_ids = []
         device_names = []
+        if not devices:
+            devices = self.devices
         num = 0
         if self.pf_vf_info:
             for pf in self.pf_vf_info:
                 if 'ethname' in pf:
                     device_names.append(pf['ethname'])
-        for device in self.devices:
+        for device in devices:
             if device['type'] == 'vf':
                 name = device.get('name', None)
                 if not name:
@@ -1057,7 +1061,7 @@ class PciAssignable(object):
                     vf_ids.append(vf_id)
         return vf_ids
 
-    def get_pf_devs(self):
+    def get_pf_devs(self, devices):
         """
         Get PFs PCI IDs requested by self.devices.
         It will try to get PF by device name.
@@ -1065,11 +1069,15 @@ class PciAssignable(object):
         Please set unoccupied device name. If not sure, please just do not
         set device name. It will return unused PF list.
 
+        :param devices: List of device dict that contain PF VF information.
+        :type devices: List of dict
         :return: List with all PCI IDs for the physical hardware requested
         :rtype: List of string
         """
         pf_ids = []
-        for device in self.devices:
+        if not devices:
+            devices = self.devices
+        for device in devices:
             if device['type'] == 'pf':
                 name = device.get('name', None)
                 pf_id = self._get_pf_pci_id(name)
@@ -1090,8 +1098,8 @@ class PciAssignable(object):
         base_dir = "/sys/bus/pci"
         if not devices:
             devices = self.devices
-        pf_ids = self.get_pf_devs()
-        vf_ids = self.get_vf_devs()
+        pf_ids = self.get_pf_devs(devices)
+        vf_ids = self.get_vf_devs(devices)
         vf_ids.sort()
         dev_ids = []
         if isinstance(devices, dict):
