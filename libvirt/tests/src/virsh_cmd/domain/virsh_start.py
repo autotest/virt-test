@@ -30,7 +30,7 @@ def do_virsh_start(vm_name):
     cmd_result = virsh.command("start %s" % vm_name)
 
     if cmd_result.exit_status:
-        raise StartError(vm_name, cmd_result.stdout)
+        raise StartError(vm_name, cmd_result.stderr)
 
 
 def run_virsh_start(test, params, env):
