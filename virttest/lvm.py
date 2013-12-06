@@ -30,11 +30,13 @@ from autotest.client.shared import utils
 UNIT = "B"
 COMMON_OPTS = "--noheading --nosuffix --unit=%s" % UNIT
 
+
 def normalize_data_size(size):
     if re.match(".*\d$", str(size)):
         size = "%s%s" % (size, UNIT)
     size = float(utils_misc.normalize_data_size(size, UNIT, 1024))
     return int(math.ceil(size))
+
 
 def cmd_output(cmd, res="[\w/]+"):
     result = utils.run(cmd, ignore_status=True)
@@ -136,7 +138,7 @@ class PhysicalVolume(Volume):
                                                                    self.name)
         utils.system(cmd)
         self.size = size
-        logging.info("resize volume %s to %s B" %(self.name, self.size))
+        logging.info("resize volume %s to %s B" % (self.name, self.size))
 
     def display(self):
         """

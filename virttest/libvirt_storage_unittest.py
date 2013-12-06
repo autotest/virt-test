@@ -3,7 +3,8 @@ import unittest
 
 import common
 from autotest.client.utils import CmdResult
-import libvirt_storage, virsh
+import libvirt_storage
+import virsh
 
 # The output of virsh.pool_list with only default pool
 _DEFAULT_POOL = ("Name                 State      Autostart\n"

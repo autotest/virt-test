@@ -14,9 +14,11 @@ import re
 
 
 class PCIBusInfo:
+
     """
     Structured info about PCI bus
     """
+
     def __init__(self, device):
         self.name = device.aobject
         if device.child_bus:

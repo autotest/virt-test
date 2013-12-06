@@ -35,7 +35,7 @@ def run_virt_sysprep(test, params, env):
             mail_out = session.cmd_output("cd /var/mail && ls | grep tmp")
             hname_out = session.cmd_output("hostname")
             if (not log_out.strip() or not mail_out.strip() or
-                hname_out.strip() != tmp_hostname):
+                    hname_out.strip() != tmp_hostname):
                 logging.debug("log:%s\nmail:%s\nhostname:%s"
                               % (log_out, mail_out, hname_out))
                 raise error.TestFail("Prepare action failed!")
@@ -110,7 +110,7 @@ def run_virt_sysprep(test, params, env):
             vm.destroy()
             if (log_out.strip() or mail_out.strip() or
                 hname_out.strip() != sysprep_hostname or
-                ssh_out.strip() == o_ssh.strip()):
+                    ssh_out.strip() == o_ssh.strip()):
                 logging.debug("log: %s\nmail:%s\nhostname:%s\nsshkey:%s" %
                               (log_out, mail_out, hname_out, ssh_out))
                 return False

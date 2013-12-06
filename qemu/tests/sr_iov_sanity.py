@@ -134,7 +134,7 @@ def run_sr_iov_sanity(test, params, env):
         if device_type == "vf":
             post_device_num = pci_assignable.get_vfs_count()
         else:
-             post_device_num = len(pci_assignable.get_pf_vf_info())
+            post_device_num = len(pci_assignable.get_pf_vf_info())
         if post_device_num != device_num:
             msg = "lspci cannot report the correct PF/VF number."
             msg += " Correct number is '%s'" % device_num

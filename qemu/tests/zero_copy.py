@@ -30,7 +30,6 @@ def run_zero_copy(test, params, env):
         else:
             return True
 
-
     def enable_zerocopytx_in_host(enable=True):
         """
         Enable or disable vhost_net zero copy in host
@@ -40,9 +39,8 @@ def run_zero_copy(test, params, env):
             cmd += "modprobe vhost-net experimental_zcopytx=1"
         else:
             cmd += "modprobe vhost-net experimental_zcopytx=0"
-        if utils.system(cmd) or enable !=  zerocp_enable_status():
+        if utils.system(cmd) or enable != zerocp_enable_status():
             raise error.TestNAError("Set vhost_net zcopytx failed")
-
 
     error.context("Set host vhost_net experimental_zcopytx", logging.info)
     if params.get("enable_zerocp", 'yes') == 'yes':
@@ -69,6 +67,6 @@ def run_zero_copy(test, params, env):
         err_msg = "All packets lost during ping guest %s." % guest_ip
         raise error.TestFail(err_msg)
 
-    #in vm.verify_alive will check whether have userspace or kernel crash
+    # in vm.verify_alive will check whether have userspace or kernel crash
     error.context("Check guest is alive and have no crash", logging.info)
     vm.verify_alive()

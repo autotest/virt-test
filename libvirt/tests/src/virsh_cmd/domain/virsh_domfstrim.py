@@ -55,7 +55,7 @@ def run_virsh_domfstrim(test, params, env):
         scsi_disk = Disk(type_name="block")
         scsi_disk.device = "lun"
         scsi_disk.source = scsi_disk.new_disk_source(
-                                            **{'attrs': {'dev': disk_path}})
+            **{'attrs': {'dev': disk_path}})
         scsi_disk.target = {'dev': "sdb", 'bus': "scsi"}
         vmxml.add_device(scsi_disk)
 

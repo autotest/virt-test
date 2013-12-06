@@ -1686,6 +1686,7 @@ class DbNet(VMNet):
 ADDRESS_POOL_FILENAME = os.path.join("/tmp", "address_pool")
 ADDRESS_POOL_LOCK_FILENAME = ADDRESS_POOL_FILENAME + ".lock"
 
+
 def clean_tmp_files():
     """
     Remove the base adress pool filename.

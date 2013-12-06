@@ -34,10 +34,10 @@ def run_suspend_under_stress(test, params, env):
             bg_stress_run_flag = params.get("bg_stress_run_flag")
             env[bg_stress_run_flag] = False
             stress_thread = utils.InterruptedThread(
-                    utils_test.run_virt_sub_test, (test, params, env),
-                    {"sub_type": bg_stress_test})
+                utils_test.run_virt_sub_test, (test, params, env),
+                {"sub_type": bg_stress_test})
             stress_thread.start()
-            if not utils_misc.wait_for(lambda : env.get(bg_stress_run_flag),
+            if not utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
                                        wait_time, 0, 5,
                                        "Wait %s test start" % bg_stress_test):
                 raise error.TestError("Run stress test error")

@@ -41,7 +41,6 @@ def preprocess_image_backend(bindir, params, env):
     return True
 
 
-
 def postprocess_images(bindir, params):
     for vm in params.get("vms").split():
         vm_params = params.object_params(vm)
@@ -463,9 +462,11 @@ class Iscsidev(Rawdev):
 
 
 class LVMdev(Rawdev):
+
     """
     Class for handle LVM devices for VM
     """
+
     def __init__(self, params, root_dir, tag):
         """
         Init the default value for image object.

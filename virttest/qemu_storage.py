@@ -495,9 +495,11 @@ class Iscsidev(storage.Iscsidev):
 
 
 class LVMdev(storage.LVMdev):
+
     """
     Class for handle lvm devices for VM
     """
+
     def __init__(self, params, root_dir, tag):
         """
         Init the default value for image object.
