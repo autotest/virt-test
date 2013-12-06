@@ -1381,6 +1381,7 @@ class NumaNode(object):
 
 
 class Flag(str):
+
     """
     Class for easy merge cpuflags.
     """
@@ -1410,39 +1411,39 @@ class Flag(str):
 
 
 kvm_map_flags_to_test = {
-            Flag('avx')                        :set(['avx']),
-            Flag('sse3|pni')                   :set(['sse3']),
-            Flag('ssse3')                      :set(['ssse3']),
-            Flag('sse4.1|sse4_1|sse4.2|sse4_2'):set(['sse4']),
-            Flag('aes')                        :set(['aes','pclmul']),
-            Flag('pclmuldq')                   :set(['pclmul']),
-            Flag('pclmulqdq')                  :set(['pclmul']),
-            Flag('rdrand')                     :set(['rdrand']),
-            Flag('sse4a')                      :set(['sse4a']),
-            Flag('fma4')                       :set(['fma4']),
-            Flag('xop')                        :set(['xop']),
-            }
+    Flag('avx'): set(['avx']),
+    Flag('sse3|pni'): set(['sse3']),
+    Flag('ssse3'): set(['ssse3']),
+    Flag('sse4.1|sse4_1|sse4.2|sse4_2'): set(['sse4']),
+    Flag('aes'): set(['aes', 'pclmul']),
+    Flag('pclmuldq'): set(['pclmul']),
+    Flag('pclmulqdq'): set(['pclmul']),
+    Flag('rdrand'): set(['rdrand']),
+    Flag('sse4a'): set(['sse4a']),
+    Flag('fma4'): set(['fma4']),
+    Flag('xop'): set(['xop']),
+}
 
 
 kvm_map_flags_aliases = {
-           'sse4_1'              :'sse4.1',
-           'sse4_2'              :'sse4.2',
-           'pclmuldq'            :'pclmulqdq',
-           'sse3'                :'pni',
-           'ffxsr'               :'fxsr_opt',
-           'xd'                  :'nx',
-           'i64'                 :'lm',
-           'psn'                 :'pn',
-           'clfsh'               :'clflush',
-           'dts'                 :'ds',
-           'htt'                 :'ht',
-           'CMPXCHG8B'           :'cx8',
-           'Page1GB'             :'pdpe1gb',
-           'LahfSahf'            :'lahf_lm',
-           'ExtApicSpace'        :'extapic',
-           'AltMovCr8'           :'cr8_legacy',
-           'cr8legacy'           :'cr8_legacy'
-            }
+    'sse4_1': 'sse4.1',
+    'sse4_2': 'sse4.2',
+    'pclmuldq': 'pclmulqdq',
+    'sse3': 'pni',
+    'ffxsr': 'fxsr_opt',
+    'xd': 'nx',
+    'i64': 'lm',
+           'psn': 'pn',
+           'clfsh': 'clflush',
+           'dts': 'ds',
+           'htt': 'ht',
+           'CMPXCHG8B': 'cx8',
+           'Page1GB': 'pdpe1gb',
+           'LahfSahf': 'lahf_lm',
+           'ExtApicSpace': 'extapic',
+           'AltMovCr8': 'cr8_legacy',
+           'cr8legacy': 'cr8_legacy'
+}
 
 
 def kvm_flags_to_stresstests(flags):
@@ -1457,7 +1458,7 @@ def kvm_flags_to_stresstests(flags):
         tests |= kvm_map_flags_to_test[f]
     param = ""
     for f in tests:
-        param += ","+f
+        param += "," + f
     return param
 
 
@@ -1475,7 +1476,6 @@ def get_cpu_flags(cpu_info=""):
         return []
     cpu_flags = cpu_flag_lists[0]
     return cpu_flags.strip().split('\s+')
-
 
 
 def get_cpu_vendor(cpu_info="", verbose=True):

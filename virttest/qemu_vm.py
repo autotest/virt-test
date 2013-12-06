@@ -67,11 +67,13 @@ class ImageUnbootableError(virt_vm.VMError):
         return ("VM '%s' can't bootup from image,"
                 " check your boot disk image file." % self.name)
 
+
 def clean_tmp_files():
     if os.path.isfile(CREATE_LOCK_FILENAME):
         os.unlink(CREATE_LOCK_FILENAME)
 
 CREATE_LOCK_FILENAME = os.path.join('/tmp', 'virt-test-vm-create.lock')
+
 
 class VM(virt_vm.BaseVM):
 
@@ -1918,7 +1920,7 @@ class VM(virt_vm.BaseVM):
                         self._nic_tap_add_helper(nic)
 
                     if ((nic_params.get("vhost") == 'vhost=on') and
-                        (nic_params.get("enable_vhostfd", "yes") == "yes")):
+                            (nic_params.get("enable_vhostfd", "yes") == "yes")):
                         vhostfds = []
                         for i in xrange(int(nic.queues)):
                             vhostfds.append(str(os.open("/dev/vhost-net",

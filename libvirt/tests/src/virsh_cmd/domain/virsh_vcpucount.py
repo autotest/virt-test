@@ -116,12 +116,14 @@ def chk_output_shutoff(output, expect_out, options):
     else:
         raise error.TestFail("Options %s should failed" % options)
 
+
 def reset_env(vm_name, xml_file):
     virsh.destroy(vm_name)
     virsh.undefine(vm_name)
     virsh.define(xml_file)
     if os.path.exists(xml_file):
         os.remove(xml_file)
+
 
 def run_virsh_vcpucount(test, params, env):
     """

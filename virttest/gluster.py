@@ -22,6 +22,7 @@ class GlusterError(Exception):
 
 
 class GlusterBrickError(GlusterError):
+
     def __init__(self, error_mgs):
         super(GlusterBrickError, self).__init__(error_mgs)
         self.error_mgs = error_mgs

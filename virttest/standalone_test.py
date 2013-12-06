@@ -647,6 +647,7 @@ def bootstrap_tests(options):
 
     return True
 
+
 def cleanup_env(parser, options):
     """
     Clean up virt-test temporary files.
@@ -667,6 +668,7 @@ def cleanup_env(parser, options):
     data_dir.clean_tmp_files()
     qemu_vm.clean_tmp_files()
     logging.info("")
+
 
 def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
     """

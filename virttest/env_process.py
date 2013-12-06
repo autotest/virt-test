@@ -861,8 +861,6 @@ def postprocess_on_error(test, params, env):
     params.update(params.object_params("on_error"))
 
 
-
-
 def _take_screendumps(test, params, env):
     global _screendump_thread_termination_event
     temp_dir = test.debugdir

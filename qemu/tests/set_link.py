@@ -41,7 +41,6 @@ def run_set_link(test, params, env):
             err_msg += "Error info: '%s'" % err
             raise error.TestFail(err_msg)
 
-
     def change_queues_number_repeatly(guest_ifname):
         """
         Change queues repeatedly, only for mq test
@@ -49,7 +48,7 @@ def run_set_link(test, params, env):
         session = vm.wait_for_serial_login()
         try:
             queues = params.get("queues", 1)
-            change_list = xrange(1, int(queues)+1)
+            change_list = xrange(1, int(queues) + 1)
             env["run_change_queues"] = True
             change_queues_number(session, guest_ifname, queues)
             while env["run_change_queues"]:
@@ -60,7 +59,6 @@ def run_set_link(test, params, env):
                 del env["run_change_queues"]
             session.close()
 
-
     def guest_reboot(reboot_method, link_up):
         """
         Reboot guest by different method (shell/system_reset)
@@ -70,7 +68,6 @@ def run_set_link(test, params, env):
         except remote.LoginError, virt_vm.VMAddressError:
             if not link_up:
                 logging.info("Login error is expected when net link is down")
-
 
     def guest_netwok_connecting_check(guest_ip, link_up, change_queues=False):
         """
@@ -102,7 +99,6 @@ def run_set_link(test, params, env):
             env["run_change_queues"] = False
             bg_thread.join()
 
-
     def operstate_check(session, expect_status, guest_ifname=""):
         """
         Check Guest interface operstate
@@ -112,7 +108,7 @@ def run_set_link(test, params, env):
                                                           session.cmd)
         else:
             if_operstate = utils_net.get_windows_nic_attribute(session,
-                    "macaddress", vm.get_mac_address(), "netconnectionstatus")
+                                                               "macaddress", vm.get_mac_address(), "netconnectionstatus")
 
         if if_operstate != expect_status:
             err_msg = "Guest interface %s status error, " % guest_ifname
@@ -121,7 +117,6 @@ def run_set_link(test, params, env):
             raise error.TestFail(err_msg)
         logging.info("Guest interface operstate '%s' is exactly as expected" %
                      if_operstate)
-
 
     def guest_interface_operstate_check(expect_status, guest_ifname="",
                                         change_queues=False):
@@ -132,7 +127,7 @@ def run_set_link(test, params, env):
         try:
             if change_queues:
                 queues = params.get("queues", 1)
-                change_list = xrange(1, int(queues)+1)
+                change_list = xrange(1, int(queues) + 1)
                 for q_number in change_list:
                     change_queues_number(session, guest_ifname, q_number)
                     operstate_check(session, expect_status, guest_ifname)
@@ -140,7 +135,6 @@ def run_set_link(test, params, env):
                 operstate_check(session, expect_status, guest_ifname)
         finally:
             session.close()
-
 
     def set_link_test(linkid, link_up, expect_status,
                       operstate_always_up=False, change_queues=False):
@@ -181,7 +175,6 @@ def run_set_link(test, params, env):
         error.context("Check guest network connecting after reboot by '%s'" %
                       reboot_method, logging.info)
         guest_netwok_connecting_check(guest_ip, link_up, change_queues)
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

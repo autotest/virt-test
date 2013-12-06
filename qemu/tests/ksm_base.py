@@ -84,7 +84,7 @@ def run_ksm_base(test, params, env):
                                   "grep MemFree /proc/meminfo")
     free_mem = vm.get_memory_size(get_free_mem_cmd)
     max_mem = int(free_mem / (1 + TMPFS_OVERHEAD) - guest_script_overhead)
-    
+
     # Keep test from OOM killer
     if max_mem < shared_mem:
         shared_mem = max_mem

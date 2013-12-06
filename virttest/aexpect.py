@@ -17,6 +17,7 @@ import shutil
 
 BASE_DIR = os.path.join('/tmp', 'aexpect')
 
+
 def clean_tmp_files():
     """
     Remove all aexpect temporary files.
@@ -242,6 +243,7 @@ import re
 import threading
 import logging
 import utils_misc
+
 
 class ExpectError(Exception):
 
@@ -712,7 +714,6 @@ class Spawn(object):
                 os.unlink(filename)
             except OSError:
                 pass
-
 
     def set_linesep(self, linesep):
         """

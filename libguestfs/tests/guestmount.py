@@ -40,7 +40,7 @@ def run_guestmount(test, params, env):
     # Automatically get disk if no disk specified.
     if is_disk and vm_ref is None:
         vm_ref = utils_test.libguestfs.get_primary_disk(vm)
- 
+
     if special_mount:
         # Get root filesystem before test
         params['libvirt_domain'] = params.get("main_vm")

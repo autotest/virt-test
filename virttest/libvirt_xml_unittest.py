@@ -957,7 +957,7 @@ class testNodedevXML(LibvirtXMLTestBase):
     def test_new_from_dumpxml(self):
         NodedevXML = nodedev_xml.NodedevXML
         nodedevxml = NodedevXML.new_from_dumpxml('pci_0000_00_00_0',
-                                                virsh_instance=self.dummy_virsh)
+                                                 virsh_instance=self.dummy_virsh)
         self.assertTrue(isinstance(nodedevxml, NodedevXML))
 
     def test_get_key2value_dict(self):

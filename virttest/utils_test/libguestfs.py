@@ -382,7 +382,6 @@ class GuestfishTools(lgf.GuestfishPersistent):
             if re.search(release_type[key], release_result.stdout):
                 return (True, key)
 
-
     def write_file(self, path, content):
         """
         Create a new file to vm with guestfish

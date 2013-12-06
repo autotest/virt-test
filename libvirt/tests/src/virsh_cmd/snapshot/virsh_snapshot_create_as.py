@@ -73,6 +73,7 @@ def compose_disk_options(test, params, opt_names):
 
         return opt_disk[0] + "file=" + spec_disk + left_opt
 
+
 def check_snapslist(vm_name, options, option_dict, output,
                     snaps_before, snaps_list):
         no_metadata = options.find("--no-metadata")
@@ -93,7 +94,7 @@ def check_snapslist(vm_name, options, option_dict, output,
             # check domain/snapshot xml depends on if have metadata
             if no_metadata < 0:
                 output_dump = virsh.snapshot_dumpxml(vm_name,
-                              get_sname).stdout.strip()
+                                                     get_sname).stdout.strip()
             else:
                 output_dump = virsh.dumpxml(vm_name).stdout.strip()
                 fdisks = "devices"
@@ -120,7 +121,7 @@ def check_snapslist(vm_name, options, option_dict, output,
 
                 # Check snapshot only in qemu-img
                 if (options.find("--disk-only") < 0 and
-                    options.find("--memspec") < 0):
+                        options.find("--memspec") < 0):
                     ret = check_snap_in_image(vm_name, get_sname)
 
                     if ret is False:
@@ -182,7 +183,7 @@ def check_snapslist(vm_name, options, option_dict, output,
 
                 option_disk = "name=" + option_disk
                 disk_dict = utils_misc.valued_option_dict(option_disk,
-                                                                  ",", 0, "=")
+                                                          ",", 0, "=")
                 logging.debug("disk_dict is %s", disk_dict)
 
                 # For no metadata snapshot do not check name and
@@ -234,7 +235,7 @@ def check_snapslist(vm_name, options, option_dict, output,
                 memspec = 'file=' + option_dict['memspec']
 
             mem_dict = utils_misc.valued_option_dict(memspec, ",", 0,
-                                                             "=")
+                                                     "=")
             logging.debug("mem_dict is %s", mem_dict)
 
             if no_metadata < 0:
@@ -262,7 +263,6 @@ def check_snapslist(vm_name, options, option_dict, output,
                 else:
                     raise error.TestFail("Fail to generate memory file"
                                          " %s", mem_dict['file'])
-
 
 
 def run_virsh_snapshot_create_as(test, params, env):

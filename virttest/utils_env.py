@@ -307,9 +307,9 @@ class Env(UserDict.IterableUserDict):
                          (port, username, address))
 
             self._tcpdump = aexpect.ShellSession(
-                    login_cmd,
-                    output_func=_update_address_cache,
-                    output_params=(self,))
+                login_cmd,
+                output_func=_update_address_cache,
+                output_params=(self,))
 
             remote.handle_prompts(self._tcpdump, username, password, prompt)
             self._tcpdump.sendline(cmd)
