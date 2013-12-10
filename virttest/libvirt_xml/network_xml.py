@@ -427,6 +427,16 @@ class NetworkXML(NetworkXMLBase):
         for debug_line in str(xml).splitlines():
             logging.debug("Network XML: %s", debug_line)
 
+    def state_dict(self):
+        """
+        Return a dict containing states of active/autostart/persistent
+
+        :return: A dict contains active/autostart/persistent as keys
+                 and boolean as values or None if network doesn't exist.
+        """
+        if self.defined:
+            return self.virsh.net_state_dict()[self.name]
+
     def create(self):
         """
         Adds non-persistant / transient network to libvirt with net-create
@@ -484,11 +494,27 @@ class NetworkXML(NetworkXMLBase):
                                          "Detail: %s" %
                                          (self.name, cmd_result.stderr))
 
-    def sync(self):
+    def sync(self, state=None):
         """
         Make the change of "self" take effect on network.
+        Recover network to designated state if option state is set.
+
+        :param state: a boolean dict contains active/persistent/autostart as
+                      keys
         """
-        if self.exists():
-            self.undefine()
-        self.define()
-        self.start()
+        if self['defined']:
+            if self['active']:
+                del self['active']
+            if self['defined']:
+                del self['defined']
+
+        self['defined'] = True
+        if state:
+            self['active'] = state['active']
+            if not state['persistent']:
+                del self['persistent']
+            if self.defined:
+                self['autostart'] = state['autostart']
+        else:
+            self['active'] = True
+            self['autostart'] = True
