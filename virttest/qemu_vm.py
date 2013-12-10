@@ -67,14 +67,6 @@ class ImageUnbootableError(virt_vm.VMError):
         return ("VM '%s' can't bootup from image,"
                 " check your boot disk image file." % self.name)
 
-
-def clean_tmp_files():
-    if os.path.isfile(CREATE_LOCK_FILENAME):
-        os.unlink(CREATE_LOCK_FILENAME)
-
-CREATE_LOCK_FILENAME = os.path.join('/tmp', 'virt-test-vm-create.lock')
-
-
 class VM(virt_vm.BaseVM):
 
     """
@@ -91,6 +83,9 @@ class VM(virt_vm.BaseVM):
     # which are used on create(), this timeout is considerably larger
     # than the one on the base vm class
     CREATE_TIMEOUT = 20
+
+    # Qemu/kvm specialized networking device handling helpers live here
+    VIRTNETCCLASS = utils_net.QemuIface
 
     def __init__(self, name, params, root_dir, address_cache, state=None):
         """

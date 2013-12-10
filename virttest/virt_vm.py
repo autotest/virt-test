@@ -446,6 +446,15 @@ class CpuInfo(object):
         self.cores = cores
         self.threads = threads
 
+CREATE_LOCK_FILENAME = os.path.join('/tmp', 'virt-test-vm-create.lock')
+
+def clean_tmp_files():
+    if os.path.isfile(CREATE_LOCK_FILENAME):
+        os.unlink(CREATE_LOCK_FILENAME)
+    if os.path.isfile(BaseVM.VIRTNETDBFN):
+        os.unlink(BaseVM.VIRTNETDBFN)
+    if os.path.isfile(BaseVM.VIRTNETDBFN + '.lock'):
+        os.unlink(BaseVM.VIRTNETDBFN + '.lock')
 
 class BaseVM(object):
 
@@ -497,6 +506,8 @@ class BaseVM(object):
     MIGRATE_TIMEOUT = 3600
     REBOOT_TIMEOUT = 240
     CREATE_TIMEOUT = 5
+    VIRTNETCCLASS = utils_net.VirtIface
+    VIRTNETDBFN = '/tmp/address_pool.db'
 
     def __init__(self, name, params, root_dir, address_cache):
         self.name = name
@@ -538,9 +549,6 @@ class BaseVM(object):
                              utils_misc.generate_random_string(8))
             if not glob.glob("/tmp/*%s" % self.instance):
                 break
-
-        """
-        """
 
     @staticmethod
     def lookup_vm_class(vm_type, target):
