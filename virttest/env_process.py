@@ -111,7 +111,7 @@ def preprocess_vm(test, params, env, name):
             if params.get("check_vm_needs_restart", "yes") == "yes":
                 if vm.needs_restart(name=name,
                                     params=params,
-                                    basedir=test.bindir):
+                                    root_dir=test.bindir):
                     start_vm = True
                     old_vm.destroy(gracefully=gracefully_kill,
                                    free_mac_addresses=False)

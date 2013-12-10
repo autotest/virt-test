@@ -121,11 +121,8 @@ class VM(virt_vm.BaseVM):
             self.pci_devices = []
             self.uuid = None
 
+        super(VM, self).__init__(name, params, root_dir, address_cache)
         self.spice_port = 8000
-        self.name = name
-        self.params = params
-        self.root_dir = root_dir
-        self.address_cache = address_cache
         self.vnclisten = "0.0.0.0"
         self.connect_uri = normalize_connect_uri(params.get("connect_uri",
                                                             "default"))

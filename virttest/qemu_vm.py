@@ -122,10 +122,6 @@ class VM(virt_vm.BaseVM):
             self.devices = None
             self.logs = {}
 
-        self.name = name
-        self.params = params
-        self.root_dir = root_dir
-        self.address_cache = address_cache
         self.index_in_use = {}
         # This usb_dev_dict member stores usb controller and device info,
         # It's dict, each key is an id of usb controller,
@@ -139,14 +135,13 @@ class VM(virt_vm.BaseVM):
         # This structure can used in usb hotplug/unplug test.
         self.usb_dev_dict = {}
         self.logsessions = {}
-        super(VM, self).__init__(name, params)
-        # un-overwrite instance attribute, virtnet db lookups depend on this
         if state:
             self.instance = state['instance']
         self.qemu_command = ''
         self.start_time = 0.0
         self.last_boot_index = 0
         self.last_driver_index = 0
+        super(VM, self).__init__(name, params, root_dir, address_cache)
 
     def verify_alive(self):
         """
@@ -321,6 +316,7 @@ class VM(virt_vm.BaseVM):
                For each NIC in nics:
                nic_model -- string to pass as 'model' parameter for this
                NIC (e.g. e1000)
+               nettype and netdst
         """
         # Helper function for command line option wrappers
         def _add_option(option, value, option_type=None, first=False):
@@ -1792,7 +1788,7 @@ class VM(virt_vm.BaseVM):
         :raise TAPBringUpError: If fail to bring up a tap
         :raise PrivateBridgeError: If fail to bring the private bridge
         """
-        error.context("creating '%s'" % self.name)
+        error.context("creating '%s'" % name)
         self.destroy(free_mac_addresses=False)
 
         if name is not None:
@@ -2088,7 +2084,9 @@ class VM(virt_vm.BaseVM):
                 monitor_params = params.object_params(monitor_name)
                 try:
                     monitor = qemu_monitor.wait_for_create_monitor(self,
-                                                                   monitor_name, monitor_params, timeout)
+                                                                   monitor_name,
+                                                                   monitor_params,
+                                                                   timeout)
                 except qemu_monitor.MonitorConnectError, detail:
                     logging.error(detail)
                     self.destroy()

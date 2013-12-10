@@ -498,9 +498,11 @@ class BaseVM(object):
     REBOOT_TIMEOUT = 240
     CREATE_TIMEOUT = 5
 
-    def __init__(self, name, params):
+    def __init__(self, name, params, root_dir, address_cache):
         self.name = name
         self.params = params
+        self.root_dir = root_dir
+        self.address_cache = address_cache
         #
         # Assuming all low-level hypervisors will have a serial (like) console
         # connection to the guest. libvirt also supports serial (like) consoles
