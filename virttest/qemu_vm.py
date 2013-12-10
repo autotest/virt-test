@@ -530,7 +530,7 @@ class VM(virt_vm.BaseVM):
                 dev.set_param('macaddr', mac, 'NEED_QUOTE')
             dev.set_param('id', device_id, 'NEED_QUOTE')
             if "virtio" in model:
-                if int(queues) > 1:
+                if queues > 1:
                     dev.set_param('mq', 'on')
                 if vectors:
                     dev.set_param('vectors', vectors)
@@ -557,12 +557,11 @@ class VM(virt_vm.BaseVM):
                 if vhost:
                     cmd += ",%s" % vhost
                     if vhostfds:
-                        if (int(queues) > 1 and
-                           'vhostfds=' in devices.get_help_text()):
+                        if queues > 1 and 'vhostfds=' in devices.get_help_text():
                             cmd += ",vhostfds=%s" % vhostfds
                         else:
                             txt = ""
-                            if int(queues) > 1:
+                            if queues > 1:
                                 txt = "qemu do not support vhost multiqueue,"
                                 txt += " Fall back to single queue."
                             if 'vhostfd=' in devices.get_help_text():
@@ -575,19 +574,11 @@ class VM(virt_vm.BaseVM):
                     cmd += "%s" % netdev_extra_params
             else:
                 cmd = " -net %s,vlan=%d" % (mode, vlan)
-
-            if mode == "tap":
-                if script:
-                    cmd += ",script='%s'" % script
-                    cmd += ",downscript='%s'" % (downscript or "no")
-                    if ifname:
-                        cmd += ",ifname='%s'" % ifname
-                elif tapfds:
-                    if ((int(queues)) > 1
-                         and ',fds=' in devices.get_help_text()):
-                        cmd += ",fds=%s" % tapfds
-                    else:
-                        cmd += ",fd=%s" % tapfds
+            if mode == "tap" and tapfds:
+                if queues > 1 and ',fds=' in devices.get_help_text():
+                    cmd += ",fds=%s" % tapfds
+                else:
+                    cmd += ",fd=%s" % tapfds
             elif mode == "user":
                 if tftp and "[,tftp=" in devices.get_help_text():
                     cmd += ",tftp='%s'" % tftp
@@ -1266,7 +1257,7 @@ class VM(virt_vm.BaseVM):
                 # add_netdev if netdev_id not set
                 nic = vm.add_nic(**dict(nic))
                 # gather set values or None if unset
-                vlan = int(nic.get('vlan'))
+                vlan = nic.get('vlan')
                 netdev_id = nic.get('netdev_id')
                 device_id = nic.get('device_id')
                 mac = nic.get('mac')
@@ -1290,22 +1281,18 @@ class VM(virt_vm.BaseVM):
                 else:
                     vhostfds = None
                 ifname = nic.get('ifname')
-                queues = nic.get("queues", 1)
+                nic.queues = queues = nic.get("queues", 1)
                 # specify the number of MSI-X vectors that the card should have;
                 # this option currently only affects virtio cards
-                if nic_params.get("enable_msix_vectors") == "yes":
-                    if nic.has_key("vectors"):
-                        vectors = nic.vectors
-                    else:
-                        vectors = 2 * int(queues) + 1
+                if nic.get("enable_msix_vectors", "No") == "yes":
+                    nic.vectors = vectors = nic.get("vectors", 2 * queues + 1)
                 else:
                     vectors = None
-
                 # Handle the '-net nic' part
                 add_nic(devices, vlan, nic_model, mac,
                         device_id, netdev_id, nic_extra,
-                        nic_params.get("nic_pci_addr"),
-                        bootindex, queues, vectors, pci_bus)
+                        pci_addr, bootindex, queues, vectors,
+                        pci_bus)
 
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 cmd = add_net(devices, vlan, nettype, ifname, tftp,
@@ -1871,10 +1858,10 @@ class VM(virt_vm.BaseVM):
                     if ((nic_params.get("vhost") == 'vhost=on') and
                             (nic_params.get("enable_vhostfd", "yes") == "yes")):
                         vhostfds = []
-                        for i in xrange(int(nic.queues)):
                             vhostfds.append(str(os.open("/dev/vhost-net",
                                                         os.O_RDWR)))
                         nic.vhostfds = ':'.join(vhostfds)
+                            for i in xrange(nic.queues):
                     elif nic.nettype == 'user':
                         logging.info("Assuming dependencies met for "
                                      "user mode nic %s, and ready to go"
@@ -2555,12 +2542,9 @@ class VM(virt_vm.BaseVM):
             # destination is required, hard-code reasonable default if unset
             # nic.set_if_none('netdst', 'virbr0')
             # tapfd allocated/set in activate because requires system resources
-            nic.set_if_none('queues', '1')
             ids = []
-            for i in range(int(nic.queues)):
-                ids.append(utils_misc.generate_random_id())
             nic.set_if_none('tapfd_ids', ids)
-
+            nic.generate_tapfd_ids()
         elif nic.nettype == 'user':
             pass  # nothing to do
         else:  # unsupported nettype
@@ -2598,14 +2582,14 @@ class VM(virt_vm.BaseVM):
         nic_index = self.virtnet.nic_name_index(nic.nic_name)
         nic.set_if_none('vlan', str(nic_index))
         nic.set_if_none('device_id', utils_misc.generate_random_id())
-        nic.set_if_none('queues', '1')
         if not nic.has_key('netdev_id'):
             # virtnet items are lists that act like dicts
             nic.netdev_id = self.add_netdev(**dict(nic))
         nic.set_if_none('nic_model', params['nic_model'])
-        nic.set_if_none('queues', params.get('queues', '1'))
-        if params.get("enable_msix_vectors") == "yes":
-            nic.set_if_none('vectors', 2 * int(nic.queues) + 1)
+        nic.queues = nic.get('queues', 1)
+        if nic.get("enable_msix_vectors") == "yes":
+            nic.vectors = nic.get("vectors", 2 * nic.queues + 1)
+        self.update_address_pool()
         return nic
 
     @error.context_aware
@@ -2721,7 +2705,7 @@ class VM(virt_vm.BaseVM):
             device_add_cmd += ",mac=%s" % nic.mac
         device_add_cmd += ",id=%s" % nic.nic_name
         if nic['nic_model'] == 'virtio-net-pci':
-            if int(nic['queues']) > 1:
+            if nic.queues > 1:
                 device_add_cmd += ",mq=on"
             if nic.has_key('vectors'):
                 device_add_cmd += ",vectors=%s" % nic.vectors
