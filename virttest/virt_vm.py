@@ -604,35 +604,9 @@ class BaseVM(object):
     #
     # Public API - could be reimplemented with virt specific code
     #
-    def needs_restart(self, name, params, basedir):
-        """
-        Verifies whether the current virt_install commandline matches the
-        requested one, based on the test parameters.
-        """
-        try:
-            need_restart = (self.make_create_command() !=
-                            self.make_create_command(name, params, basedir))
-        except Exception:
-            need_restart = True
-        if need_restart:
-            logging.debug(
-                "VM params in env don't match requested, restarting.")
-            return True
-        else:
-            # Command-line encoded state doesn't include all params
-            # TODO: Check more than just networking
-            other_virtnet = utils_net.VirtNet(params, name, self.instance)
-            if self.virtnet != other_virtnet:
-                logging.debug("VM params in env match, but network differs, "
-                              "restarting")
-                logging.debug("\t" + str(self.virtnet))
-                logging.debug("\t!=")
-                logging.debug("\t" + str(other_virtnet))
-                return True
-            else:
-                logging.debug(
-                    "VM params in env do match requested, continuing.")
-                return False
+    def needs_restart(self, name, params, root_dir):
+        # FIXME: Kill this function, logic is all in env_process
+        return True
 
     def verify_alive(self):
         """
