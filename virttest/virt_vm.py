@@ -525,20 +525,11 @@ class BaseVM(object):
         # Create instance if not already set
         if not hasattr(self, 'instance'):
             self._generate_unique_id()
-        # Don't overwrite existing state, update from params
-        if hasattr(self, 'virtnet'):
-            # Direct reference to self.virtnet makes pylint complain
-            # note: virtnet.__init__() supports being called anytime
-            getattr(self, 'virtnet').__init__(self.params,
-                                              self.name,
-                                              self.instance)
-        else:  # Create new
-            self.virtnet = utils_net.VirtNet(self.params,
-                                             self.name,
-                                             self.instance)
-
         if not hasattr(self, 'cpuinfo'):
             self.cpuinfo = CpuInfo()
+        # Setup as needed by subclasses and higher-level callers
+        self.virtnet = None
+        self.virtnetdb = None
 
     def _generate_unique_id(self):
         """
@@ -549,6 +540,46 @@ class BaseVM(object):
                              utils_misc.generate_random_string(8))
             if not glob.glob("/tmp/*%s" % self.instance):
                 break
+
+    def init_params_networking(self):
+        """
+        Initialize networking from params, using macs from db if possible
+        """
+        # Don't double-init if already setup
+        if self.virtnet is not None:
+            return
+        self.virtnet = utils_net.VirtNetParams(self.VIRTNETCCLASS)
+        self.virtnet.load_from(self.params, self.name)
+        self.freshen_networking_cache()
+        for nic in self.virtnet:
+            if nic.nic_name in self.virtnetdb.nic_name_list():
+                db_mac = self.virtnetdb[nic.nic_name].get('mac')
+                if db_mac is not None:
+                    logging.debug("Using nic %s mac %s from address_pool db",
+                                  nic.nic_name, db_mac)
+                    nic.mac = db_mac
+
+    def init_cache_networking(self):
+        """
+        Load all networking parameters from address_cache db
+        """
+        self.freshen_networking_cache()
+        self.virtnet = self.virtnetdb.convert_to(utils_net.VirtNetParams)
+
+    def freshen_networking_cache(self):
+        """Reload networking cache from address_pool db"""
+        self.virtnetdb = utils_net.VirtNetDB(self.VIRTNETCCLASS)
+        try:
+            self.virtnetdb.load_from(self.VIRTNETDBFN, self.instance)
+        except KeyError:
+            pass
+
+    def update_address_pool(self):
+        """
+        Store current networking state into address_pool db
+        """
+        self.virtnetdb = self.virtnet.convert_to(utils_net.VirtNetDB)
+        self.virtnetdb.store_to(self.VIRTNETDBFN, self.instance)
 
     @staticmethod
     def lookup_vm_class(vm_type, target):
