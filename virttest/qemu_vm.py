@@ -2564,19 +2564,12 @@ class VM(virt_vm.BaseVM):
         :return: netdev_id
         """
         nic_name = nic['nic_name']
-        nic = self.virtnet[nic_name]
-        nic_index = self.virtnet.nic_name_index(nic_name)
-        nic.set_if_none('netdev_id', utils_misc.generate_random_id())
-        nic.set_if_none('ifname', self.virtnet.generate_ifname(nic_index))
-        nic.set_if_none('netdev_extra_params',
-                        params.get('netdev_extra_params'))
-        nic.set_if_none('nettype', 'bridge')
+        if nic.get('netdev_id') is None:
+            nic.generate_netdev_id()
+        if nic.get('ifname') is None:
+            nic.generate_ifname()
+        nic.nettype = nic.get('nettype', 'bridge')
         if nic.nettype in ['bridge', 'macvtap']:  # implies tap
-            # destination is required, hard-code reasonable default if unset
-            # nic.set_if_none('netdst', 'virbr0')
-            # tapfd allocated/set in activate because requires system resources
-            ids = []
-            nic.set_if_none('tapfd_ids', ids)
             nic.generate_tapfd_ids()
         elif nic.nettype == 'user':
             pass  # nothing to do
@@ -2609,13 +2602,7 @@ class VM(virt_vm.BaseVM):
         # returns existing or new nic object
         nic = super(VM, self).add_nic(nic)
         nic_index = self.virtnet.nic_name_index(nic.nic_name)
-        nic.set_if_none('vlan', str(nic_index))
-        nic.set_if_none('device_id', utils_misc.generate_random_id())
-        if not nic.has_key('netdev_id'):
-            nic.netdev_id = self.add_netdev(nic)
-        nic.set_if_none('nic_model', params['nic_model'])
-        if params.get("enable_msix_vectors") == "yes":
-            nic.set_if_none('vectors', 2 * int(nic.queues) + 1)
+        nic.vlan = nic.get('vlan', nic_index)
         nic.queues = nic.get('queues', 1)
         if nic.get("enable_msix_vectors") == "yes":
             nic.vectors = nic.get("vectors", 2 * nic.queues + 1)
@@ -2744,8 +2731,6 @@ class VM(virt_vm.BaseVM):
             if nic.has_key('vectors'):
                 device_add_cmd += ",vectors=%s" % nic.vectors
         device_add_cmd += nic.get('nic_extra_params', '')
-        if nic.has_key('romfile'):
-            device_add_cmd += ",romfile=%s" % nic.romfile
         error.context("Activating nic on VM %s with monitor command %s" % (
             self.name, device_add_cmd))
 
