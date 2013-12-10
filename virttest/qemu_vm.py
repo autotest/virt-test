@@ -1273,9 +1273,9 @@ class VM(virt_vm.BaseVM):
 
         iov = 0
         for nic in vm.virtnet:
-            nic_params = params.object_params(nic.nic_name)
-            if nic_params.get('pci_assignable') == "no":
-                vhost = nic_params.get("vhost")
+            nic.root_dir = vm.root_dir
+            if nic.get('pci_assignable') == "no":
+                vhost = nic.get("vhost")
                 # setup nic parameters as needed
                 # add_netdev if netdev_id not set
                 nic = vm.add_nic(nic)
@@ -1286,24 +1286,16 @@ class VM(virt_vm.BaseVM):
                 mac = nic.get('mac')
                 nic_model = nic.get("nic_model")
                 nic_extra = nic.get("nic_extra_params")
-                bootindex = nic_params.get("bootindex")
+                bootindex = nic.get("bootindex")
                 netdev_extra = nic.get("netdev_extra_params")
-                bootp = nic.get("bootp")
-                if nic.get("tftp"):
-                    tftp = utils_misc.get_path(root_dir, nic.get("tftp"))
-                else:
-                    tftp = None
+                bootfile = nic.get("bootfile")
+                tftp = nic.get("tftp")
                 nettype = nic.get("nettype", "bridge")
                 # don't force conversion add_nic()/add_net() optional parameter
-                if nic.has_key('tapfds'):
-                    tapfds = nic.tapfds
-                else:
-                    tapfds = None
-                if nic.has_key('vhostfds'):
-                    vhostfds = nic.vhostfds
-                else:
-                    vhostfds = None
+                tapfds = nic.get('tapfds')
+                vhostfds = nic.get('vhostfds')
                 ifname = nic.get('ifname')
+                pci_addr = nic.get("pci_addr")
                 nic.queues = queues = nic.get("queues", 1)
                 # specify the number of MSI-X vectors that the card should have;
                 # this option currently only affects virtio cards
@@ -1324,10 +1316,10 @@ class VM(virt_vm.BaseVM):
                 # TODO: Is every NIC a PCI device?
                 devices.insert(StrDev("NET-%s" % nettype, cmdline=cmd))
             else:
-                device_driver = nic_params.get("device_driver", "pci-assign")
-                pci_id = vm.pa_pci_ids[iov]
+                nic.device_driver = device_driver = nic.get("device_driver",
+                                                            "pci-assign")
                 pci_id = ":".join(pci_id.split(":")[1:])
-                add_pcidevice(devices, pci_id, params=nic_params,
+                add_pcidevice(devices, pci_id, params=nic,
                               device_driver=device_driver,
                               pci_bus=pci_bus)
                 iov += 1
