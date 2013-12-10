@@ -218,9 +218,6 @@ def run_migration(test, params, env):
                 # Set deamon thread action to stop after migrate
                 params["action"] = "stop"
                 deamon_thread.join()
-
-        session2.close()
-        session.close()
     else:
         # Just migrate without depending on a living guest OS
         vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, offline,
