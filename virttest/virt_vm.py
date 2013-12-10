@@ -700,7 +700,7 @@ class BaseVM(object):
 
         # Make sure the IP address is assigned to one or more macs
         # for this guest
-        macs = self.virtnet.mac_list()
+        macs = [nic.mac for nic in self.virtnet]
 
         # SR-IOV card may not in same subnet with the card used by host by
         # default. So arp check cannot work.
@@ -733,12 +733,12 @@ class BaseVM(object):
                                     "ipv6":['addrs',]},
                           ...}
         """
-        for virtnet in self.virtnet:
+        for nic in self.virtnet:
             for iface_name, iface in addrs.iteritems():
-                if virtnet.mac in iface["mac"]:
-                    virtnet.ip = {"ipv4": iface["ipv4"],
-                                  "ipv6": iface["ipv6"]}
-                    virtnet.g_nic_name = iface_name
+                if nic.mac in iface["mac"]:
+                    nic.ip = {"ipv4": iface["ipv4"],
+                              "ipv6": iface["ipv6"]}
+                    nic.g_nic_name = iface_name
 
     def get_port(self, port, nic_index=0):
         """
