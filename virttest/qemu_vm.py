@@ -2274,24 +2274,25 @@ class VM(virt_vm.BaseVM):
             except OSError:
                 pass
 
-        if hasattr(self, "migration_file"):
+        if hasattr(self, "migration_file") and self.migration_file is not None:
             try:
                 os.unlink(self.migration_file)
             except OSError:
                 pass
 
-        if free_mac_addresses:
-            for nic_index in xrange(0, len(self.virtnet)):
-                self.free_mac_address(nic_index)
-
-        for nic in self.virtnet:
-            if nic.nettype == 'macvtap':
-                tap = utils_net.Macvtap(nic.ifname)
-                tap.delete()
-            elif nic.ifname and nic.ifname not in utils_net.get_net_if():
-                _, br_name = utils_net.find_current_bridge(nic.ifname)
-                if br_name == nic.netdst:
-                    utils_net.del_from_bridge(nic.ifname, nic.netdst)
+        if self.virtnet is not None:
+            if free_mac_addresses:
+                for nic_index in xrange(0, len(self.virtnet)):
+                    self.free_mac_address(nic_index)
+            for nic in self.virtnet:
+                if nic.nettype == 'macvtap':
+                    tap = utils_net.Macvtap(nic.ifname)
+                    tap.delete()
+                elif nic.get('ifname') is not None:
+                    if nic.ifname not in utils_net.get_net_if():
+                        _, br_name = utils_net.find_current_bridge(nic.ifname)
+                        if br_name == nic.netdst:
+                            utils_net.del_from_bridge(nic.ifname, nic.netdst)
 
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
