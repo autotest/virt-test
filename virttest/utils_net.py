@@ -1414,7 +1414,7 @@ class QemuIface(VirtIface):
                  'bootfile', 'nic_extra_params', 'vhost',
                  'netdev_extra_params', 'queues', 'vhostfds',
                  'vectors', 'pci_assignable', 'enable_msix_vectors',
-                 'root_dir', 'pci_addr', 'pci_bus', 'macvtap_mode'
+                 'root_dir', 'pci_addr', 'macvtap_mode'
                  'device_driver', 'device_name', 'enable_vhostfd']
 
     # Wether or not full paths should be supplied on access
@@ -1449,11 +1449,56 @@ class QemuIface(VirtIface):
             return tftp
 
     # Some qemu_vm specific helpers
+
+    def mode(self):
+        """
+        Read-only property that parses nettype into 'user' or 'tap'
+        """
+        if self.nettype in ['bridge', 'macvtap', 'network']:
+            mode = 'tap'
+        elif self.nettype == 'user':
+            mode = 'user'
+        else:
+            mode = None # Throw exception
+        return mode
+
+    def parse_extra(self, nic_or_net='nic'):
+        """
+        Return a (possibly empty) list of 'extra' formatted options
+
+        :param nic_or_net: "nic"_extra_params or "netdev"_extra_params
+        """
+        if nic_or_net == 'nic':
+            value = self.get('nic_extra_params')
+        elif nic_or_net == 'netdev':
+            value = self.get('netdev_extra_params')
+        else:
+            raise ValueError('Unknown nic_or_net value %s' % nic_or_net)
+        if value is None:
+            eps = []
+        else:
+            eps = value.split(',')
+        for item in eps:
+            if item is not None:
+                key, value = item.split('=', 1)
+                yield (key, value)
+
     def generate_ifname(self):
-        prefix = "t%d-" % self.vlan
-        postfix = utils_misc.generate_random_string(6)
-        # Ensure interface name doesn't excede 11 characters
-        self.ifname = (prefix[:5] + postfix)
+        """
+        Generate a new ifname (tap device name) that doesn't clash
+        """
+        tries = 256
+        ifname = None
+        active_ifnames = get_net_if()
+        while tries > 0:
+            prefix = "t%d-" % self.vlan
+            postfix = utils_misc.generate_random_string(6)
+            # Ensure interface name doesn't excede 11 characters
+            ifname = (prefix[:5] + postfix)
+            if ifname not in active_ifnames:
+                self.ifname = ifname
+                return
+            tries -= 1
 
     def generate_netdev_id(self):
         self.netdev_id = utils_misc.generate_random_id()
@@ -1501,9 +1546,19 @@ class QemuIface(VirtIface):
                     _, br_name = find_current_bridge(self.ifname)
                     if br_name == self.netdst:
                         del_from_bridge(self.ifname, self.netdst)
-        except TypeError:
-            logging.warning("Ignoring failure to remove tap")
+        except (TypeError, AttributeError):
+            logging.warning("Likely innocent failure to remove tap")
 
+    def del_from_bridge(self):
+        """Try to remove nic from bridge by ifname, ignore failure"""
+        logging.info("Removing %s from any bridges it may be on",
+                     self.nic_name)
+        try:
+            del_from_bridge(self.ifname, self.netdst)
+        except (AttributeError, KeyError, BRDelIfError):
+            logging.info("Nic %s removal from bridge %s failed, this "
+                         "is normal when infrequent.", self.nic_name,
+                                                       self.netdst)
 
 class VirtNetBase(collections.MutableSequence, list):
     """
