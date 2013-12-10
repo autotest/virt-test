@@ -472,7 +472,6 @@ def command(cmd, **dargs):
     if session_id:
         # Retrieve existing session
         session = VirshSession(a_id=session_id)
-        logging.debug("Reusing session %s", session_id)
     else:
         session = None
 
