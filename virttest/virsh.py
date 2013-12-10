@@ -1401,22 +1401,27 @@ def net_state_dict(only_names=False, **dargs):
         # Keep search fast & avoid first-letter capital problems
         active = not bool(linesplit[1].count("nactive"))
         autostart = bool(linesplit[2].count("es"))
-        # There is no representation of persistent status in output
-        try:
-            # Rely on net_autostart will raise() if not persistent state
-            if autostart:  # Enabled, try enabling again
-                # dargs['ignore_status'] already False
-                net_autostart(name, **dargs)
-            else:  # Disabled, try disabling again
-                net_autostart(name, "--disable", **dargs)
-            # no exception raised, must be persistent
-            persistent = True
-        except error.CmdError, detail:
-            # Exception thrown, could be transient or real problem
-            if bool(str(detail.result_obj).count("ransient")):
-                persistent = False
-            else:  # A unexpected problem happened, re-raise it.
-                raise
+        if len(linesplit) == 4:
+            persistent = bool(linesplit[3].count("es"))
+        else:
+            # There is no representation of persistent status in output
+            # in older libvirt. When libvirt older than 0.10.2 no longer
+            # supported, this block can be safely removed.
+            try:
+                # Rely on net_autostart will raise() if not persistent state
+                if autostart:  # Enabled, try enabling again
+                    # dargs['ignore_status'] already False
+                    net_autostart(name, **dargs)
+                else:  # Disabled, try disabling again
+                    net_autostart(name, "--disable", **dargs)
+                # no exception raised, must be persistent
+                persistent = True
+            except error.CmdError, detail:
+                # Exception thrown, could be transient or real problem
+                if bool(str(detail.result_obj).count("ransient")):
+                    persistent = False
+                else:  # A unexpected problem happened, re-raise it.
+                    raise
         # Warning: These key names are used by libvirt_xml and test modules!
         result[name] = {'active': active,
                         'autostart': autostart,
