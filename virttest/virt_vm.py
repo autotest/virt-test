@@ -762,11 +762,16 @@ class BaseVM(object):
 
     def free_mac_address(self, nic_index_or_name=0):
         """
-        Free a NIC's MAC address.
+        Remove nic_index_or_name from this instance in database
 
         :param nic_index: Index of the NIC
         """
-        self.virtnet.free_mac_address(nic_index_or_name)
+        self.freshen_networking_cache()
+        try:
+            del self.virtnetdb[nic_index_or_name]
+        except KeyError:
+            logging.debug("Ignoring non-existant cache of nic %s + instance %s",
+                          nic_index_or_name, self.instance)
 
     @error.context_aware
     def wait_for_get_address(self, nic_index_or_name, timeout=30, internal_timeout=1):
@@ -786,29 +791,22 @@ class BaseVM(object):
     # Adding/setup networking devices methods split between 'add_*' for
     # setting up virtnet, and 'activate_' for performing actions based
     # on settings.
-    def add_nic(self, **params):
+    def add_nic(self, nic):
         """
         Add new or setup existing NIC with optional model type and mac address
 
-        :param **params: Additional NIC parameters to set.
-        :param nic_name: Name for device
-        :param mac: Optional MAC address, None to randomly generate.
-        :param ip: Optional IP address to register in address_cache
-        :return: Dict with new NIC's info.
+        :param nic: A dict-like containing networking parameters
+        :return: A dict-like containing possibily modified parameters
         """
-        if not params.has_key('nic_name'):
-            params['nic_name'] = utils_misc.generate_random_id()
-        nic_name = params['nic_name']
+        nic_name = nic['nic_name']
+        # Make certain nic gets converted to VIRTNETCCLASS in self.virtnet
         if nic_name in self.virtnet.nic_name_list():
-            self.virtnet[nic_name].update(**params)
+            self.virtnet[nic_name] = nic
         else:
-            self.virtnet.append(params)
+            self.virtnet.append(nic)
+        # Implies above did conversion to VIRTNETCCLASS
         nic = self.virtnet[nic_name]
-        if not nic.has_key('mac'):  # generate random mac
-            logging.debug("Generating random mac address for nic")
-            self.virtnet.generate_mac_address(nic_name)
-        # mac of '' or invaid format results in not setting a mac
-        if nic.has_key('ip') and nic.has_key('mac'):
+        if nic.has_key('ip') and not nic.needs_mac():
             if not self.address_cache.has_key(nic.mac):
                 logging.debug("(address cache) Adding static "
                               "cache entry: %s ---> %s" % (nic.mac, nic.ip))
@@ -816,24 +814,33 @@ class BaseVM(object):
                 logging.debug("(address cache) Updating static "
                               "cache entry from: %s ---> %s"
                               " to: %s ---> %s" % (nic.mac,
-                                                   self.address_cache[nic.mac], nic.mac, nic.ip))
+                                                   self.address_cache[nic.mac],
+                                                   nic.mac, nic.ip))
             self.address_cache[nic.mac] = nic.ip
+        elif nic.needs_mac():
+            self.freshen_networking_cache()
+            existing_macs = self.virtnet.all_macs(self.virtnetdb.all_macs())
+            nic.generate_mac_address(existing_macs)
+            logging.debug("Generated new MAC %s for nic %s",
+                          nic.mac, nic.nic_name)
+        self.update_address_pool()
         return nic
 
     def del_nic(self, nic_index_or_name):
         """
-        Remove the nic specified by name, or index number
+        Remove the nic specified by name, or index number and free it's mac
         """
-        nic = self.virtnet[nic_index_or_name]
-        nic_mac = nic.mac.lower()
-        self.free_mac_address(nic_index_or_name)
+        try:
+            del self.address_cache[self.virtnet[nic_index_or_name].mac]
+        except (KeyError, IndexError):
+            pass
         try:
             del self.virtnet[nic_index_or_name]
-            del self.address_cache[nic_mac]
-        except IndexError:
-            pass  # continue to not exist
-        except KeyError:
-            pass  # continue to not exist
+        except (KeyError, IndexError):
+            logging.warning("Can't find nic %s to delete, ignoring",
+                            nic_index_or_name)
+            pass
+        self.update_address_pool()
 
     def verify_kernel_crash(self):
         """
