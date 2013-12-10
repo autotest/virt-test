@@ -2595,10 +2595,10 @@ class VM(virt_vm.BaseVM):
         nic = self.virtnet[nic_index_or_name]
         error.context("removing netdev info from nic %s from vm %s" % (
                       nic, self.name))
-        for propertea in ['netdev_id', 'ifname', 'queues',
-                          'tapfds', 'tapfd_ids', 'vectors']:
-            if nic.has_key(propertea):
-                del nic[propertea]
+        for prop in ['netdev_id', 'ifname', 'queues',
+                     'tapfds', 'tapfd_ids', 'vectors']:
+            if nic.has_key(prop):
+                del nic[prop]
 
     def add_nic(self, nic):
         """
