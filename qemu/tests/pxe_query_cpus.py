@@ -48,7 +48,6 @@ def run_pxe_query_cpus(test, params, env):
 
     params["start_vm"] = "yes"
     params["kvm_vm"] = "yes"
-    params["restart_vm"] = "no"
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     bg = utils.InterruptedThread(utils_test.run_virt_sub_test,

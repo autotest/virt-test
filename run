@@ -651,7 +651,7 @@ class VirtTestApp(object):
 
     def _process_restart_vm(self):
         if self.options.restart_vm:
-            self.cartesian_parser.assign("restart_vm", "yes")
+            self.cartesian_parser.assign("kill_vm", "yes")
 
     def _process_restore_image_between_tests(self):
         if self.options.restore_image_between_tests:
