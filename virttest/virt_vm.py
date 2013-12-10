@@ -4,14 +4,14 @@ import glob
 import os
 import re
 import socket
+from autotest.client import utils
 from autotest.client.shared import error
+import data_dir
 import utils_misc
 import utils_net
 import remote
 import aexpect
 import ppm_utils
-import data_dir
-
 
 class VMError(Exception):
     pass
@@ -448,13 +448,11 @@ class CpuInfo(object):
 
 CREATE_LOCK_FILENAME = os.path.join('/tmp', 'virt-test-vm-create.lock')
 
+
 def clean_tmp_files():
     if os.path.isfile(CREATE_LOCK_FILENAME):
         os.unlink(CREATE_LOCK_FILENAME)
-    if os.path.isfile(BaseVM.VIRTNETDBFN):
-        os.unlink(BaseVM.VIRTNETDBFN)
-    if os.path.isfile(BaseVM.VIRTNETDBFN + '.lock'):
-        os.unlink(BaseVM.VIRTNETDBFN + '.lock')
+
 
 class BaseVM(object):
 
@@ -507,7 +505,6 @@ class BaseVM(object):
     REBOOT_TIMEOUT = 240
     CREATE_TIMEOUT = 5
     VIRTNETCCLASS = utils_net.VirtIface
-    VIRTNETDBFN = '/tmp/address_pool.db'
 
     def __init__(self, name, params, root_dir, address_cache):
         self.name = name
@@ -529,7 +526,7 @@ class BaseVM(object):
             self.cpuinfo = CpuInfo()
         # Setup as needed by subclasses and higher-level callers
         self.virtnet = None
-        self.virtnetdb = None
+        self.virtnet_cache = None
 
     def _generate_unique_id(self):
         """
@@ -550,36 +547,14 @@ class BaseVM(object):
             return
         self.virtnet = utils_net.VirtNetParams(self.VIRTNETCCLASS)
         self.virtnet.load_from(self.params, self.name)
-        self.freshen_networking_cache()
+        self.freshen_virtnet_cache()
         for nic in self.virtnet:
-            if nic.nic_name in self.virtnetdb.nic_name_list():
-                db_mac = self.virtnetdb[nic.nic_name].get('mac')
+            if nic.nic_name in self.virtnet_cache.nic_name_list():
+                db_mac = self.virtnet_cache[nic.nic_name].get('mac')
                 if db_mac is not None:
-                    logging.debug("Using nic %s mac %s from address_pool db",
+                    logging.debug("Using nic %s mac %s from virtnet cache",
                                   nic.nic_name, db_mac)
                     nic.mac = db_mac
-
-    def init_cache_networking(self):
-        """
-        Load all networking parameters from address_cache db
-        """
-        self.freshen_networking_cache()
-        self.virtnet = self.virtnetdb.convert_to(utils_net.VirtNetParams)
-
-    def freshen_networking_cache(self):
-        """Reload networking cache from address_pool db"""
-        self.virtnetdb = utils_net.VirtNetDB(self.VIRTNETCCLASS)
-        try:
-            self.virtnetdb.load_from(self.VIRTNETDBFN, self.instance)
-        except KeyError:
-            pass
-
-    def update_address_pool(self):
-        """
-        Store current networking state into address_pool db
-        """
-        self.virtnetdb = self.virtnet.convert_to(utils_net.VirtNetDB)
-        self.virtnetdb.store_to(self.VIRTNETDBFN, self.instance)
 
     @staticmethod
     def lookup_vm_class(vm_type, target):
@@ -766,9 +741,9 @@ class BaseVM(object):
 
         :param nic_index: Index of the NIC
         """
-        self.freshen_networking_cache()
+        self.freshen_virtnet_cache()
         try:
-            del self.virtnetdb[nic_index_or_name]
+            del self.virtnet_cache[nic_index_or_name]
         except KeyError:
             logging.debug("Ignoring non-existant cache of nic %s + instance %s",
                           nic_index_or_name, self.instance)
@@ -818,12 +793,12 @@ class BaseVM(object):
                                                    nic.mac, nic.ip))
             self.address_cache[nic.mac] = nic.ip
         elif nic.needs_mac():
-            self.freshen_networking_cache()
-            existing_macs = self.virtnet.all_macs(self.virtnetdb.all_macs())
+            self.freshen_virtnet_cache()
+            existing_macs = self.virtnet.all_macs(self.virtnet_cache.all_macs())
             nic.generate_mac_address(existing_macs)
             logging.debug("Generated new MAC %s for nic %s",
                           nic.mac, nic.nic_name)
-        self.update_address_pool()
+        self.update_virtnet_cache()
         return nic
 
     def del_nic(self, nic_index_or_name):
@@ -840,7 +815,7 @@ class BaseVM(object):
             logging.warning("Can't find nic %s to delete, ignoring",
                             nic_index_or_name)
             pass
-        self.update_address_pool()
+        self.update_virtnet_cache()
 
     def verify_kernel_crash(self):
         """
@@ -1232,6 +1207,14 @@ class BaseVM(object):
     #
     # Public API - *must* be reimplemented with virt specific code
     #
+    def freshen_virtnet_cache(self):
+        """Try to (re)load virtnet_cache from persistent storage"""
+        raise NotImplementedError
+
+    def update_virtnet_cache(self):
+        """Try to store virtnet into persistent virtnet_cache storage"""
+        raise NotImplementedError
+
     def is_alive(self):
         """
         Return True if the VM is alive and the management interface is responsive.

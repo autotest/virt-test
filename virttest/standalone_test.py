@@ -23,6 +23,7 @@ import arch
 import funcatexit
 import version
 import virt_vm
+import qemu_vm
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -673,6 +674,7 @@ def cleanup_env(parser, options):
         aexpect.clean_tmp_files()
         data_dir.clean_tmp_files()
         virt_vm.clean_tmp_files()
+        qemu_vm.clean_tmp_files()
         logging.info("")
 
 

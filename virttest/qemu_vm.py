@@ -67,6 +67,14 @@ class ImageUnbootableError(virt_vm.VMError):
         return ("VM '%s' can't bootup from image,"
                 " check your boot disk image file." % self.name)
 
+
+def clean_tmp_files():
+    if os.path.isfile(VM.VIRTNETCACHEFN):
+        os.unlink(VM.VIRTNETCACHEFN)
+    if os.path.isfile(VM.VIRTNETCACHEFN + '.lock'):
+        os.unlink(VM.VIRTNETCACHEFN + '.lock')
+
+
 class VM(virt_vm.BaseVM):
 
     """
@@ -86,6 +94,7 @@ class VM(virt_vm.BaseVM):
 
     # Qemu/kvm specialized networking device handling helpers live here
     VIRTNETCCLASS = utils_net.QemuIface
+    VIRTNETCACHEFN = '/tmp/address_pool.db'
 
     def __init__(self, name, params, root_dir, address_cache, state=None):
         """
@@ -137,6 +146,19 @@ class VM(virt_vm.BaseVM):
         self.last_boot_index = 0
         self.last_driver_index = 0
         super(VM, self).__init__(name, params, root_dir, address_cache)
+
+    def freshen_virtnet_cache(self):
+        """Try to (re)load virtnet_cache from persistent storage"""
+        self.virtnet_cache = utils_net.VirtNetDB(self.VIRTNETCCLASS)
+        try:
+            self.virtnet_cache.load_from(self.VIRTNETCACHEFN, self.instance)
+        except KeyError:
+            pass
+
+    def update_virtnet_cache(self):
+        """Store virtnet into persistent backing for virtnet_cache"""
+        self.virtnet_cache = self.virtnet.convert_to(utils_net.VirtNetDB)
+        self.virtnet_cache.store_to(self.VIRTNETCACHEFN, self.instance)
 
     def verify_alive(self):
         """
@@ -1003,6 +1025,7 @@ class VM(virt_vm.BaseVM):
 
         # Clone this VM using the new params
         vm = self.clone(name, params, root_dir, copy_state=True)
+        # copy_state=True means vm.instance key will be the same
 
         # global counters
         ide_bus = 0
@@ -1308,6 +1331,10 @@ class VM(virt_vm.BaseVM):
                               device_driver=device_driver,
                               pci_bus=pci_bus)
                 iov += 1
+            logging.debug("vm.make_create_command() produced networking setup: "
+                          "%s", vm.virtnet)
+            # save any allocated addresses/info in cache
+            vm.update_virtnet_cache()
 
         mem = params.get("mem")
         if mem:
@@ -1800,16 +1827,21 @@ class VM(virt_vm.BaseVM):
             if self.redirs != old_redirs:
                 self.devices = None
 
+            self.init_params_networking()
             # Generate basic parameter values for all NICs and create TAP fd
             for nic in self.virtnet:
-                nic_params = params.object_params(nic.nic_name)
-                pa_type = nic_params.get("pci_assignable")
-                if pa_type and pa_type != "no":
-                    device_driver = nic_params.get("device_driver",
-                                                   "pci-assign")
-                    if "mac" not in nic:
-                        self.virtnet.generate_mac_address(nic["nic_name"])
-                    mac = nic["mac"]
+                nic.pci_assignable = pa_type = nic.get("pci_assignable", 'no')
+                if pa_type != "no":
+                    device_driver = nic.get("device_driver",
+                                            "pci-assign")
+                    nic.device_driver = device_driver
+                    if nic.needs_mac():
+                        self.freshen_virtnet_cache()
+                        db_macs = self.virtnet_cache.all_macs()
+                        existing_macs = self.virtnet.all_macs(db_macs)
+                        nic.mac = mac = nic.generate_mac_address(existing_macs)
+                    else:
+                        mac = nic.mac
                     if self.pci_assignable is None:
                         self.pci_assignable = test_setup.PciAssignable(
                             driver=params.get("driver"),
@@ -1867,8 +1899,9 @@ class VM(virt_vm.BaseVM):
                                      "user mode nic %s, and ready to go"
                                      % nic.nic_name)
 
-                    self.virtnet.update_db()
-
+                    self.update_virtnet_cache()
+            logging.debug("vm.create() produced networking setup: %s",
+                          self.virtnet)
             # Find available VNC port, if needed
             if params.get("display") == "vnc":
                 self.vnc_port = utils_misc.find_free_port(5900, 6100)
@@ -2589,7 +2622,11 @@ class VM(virt_vm.BaseVM):
         nic.queues = nic.get('queues', 1)
         if nic.get("enable_msix_vectors") == "yes":
             nic.vectors = nic.get("vectors", 2 * nic.queues + 1)
-        self.update_address_pool()
+        if nic.get('device_id') is None:
+            nic.generate_device_id()
+        if nic.get('netdev_id') is None:
+            nic.netdev_id = self.add_netdev(nic)
+        self.update_virtnet_cache()
         return nic
 
     @error.context_aware
