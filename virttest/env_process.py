@@ -96,12 +96,7 @@ def preprocess_vm(test, params, env, name):
     start_vm = False
     update_virtnet = False
 
-    if params.get("restart_vm") == "yes":
-        if vm.is_alive():
-            vm.destroy(gracefully=True, free_mac_addresses=False)
-        update_virtnet = True
-        start_vm = True
-    elif params.get("migration_mode"):
+    if params.get("migration_mode"):
         start_vm = True
     elif params.get("start_vm") == "yes":
         # need to deal with libvirt VM differently than qemu
