@@ -542,8 +542,8 @@ class VM(virt_vm.BaseVM):
 
         def add_net(devices, vlan, nettype, ifname=None, tftp=None,
                     bootfile=None, hostfwd=[], netdev_id=None,
-                    netdev_extra_params=None, tapfds=None, script=None,
-                    downscript=None, vhost=None, queues=None, vhostfds=None):
+                    netdev_extra_params=None, tapfds=None,
+                    vhost=None, queues=None, vhostfds=None):
             mode = None
             if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
@@ -1261,14 +1261,7 @@ class VM(virt_vm.BaseVM):
         for nic in vm.virtnet:
             nic_params = params.object_params(nic.nic_name)
             if nic_params.get('pci_assignable') == "no":
-                script = nic_params.get("nic_script")
-                downscript = nic_params.get("nic_downscript")
                 vhost = nic_params.get("vhost")
-                script_dir = data_dir.get_data_dir()
-                if script:
-                    script = utils_misc.get_path(script_dir, script)
-                if downscript:
-                    downscript = utils_misc.get_path(script_dir, downscript)
                 # setup nic parameters as needed
                 # add_netdev if netdev_id not set
                 nic = vm.add_nic(**dict(nic))
@@ -1316,9 +1309,8 @@ class VM(virt_vm.BaseVM):
 
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 cmd = add_net(devices, vlan, nettype, ifname, tftp,
-                              bootp, redirs, netdev_id, netdev_extra,
-                              tapfds, script, downscript, vhost, queues,
-                              vhostfds)
+                              bootfile, redirs, netdev_id, netdev_extra,
+                              tapfds, vhost, queues, vhostfds)
                 # TODO: Is every NIC a PCI device?
                 devices.insert(StrDev("NET-%s" % nettype, cmdline=cmd))
             else:
