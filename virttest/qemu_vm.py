@@ -1278,7 +1278,7 @@ class VM(virt_vm.BaseVM):
                 vhost = nic_params.get("vhost")
                 # setup nic parameters as needed
                 # add_netdev if netdev_id not set
-                nic = vm.add_nic(**dict(nic))
+                nic = vm.add_nic(nic)
                 # gather set values or None if unset
                 vlan = nic.get('vlan')
                 netdev_id = nic.get('netdev_id')
@@ -1870,7 +1870,7 @@ class VM(virt_vm.BaseVM):
                         nic.netdst = (test_setup.
                                       PrivateBridgeConfig(nic_params).brname)
 
-                    nic = self.add_nic(**dict(nic))  # implied add_netdev
+                    nic = self.add_nic(nic)  # implied add_netdev
 
                     if mac_source:
                         # Will raise exception if source doesn't
@@ -2556,14 +2556,14 @@ class VM(virt_vm.BaseVM):
         self.del_nic(nic_name)
 
     @error.context_aware
-    def add_netdev(self, **params):
+    def add_netdev(self, nic):
         """
         Hotplug a netdev device.
 
-        :param **params: NIC info. dict.
+        :param nic: A dict-like containing networking parameters
         :return: netdev_id
         """
-        nic_name = params['nic_name']
+        nic_name = nic['nic_name']
         nic = self.virtnet[nic_name]
         nic_index = self.virtnet.nic_name_index(nic_name)
         nic.set_if_none('netdev_id', utils_misc.generate_random_id())
@@ -2600,25 +2600,22 @@ class VM(virt_vm.BaseVM):
             if nic.has_key(propertea):
                 del nic[propertea]
 
-    def add_nic(self, **params):
+    def add_nic(self, nic):
         """
         Add new or setup existing NIC, optionally creating netdev if None
 
-        :param **params: Parameters to set
-        :param nic_name: Name for existing or new device
-        :param nic_model: Model name to emulate
-        :param netdev_id: Existing qemu net device ID name, None to create new
-        :param mac: Optional MAC address, None to randomly generate.
+        :param nic: A dict-like containing networking parameters
         """
         # returns existing or new nic object
-        nic = super(VM, self).add_nic(**params)
+        nic = super(VM, self).add_nic(nic)
         nic_index = self.virtnet.nic_name_index(nic.nic_name)
         nic.set_if_none('vlan', str(nic_index))
         nic.set_if_none('device_id', utils_misc.generate_random_id())
         if not nic.has_key('netdev_id'):
-            # virtnet items are lists that act like dicts
-            nic.netdev_id = self.add_netdev(**dict(nic))
+            nic.netdev_id = self.add_netdev(nic)
         nic.set_if_none('nic_model', params['nic_model'])
+        if params.get("enable_msix_vectors") == "yes":
+            nic.set_if_none('vectors', 2 * int(nic.queues) + 1)
         nic.queues = nic.get('queues', 1)
         if nic.get("enable_msix_vectors") == "yes":
             nic.vectors = nic.get("vectors", 2 * nic.queues + 1)
