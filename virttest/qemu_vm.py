@@ -1683,42 +1683,6 @@ class VM(virt_vm.BaseVM):
 
         return devices
 
-    def _nic_tap_add_helper(self, nic):
-        if nic.nettype == 'macvtap':
-            macvtap_mode = self.params.get("macvtap_mode", "vepa")
-            nic.tapfds = utils_net.create_and_open_macvtap(nic.ifname,
-                    macvtap_mode, nic.queues, nic.netdst, nic.mac)
-        else:
-            nic.tapfds = utils_net.open_tap("/dev/net/tun", nic.ifname,
-                                            queues=nic.queues, vnet_hdr=True)
-            logging.debug("Adding VM %s NIC ifname %s to bridge %s",
-                          self.name, nic.ifname, nic.netdst)
-            if nic.nettype == 'bridge':
-                utils_net.add_to_bridge(nic.ifname, nic.netdst)
-        utils_net.bring_up_ifname(nic.ifname)
-
-    def _nic_tap_remove_helper(self, nic):
-        try:
-            if nic.nettype == 'macvtap':
-                logging.info("Remove macvtap ifname %s", nic.ifname)
-                tap = utils_net.Macvtap(nic.ifname)
-                tap.delete()
-            else:
-                logging.debug("Removing VM %s NIC ifname %s from bridge %s",
-                              self.name, nic.ifname, nic.netdst)
-                if nic.tapfds:
-                    for i in nic.tapfds.split(':'):
-                        os.close(int(i))
-                if nic.vhostfds:
-                    for i in nic.vhostfds.split(':'):
-                        os.close(int(i))
-                if nic.ifname and nic.ifname not in utils_net.get_net_if():
-                    _, br_name = utils_net.find_current_bridge(nic.ifname)
-                    if br_name == nic.netdst:
-                        utils_net.del_from_bridge(nic.ifname, nic.netdst)
-        except TypeError:
-            pass
-
     def create_serial_console(self):
         """
         Establish a session with the serial console.
@@ -1903,7 +1867,6 @@ class VM(virt_vm.BaseVM):
                         utils_net.del_from_bridge(nic.ifname, nic.netdst)
 
                     if nic.nettype in ['bridge', 'network', 'macvtap']:
-                        self._nic_tap_add_helper(nic)
 
                     if ((nic_params.get("vhost") == 'vhost=on') and
                             (nic_params.get("enable_vhostfd", "yes") == "yes")):
@@ -1950,7 +1913,7 @@ class VM(virt_vm.BaseVM):
                 raise
             except Exception:
                 for nic in self.virtnet:
-                    self._nic_tap_remove_helper(nic)
+                    nic.del_nic_tap()
                 # TODO: log_last_traceback is being moved into autotest.
                 # use autotest.client.shared.base_utils when it's completed.
                 if 'log_last_traceback' in utils.__dict__:

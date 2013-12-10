@@ -1240,6 +1240,9 @@ class VirtIface(propcan.PropCan, object):
     # addressing while avoiding clashes between multiple NICs.
     LASTBYTE = random.SystemRandom().randint(0x00, 0xff)
 
+    # Flag to turn off nettype warnings (mostly for unittests)
+    NETTYPEWARN = True
+
     def __getstate__(self):
         """Help VirtIface objects be pickleable"""
         state = {}
@@ -1365,6 +1368,24 @@ class VirtIface(propcan.PropCan, object):
                     break
         return self.int_list_to_mac_str(mac)
 
+    @staticmethod
+    def giabi(name):
+        """
+        Shortcut to Get IP Address by interface ("device" name)
+        """
+        return get_ip_address_by_interface(name)
+
+    def set_nettype(self, value):
+        """
+        Log warning for unknown/unsupported networking types
+        """
+        if self.NETTYPEWARN:
+            if value not in ('user', 'network', 'bridge', 'private', 'macvtap'):
+                logging.warning('Setting nic %s to unknown/unsupported '
+                                'nettype %s', self.nic_name, value)
+        return self.__dict_set__('nettype', value)
+
+
 class LibvirtQemuIface(VirtIface):
     """
     Networking information specific to libvirt qemu
@@ -1393,7 +1414,7 @@ class QemuIface(VirtIface):
                  'bootfile', 'nic_extra_params', 'vhost',
                  'netdev_extra_params', 'queues', 'vhostfds',
                  'vectors', 'pci_assignable', 'enable_msix_vectors',
-                 'root_dir', 'pci_addr', 'pci_bus',
+                 'root_dir', 'pci_addr', 'pci_bus', 'macvtap_mode'
                  'device_driver', 'device_name', 'enable_vhostfd']
 
     # Wether or not full paths should be supplied on access
@@ -1446,26 +1467,30 @@ class QemuIface(VirtIface):
 
     def add_nic_tap(self):
         if self.nettype == 'macvtap':
-            logging.info("Adding macvtap ifname: %s", self.ifname)
-            add_nic_macvtap(self)
-            return
-        self.tapfds = open_tap("/dev/net/tun", self.ifname,
-                               queues=self.queues, vnet_hdr=True)
-        logging.debug("Adding NIC ifname %s to bridge %s",
-                      self.ifname, self.netdst)
-        if self.nettype == 'bridge':
-            add_to_bridge(self.ifname, self.netdst)
+            macvtap_mode = self.get("macvtap_mode", "vepa")
+            self.tapfds = create_and_open_macvtap(self.ifname,
+                                                  macvtap_mode,
+                                                  self.queues,
+                                                  self.netdst,
+                                                  self.mac)
+        else:
+            self.tapfds = open_tap("/dev/net/tun", self.ifname,
+                                   queues=self.queues, vnet_hdr=True)
+            logging.debug("Adding NIC %s to bridge %s",
+                          self.nic_name, self.netdst)
+            if self.nettype == 'bridge':
+                add_to_bridge(self.ifname, self.netdst)
         bring_up_ifname(self.ifname)
 
     def del_nic_tap(self):
         try:
             if self.nettype == 'macvtap':
-                logging.info("Remove macvtap ifname %s", self.ifname)
+                logging.info("Remove macvtap for nic %s", self.nic_name)
                 tap = Macvtap(self.ifname)
                 tap.delete()
             else:
-                logging.debug("Removing NIC ifname %s from bridge %s",
-                              self.ifname, self.netdst)
+                logging.debug("Removing NIC %s from bridge %s",
+                              self.nic_name, self.netdst)
                 if self.tapfds:
                     for i in self.tapfds.split(':'):
                         os.close(int(i))
@@ -1476,9 +1501,8 @@ class QemuIface(VirtIface):
                     _, br_name = find_current_bridge(self.ifname)
                     if br_name == self.netdst:
                         del_from_bridge(self.ifname, self.netdst)
-        except (AttributeError, TypeError):
+        except TypeError:
             logging.warning("Ignoring failure to remove tap")
-            pass
 
 
 class VirtNetBase(collections.MutableSequence, list):
@@ -1609,6 +1633,13 @@ class VirtNetBase(collections.MutableSequence, list):
             for mac in other:
                 yield mac
 
+    def host_ip(self):
+        """
+        Return IPv4 address of a host-side interface
+        """
+        # Empty 'params' dict forces lookup by default host device
+        return get_host_ip_address({})
+
     def update_from(self, source, key=None):
         """
         Add/update current contents from iterable source of dict-likes
@@ -1725,6 +1756,16 @@ class VirtNetParams(VirtNetBase):
             yield mac
         for mac in gen2:
             yield mac
+
+    def host_ip(self):
+        """
+        Return IPv4 address of a host-side interface
+        """
+        if self.last_source is not None:
+            return get_host_ip_address(self.last_source)
+        else:
+            # Call with empty params
+            super(VirtNetParams, self).host_ip()
 
 
 class VirtNetDB(VirtNetBase):

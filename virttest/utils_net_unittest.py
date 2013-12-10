@@ -109,7 +109,7 @@ class TestVirtIface(unittest.TestCase):
         self.test_class.LASTBYTE = -1
         self.test_class.MANGLE_PATHS = False
         self.test_class.FORCE_INTS = False
-
+        self.test_class.NETTYPEWARN = False
 
     def loop_equal(self, virtiface, test_keys, what_func):
         for prop in test_keys:
