@@ -272,6 +272,13 @@ class VirtTestRunParser(optparse.OptionParser):
                                  ", ".join(SUPPORTED_LOG_LEVELS) +
                                  ". Default: %default"))
 
+        general.add_option("--no-cleanup", action="store_true",
+                           dest="no_cleanup",
+                           default=False,
+                           help=("Don't clean up tmp files or VM processes at "
+                                 "the end of a virt-test execution (useful "
+                                 "for debugging)"))
+
         self.add_option_group(general)
 
         qemu = optparse.OptionGroup(self, 'Options specific to the qemu test')
