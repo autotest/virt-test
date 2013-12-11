@@ -273,6 +273,8 @@ class QemuImg(object):
 
         def backup_image_file(src, dst):
             logging.debug("Copying %s -> %s", src, dst)
+            if os.path.isfile(dst) and os.path.isfile(src):
+                os.unlink(dst)
             if os.path.isfile(src):
                 shutil.copy(src, dst)
             else:

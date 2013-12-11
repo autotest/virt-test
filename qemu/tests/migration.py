@@ -2,7 +2,7 @@ import logging
 import time
 import types
 from autotest.client.shared import error
-from virttest import utils_misc, utils_test
+from virttest import utils_misc, utils_test, aexpect
 
 
 def run_migration(test, params, env):
@@ -212,15 +212,18 @@ def run_migration(test, params, env):
         finally:
             # Kill the background process
             if session2 and session2.is_alive():
-                session2.cmd_output(
-                    params.get("migration_bg_kill_command", ""))
+                bg_kill_cmd = params.get("migration_bg_kill_command", None)
+                if bg_kill_cmd is not None:
+                    try:
+                        session2.cmd(bg_kill_cmd)
+                    except aexpect.ShellTimeoutError:
+                        logging.debug("Remote session not responsive, "
+                                      "shutting down VM %s", vm.name)
+                        vm.destroy(gracefully=True)
             if deamon_thread is not None:
                 # Set deamon thread action to stop after migrate
                 params["action"] = "stop"
                 deamon_thread.join()
-
-        session2.close()
-        session.close()
     else:
         # Just migrate without depending on a living guest OS
         vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, offline,
