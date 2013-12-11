@@ -25,36 +25,23 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
     5) Recover environment like vm's state
     6) Check result.
     """
-    def get_parameter_in_cgroup(domname, controller="cpu",
-                                parameter="cpu.shares",
-                                libvirt_cgroup_path="libvirt/qemu/"):
+    def get_parameter_in_cgroup(vm, parameter):
         """
         Get vm's cgroup value.
 
-        @Param domname: vm's name
-        @Param controller: the controller which parameter is in.
+        @Param vm: the vm object
         @Param parameter: the cgroup parameter of vm which we need to get.
-        @Param libvirt_cgroup_path: the path of libvirt in cgroup
         :return: False if expected controller is not mounted.
                  else return value's result object.
         """
-        try:
-            ctl_mount = utils_cgroup.get_cgroup_mountpoint(controller)
-        except IndexError:
-            return None
-        if ctl_mount is not False:
-            cgroup_path = os.path.join(ctl_mount, libvirt_cgroup_path,
-                                       domname, parameter)
-            if not os.path.exists(cgroup_path):
-                cgroup_path = os.path.join(ctl_mount, "machine", domname
-                                           + ".libvirt-qemu", parameter)
-            if not os.path.exists(cgroup_path):
-                raise error.TestNAError("Unknown path to cgroups")
-            get_value_cmd = "cat %s" % cgroup_path
-            result = utils.run(get_value_cmd, ignore_status=True)
-            return result.stdout.strip()
-        else:
-            return None
+        cgroup_path = \
+            utils_cgroup.resolve_task_cgroup_path(vm.get_pid(), "cpu")
+        cgroup_file = os.path.join(cgroup_path, parameter)
+        if not os.path.exists(cgroup_file):
+            raise error.TestNAError("Unknown path to cgroups", cgroup_file)
+        get_value_cmd = "cat %s" % cgroup_file
+        result = utils.run(get_value_cmd, ignore_status=True)
+        return result.stdout.strip()
 
     def schedinfo_output_analyse(result, set_ref, scheduler="posix"):
         """
@@ -94,7 +81,7 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
     options_ref = params.get("schedinfo_options_ref", "")
     options_suffix = params.get("schedinfo_options_suffix", "")
     set_ref = params.get("schedinfo_set_ref", "")
-    cgroup_ref = params.get("schedinfo_cgroup_ref", "")
+    cgroup_ref = params.get("schedinfo_cgroup_ref", "cpu.shares")
     set_value = params.get("schedinfo_set_value", "")
     set_value_expected = params.get("schedinfo_set_value_expected", "")
     # The default scheduler on qemu/kvm is posix
@@ -132,8 +119,7 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
     # VM must be running to get cgroup parameters.
     if not vm.is_alive():
         vm.start()
-    set_value_of_cgroup = get_parameter_in_cgroup(vm_name,
-                                                  parameter=cgroup_ref)
+    set_value_of_cgroup = get_parameter_in_cgroup(vm, parameter=cgroup_ref)
     vm.destroy()
 
     if set_ref:
