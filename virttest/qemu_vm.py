@@ -12,6 +12,7 @@ import re
 import commands
 from autotest.client.shared import error
 from autotest.client import utils
+from virttest.qemu_devices import qdevices, qcontainer
 import utils_misc
 import virt_vm
 import test_setup
@@ -22,7 +23,6 @@ import qemu_virtio_port
 import remote
 import data_dir
 import utils_net
-import qemu_devices
 
 
 class QemuSegFaultError(virt_vm.VMError):
@@ -479,7 +479,7 @@ class VM(virt_vm.BaseVM):
             vioser_id = "anacondalog_vioser_%s" % self.instance
             filename = "/tmp/anaconda-%s" % self.instance
             self.logs["anaconda"] = filename
-            dev = qemu_devices.QCustomDevice('chardev', backend='backend')
+            dev = qdevices.QCustomDevice('chardev', backend='backend')
             dev.set_param('backend', 'socket')
             dev.set_param('id', chardev_id)
             dev.set_param("path", filename)
@@ -535,7 +535,7 @@ class VM(virt_vm.BaseVM):
                         dev.set_param(key, val)
                 dev.set_param("bootindex", bootindex)
             else:
-                dev = qemu_devices.QCustomDevice('net', backend='type')
+                dev = qdevices.QCustomDevice('net', backend='type')
                 dev.set_param('type', 'nic')
                 dev.set_param('model', model)
                 dev.set_param('macaddr', mac, 'NEED_QUOTE')
@@ -660,14 +660,14 @@ class VM(virt_vm.BaseVM):
                    devices.has_device("kvm-pci-assign")):
                     dev = QDevice(device_driver, parent_bus=pci_bus)
                 else:
-                    dev = qemu_devices.QCustomDevice('pcidevice',
-                                                     parent_bus=pci_bus)
+                    dev = qdevices.QCustomDevice('pcidevice',
+                                                 parent_bus=pci_bus)
             else:
                 if devices.has_device(device_driver):
                     dev = QDevice(device_driver, parent_bus=pci_bus)
                 else:
-                    dev = qemu_devices.QCustomDevice('pcidevice',
-                                                     parent_bus=pci_bus)
+                    dev = qdevices.QCustomDevice('pcidevice',
+                                                 parent_bus=pci_bus)
             help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
             pcidevice_help = utils.system_output(help_cmd)
             dev.set_param('host', host)
@@ -1066,13 +1066,12 @@ class VM(virt_vm.BaseVM):
                 cmd += "numactl -m %s " % n
 
         # Start constructing devices representation
-        devices = qemu_devices.DevContainer(qemu_binary, self.name,
-                                            params.get('strict_mode'),
-                                            params.get(
-                                                'workaround_qemu_qmp_crash'),
-                                            params.get('allow_hotplugged_vm'))
-        StrDev = qemu_devices.QStringDevice
-        QDevice = qemu_devices.QDevice
+        devices = qcontainer.DevContainer(qemu_binary, self.name,
+                                          params.get('strict_mode'),
+                                          params.get('workaround_qemu_qmp_crash'),
+                                          params.get('allow_hotplugged_vm'))
+        StrDev = qdevices.QStringDevice
+        QDevice = qdevices.QDevice
 
         devices.insert(StrDev('PREFIX', cmdline=cmd))
         # Add the qemu binary
