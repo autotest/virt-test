@@ -153,7 +153,7 @@ def run_multi_disk_random_hotplug(test, params, env):
             devs = qdev.images_define_by_variables(**args)
             try:
                 for dev in devs:
-                    qdev.insert(dev, force=False)
+                    qdev.insert(dev)
             except qcontainer.DeviceInsertError:
                 # All buses are full, (TODO add bus) or remove this format
                 for dev in devs:
@@ -229,7 +229,7 @@ def run_multi_disk_random_hotplug(test, params, env):
         for device in new_devices[::-1]:
             if device in qdev:
                 time.sleep(float(params.get('wait_between_unplugs', 0)))
-                out = qdev.unplug(device, monitor, True)
+                out = qdev.simple_unplug(device, monitor)
             else:
                 continue
             if out is True:
