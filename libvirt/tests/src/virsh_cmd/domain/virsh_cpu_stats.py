@@ -1,8 +1,10 @@
 import re
-import commands
+import os.path
 import logging
+import multiprocessing
 from autotest.client.shared import error
 from virttest import virsh
+from virttest.staging import utils_cgroup
 
 
 def run_virsh_cpu_stats(test, params, env):
@@ -29,8 +31,7 @@ def run_virsh_cpu_stats(test, params, env):
         vm_ref = vm_name
 
     # get host cpus num
-    cpus = commands.getoutput("cat /proc/cpuinfo |grep processor | "
-                              "wc -l").strip()
+    cpus = multiprocessing.cpu_count()
     logging.debug("host cpu num is %s", cpus)
 
     # get options and put into a dict
@@ -72,9 +73,15 @@ def run_virsh_cpu_stats(test, params, env):
         else:
             # Get cgroup cpu_time
             if not get_totalonly:
-                cgcpu = "cat /cgroup/cpuacct/libvirt/qemu/" + vm_name + \
-                        "/cpuacct.usage_percpu"
-                cgtime = commands.getoutput(cgcpu).strip().split()
+                vm = env.get_vm(vm_ref)
+                cgpath = utils_cgroup.resolve_task_cgroup_path(
+                    vm.get_pid(), "cpuacct")
+                # When a VM has an 'emulator' child cgroup present, we must
+                # strip off that suffix when detecting the cgroup for a machine
+                if os.path.basename(cgpath) == "emulator":
+                    cgpath = os.path.dirname(cgpath)
+                usage_file = os.path.join(cgpath, "cpuacct.usage_percpu")
+                cgtime = file(usage_file).read().strip().split()
                 logging.debug("cgtime get is %s", cgtime)
 
             # Cut CPUs from output and format to list
