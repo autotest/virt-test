@@ -139,6 +139,10 @@ def check_snapslist(vm_name, options, option_dict, output,
                         logging.info("disk file %s exist" % diskpath)
                         os.remove(diskpath)
                     else:
+                        # Didn't find <source file="path to disk"/>
+                        # in output - this could leave a file around
+                        # wherever the main OS image file is found
+                        logging.debug("output_dump=%s", output_dump)
                         raise error.TestFail("Can not find disk %s"
                                              % diskpath)
 
@@ -353,95 +357,88 @@ def run_virsh_snapshot_create_as(test, params, env):
         external_disk = os.path.join(test.virtdir, external_disk)
         commands.getoutput("qemu-img create -f qcow2 %s 1G" % external_disk)
 
-    # Start qemu-ga on guest if have --quiesce
-    if options.find("quiesce") >= 0:
-        if vm.is_alive():
-            vm.destroy()
-        virt_xml_obj = libvirt_xml.VMXML(virsh_instance=virsh)
-        virt_xml_obj.set_agent_channel(vm_name)
-        vm.start()
-        if start_ga == "yes":
-            session = vm.wait_for_login()
+    try:
+        # Start qemu-ga on guest if have --quiesce
+        if options.find("quiesce") >= 0:
+            if vm.is_alive():
+                vm.destroy()
+            virt_xml_obj = libvirt_xml.VMXML(virsh_instance=virsh)
+            virt_xml_obj.set_agent_channel(vm_name)
+            vm.start()
+            if start_ga == "yes":
+                session = vm.wait_for_login()
 
-            # Check if qemu-ga already started automatically
-            cmd = "rpm -q qemu-guest-agent || yum install -y qemu-guest-agent"
-            stat_install = session.cmd_status(cmd, 300)
-            if stat_install != 0:
-                xml_recover(vmxml_backup)
-                raise error.TestFail("Fail to install qemu-guest-agent, make"
-                                     "sure that you have usable repo in guest")
+                # Check if qemu-ga already started automatically
+                cmd = "rpm -q qemu-guest-agent || yum install -y qemu-guest-agent"
+                stat_install = session.cmd_status(cmd, 300)
+                if stat_install != 0:
+                    raise error.TestFail("Fail to install qemu-guest-agent, make"
+                                         "sure that you have usable repo in guest")
 
-            # Check if qemu-ga already started
-            stat_ps = session.cmd_status("ps aux |grep [q]emu-ga")
-            if stat_ps != 0:
-                session.cmd("qemu-ga -d")
-                # Check if the qemu-ga really started
+                # Check if qemu-ga already started
                 stat_ps = session.cmd_status("ps aux |grep [q]emu-ga")
                 if stat_ps != 0:
-                    xml_recover(vmxml_backup)
-                    raise error.TestFail("Fail to run qemu-ga in guest")
+                    session.cmd("qemu-ga -d")
+                    # Check if the qemu-ga really started
+                    stat_ps = session.cmd_status("ps aux |grep [q]emu-ga")
+                    if stat_ps != 0:
+                        raise error.TestFail("Fail to run qemu-ga in guest")
 
-        if domain_state == "paused":
-            virsh.suspend(vm_name)
+            if domain_state == "paused":
+                virsh.suspend(vm_name)
 
-    # Record the previous snapshot-list
-    snaps_before = virsh.snapshot_list(vm_name)
+        # Record the previous snapshot-list
+        snaps_before = virsh.snapshot_list(vm_name)
 
-    # Run virsh command
-    # May create several snapshots, according to configuration
-    for count in range(int(multi_num)):
-        cmd_result = virsh.snapshot_create_as(vm_name, options,
-                                              ignore_status=True, debug=True)
-        output = cmd_result.stdout.strip()
-        status = cmd_result.exit_status
+        # Run virsh command
+        # May create several snapshots, according to configuration
+        for count in range(int(multi_num)):
+            cmd_result = virsh.snapshot_create_as(vm_name, options,
+                                                  ignore_status=True, debug=True)
+            output = cmd_result.stdout.strip()
+            status = cmd_result.exit_status
 
-        # check status_error
-        if status_error == "yes":
-            if status == 0:
-                xml_recover(vmxml_backup)
-                raise error.TestFail("Run successfully with wrong command!")
-            else:
-                # Check memspec file should be removed if failed
-                if (options.find("memspec") >= 0
-                        and options.find("atomic") >= 0):
-                    if os.path.isfile(option_dict['memspec']):
-                        os.remove(option_dict['memspec'])
-                        xml_recover(vmxml_backup)
-                        raise error.TestFail("Run failed but file %s exist"
-                                             % option_dict['memspec'])
-                    else:
-                        logging.info("Run failed as expected and memspec file"
-                                     " already beed removed")
+            # check status_error
+            if status_error == "yes":
+                if status == 0:
+                    raise error.TestFail("Run successfully with wrong command!")
                 else:
-                    logging.info("Run failed as expected")
+                    # Check memspec file should be removed if failed
+                    if (options.find("memspec") >= 0
+                            and options.find("atomic") >= 0):
+                        if os.path.isfile(option_dict['memspec']):
+                            os.remove(option_dict['memspec'])
+                            raise error.TestFail("Run failed but file %s exist"
+                                                 % option_dict['memspec'])
+                        else:
+                            logging.info("Run failed as expected and memspec file"
+                                         " already beed removed")
+                    else:
+                        logging.info("Run failed as expected")
 
-        elif status_error == "no":
-            if status != 0:
-                xml_recover(vmxml_backup)
-                raise error.TestFail("Run failed with right command: %s"
-                                     % output)
-            else:
-                # Check the special options
-                snaps_list = virsh.snapshot_list(vm_name)
-                logging.debug("snaps_list is %s", snaps_list)
+            elif status_error == "no":
+                if status != 0:
+                    raise error.TestFail("Run failed with right command: %s"
+                                         % output)
+                else:
+                    # Check the special options
+                    snaps_list = virsh.snapshot_list(vm_name)
+                    logging.debug("snaps_list is %s", snaps_list)
 
-                try:
                     check_snapslist(vm_name, options, option_dict, output,
-                                    snaps_before, snaps_list)
-                except Exception, details:
-                    xml_recover(vmxml_backup)
-                    raise error.TestFail(details)
+                                        snaps_before, snaps_list)
 
-    # Environment clean
-    if options.find("quiesce") >= 0 and start_ga == "yes":
-        session.cmd("rpm -e qemu-guest-agent")
+    finally:
+        # Environment clean
+        if options.find("quiesce") >= 0 and start_ga == "yes":
+            session.cmd("rpm -e qemu-guest-agent")
 
-    # recover domain xml
-    xml_recover(vmxml_backup)
-    path = "/var/lib/libvirt/qemu/snapshot/" + vm_name
-    if os.path.isfile(path):
-        raise error.TestFail("Still can find snapshot metadata")
+        # recover domain xml
+        xml_recover(vmxml_backup)
+        path = "/var/lib/libvirt/qemu/snapshot/" + vm_name
+        if os.path.isfile(path):
+            raise error.TestFail("Still can find snapshot metadata")
 
-    # rm bad disks
-    if bad_disk is not None:
-        os.remove(bad_disk)
+        # rm bad disks
+        if bad_disk is not None:
+            os.remove(bad_disk)
