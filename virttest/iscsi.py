@@ -212,7 +212,7 @@ class Iscsi(object):
         for line in re.split("\n", target_info):
             if re.findall("Target\s+(\d+)", line):
                 target_id = re.findall("Target\s+(\d+)", line)[0]
-            elif re.findall("Backing store path:\s+(/+.+)", line):
+            if re.findall("Backing store path:\s+(/+.+)", line):
                 if self.emulated_image in line:
                     break
         else:
@@ -278,8 +278,7 @@ class Iscsi(object):
         """
         Clean up env after iscsi used.
         """
-        if self.logged_in():
-            self.logout()
+        self.logout()
         if os.path.isfile("/etc/iscsi/initiatorname.iscsi-%s" % self.id):
             cmd = " mv /etc/iscsi/initiatorname.iscsi-%s" % self.id
             cmd += " /etc/iscsi/initiatorname.iscsi"
