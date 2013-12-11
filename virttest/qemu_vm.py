@@ -1082,8 +1082,8 @@ class VM(virt_vm.BaseVM):
         devices.insert(StrDev('vmname', cmdline=add_name(devices, name)))
 
         if params.get("qemu_sandbox", "on") == "on":
-            devices.insert(StrDev('sandbox', cmdline=process_sandbox(devices, "add")))
-        elif params.get("sandbox", "off") == "off":
+            devices.insert(StrDev('qemu_sandbox', cmdline=process_sandbox(devices, "add")))
+        else:
             devices.insert(StrDev('qemu_sandbox', cmdline=process_sandbox(devices, "rem")))
 
         devs = devices.machine_by_params(params)
