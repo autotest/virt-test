@@ -197,7 +197,7 @@ systemctl mask sys-devices-virtual-tty-tty9.device
 systemctl mask sys-devices-virtual-tty-tty10.device
 systemctl mask sys-devices-virtual-tty-tty11.device
 systemctl mask sys-devices-virtual-tty-tty12.device
-yum install -y hdparm ntpdate
+yum install -y hdparm ntpdate qemu-guest-agent
 yum clean all
 mkdir -p /var/log/journal
 echo 'Post set up finished' > /dev/ttyS0
