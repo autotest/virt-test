@@ -197,13 +197,16 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("--no-downloads", action="store_true",
                            dest="no_downloads", default=False,
                            help="Do not attempt to download JeOS images")
-        general.add_option("-r", "--restore-image", action="store_true",
-                           dest="restore",
-                           help="Restore guest image from the pristine image")
-        general.add_option("-j", "--restore-image-between-tests",
+        general.add_option("-k", "--keep-image", action="store_true",
+                           dest="keep_image",
+                           help=("Don't restore the JeOS image from pristine "
+                                 "at the beginning of the test suite run "
+                                 "(faster but unsafe)"))
+        general.add_option("--keep-image-between-tests",
                            action="store_true", default=False,
-                           dest="restore_image_between_tests",
-                           help="Restore from the pristine image on *every test*")
+                           dest="keep_image_between_tests",
+                           help=("Don't restore the JeOS image from pristine "
+                                 "between tests (faster but unsafe)"))
         general.add_option("-g", "--guest-os", action="store", dest="guest_os",
                            default=None,
                            help=("Select the guest OS to be used. "
@@ -241,11 +244,10 @@ class VirtTestRunParser(optparse.OptionParser):
                            help=("Path to a data dir. "
                                  "Default path: %s" %
                                  data_dir.get_backing_data_dir()))
-        general.add_option(
-            "--restart-vm", action="store_true", dest="restart_vm",
-            default=False,
-            help=("Whether to reboot the vm between every test. "
-                          "Default: False"))
+        general.add_option("--keep-guest-running", action="store_true",
+                           dest="keep_guest_running", default=False,
+                           help=("Don't shut down guests at the end of each "
+                                 "test (faster but unsafe)"))
         general.add_option("-m", "--mem", action="store", dest="mem",
                            default="1024",
                            help=("RAM dedicated to the main VM. Default:"
@@ -657,11 +659,11 @@ class VirtTestApp(object):
             logging.info("Config provided, ignoring --tests option")
 
     def _process_restart_vm(self):
-        if self.options.restart_vm:
+        if not self.options.keep_guest_running:
             self.cartesian_parser.assign("kill_vm", "yes")
 
     def _process_restore_image_between_tests(self):
-        if self.options.restore_image_between_tests:
+        if not self.options.keep_image_between_tests:
             self.cartesian_parser.assign("restore_image", "yes")
 
     def _process_mem(self):
