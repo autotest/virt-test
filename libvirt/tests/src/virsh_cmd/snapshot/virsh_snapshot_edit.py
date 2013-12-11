@@ -70,8 +70,16 @@ def run_virsh_snapshot_edit(test, params, env):
         if pre_xml.strip() == after_xml.strip():
             logging.info("Succeed to check the xml for description and name")
         else:
-            raise error.TestFail("Fail to check the xml, pre: %s, after: %s"
-                                 % (pre_xml, after_xml))
+            # Print just the differences rather than printing both
+            # files and forcing the eyeball comparison between lines
+            elems = map(None, pre_xml.splitlines(),after_xml.splitlines())
+            for pre_line, aft_line in elems:
+                if pre_line.lstrip().strip() != aft_line.lstrip().strip():
+                    if pre_line != None:
+                        logging.debug("diff before='%s'", pre_line.lstrip().strip())
+                    if aft_line != None:
+                        logging.debug("diff  after='%s'", aft_line.lstrip().strip())
+            raise error.TestFail("Failed xml before/after comparison")
 
     try:
         # Create disk snapshot before all to make the origin image clean
@@ -100,7 +108,6 @@ def run_virsh_snapshot_edit(test, params, env):
         ret = virsh.snapshot_dumpxml(vm_name, pre_name)
         if ret.exit_status == 0:
             pre_xml = ret.stdout
-            logging.debug("pre xml is %s", pre_xml)
         else:
             raise error.TestFail("Fail to dumpxml of snapshot %s:%s" %
                                  (pre_name, ret.stderr.strip()))
@@ -129,11 +136,16 @@ def run_virsh_snapshot_edit(test, params, env):
 
         # Do edit check
         snapshots = virsh.snapshot_list(vm_name)
-        after_xml = virsh.snapshot_dumpxml(vm_name, check_name).stdout.strip()
+        after_xml = virsh.snapshot_dumpxml(vm_name, check_name).stdout
         match_str = "<description>" + snap_desc + "</description>"
-        if not re.search(match_str, after_xml):
-            raise error.TestFail("Failed to edit snapshot description, match "
-                                 "is %s, xml is %s" % (match_str, after_xml))
+        if not re.search(match_str, after_xml.strip("\n")):
+            logging.debug("Failed to edit snapshot edit_opts=%s, match=%s",
+                          edit_opts, match_str)
+            # Only print first 15 lines - they are most relevant
+            for i in range(15):
+                logging.debug("before xml=%s", pre_xml.split()[i].lstrip())
+                logging.debug(" after xml=%s", after_xml.split()[i].lstrip())
+            raise error.TestFail("Failed to edit snapshot description")
 
         # Check edit options --clone
         if snap_opt == "--clone":
