@@ -655,19 +655,24 @@ def cleanup_env(parser, options):
     :param parser: Cartesian parser with run parameters.
     :param options: Test runner options object.
     """
-    logging.info("Cleaning virt-test temp files...")
-    d = parser.get_dicts().next()
-    env_filename = os.path.join(data_dir.get_root_dir(),
-                                options.type, d.get("env", "env"))
-    env = utils_env.Env(filename=env_filename, version=Test.env_version)
-    env.destroy()
-    # Kill all tail_threads which env constructor recreate.
-    aexpect.kill_tail_threads()
-    aexpect.clean_tmp_files()
-    utils_net.clean_tmp_files()
-    data_dir.clean_tmp_files()
-    qemu_vm.clean_tmp_files()
-    logging.info("")
+    if options.no_cleanup:
+        logging.info("Option --no-cleanup requested, not cleaning temporary "
+                     "files and VM processes...")
+        logging.info("")
+    else:
+        logging.info("Cleaning tmp files and VM processes...")
+        d = parser.get_dicts().next()
+        env_filename = os.path.join(data_dir.get_root_dir(),
+                                    options.type, d.get("env", "env"))
+        env = utils_env.Env(filename=env_filename, version=Test.env_version)
+        env.destroy()
+        # Kill all tail_threads which env constructor recreate.
+        aexpect.kill_tail_threads()
+        aexpect.clean_tmp_files()
+        utils_net.clean_tmp_files()
+        data_dir.clean_tmp_files()
+        qemu_vm.clean_tmp_files()
+        logging.info("")
 
 
 def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
