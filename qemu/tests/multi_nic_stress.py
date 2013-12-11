@@ -201,8 +201,9 @@ def launch_client(sessions, servers, server_ctl, clients,
     """
     # Start netserver
     error.context("Start Netserver on guest", logging.info)
-    client_path = "/tmp/netperf-2.6.0/src/netperf"
-    server_path = "/tmp/netperf-2.6.0/src/netserver"
+    remote_dir = params.get("remote_dir", "/var/tmp")
+    client_path = os.path.join(remote_dir, "netperf-2.6.0/src/netperf")
+    server_path = os.path.join(remote_dir, "netperf-2.6.0/src/netserver")
 
     if params.get("os_type") == "windows":
         winutils_vol = utils_misc.get_winutils_vol(server_ctl)
