@@ -200,6 +200,8 @@ systemctl mask sys-devices-virtual-tty-tty12.device
 yum install -y hdparm ntpdate qemu-guest-agent
 yum clean all
 mkdir -p /var/log/journal
+dd if=/dev/zero of=/fill-up-file bs=1M
+rm -f /fill-up-file
 echo 'Post set up finished' > /dev/ttyS0
 echo Post set up finished > /dev/hvc0
 echo "OS install is completed" > /dev/ttyS0
