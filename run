@@ -186,7 +186,17 @@ class VirtTestRunParser(optparse.OptionParser):
 
         general = optparse.OptionGroup(self, 'General Options')
         general.add_option("-v", "--verbose", action="store_true",
-                           dest="verbose", help="Exhibit debug messages")
+                           dest="verbose", help=("Exhibit test "
+                                                 "messages in the console "
+                                                 "(used for debugging)"))
+        general.add_option("--console-level", action="store",
+                           dest="console_level",
+                           default="debug",
+                           help=("Log level of test messages in the console. Only valid "
+                                 "with --verbose. "
+                                 "Supported levels: " +
+                                 ", ".join(SUPPORTED_LOG_LEVELS) +
+                                 ". Default: %default"))
         general.add_option("-t", "--type", action="store", dest="type",
                            help="Choose test type (%s)" %
                            ", ".join(SUPPORTED_TEST_TYPES))
@@ -740,6 +750,17 @@ class VirtTestApp(object):
         num_level = getattr(logging, self.options.log_level.upper(), None)
         self.options.log_level = num_level
 
+        if self.options.console_level not in SUPPORTED_LOG_LEVELS:
+            _restore_stdout()
+            print("Invalid console level '%s'. Valid console levels: %s. "
+                  "Aborting..." % (self.options.console_level,
+                                   " ".join(SUPPORTED_LOG_LEVELS)))
+            sys.exit(1)
+        num_level_console = getattr(logging,
+                                    self.options.console_level.upper(),
+                                    None)
+        self.options.console_level = num_level_console
+
         if self.options.datadir:
             data_dir.set_backing_data_dir(self.options.datadir)
 
@@ -784,7 +805,7 @@ class VirtTestApp(object):
             self._process_options()
             standalone_test.reset_logging()
             standalone_test.configure_console_logging(
-                loglevel=self.options.log_level)
+                loglevel=self.options.console_level)
             standalone_test.bootstrap_tests(self.options)
             ok = standalone_test.run_tests(self.cartesian_parser, self.options)
 
