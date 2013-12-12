@@ -53,8 +53,8 @@ def run_rv_smartcard(test, params, env):
     # verify the smart card reader can be seen
     output = guest_session.cmd("lsusb")
     logging.debug("lsusb output: " + output)
-    if "Gemplus GemPC433-Swap" in output:
-        logging.info("Smartcard reader, Gemplus GemPC433-Swap detected.")
+    if "Gemalto (was Gemplus) GemPC433-Swap" in output:
+        logging.info("Smartcard reader, Gemalto GemPC433-Swap detected.")
     else:
         raise error.TestFail("No smartcard reader found")
 
