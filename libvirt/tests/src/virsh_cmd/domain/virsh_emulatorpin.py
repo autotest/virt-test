@@ -193,6 +193,9 @@ def run_virsh_emulatorpin(test, params, env):
     status_error = params.get("status_error", "no")
     change_parameters = params.get("change_parameters", "no")
 
+    # Backup original vm
+    vmxml_backup = vm_xml.VMXML.new_from_inactive_dumpxml(vm_name)
+
     test_dicts = dict(params)
     test_dicts['vm'] = vm
 
@@ -210,27 +213,30 @@ def run_virsh_emulatorpin(test, params, env):
     if cpu_list and max(cpu_list) > host_cpus - 1:
         test_dicts["status_error"] = "yes"
 
-    # positive and negative testing #########
-
-    if status_error == "no":
-        if change_parameters == "no":
-            get_emulatorpin_parameter(test_dicts)
-        else:
-            set_emulatorpin_parameter(test_dicts)
-
     cg = utils_cgroup.CgconfigService()
 
     if cgconfig == "off":
         if cg.cgconfig_is_running():
             cg.cgconfig_stop()
 
-    if status_error == "yes":
-        if change_parameters == "no":
-            get_emulatorpin_parameter(test_dicts)
-        else:
-            set_emulatorpin_parameter(test_dicts)
+    # positive and negative testing #########
+    try:
+        if status_error == "no":
+            if change_parameters == "no":
+                get_emulatorpin_parameter(test_dicts)
+            else:
+                set_emulatorpin_parameter(test_dicts)
 
-    # Recover cgconfig and libvirtd service
-    if not cg.cgconfig_is_running():
-        cg.cgconfig_restart()
-        utils_libvirtd.service_libvirtd_control("restart")
+
+        if status_error == "yes":
+            if change_parameters == "no":
+                get_emulatorpin_parameter(test_dicts)
+            else:
+                set_emulatorpin_parameter(test_dicts)
+    finally:
+        # Recover cgconfig and libvirtd service
+        if not cg.cgconfig_is_running():
+            cg.cgconfig_start()
+            utils_libvirtd.libvirtd_restart()
+        # Recover vm.
+        vmxml_backup.sync()
