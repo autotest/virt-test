@@ -4,8 +4,6 @@ Generic character device support for serial, parallel, channel, and console
 http://libvirt.org/formatdomain.html#elementCharSerial
 """
 
-from virttest.xml_utils import ElementTree
-from virttest.libvirt_xml import xcepts
 from virttest.libvirt_xml.devices import base
 
 
@@ -15,48 +13,7 @@ class CharacterBase(base.TypedDeviceBase):
 
     # Not overriding __init__ because ABC cannot hide device_tag as expected
 
-    # All accessors here will vary only by sources or targets tag
-    def _get_list(self, tag_filter):
-        dict_list = []
-        elements = self.xmltreefile.findall(tag_filter)
-        for element in elements:
-            dict_list.append(dict(element.items()))
-        return dict_list
-
-    def _set_list(self, tag_name, value):
-        xcept = xcepts.LibvirtXMLError("Must set %s child %s elements from"
-                                       " a list-like of dict-likes"
-                                       % (self.device_tag, tag_name))
-        if not isinstance(value, list):
-            raise xcept
-        # Start with clean slate
-        self._del_list(tag_name)
-        for dict_item in value:
-            if not isinstance(dict_item, dict):
-                raise xcept
-            ElementTree.SubElement(self.xmltreefile.getroot(),
-                                   tag_name, dict_item)
-        self.xmltreefile.write()
-
-    def _del_list(self, tag_filter):
-        element = self.xmltreefile.find(tag_filter)
-        while element is not None:
-            self.xmltreefile.getroot().remove(element)
-            element = self.xmltreefile.find(tag_filter)
-        self.xmltreefile.write()
-
-    def _add_item(self, prop_name, **attributes):
-        items = self[prop_name]  # sources or targets
-        items.append(attributes)
-        self[prop_name] = items
-
-    def _update_item(self, prop_name, index, **attributes):
-        items = self[prop_name]  # sources or targets
-        item = items[index]
-        item.update(attributes)
-        self[prop_name] = items
-
-    # Accessors just wrap private helpers above
+    # Accessors just wrap private helpers in UntypedDeviceBase class
     def get_sources(self):
         """
         Return a list of dictionaries containing each source's attributes.
