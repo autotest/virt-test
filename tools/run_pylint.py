@@ -107,9 +107,15 @@ def check_file(file_path):
             return 0
     pylint_opts = get_pylint_opts()
     if pylint_version >= 0.21:
-        runner = pylint.lint.Run(pylint_opts + [file_path], exit=False)
+        try:
+            runner = pylint.lint.Run(pylint_opts + [file_path], exit=False)
+        except Exception, err:
+            print "Unexpected exception checking %s: %s" % (file_path, err)
     else:
-        runner = pylint.lint.Run(pylint_opts + [file_path])
+        try:
+            runner = pylint.lint.Run(pylint_opts + [file_path])
+        except Exception, err:
+            print "Unexpected exception checking %s: %s" % (file_path, err)
 
     return runner.linter.msg_status
 
