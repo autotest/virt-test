@@ -6,6 +6,7 @@ import logging
 from StringIO import StringIO
 from virttest import xml_utils
 from virttest.libvirt_xml import base, xcepts, accessors
+from virttest.xml_utils import ElementTree
 
 
 class UntypedDeviceBase(base.LibvirtXMLBase):
@@ -65,6 +66,64 @@ class UntypedDeviceBase(base.LibvirtXMLBase):
         for key, value in properties.items():
             setattr(instance, key, value)
         return instance
+
+    # Add accessors here to be used by any elements
+    def _get_list(self, tag_filter):
+        """
+        Return a list of dictionaries containing element's attributes.
+        """
+        dict_list = []
+        elements = self.xmltreefile.findall(tag_filter)
+        for element in elements:
+            dict_list.append(dict(element.items()))
+        return dict_list
+
+    def _set_list(self, tag_name, value):
+        """
+        Set all elements to the value list of dictionaries of element's
+        attributes.
+        """
+        xcept = xcepts.LibvirtXMLError("Must set %s child %s elements from"
+                                       " a list of dictionary"
+                                       % (self.device_tag, tag_name))
+        if not isinstance(value, list):
+            raise xcept
+        # Start with clean slate
+        self._del_list(tag_name)
+        for dict_item in value:
+            if not isinstance(dict_item, dict):
+                raise xcept
+            ElementTree.SubElement(self.xmltreefile.getroot(),
+                                   tag_name, dict_item)
+        self.xmltreefile.write()
+
+    def _del_list(self, tag_filter):
+        """
+        Remove the list of dictionaries containing each element's attributes.
+        """
+        element = self.xmltreefile.find(tag_filter)
+        while element is not None:
+            self.xmltreefile.getroot().remove(element)
+            element = self.xmltreefile.find(tag_filter)
+        self.xmltreefile.write()
+
+    def _add_item(self, prop_name, **attributes):
+        """
+        Convenience method for appending an element from dictionary of
+        attributes.
+        """
+        items = self[prop_name]  # xml element name
+        items.append(attributes)
+        self[prop_name] = items
+
+    def _update_item(self, prop_name, index, **attributes):
+        """
+        Convenience method for merging values into an element's attributes
+        """
+        items = self[prop_name]  # xml element name
+        item = items[index]
+        item.update(attributes)
+        self[prop_name] = items
 
 
 class TypedDeviceBase(UntypedDeviceBase):
