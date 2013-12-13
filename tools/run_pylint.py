@@ -110,12 +110,12 @@ def check_file(file_path):
         try:
             runner = pylint.lint.Run(pylint_opts + [file_path], exit=False)
         except Exception, err:
-            print "Unexpected exception checking %s: %s" % (file_path, err)
+            return "Unexpected exception checking %s: %s" % (file_path, err)
     else:
         try:
             runner = pylint.lint.Run(pylint_opts + [file_path])
         except Exception, err:
-            print "Unexpected exception checking %s: %s" % (file_path, err)
+            return "Unexpected exception checking %s: %s" % (file_path, err)
 
     return runner.linter.msg_status
 
