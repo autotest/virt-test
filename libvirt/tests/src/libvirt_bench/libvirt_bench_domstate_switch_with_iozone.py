@@ -44,8 +44,8 @@ def run_libvirt_bench_domstate_switch_with_iozone(test, params, env):
     3) Clean up.
     """
     vms = env.get_all_vms()
-    iozone_control_file = params.get("iozone_controle_file",
-                                        "iozone.control")
+    iozone_control_file = params.get("iozone_control_file",
+                                     "iozone.control")
     timeout = int(params.get("LB_domstate_with_iozone_loop_time", "600"))
     # Run iozone on guest.
     params["test_control_file"] = iozone_control_file
