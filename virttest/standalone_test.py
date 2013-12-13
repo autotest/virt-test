@@ -601,7 +601,7 @@ def bootstrap_tests(options):
               'check_modules': check_modules,
               'online_docs_url': online_docs_url,
               'download_image': not options.no_downloads,
-              'restore_image': options.restore,
+              'restore_image': not options.keep_image,
               'interactive': False}
 
     # Tolerance we have without printing a message for the user to wait (3 s)
@@ -763,7 +763,7 @@ def run_tests(parser, options):
 
     d = parser.get_dicts().next()
 
-    if options.restore_image_between_tests:
+    if not options.keep_image_between_tests:
         logging.debug("Creating first backup of guest image")
         qemu_img = storage.QemuImg(d, data_dir.get_data_dir(), "image")
         qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
