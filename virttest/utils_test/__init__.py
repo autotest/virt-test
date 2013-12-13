@@ -28,7 +28,6 @@ import signal
 import tempfile
 import threading
 import time
-import shutil
 
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
@@ -833,7 +832,7 @@ def run_autotest(vm, session, control_path, timeout,
                                         "results",
                                         os.path.basename(server_control_path))
                 if os.path.isdir(server_result):
-                    shutil.rmtree(server_result)
+                    utils.safe_rmdir()
                 # Remove the control file for server.
                 if os.path.exists(server_control_path):
                     os.remove(server_control_path)
