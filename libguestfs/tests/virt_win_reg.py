@@ -15,6 +15,31 @@ def run_virt_win_reg(test, params, env):
     (3).Login vm to get a session.
     (4).Prepare for test.
     (5).Run virt-win-reg command.
+            Command virt-win-reg is used to export and merge Windows Registry
+        entries from a Windows guest. We can do add/remove/modify/query with
+        it.
+
+        Example:
+        * add:
+            Make sure there is no value named AddTest in 
+            [HKLM\SYSTEM\ControlSet001\Control\ComputerName\ComputerName]
+            # cat reg_file.reg
+            [HKLM\SYSTEM\ControlSet001\Control\ComputerName\ComputerName]
+            "AddTest" = "VIRTTEST"
+            # virt-win-reg Guestname/disk --merge reg_file.reg
+        * remove:
+            # cat reg_file.reg
+            [HKLM\SYSTEM\ControlSet001\Control\ComputerName\ComputerName]
+            "ComputerName" = -
+            # virt-win-reg Guestname/disk --merge reg_file.reg
+        * modify:
+            # cat reg_file.reg
+            [HKLM\SYSTEM\ControlSet001\Control\ComputerName\ComputerName
+            "ComputerName" = "VIRTTEST_v2"
+            # virt-win-reg Guestname/disk --merge reg_file.reg
+        * query:
+            # virt-win-reg domname 'HKLM\SYSTEM\ControlSet001\Control\ComputerName\ComputerName' ComputerName
+            
     (6).Verify the result.
     (7).Clean up.
     """
