@@ -1,4 +1,3 @@
-import re
 import logging
 import threading
 import time
@@ -79,6 +78,8 @@ def run(test, params, env):
     vm_ref = params.get("vm_ref", "name")
     dest_uri = params.get(
         "virsh_migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
+    src_uri = params.get(
+        "virsh_migrate_src_uri", "qemu+ssh://EXAMPLE/system")
     pre_vm_state = params.get("pre_vm_state", "running")
     status_error = "yes" == params.get("status_error", "no")
     do_migrate = "yes" == params.get("do_migrate", "yes")
@@ -97,9 +98,10 @@ def run(test, params, env):
         vm.start()
     vm.wait_for_login()
     domid = vm.get_id()
-    src_uri = vm.connect_uri
-    if re.search("EXAMPLE", dest_uri):
+    if dest_uri.count('///') or dest_uri.count('EXAMPLE'):
         raise error.TestNAError("Set your destination uri first.")
+    if src_uri.count('///') or src_uri.count('EXAMPLE'):
+        raise error.TestNAError("Set your source uri first.")
     if src_uri == dest_uri:
         raise error.TestNAError("You should not set dest uri same as local.")
 
