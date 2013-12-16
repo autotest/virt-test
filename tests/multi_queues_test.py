@@ -44,7 +44,7 @@ def run_multi_queues_test(test, params, env):
         """
         cpu_used_index = []
         for cpu_index in range(int(vm.cpuinfo.smp)):
-            if int(cpu_id) & (0b1 << cpu_index) != 0:
+            if int(cpu_id) & (1 << cpu_index) != 0:
                 cpu_used_index.append(cpu_index)
         return cpu_used_index
 

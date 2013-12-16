@@ -347,6 +347,6 @@ def run_balloon_check(test, params, env):
 
         quit_after_test = balloon_test.run_ballooning_test(expect_mem, tag)
         if quit_after_test:
-            exit()
+            return
 
     balloon_test.reset_memory()

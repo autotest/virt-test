@@ -80,18 +80,18 @@ def run_pktgen(test, params, env):
                                    vm.get_mac_address(),
                                    server_interface, run_threads)
     try:
-        #Set a run flag in env, when other case call this case as a sub
-        #backgroud process, can set run flag to False to stop this case.
         env["pktgen_run"] = True
-        start_time = time.time()
-        stop_time = start_time + pktgen_stress_timeout
-        while (env["pktgen_run"] and time.time < stop_time):
-            runner(exec_cmd, timeout= pktgen_stress_timeout)
+        try:
+            #Set a run flag in env, when other case call this case as a sub
+            #backgroud process, can set run flag to False to stop this case.
+            start_time = time.time()
+            stop_time = start_time + pktgen_stress_timeout
+            while (env["pktgen_run"] and time.time < stop_time):
+                runner(exec_cmd, timeout= pktgen_stress_timeout)
 
-    #using ping to kill the pktgen stress
-    except aexpect.ShellTimeoutError:
-        session.cmd("ping pktgen_ip")
-
+        #using ping to kill the pktgen stress
+        except aexpect.ShellTimeoutError:
+            session.cmd("ping pktgen_ip")
     finally:
         env["pktgen_run"] = False
 
