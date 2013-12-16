@@ -5,10 +5,11 @@ multi_disk_random_hotplug test for Autotest framework.
 """
 import logging
 import random
-from autotest.client.shared import error
-from virttest import qemu_devices, qemu_qtree, utils_test, env_process
-from virttest import funcatexit, arch
 import time
+from autotest.client.shared import error
+from virttest import funcatexit, arch
+from virttest import qemu_qtree, utils_test, env_process
+from virttest.qemu_devices import qcontainer
 
 
 def stop_stresser(vm, stop_cmd):
@@ -83,8 +84,8 @@ def run_multi_disk_random_hotplug(test, params, env):
         :type info_block: dict of dicts
         :param proc_scsi: Output of "/proc/scsi/scsi" guest file
         :type proc_scsi: string
-        :param qdev: qemu_devices representation
-        :type qdev: virttest.qemu_devices.DevContainer
+        :param qdev: qcontainer representation
+        :type qdev: virttest.qemu_devices.qcontainer.DevContainer
         """
         err = 0
         qtree = qemu_qtree.QtreeContainer()
@@ -109,7 +110,7 @@ def run_multi_disk_random_hotplug(test, params, env):
         """
         Inserts no_disks disks int qdev using randomized args from param_matrix
         :param qdev: qemu devices container
-        :type qdev: virttest.qemu_devices.DevContainer
+        :type qdev: virttest.qemu_devices.qcontainer.DevContainer
         :param param_matrix: Matrix of randomizable params
         :type param_matrix: list of lists
         :param no_disks: Desired number of disks
@@ -152,8 +153,8 @@ def run_multi_disk_random_hotplug(test, params, env):
             devs = qdev.images_define_by_variables(**args)
             try:
                 for dev in devs:
-                    qdev.insert(dev, force=False)
-            except qemu_devices.DeviceInsertError:
+                    qdev.insert(dev)
+            except qcontainer.DeviceInsertError:
                 # All buses are full, (TODO add bus) or remove this format
                 for dev in devs:
                     if dev in qdev:
@@ -187,7 +188,7 @@ def run_multi_disk_random_hotplug(test, params, env):
         """
         Do the actual hotplug of the new_devices using monitor monitor.
         :param new_devices: List of devices which should be hotplugged
-        :type new_devices: List of virttest.qemu_devices.QBaseDevice
+        :type new_devices: List of virttest.qemu_devices.qdevice.QBaseDevice
         :param monitor: Monitor which should be used for hotplug
         :type monitor: virttest.qemu_monitor.Monitor
         """
@@ -216,9 +217,9 @@ def run_multi_disk_random_hotplug(test, params, env):
         """
         Do the actual unplug of new_devices using monitor monitor
         :param new_devices: List of devices which should be hotplugged
-        :type new_devices: List of virttest.qemu_devices.QBaseDevice
+        :type new_devices: List of virttest.qemu_devices.qdevice.QBaseDevice
         :param qdev: qemu devices container
-        :type qdev: virttest.qemu_devices.DevContainer
+        :type qdev: virttest.qemu_devices.qcontainer.DevContainer
         :param monitor: Monitor which should be used for hotplug
         :type monitor: virttest.qemu_monitor.Monitor
         """
@@ -228,7 +229,7 @@ def run_multi_disk_random_hotplug(test, params, env):
         for device in new_devices[::-1]:
             if device in qdev:
                 time.sleep(float(params.get('wait_between_unplugs', 0)))
-                out = qdev.unplug(device, monitor, True)
+                out = qdev.simple_unplug(device, monitor)
             else:
                 continue
             if out is True:
