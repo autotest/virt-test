@@ -140,7 +140,7 @@ class NetworkXMLTest(NetworkTestBase):
         state = {'active': True,
                  'persistent': True,
                  'autostart': True}
-        self.assertDictEqual(state, new_state)
+        self.assertEqual(state, new_state)
 
         for values in itertools.product([True, False], repeat=3):
             # Change network to all possible states.
@@ -159,9 +159,9 @@ class NetworkXMLTest(NetworkTestBase):
                          'autostart': False}
             # Non-exist network should return None when retieving state.
             if not state['active'] and not state['persistent']:
-                self.assertIsNone(new_state)
+                assert new_state is None
             else:
-                self.assertDictEqual(state, new_state)
+                self.assertEqual(state, new_state)
 
 if __name__ == '__main__':
     unittest.main()

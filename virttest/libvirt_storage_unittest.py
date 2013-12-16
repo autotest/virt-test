@@ -118,7 +118,7 @@ class ExistPoolTest(PoolTestBase):
 
     def test_exist_pool(self):
         pools = self.sp.list_pools()
-        self.assertIsInstance(pools, dict)
+        assert isinstance(pools, dict)
         # Test pool_state
         self.assertIn(self.sp.pool_state("default"), ['active', 'inactive'])
         # Test pool_info
@@ -146,7 +146,7 @@ class NotExpectedPoolTest(PoolTestBase):
 
     def test_not_exist_pool(self):
         self.assertFalse(self.sp.pool_exists("NOTEXISTPOOL"))
-        self.assertIsNone(self.sp.pool_state("NOTEXISTPOOL"))
+        assert self.sp.pool_state("NOTEXISTPOOL") is None
         self.assertEqual(self.sp.pool_info("NOTEXISTPOOL"), {})
 
 

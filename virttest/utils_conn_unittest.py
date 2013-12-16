@@ -30,7 +30,7 @@ class UtilsConnTest(unittest.TestCase):
         self.assertRaises(utils_conn.ConnForbiddenError,
                           connbase.del_client_session)
 
-        self.assertIsNotNone(connbase.tmp_dir)
+        assert connbase.tmp_dir is not None
         tmp_dir = connbase.tmp_dir
 
         self.assertTrue(os.path.isdir(tmp_dir))

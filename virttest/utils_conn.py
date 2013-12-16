@@ -164,7 +164,7 @@ class ConnPrivKeyError(ConnectionError):
         self.output = output
 
     def __str__(self):
-        return ("Failed to build private key file(%s).\n"
+        return ("Failed to build private key file (%s).\n"
                 "output: %s .\n" % (self.key, self.output))
 
 
@@ -960,9 +960,9 @@ def build_server_key(tmp_dir, server_cn="TLSServer", certtool="certtool"):
 
     # make a private key
     cmd = "%s --generate-privkey > %s" % (certtool, serverkey_path)
-    CmdResult = utils.run(cmd, ignore_status=True)
-    if CmdResult.exit_status:
-        raise ConnPrivKeyError(CmdResult.stderr)
+    cmd_result = utils.run(cmd, ignore_status=True)
+    if cmd_result.exit_status:
+        raise ConnPrivKeyError(serverkey_path, cmd_result.stderr)
 
     # prepare a info file to build servercert and serverkey
     serverinfo_file = open(serverinfo_path, "w")
@@ -1001,9 +1001,9 @@ def build_CA(tmp_dir, certtool="certtool"):
 
     # make a private key
     cmd = "%s --generate-privkey > %s " % (certtool, cakey_path)
-    CmdResult = utils.run(cmd, ignore_status=True, timeout=10)
-    if CmdResult.exit_status:
-        raise ConnPrivKeyError(CmdResult.stderr)
+    cmd_result = utils.run(cmd, ignore_status=True, timeout=10)
+    if cmd_result.exit_status:
+        raise ConnPrivKeyError(cakey_path, cmd_result.stderr)
     # prepare a info file to build certificate file
     cainfo_file = open(cainfo_path, "w")
     cainfo_file.write("cn = AUTOTEST.VIRT\n")
