@@ -55,13 +55,16 @@ def test_cloned_vm(vm, params):
     # This step for this reason:
     # virt-clone will move ifcfg-xxx to a file with suffix ".bak"
     # So we need start vm then shutdown it to copy it back
+    new_vm = None
     try:
-        new_vm.start()
-        new_vm.wait_for_login(timeout=120)
-    except (virt_vm.VMStartError, aexpect.ShellError, remote.LoginError):
-        pass
+        try:
+            new_vm.start()
+            new_vm.wait_for_login(timeout=120)
+        except (virt_vm.VMStartError, aexpect.ShellError, remote.LoginError):
+            pass
     finally:
-        new_vm.destroy()
+        if new_vm is not None:
+            new_vm.destroy()
     gf.new_session()
     gf.copy_ifcfg_back()
     gf.close_session()
