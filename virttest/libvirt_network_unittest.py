@@ -159,7 +159,7 @@ class NetworkXMLTest(NetworkTestBase):
                          'autostart': False}
             # Non-exist network should return None when retieving state.
             if not state['active'] and not state['persistent']:
-                self.assertIsNone(new_state)
+                assert new_state is None
             else:
                 self.assertEqual(state, new_state)
 
