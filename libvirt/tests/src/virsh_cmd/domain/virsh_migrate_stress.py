@@ -392,6 +392,14 @@ def run_virsh_migrate_stress(test, params, env):
     if len(vm_names) < 2:
         raise error.TestNAError("Provide enough vms for migration first.")
 
+    src_uri = params.get("migrate_src_uri", "qemu+ssh://EXAMPLE/system")
+    if src_uri.count('///') or src_uri.count('EXAMPLE'):
+        raise error.TestNAError("The src_uri '%s' is invalid", src_uri)
+
+    dest_uri = params.get("migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
+    if dest_uri.count('///') or dest_uri.count('EXAMPLE'):
+        raise error.TestNAError("The dest_uri '%s' is invalid", dest_uri)
+
     # Migrated vms' instance
     vms = []
     for vm_name in vm_names:
@@ -410,8 +418,6 @@ def run_virsh_migrate_stress(test, params, env):
     stress_type = params.get("migration_stress_type")
     migration_type = params.get("migration_type")
     start_migration_vms = "yes" == params.get("start_migration_vms", "yes")
-    dest_uri = params.get("migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
-    src_uri = params.get("migrate_src_uri", "qemu+ssh://EXAMPLE/system")
     thread_timeout = int(params.get("thread_timeout", 120))
     remote_host = params.get("remote_ip")
     username = params.get("remote_user", "root")
