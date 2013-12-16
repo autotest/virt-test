@@ -22,7 +22,8 @@ class SandboxService(object):
         #   Use virsh for list/edit/modify manipulation
         self.virsh = virsh.Virsh(uri=uri, ignore_status=True)
         self.command = lvsb_base.SandboxCommandBase(params, service_name)
-        self.command.BINARY_PATH_PARAM = 'virt_sandbox_service_binary'
+        self.command.BINARY_PATH_PARAM = params.get('virt_sandbox_service_binary',
+                                                    "virt-sandbox-service")
         self.command.add_optarg('--connect', uri)
         # SpecificServiceManager is not pickleable, save init args
         self._run = utils.run
