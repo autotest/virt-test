@@ -134,7 +134,7 @@ class virt(test.test):
                         msg = "Running function: %s.run_%s()" % (
                             t_type, t_type)
                         logging.info(msg)
-                        run_func = getattr(test_module, "run_%s" % t_type)
+                        run_func = getattr(test_module, "run")
                         try:
                             run_func(self, params, env)
                             self.verify_background_errors()
