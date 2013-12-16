@@ -988,7 +988,7 @@ class DevContainer(object):
                                    strict_mode=None, media=None, imgfmt=None,
                                    pci_addr=None, scsi_hba=None, x_data_plane=None,
                                    blk_extra_params=None, scsi=None,
-                                   pci_bus='pci.0'):
+                                   pci_bus='pci.0', drv_extra_params=None):
         """
         Creates related devices by variables
         :note: To skip the argument use None, to disable it use False
@@ -1209,6 +1209,11 @@ class DevContainer(object):
                                                               filename))
         else:
             devices[-1].set_param('file', filename)
+        if drv_extra_params:
+            drv_extra_params = (_.split('=', 1) for _ in
+                                drv_extra_params.split(',') if _)
+            for key, value in drv_extra_params:
+                devices[-1].set_param(key, value)
         if not use_device:
             if fmt and fmt.startswith('scsi-'):
                 if scsi_hba == 'lsi53c895a' or scsi_hba == 'spapr-vscsi':
@@ -1362,7 +1367,8 @@ class DevContainer(object):
                                                image_params.get(
                                                    "blk_extra_params"),
                                                image_params.get("virtio-blk-pci_scsi"),
-                                               image_params.get('pci_bus', 'pci.0'))
+                                               image_params.get('pci_bus', 'pci.0'),
+                                               image_params.get("drv_extra_params"))
 
     def cdroms_define_by_params(self, name, image_params, media=None,
                                 index=None, image_boot=None,
@@ -1438,7 +1444,8 @@ class DevContainer(object):
                                                image_params.get(
                                                    "blk_extra_params"),
                                                image_params.get("virtio-blk-pci_scsi"),
-                                               image_params.get('pci_bus', 'pci.0'))
+                                               image_params.get('pci_bus', 'pci.0'),
+                                               image_params.get("drv_extra_params"))
 
     def pcic_by_params(self, name, params):
         """
