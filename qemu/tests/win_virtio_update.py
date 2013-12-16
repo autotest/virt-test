@@ -31,8 +31,8 @@ def run_win_virtio_update(test, params, env):
         while time.time() - start_time < timeout:
             vols_str = session.cmd(cdrom_chk_cmd)
 
-            if len(re.findall("CDFS.*Healthy", vols_str)) >= cdrom_num:
-                vols = re.findall(".*CDFS.*?Healthy.*\n", vols_str)
+            if len(re.findall("CDFS", vols_str)) >= cdrom_num:
+                vols = re.findall(".*CDFS.*?\n", vols_str)
                 break
         return vols
 
@@ -160,6 +160,7 @@ def run_win_virtio_update(test, params, env):
     cdroms = params.get("cdroms")
     cdrom_num = len(re.split("\s+", cdroms.strip()))
     init_timeout = int(params.get("init_timeout", "60"))
+    driver_install_timeout = int(params.get('driver_install_timeout', 720))
 
     error.context("Check the cdrom is available")
     volumes = check_cdrom(init_timeout)
@@ -178,6 +179,7 @@ def run_win_virtio_update(test, params, env):
 
     error.context("Install drivers", logging.info)
     for driver in drivers_install:
+        error.context("Install drivers %s" % driver, logging.info)
         if params.get("kill_rundll", "no") == "yes":
             kill_cmd = 'tasklist | find /I "rundll32"'
             status, tasks = session.cmd_status_output(kill_cmd)
@@ -187,7 +189,7 @@ def run_win_virtio_update(test, params, env):
         if install_cmds:
             cmd = re.sub("WIN_UTILS", vol_utils, install_cmds[driver])
             cmd = re.sub("WIN_VIRTIO", vol_virtio, cmd)
-            session.cmd(cmd)
+            session.cmd(cmd, timeout=driver_install_timeout)
             session = vm.reboot(session)
 
     if params.get("check_info") == "yes":
@@ -223,12 +225,12 @@ def run_win_virtio_update(test, params, env):
     if fail_flag:
         raise error.TestFail(fail_log)
 
-    if check_cmds:
+    if op_cmds:
         error.context("Do more operates in guest to check the driver",
                       logging.info)
         for driver in drivers_install:
-            if isinstance(check_cmds[driver], str):
+            if isinstance(op_cmds[driver], str):
                 session.cmd(cmd)
             else:
-                for cmd in check_cmds[driver]:
+                for cmd in op_cmds[driver]:
                     session.cmd(cmd)
