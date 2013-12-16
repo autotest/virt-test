@@ -1,5 +1,6 @@
 import os
 import time
+from virttest import remote
 
 from autotest.client.shared import error
 from virttest import virsh, aexpect, utils_libvirtd
@@ -46,8 +47,7 @@ def run_virsh_edit(test, params, env):
             session.sendline(edit_cmd)
             session.send('\x1b')
             session.send('ZZ')
-            # use sleep(1) to make sure the modify has been completed.
-            time.sleep(1)
+            remote.handle_prompts(session, None, None, r"[\#\$]\s*$")
             session.close()
             return True
         except:
@@ -74,7 +74,8 @@ def run_virsh_edit(test, params, env):
             virsh.destroy(guest_name)
         vcpus = vm.dominfo()["CPU(s)"]
         # Recover cpuinfo
-        status = modify_vcpu(source, dic_mode["recover"])
+        # Use name rather than source, since source could be domid
+        status = modify_vcpu(guest_name, dic_mode["recover"])
         if status and vcpus != expected_vcpu:
             return False
         return status
