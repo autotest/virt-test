@@ -120,7 +120,7 @@ class ExistPoolTest(PoolTestBase):
         pools = self.sp.list_pools()
         assert isinstance(pools, dict)
         # Test pool_state
-        self.assertIn(self.sp.pool_state("default"), ['active', 'inactive'])
+        self.assertTrue(self.sp.pool_state("default") in ['active', 'inactive'])
         # Test pool_info
         self.assertNotEqual(self.sp.pool_info("default"), {})
 
