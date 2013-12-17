@@ -622,7 +622,7 @@ def get_cgroup_mountpoint(controller):
     f_cgcon = open("/proc/mounts", "rU")
     cgconf_txt = f_cgcon.read()
     f_cgcon.close()
-    mntpt = re.findall(r"\s(\S*cgroup/\S*%s[,\ ]\S*)" % controller, cgconf_txt)
+    mntpt = re.findall(r"\s(\S*cgroup/\S*%s(?=[,\ ])\S*)" % controller, cgconf_txt)
     return mntpt[0]
 
 
