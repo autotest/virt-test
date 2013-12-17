@@ -56,7 +56,7 @@ class DeviceRemoveError(DeviceInsertError):
     """ Fail to remove device """
 
     def __init__(self, device, reason, vmdev):
-        super(DeviceRemoveError, self).__init__(device, reason, vmdev)
+        DeviceInsertError.__init__(self, device, reason, vmdev)
         self.issue = "remove"
 
 
@@ -65,7 +65,7 @@ class DeviceHotplugError(DeviceInsertError):
     """ Fail to hotplug device """
 
     def __init__(self, device, reason, vmdev):
-        super(DeviceHotplugError, self).__init__(device, reason, vmdev)
+        DeviceInsertError.__init__(self, device, reason, vmdev)
         self.issue = "hotplug"
 
 
@@ -74,7 +74,7 @@ class DeviceUnplugError(DeviceHotplugError):
     """ Fail to unplug device """
 
     def __init__(self, device, reason, vmdev):
-        super(DeviceUnplugError, self).__init__(device, reason, vmdev)
+        DeviceHotplugError.__init__(self, device, reason, vmdev)
         self.issue = "unplug"
 
 
