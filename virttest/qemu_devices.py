@@ -8,7 +8,6 @@ complete representation of VM. There are three parts:
 :copyright: 2012-2013 Red Hat Inc.
 """
 # Python imports
-import itertools
 import logging
 import os
 import re
@@ -21,24 +20,13 @@ import qemu_monitor
 import storage
 import virt_vm
 import utils_misc
+from staging.backports import itertools
 
 try:
     # pylint: disable=E0611
     from collections import OrderedDict
 except ImportError:
-    class OrderedDict(dict):
-
-        """
-        Dictionary which keeps the order of items when using .itervalues()
-        @warning: This is not the full OrderedDict implementation!
-        """
-
-        def itervalues(self, *args, **kwargs):
-            return (_[1] for _ in sorted(dict.iteritems(self, *args, **kwargs)))
-
-        def iteritems(self, *args, **kwargs):
-            return sorted(dict.iteritems(self, *args, **kwargs),
-                          key=lambda item: item[0])
+    from virttest.staging.backports.collections import OrderedDict
 
 
 class DeviceError(Exception):
@@ -68,7 +56,7 @@ class DeviceRemoveError(DeviceInsertError):
     """ Fail to remove device """
 
     def __init__(self, device, reason, vmdev):
-        super(DeviceRemoveError, self).__init__(device, reason, vmdev)
+        DeviceInsertError.__init__(self, device, reason, vmdev)
         self.issue = "remove"
 
 
@@ -77,7 +65,7 @@ class DeviceHotplugError(DeviceInsertError):
     """ Fail to hotplug device """
 
     def __init__(self, device, reason, vmdev):
-        super(DeviceHotplugError, self).__init__(device, reason, vmdev)
+        DeviceInsertError.__init__(self, device, reason, vmdev)
         self.issue = "hotplug"
 
 
@@ -86,7 +74,7 @@ class DeviceUnplugError(DeviceHotplugError):
     """ Fail to unplug device """
 
     def __init__(self, device, reason, vmdev):
-        super(DeviceUnplugError, self).__init__(device, reason, vmdev)
+        DeviceHotplugError.__init__(self, device, reason, vmdev)
         self.issue = "unplug"
 
 
