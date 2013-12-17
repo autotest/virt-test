@@ -260,35 +260,6 @@ class VM(virt_vm.BaseVM):
             logging.error("Failed to backup xml file:\n%s", detail)
             return ""
 
-    def clone(self, name=None, params=None, root_dir=None, address_cache=None,
-              copy_state=False):
-        """
-        Return a clone of the VM object with optionally modified parameters.
-        The clone is initially not alive and needs to be started using create().
-        Any parameters not passed to this function are copied from the source
-        VM.
-
-        :param name: Optional new VM name
-        :param params: Optional new VM creation parameters
-        :param root_dir: Optional new base directory for relative filenames
-        :param address_cache: A dict that maps MAC addresses to IP addresses
-        :param copy_state: If True, copy the original VM's state to the clone.
-                Mainly useful for make_create_command().
-        """
-        if name is None:
-            name = self.name
-        if params is None:
-            params = self.params.copy()
-        if root_dir is None:
-            root_dir = self.root_dir
-        if address_cache is None:
-            address_cache = self.address_cache
-        if copy_state:
-            state = self.__dict__.copy()
-        else:
-            state = None
-        return VM(name, params, root_dir, address_cache, state)
-
     def make_create_command(self, name=None, params=None, root_dir=None):
         """
         Generate a libvirt command line. All parameters are optional. If a
@@ -984,6 +955,18 @@ class VM(virt_vm.BaseVM):
         logging.debug("Set inittab for %s failed.", device)
         return False
 
+    def verify_iso_md5s(self, params):
+        if params.get("medium") != "import":
+            for cdrom in params.objects("cdroms"):
+                cdrom_params = params.object_params(cdrom)
+                iso = cdrom_params.get("cdrom")
+                if params.get("medium") == "import":
+                    break
+                iso_is_ks = os.path.basename(iso) == 'ks.iso'
+                if self.is_xen() and iso_is_ks:
+                    continue
+        super(VM, self).verify_iso_md5s(params)
+
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None, timeout=5.0,
                migration_mode=None, mac_source=None, autoconsole=True):
@@ -1024,44 +1007,7 @@ class VM(virt_vm.BaseVM):
         params = self.params
         root_dir = self.root_dir
 
-        # Verify the md5sum of the ISO images
-        for cdrom in params.objects("cdroms"):
-            if params.get("medium") == "import":
-                break
-            cdrom_params = params.object_params(cdrom)
-            iso = cdrom_params.get("cdrom")
-            iso_is_ks = os.path.basename(iso) == 'ks.iso'
-            if self.is_xen() and iso_is_ks:
-                continue
-            if iso:
-                iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
-                if not os.path.exists(iso):
-                    raise virt_vm.VMImageMissingError(iso)
-                compare = False
-                if cdrom_params.get("md5sum_1m"):
-                    logging.debug("Comparing expected MD5 sum with MD5 sum of "
-                                  "first MB of ISO file...")
-                    actual_hash = utils.hash_file(iso, 1048576, method="md5")
-                    expected_hash = cdrom_params.get("md5sum_1m")
-                    compare = True
-                elif cdrom_params.get("md5sum"):
-                    logging.debug("Comparing expected MD5 sum with MD5 sum of "
-                                  "ISO file...")
-                    actual_hash = utils.hash_file(iso, method="md5")
-                    expected_hash = cdrom_params.get("md5sum")
-                    compare = True
-                elif cdrom_params.get("sha1sum"):
-                    logging.debug("Comparing expected SHA1 sum with SHA1 sum "
-                                  "of ISO file...")
-                    actual_hash = utils.hash_file(iso, method="sha1")
-                    expected_hash = cdrom_params.get("sha1sum")
-                    compare = True
-                if compare:
-                    if actual_hash == expected_hash:
-                        logging.debug("Hashes match")
-                    else:
-                        raise virt_vm.VMHashMismatchError(actual_hash,
-                                                          expected_hash)
+        self.verify_iso_md5s(params)
 
         # Make sure the following code is not executed by more than one thread
         # at the same time
