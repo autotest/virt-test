@@ -262,7 +262,7 @@ class VM(virt_vm.BaseVM):
 
     def make_create_command(self, name=None, params=None, root_dir=None):
         """
-        Generate a libvirt command line. All parameters are optional. If a
+        Generate a virt-install command line. All parameters are optional. If a
         parameter is not supplied, the corresponding value stored in the
         class attributes is used.
 
@@ -296,6 +296,7 @@ class VM(virt_vm.BaseVM):
                nic_model -- string to pass as 'model' parameter for this
                NIC (e.g. e1000)
         """
+
         # helper function for command line option wrappers
         def has_option(help_text, option):
             return bool(re.search(r"--%s" % option, help_text, re.MULTILINE))
@@ -968,37 +969,25 @@ class VM(virt_vm.BaseVM):
         super(VM, self).verify_iso_md5s(params)
 
     @error.context_aware
-    def create(self, name=None, params=None, root_dir=None, timeout=5.0,
-               migration_mode=None, mac_source=None, autoconsole=True):
+    def create(self, name=None, params=None, root_dir=None, timeout=60):
         """
-        Start the VM by running a qemu command.
+        Start the VM by running a virt-install command
         All parameters are optional. If name, params or root_dir are not
         supplied, the respective values stored as class attributes are used.
 
         :param name: The name of the object
         :param params: A dict containing VM params
         :param root_dir: Base directory for relative filenames
-        :param migration_mode: If supplied, start VM for incoming migration
-                using this protocol (either 'tcp', 'unix' or 'exec')
-        :param migration_exec_cmd: Command to embed in '-incoming "exec: ..."'
-                (e.g. 'gzip -c -d filename') if migration_mode is 'exec'
-        :param mac_source: A VM object from which to copy MAC addresses. If not
-                specified, new addresses will be generated.
-
-        :raise VMCreateError: If qemu terminates unexpectedly
-        :raise VMKVMInitError: If KVM initialization fails
-        :raise VMHugePageError: If hugepage initialization fails
+        :param timeout:  virt-install timeout in seconds
         :raise VMImageMissingError: If a CD image is missing
         :raise VMHashMismatchError: If a CD image hash has doesn't match the
                 expected hash
-        :raise VMBadPATypeError: If an unsupported PCI assignment type is
-                requested
-        :raise VMPAError: If no PCI assignable devices could be assigned
         """
-        error.context("creating '%s'" % self.name)
-        self.destroy(free_mac_addresses=False)
+        self.destroy()
+
         if name is not None:
             self.name = name
+        error.context("creating '%s'" % self.name)
         if params is not None:
             self.params = params
         if root_dir is not None:
@@ -1011,7 +1000,7 @@ class VM(virt_vm.BaseVM):
 
         # Make sure the following code is not executed by more than one thread
         # at the same time
-        lockfile = open("/tmp/libvirt-autotest-vm-create.lock", "w+")
+        lockfile = open(virt_vm.CREATE_LOCK_FILENAME, "w+")
         fcntl.lockf(lockfile, fcntl.LOCK_EX)
 
         try:
@@ -1019,6 +1008,7 @@ class VM(virt_vm.BaseVM):
             redir_names = params.objects("redirs")
             host_ports = utils_misc.find_free_ports(
                 5000, 6000, len(redir_names))
+
             self.redirs = {}
             for i in range(len(redir_names)):
                 redir_params = params.object_params(redir_names[i])
@@ -1101,7 +1091,7 @@ class VM(virt_vm.BaseVM):
                 # some other problem happened, raise normally
                 raise
             # Wait for the domain to be created
-            utils_misc.wait_for(func=self.is_alive, timeout=60,
+            utils_misc.wait_for(func=self.is_alive, timeout=timeout,
                                 text=("waiting for domain %s to start" %
                                       self.name))
             self.uuid = virsh.domuuid(self.name,
@@ -1307,14 +1297,6 @@ class VM(virt_vm.BaseVM):
         shm = int(open(filename).read().split()[2])
         # statm stores informations in pages, translate it to MB
         return shm * 4.0 / 1024
-
-    def activate_nic(self, nic_index_or_name):
-        # TODO: Implement nic hotplugging
-        pass  # Just a stub for now
-
-    def deactivate_nic(self, nic_index_or_name):
-        # TODO: Implement nic hot un-plugging
-        pass  # Just a stub for now
 
     @error.context_aware
     def reboot(self, session=None, method="shell", nic_index=0, timeout=240):
