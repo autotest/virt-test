@@ -10,7 +10,8 @@ from string import ascii_lowercase
 from autotest.client.shared import error
 from virttest import virt_vm, virsh, remote, aexpect, utils_misc
 from virttest.libvirt_xml.vm_xml import VMXML
-
+# The backports module will take care of using the builtins if available
+from virttest.staging.backports.itertools import product, islice, count
 
 # TODO: Move all these helper classes someplace else
 class TestParams(object):

@@ -306,6 +306,7 @@ class QBaseDevice(object):
         """ :return: cmdline command to define this device """
         raise NotImplementedError
 
+    # pylint: disable=E0202
     def hotplug(self, monitor):
         """ :return: the output of monitor.cmd() hotplug command """
         if isinstance(monitor, qemu_monitor.QMPMonitor):
@@ -711,6 +712,7 @@ class QDevice(QCustomDevice):
         else:
             return True
 
+    # pylint: disable=E0202
     def verify_hotplug(self, out, monitor):
         out = monitor.info("qtree", debug=False)
         if "unknown command" in out:       # Old qemu don't have info qtree
