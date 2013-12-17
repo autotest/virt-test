@@ -8,47 +8,8 @@ import sys
 from virttest import xml_utils
 from virttest.propcan import PropCanBase
 from virttest.libvirt_xml import xcepts, base
-
-
-# Adapted from http://code.activestate.com/recipes/576847/
-# :codeauthor: Vishal Sapre
-# :license: MIT
-BIN_HEX_DICT = {
-    '0': '0000', '1': '0001', '2': '0010', '3': '0011', '4': '0100',
-    '5': '0101', '6': '0110', '7': '0111', '8': '1000', '9': '1001',
-    'a': '1010', 'b': '1011', 'c': '1100', 'd': '1101', 'e': '1110',
-    'f': '1111', 'L': ''}
-
-# match left leading zeroes, but don't match a single 0 for the case of
-# bin(0) == '0b0'
-BIN_ZSTRIP = re.compile(r'^0*(?=[01])')
-
-
-# pylint: disable=W0622
-# noinspection PyShadowingBuiltins
-def py24_bin(number):
-    """
-    Adapted from http://code.activestate.com/recipes/576847/
-    :codeauthor: Vishal Sapre
-    :license: MIT
-
-    A foolishly simple look-up method of getting binary string from an integer
-    This happens to be faster than all other ways!!!
-    """
-    # =========================================================
-    # create hex of int, remove '0x'. now for each hex char,
-    # look up binary string, append in list and join at the end.
-    # =========================================================
-    # replace leading left zeroes with '0b'
-    tmp = [BIN_HEX_DICT[hstr] for hstr in hex(number)[2:]]
-    return BIN_ZSTRIP.sub('0b', ''.join(tmp))
-
-
-if sys.version_info[0] == 2 and sys.version_info[1] < 6:
-    bin_wrapper = py24_bin
-else:
-    bin_wrapper = bin  # pylint: disable=E0602
-
+# The backports module will take care of picking the builtin if available
+from virttest.staging.backports import bin
 
 def type_check(name, thing, expected):
     """
@@ -382,7 +343,7 @@ class XMLElementInt(AccessorGeneratorBase):
     Class of accessor classes operating on element.text as an integer
     """
     __radix2func_dict__ = {0: int,
-                           2: bin_wrapper,
+                           2: bin,
                            8: oct,
                            10: int,
                            16: hex}
