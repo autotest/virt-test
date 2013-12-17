@@ -8,7 +8,6 @@ complete representation of VM. There are three parts:
 :copyright: 2012-2013 Red Hat Inc.
 """
 # Python imports
-import itertools
 import logging
 import os
 import re
@@ -21,6 +20,7 @@ import qemu_monitor
 import storage
 import virt_vm
 import utils_misc
+from staging.backports import itertools
 
 try:
     # pylint: disable=E0611

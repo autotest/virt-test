@@ -3,12 +3,12 @@
 Unit tests for Manipulator classes in libvirt_xml module.
 """
 import unittest
-import itertools
 
 import common
 import virsh
 from autotest.client.utils import CmdResult
 from libvirt_xml.network_xml import NetworkXML
+from staging.backports import itertools
 
 # The output of virsh.net_list with only default net
 _DEFAULT_NET = (' Name                 State      Autostart     Persistent\n'
