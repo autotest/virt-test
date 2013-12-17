@@ -26,19 +26,7 @@ try:
     # pylint: disable=E0611
     from collections import OrderedDict
 except ImportError:
-    class OrderedDict(dict):
-
-        """
-        Dictionary which keeps the order of items when using .itervalues()
-        @warning: This is not the full OrderedDict implementation!
-        """
-
-        def itervalues(self, *args, **kwargs):
-            return (_[1] for _ in sorted(dict.iteritems(self, *args, **kwargs)))
-
-        def iteritems(self, *args, **kwargs):
-            return sorted(dict.iteritems(self, *args, **kwargs),
-                          key=lambda item: item[0])
+    from virttest.staging.backports.collections import OrderedDict
 
 
 class DeviceError(Exception):
