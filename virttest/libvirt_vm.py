@@ -14,6 +14,7 @@ import tempfile
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc
+import utils_net
 import virt_vm
 import storage
 import aexpect
@@ -106,26 +107,29 @@ class VM(virt_vm.BaseVM):
         :param state: If provided, use this as self.__dict__
         """
 
-        if state:
-            self.__dict__ = state
-        else:
-            self.process = None
-            self.serial_ports = []
-            self.serial_console = None
-            self.redirs = {}
-            self.vnc_port = None
-            self.vnc_autoport = True
-            self.pci_assignable = None
-            self.netdev_id = []
-            self.device_id = []
-            self.pci_devices = []
-            self.uuid = None
-
+        # Even if state, don't assume init was complete
+        self.process = None
+        self.serial_ports = []
+        self.serial_console = None
+        self.redirs = {}
+        self.vnc_port = None
+        self.vnc_autoport = True
+        self.pci_assignable = None
+        self.netdev_id = []
+        self.device_id = []
+        self.pci_devices = []
+        self.uuid = None
         super(VM, self).__init__(name, params, root_dir, address_cache)
         self.spice_port = 8000
         self.vnclisten = "0.0.0.0"
         self.connect_uri = normalize_connect_uri(params.get("connect_uri",
                                                             "default"))
+        if self.is_xen():
+            self.VIRTNETCCLASS = utils_net.LibvirtXenIface
+        else:
+            self.VIRTNETCCLASS = utils_net.LibvirtQemuIface
+        if state:
+            self.__dict__ = state
 
     def is_xen(self):
         """Return true if this is a xen VM"""
@@ -133,6 +137,28 @@ class VM(virt_vm.BaseVM):
             if self.params.get('hvm_or_pv', 'hvm') == 'pv':
                 return True
         return False
+
+    def freshen_virtnet_cache(self, critical=False):
+        """
+        Try to (re)load virtnet_cache from persistent storage
+
+        :param critical: Raise exception if True.
+        """
+        self.virtnet_cache = utils_net.VirtNetLibvirt(self.VIRTNETCCLASS)
+        vrsh = virsh.Virsh(uri=self.connect_uri)
+        try:
+            self.virtnet_cache.load_from(vrsh, self.name)
+        except KeyError:
+            if not critical:
+                pass  # ignore undefined vm
+            else:
+                raise virt_vm.VMConfigMissingError(self.name,
+                                                   'libvirt definition')
+
+    def update_virtnet_cache(self):
+        """Try to store virtnet into persistent virtnet_cache storage"""
+        # Assumed to be handled automatically by libvirt or specialized test
+        pass
 
     def verify_alive(self):
         """
@@ -483,15 +509,17 @@ class VM(virt_vm.BaseVM):
 
             return result
 
-        def add_nic(help_text, nic_params):
+        def add_nic(help_text, nic):
             """
             Return additional command line params based on dict-like nic_params
+
+            :param nic: dict-like of NIC parameters
             """
-            mac = nic_params.get('mac')
-            nettype = nic_params.get('nettype')
-            netdst = nic_params.get('netdst')
-            nic_model = nic_params.get('nic_model')
-            if nettype:
+            mac = nic.get('mac')
+            nettype = nic.get('nettype')
+            netdst = nic.get('netdst')
+            nic_model = nic.get('nic_model')
+            if nettype is not None:
                 result = " --network=%s" % nettype
             else:
                 result = ""
@@ -500,20 +528,20 @@ class VM(virt_vm.BaseVM):
                 # --mac=mac)
                 if nettype != 'user':
                     result += ':%s' % netdst
-                if mac:  # possible to specify --mac w/o --network
+                if mac is not None:  # possible to specify --mac w/o --network
                     result += " --mac=%s" % mac
             else:
                 # newer libvirt (--network=mynet,model=virtio,mac=00:11)
                 if nettype != 'user':
                     result += '=%s' % netdst
-                if nettype and nic_model:  # only supported along with nettype
-                    result += ",model=%s" % nic_model
-                if nettype and mac:
-                    result += ',mac=%s' % mac
-                elif mac:  # possible to specify --mac w/o --network
-                    result += " --mac=%s" % mac
-            logging.debug("vm.make_create_command.add_nic returning: %s",
-                          result)
+                if nettype is not None:
+                    if nic_model is not None:
+                        result += ",model=%s" % nic_model
+                    if mac is not None:
+                        result += ',mac=%s' % mac
+                else:
+                    if mac is not None:  # --mac w/o --network
+                        result += " --mac=%s" % mac
             return result
 
         # End of command line option wrappers
@@ -526,7 +554,8 @@ class VM(virt_vm.BaseVM):
             root_dir = self.root_dir
 
         # Clone this VM using the new params
-        vm = self.clone(name, params, root_dir, copy_state=True)
+        vm = self.clone(name=name, params=params, root_dir=root_dir,
+                        address_cache=self.address_cache, copy_state=True)
 
         virt_install_binary = utils_misc.get_path(
             root_dir,
@@ -772,13 +801,17 @@ class VM(virt_vm.BaseVM):
                                           None,
                                           None)
 
-        # setup networking parameters
+        # make_create_command can be called w/o vm.create()
+        if vm.virtnet is None:
+            # setup networking parameters
+            vm.init_params_networking()
+            for nic in vm.virtnet:
+                nic = vm.add_nic(nic)
         for nic in vm.virtnet:
-            # make_create_command can be called w/o vm.create()
-            nic = vm.add_nic(**dict(nic))
-            logging.debug("make_create_command() setting up command for"
-                          " nic: %s" % str(nic))
             virt_install_cmd += add_nic(help_text, nic)
+
+        logging.debug("vm.make_create_command() produced networking setup: "
+                      "%s", vm.virtnet)
 
         if params.get("use_no_reboot") == "yes":
             virt_install_cmd += " --noreboot"
@@ -1039,22 +1072,17 @@ class VM(virt_vm.BaseVM):
                 self.uuid = f.read().strip()
                 f.close()
 
+            # Attempt to pull existing mac from existing libvirt defined vm
+            self.init_params_networking()
             # Generate or copy MAC addresses for all NICs
             for nic in self.virtnet:
-                nic_params = dict(nic)
-                if mac_source is not None:
-                    # Will raise exception if source doesn't
-                    # have cooresponding nic
-                    logging.debug("Copying mac for nic %s from VM %s",
-                                  nic.nic_name, mac_source.name)
-                    nic_params['mac'] = mac_source.get_mac_address(
-                        nic.nic_name)
-                # make_create_command() calls vm.add_nic (i.e. on a copy)
-                nic = self.add_nic(**nic_params)
-                logging.debug('VM.create activating nic %s' % nic)
-                self.activate_nic(nic.nic_name)
+                # Handle any static mac/ip assignments
+                self.add_nic(nic)
 
-            # Make qemu command
+            logging.debug("vm.create() produced networking setup: %s",
+                          self.virtnet)
+
+            # Make virt-install command
             install_command = self.make_create_command()
 
             logging.info("Running libvirt command (reformatted):")
@@ -1147,7 +1175,7 @@ class VM(virt_vm.BaseVM):
                                       ignore_status=ignore_status,
                                       debug=debug)
 
-    def destroy(self, gracefully=True, free_mac_addresses=True):
+    def destroy(self, gracefully=True, free_mac_addresses=None):
         """
         Destroy the VM.
 
@@ -1157,8 +1185,7 @@ class VM(virt_vm.BaseVM):
         :param gracefully: If True, an attempt will be made to end the VM
                 using a shell command before trying to end the qemu process
                 with a 'quit' or a kill signal.
-        :param free_mac_addresses: If vm is undefined with libvirt, also
-                                   release/reset associated mac address
+        :param free_mac_addresses: Unused parameter
         """
         try:
             # Is it already dead?
@@ -1187,20 +1214,15 @@ class VM(virt_vm.BaseVM):
 
         finally:
             self.cleanup_serial_console()
-        if free_mac_addresses:
-            if self.is_persistent():
-                logging.warning("Requested MAC address release from "
-                                "persistent vm %s. Ignoring." % self.name)
-            else:
-                logging.debug("Releasing MAC addresses for vm %s." % self.name)
-                for nic_name in self.virtnet.nic_name_list():
-                    self.virtnet.free_mac_address(nic_name)
+        if free_mac_addresses is not None:
+            logging.warning("Ignoring vm.destroy() parameter "
+                            "free_mac_addresses=%s" % free_mac_addresses)
 
     def remove(self):
-        self.destroy(gracefully=True, free_mac_addresses=False)
+        self.destroy(gracefully=True)
         if not self.undefine():
             raise virt_vm.VMRemoveError("VM '%s' undefine error" % self.name)
-        self.destroy(gracefully=False, free_mac_addresses=True)
+        self.destroy(gracefully=False)
         logging.debug("VM '%s' was removed", self.name)
 
     def get_uuid(self):
@@ -1341,25 +1363,25 @@ class VM(virt_vm.BaseVM):
         """
         Starts this VM.
         """
+        # Make sure address_cache knows about any static assignments
+        if getattr(self, 'virtnet', None) is None:
+            logging.debug("VM object missing networking info while starting."
+                          "Attempting to recreate from libvirt definition "
+                          "of %s", self.name)
+            # Can't build virtnet from params b/c state may have changed
+            if self.virtnet_cache is None:
+                # Normally cache isn't required, this is exception
+                self.freshen_virtnet_cache(critical=True)
+            # else assume cache is loaded + sane
+            # Create virtnet from libvirt definition
+            svc = self.virtnet_cache
+            self.virtnet = svc.convert_to(utils_net.VirtNetParams)
+        # Stuff cache with any static MAC:IP mapping
+        for nic in self.virtnet:
+            if nic.has_key('ip') and not nic.needs_mac():
+                self.address_cache[nic.mac] = nic.ip
         self.uuid = virsh.domuuid(self.name,
                                   uri=self.connect_uri).stdout.strip()
-        # Pull in mac addresses from libvirt guest definition
-        for index, nic in enumerate(self.virtnet):
-            try:
-                mac = self.get_virsh_mac_address(index)
-                if not nic.has_key('mac'):
-                    logging.debug("Updating nic %d with mac %s on vm %s"
-                                  % (index, mac, self.name))
-                    nic.mac = mac
-                elif nic.mac != mac:
-                    logging.warning("Requested mac %s doesn't match mac %s "
-                                    "as defined for vm %s", nic.mac, mac,
-                                    self.name)
-                # TODO: Checkout/Set nic_model, nettype, netdst also
-            except virt_vm.VMMACAddressMissingError:
-                logging.warning("Nic %d requested by test but not defined for"
-                                " vm %s" % (index, self.name))
-
         logging.debug("Starting vm '%s'", self.name)
         result = virsh.start(self.name, uri=self.connect_uri)
         if not result.exit_status:
