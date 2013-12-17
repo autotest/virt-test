@@ -13,7 +13,7 @@ class CharacterBase(base.TypedDeviceBase):
 
     __slots__ = ('sources', 'targets')
 
-    # Not overriding __init__ because ABC cannot hide device_tag as expected
+    # Not overriding __init__ because base cannot hide device_tag
 
     # All accessors here will vary only by sources or targets tag
     def _get_list(self, tag_filter):

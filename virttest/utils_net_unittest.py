@@ -242,7 +242,7 @@ class QemuIface(TestVirtIface):
 
 class TestVirtNetBase(unittest.TestCase):
     """
-    ABC Class for subclasses needing to test with mocked arp-cache
+    Abstract base class for subclasses needing to test with mocked arp-cache
     """
 
     test_class = utils_net.VirtNetBase
