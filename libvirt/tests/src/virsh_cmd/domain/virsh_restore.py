@@ -26,10 +26,11 @@ def run_virsh_restore(test, params, env):
     extra_param = params.get("restore_extra_param")
     pre_status = params.get("restore_pre_status")
     vm_ref = params.get("restore_vm_ref")
+    orig_vm_ref = vm_ref
 
     # run test
     if vm_ref == "" or vm_ref == "xyz":
-        status = virsh.restore(vm_ref, ignore_status=True).exit_status
+        status = virsh.restore(vm_ref, debug=True, ignore_status=True).exit_status
     else:
         if os_type == "linux":
             cmd = "cat /proc/cpuinfo"
@@ -52,9 +53,8 @@ def run_virsh_restore(test, params, env):
             virsh.start(vm_name)
         if libvirtd == "off":
             utils_libvirtd.libvirtd_stop()
-        status = virsh.restore(vm_ref, ignore_status=True).exit_status
-        if os.path.exists(tmp_file):
-            os.unlink(tmp_file)
+        status = virsh.restore(vm_ref, debug=True, ignore_status=True).exit_status
+
     if status_error == "no":
         list_output = virsh.dom_list().stdout.strip()
 
@@ -65,6 +65,10 @@ def run_virsh_restore(test, params, env):
         utils_libvirtd.libvirtd_start()
     if vm.is_alive():
         vm.destroy()
+
+    if (orig_vm_ref == "empty_new_file" or orig_vm_ref == "saved_file") and \
+       os.path.exists(orig_vm_ref):
+        os.unlink(orig_vm_ref)
 
     if status_error == "yes":
         if status == 0:
