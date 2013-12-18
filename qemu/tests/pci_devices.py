@@ -11,6 +11,7 @@ from virttest import qemu_qtree
 import logging
 import random
 import re
+import time
 
 
 class PCIBusInfo:
@@ -220,6 +221,14 @@ def add_device_usb(params, name_idxs, parent_bus, addr, device):
     return params, name_idxs
 
 
+def add_device_usb_uhci(params, name_idxs, parent_bus, addr):
+    """
+    Creates ehci usb controller
+    """
+    return add_device_usb(params, name_idxs, parent_bus,
+                          addr, ('uhci', 'ich9-usb-uhci1'))
+
+
 def add_device_usb_ehci(params, name_idxs, parent_bus, addr):
     """
     Creates ehci usb controller
@@ -236,11 +245,35 @@ def add_device_usb_xhci(params, name_idxs, parent_bus, addr):
                           addr, ('xhci', 'nec-usb-xhci'))
 
 
+def add_virtio_disk(params, name_idxs, parent_bus, addr):
+    """
+    Creates virtio disks
+    """
+    idx = name_idxs.get("virtio_disk", 0) + 1
+    name_idxs["virtio_disk"] = idx
+    name = "test_virtio_disk%d" % idx
+    params['images'] += ' %s' % name
+    params['image_name_%s' % name] = 'images/%s' % name
+    params['pci_bus_%s' % name] = parent_bus
+    params['drive_bus_%s' % name] = addr
+    params['drive_format_%s' % name] = 'virtio'
+    params['force_create_image_%s' % name] = 'yes'
+    params['remove_image_%s' % name] = 'yes'
+    params['image_size_%s' % name] = '1M'
+    if not params.get('reserved_slots_%s' % parent_bus):
+        params['reserved_slots_%s' % parent_bus] = ""
+    params['reserved_slots_%s' % parent_bus] += " %02x-00" % addr
+    logging.debug("Add test device %s virtio_disk %s addr:%s", name,
+                  parent_bus, addr)
+    return params, name_idxs
+
+
 def add_device_random(params, name_idxs, parent_bus, addr):
     """
     Add device of random type
     """
-    variants = (add_device_usb_ehci, add_device_usb_xhci)
+    variants = (add_device_usb_uhci, add_device_usb_ehci, add_device_usb_xhci,
+                add_virtio_disk)
     return random.choice(variants)(params, name_idxs, parent_bus, addr)
 
 
@@ -306,14 +339,22 @@ def run_pci_devices(test, params, env):
     add_devices = {'first': add_devices_first,
                    'all': add_devices_all}.get(test_devices,
                                                add_devices_random)
-    add_device = {'xhci': add_device_usb_xhci}.get(test_device_type,
-                                                   add_device_random)
+    add_device = {'uhci': add_device_usb_uhci,
+                  'ehci': add_device_usb_ehci,
+                  'xhci': add_device_usb_xhci,
+                  'virtio_disk': add_virtio_disk,
+                  }.get(test_device_type, add_device_random)
     name_idxs = {}
     for bus in use_buses:
         params, name_idxs = add_devices(params, name_idxs, bus, add_device)
     params['start_vm'] = 'yes'
-    env_process.preprocess_vm(test, params, env, params["main_vm"])
+    env_process.process(test, params, env, env_process.preprocess_image,
+                        env_process.preprocess_vm)
     vm = env.get_vm(params["main_vm"])
+
+    # PCI devices are initialized by firmware, which might require some time
+    # to setup. Wait 10s before getting the qtree.
+    time.sleep(10)
     qtree = qemu_qtree.QtreeContainer()
 
     error.context("Verify qtree vs. qemu devices", logging.info)
