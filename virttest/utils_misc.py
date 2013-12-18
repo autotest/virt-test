@@ -710,7 +710,6 @@ def umount(src, mount_point, fstype, verbose=True, fstype_mtab=None):
     if fstype_mtab is None:
         fstype_mtab = fstype
 
-    mount_string = "%s %s %s" % (src, mount_point, fstype)
     if is_mounted(src, mount_point, fstype, None, verbose, fstype_mtab):
         umount_cmd = "umount %s" % mount_point
         try:
@@ -740,7 +739,6 @@ def mount(src, mount_point, fstype, perm=None, verbose=True, fstype_mtab=None):
         fstype_mtab = fstype
 
     umount(src, mount_point, fstype, verbose, fstype_mtab)
-    mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
 
     if is_mounted(src, mount_point, fstype, perm, verbose, fstype_mtab):
         logging.debug("%s is already mounted in %s with %s",
@@ -781,7 +779,11 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
 
     mount_point = os.path.realpath(mount_point)
     if fstype not in ['nfs', 'smbfs', 'glusterfs']:
-        src = os.path.realpath(src)
+        if src:
+            src = os.path.realpath(src)
+        else:
+            # Allow no passed src(None or "")
+            src = ""
     mount_string = "%s %s %s %s" % (src, mount_point, fstype_mtab, perm)
     if mount_string.strip() in file("/etc/mtab").read():
         logging.debug("%s is successfully mounted", src)
