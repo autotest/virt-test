@@ -80,7 +80,7 @@ def run_virsh_setmaxmem(test, params, env):
 
     def is_in_range(actual, expected, error_percent):
         deviation = 100 - (100 * (float(actual) / float(expected)))
-        logging.debug("Deviation: %0.2f%%" % float(deviation))
+        logging.debug("Deviation: %0.2f%%", float(deviation))
         return float(deviation) <= float(error_percent)
 
     def print_debug_stats(original_vmxml_mem, original_dominfo_mem,
@@ -111,6 +111,10 @@ def run_virsh_setmaxmem(test, params, env):
 
     # Gather environment parameters
     vm = env.get_vm(vm_name)
+
+    # Backup original XML
+    original_vmxml = vm_xml.VMXML.new_from_inactive_dumpxml(vm_name)
+
     original_vmxml_mem = vmxml_max_mem(vm_name)
 
     original_dominfo_mem = vm.get_max_mem()
@@ -140,51 +144,39 @@ def run_virsh_setmaxmem(test, params, env):
     if status_error:
         logging.info("Error Test: Expecting an error to occur!")
 
-    result = virsh.setmaxmem(**dargs)
-    status = result.exit_status
+    try:
+        result = virsh.setmaxmem(**dargs)
+        status = result.exit_status
 
-    # Gather status if not running error test
-    start_status = 0     # Check can guest be started after maxmem-modified.
-    if not status_error:
-        if vm.state() == "shut off":
-            try:
-                vm.start()
-            except virt_vm.VMStartError, detail:
-                start_status = 1
-                logging.error("Start after VM's max mem modified failed:%s",
-                              detail)
+        # Gather status if not running error test
+        start_status = 0    # Check can guest be started after maxmem-modified.
+        if not status_error:
+            if vm.state() == "shut off":
+                try:
+                    vm.start()
+                except virt_vm.VMStartError, detail:
+                    start_status = 1
+                    logging.error("Start after VM's maxmem modified failed:%s",
+                                  detail)
 
-        # Actual results
-        test_vmxml_mem = vmxml_max_mem(vm_name)
-        test_dominfo_mem = vm.get_max_mem()
+            # Actual results
+            test_vmxml_mem = vmxml_max_mem(vm_name)
+            test_dominfo_mem = vm.get_max_mem()
 
-        # Expected results for both vmxml and dominfo
-        if sizearg == "yes":
-            expected_mem = int(dargs["sizearg"])
+            # Expected results for both vmxml and dominfo
+            if sizearg == "yes":
+                expected_mem = int(dargs["sizearg"])
+            else:
+                expected_mem = int(dargs["size"])
+
+            print_debug_stats(original_vmxml_mem, original_dominfo_mem,
+                              expected_mem, test_vmxml_mem, test_dominfo_mem)
+
         else:
-            expected_mem = int(dargs["size"])
-
-        print_debug_stats(original_vmxml_mem, original_dominfo_mem,
-                          expected_mem, test_vmxml_mem, test_dominfo_mem)
-
-    else:
-        if vm.state() == "paused":
-            vm.resume()
-
-    # Restore need vm to be shut off.
-    if vm.state() != "shut off":
-        vm.destroy()
-
-    if status is 0:  # Restore original memory
-        restore_status = virsh.setmaxmem(domainarg=vm_name,
-                                         sizearg=original_dominfo_mem,
-                                         ignore_status=True).exit_status
-        if restore_status:
-            logging.warning("Failed to restore VM's original memory to "
-                            "%s KiB", original_dominfo_mem)
-    else:
-        # virsh setmaxmem failed, no need to restore
-        pass
+            if vm.state() == "paused":
+                vm.resume()
+    finally:
+        original_vmxml.sync()
 
     # Don't care about memory comparison on error test
     if status_error:
