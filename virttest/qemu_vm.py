@@ -586,11 +586,19 @@ class VM(virt_vm.BaseVM):
                     cmd += "%s" % netdev_extra_params
             else:
                 cmd = " -net %s,vlan=%d" % (mode, vlan)
-            if mode == "tap" and tapfds:
-                if (int(queues)) > 1 and ',fds=' in devices.get_help_text():
-                    cmd += ",fds=%s" % tapfds
-                else:
-                    cmd += ",fd=%s" % tapfds
+
+            if mode == "tap":
+                if script:
+                    cmd += ",script='%s'" % script
+                    cmd += ",downscript='%s'" % (downscript or "no")
+                    if ifname:
+                        cmd += ",ifname='%s'" % ifname
+                elif tapfds:
+                    if ((int(queues)) > 1
+                         and ',fds=' in devices.get_help_text()):
+                        cmd += ",fds=%s" % tapfds
+                    else:
+                        cmd += ",fd=%s" % tapfds
             elif mode == "user":
                 if tftp and "[,tftp=" in devices.get_help_text():
                     cmd += ",tftp='%s'" % tftp
@@ -598,13 +606,8 @@ class VM(virt_vm.BaseVM):
                     cmd += ",bootfile='%s'" % bootfile
                 if "[,hostfwd=" in devices.get_help_text():
                     for host_port, guest_port in hostfwd:
-                        cmd += ",hostfwd=tcp::%s-:%s" % (host_port, guest_port)
-            else:
-                if ifname:
-                    cmd += ",ifname='%s'" % ifname
-                if script:
-                    cmd += ",script='%s'" % script
-                cmd += ",downscript='%s'" % (downscript or "no")
+                        cmd += ",hostfwd=tcp::%s-:%s" % (host_port,
+                                                         guest_port)
 
             return cmd
 
