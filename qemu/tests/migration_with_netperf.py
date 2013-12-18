@@ -1,6 +1,7 @@
 import logging
+from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_netperf
+from virttest import utils_netperf, utils_misc, data_dir
 
 
 @error.context_aware
@@ -17,6 +18,17 @@ def run_migration_with_netperf(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+    def dlink_preprcess(download_link):
+        """
+        Preprocess the download link
+        """
+        if not download_link:
+            raise error.TestNAError("Can not get the netperf download_link")
+        if not utils.is_url(download_link):
+            download_link = utils_misc.get_path(data_dir.get_deps_dir(),
+                                                download_link)
+        return download_link
+
 
     login_timeout = int(params.get("login_timeout", 360))
     mig_timeout = float(params.get("mig_timeout", "3600"))
@@ -28,14 +40,15 @@ def run_migration_with_netperf(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
-
     guest_address = vm.get_address()
-    download_link = params.get("netperf_download_link")
+
+    download_link = dlink_preprcess(params.get("netperf_download_link"))
     md5sum = params.get("pkg_md5sum")
     server_download_link = params.get("server_download_link", download_link)
     server_md5sum = params.get("server_md5sum", md5sum)
-    server_path = params.get("server_path", "/tmp")
-    client_path = params.get("client_path", "/tmp")
+    server_download_link = dlink_preprcess(server_download_link)
+    server_path = params.get("server_path", "/tmp/server.tar.bz2")
+    client_path = params.get("client_path", "/tmp/client.tar.bz2")
 
     username = params.get("username", "root")
     password = params.get("password", "redhat")
@@ -56,7 +69,8 @@ def run_migration_with_netperf(test, params, env):
                                                  password=password)
 
     try:
-        session.cmd("service iptables stop; iptables -F || true")
+        if params.get("os_type") == "linux":
+            session.cmd("iptables -F", ignore_all_errors=True)
         error.base_context("Run netperf test between host and guest")
         error.context("Start netserver in guest.", logging.info)
         netperf_server.start()
