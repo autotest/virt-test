@@ -66,7 +66,7 @@
 							<Key>/IMAGE/NAME</Key>
               <!--This index depends on your install ISO. Please update to a proper one if install failed. http://technet.microsoft.com/en-us/library/ff716384.aspx -->
               <!-- use "dism /get-wiminfo /wimfile:D:\sources\install.wim" to know which value should be used.-->
-							<Value>Windows Server 2012 R2 SERVERDATACENTER</Value>
+							<Value>Windows 8.1 Enterprise</Value>
 						</MetaData>
 					</InstallFrom>
 					<InstallTo>
@@ -200,7 +200,7 @@
 					<Order>13</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c Dism /online /enable-feature /norestart /featurename:NetFx3 /All /LimitAccess /logpath:C:\install-NetFx3-log.txt</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c Dism /online /enable-feature /norestart /featurename:NetFx3 /All /Source:D:\sources\sxs /LimitAccess /logpath:C:\install-NetFx3-log.txt</CommandLine>
           <!-- Enable .Net Framework version 3.X, and write down the log -->
 					<Order>14</Order>
 				</SynchronousCommand>
@@ -213,7 +213,7 @@
 					<Order>16</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c Dism /online /enable-feature /norestart /featurename:NetFx3 /All /Source:D:\sources\sxs /LimitAccess /logpath:C:\install-NetFx3-log.txt</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c Dism /online /enable-feature /norestart /All /LimitAccess /featurename:MicrosoftWindowsPowerShell /logpath:C:\install-MicrosoftWindowsPowerShell-log.txt</CommandLine>
           <!-- Enable PowerShell, and write down the log -->
           <!-- Packages for each OS: http://technet.microsoft.com/en-us/library/ff699034.aspx -->
 					<Order>17</Order>
