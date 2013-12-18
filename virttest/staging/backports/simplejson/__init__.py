@@ -124,7 +124,7 @@ OrderedDict = _import_OrderedDict()
 
 def _import_c_make_encoder():
     try:
-        from simplejson._speedups import make_encoder
+        from _speedups import make_encoder
         return make_encoder
     except ImportError:
         return None
