@@ -4,6 +4,7 @@ import re
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import virsh, utils_test
+from virttest.libvirt_xml import vm_xml
 
 
 def run_virsh_vcpupin(test, params, env):
@@ -116,42 +117,48 @@ def run_virsh_vcpupin(test, params, env):
     # Get status of this case.
     status_error = ("yes" == params.get("status_error", "no"))
 
-    # Run cases when guest is shutoff.
-    if vm.is_dead() and (params.get("start_vm") == "no"):
-        run_and_check_vcpupin(args, 0, 0, "", 0)
-        return
-    # Get the host cpu count
-    host_cpu_count = utils.count_cpus()
-    if (int(host_cpu_count) < 2) and (not cpu_list == "x"):
-        raise error.TestNAError("We need more cpus on host in this case "
-                                "for the cpu_list=%s. But current number of "
-                                "cpu on host is %s."
-                                % (cpu_list, host_cpu_count))
+    # Backup for recovery.
+    vmxml_backup = vm_xml.VMXML.new_from_inactive_dumpxml(vm_name)
 
-    # Get the guest vcpu count
-    guest_vcpu_count = virsh.vcpucount(vm_name,
-                                       "--live --active").stdout.strip()
+    try:
+        # Run cases when guest is shutoff.
+        if vm.is_dead() and (params.get("start_vm") == "no"):
+            run_and_check_vcpupin(args, 0, 0, "", 0)
+            return
+        # Get the host cpu count
+        host_cpu_count = utils.count_cpus()
+        if (int(host_cpu_count) < 2) and (not cpu_list == "x"):
+            raise error.TestNAError("We need more cpus on host in this case "
+                                    "for the cpu_list=%s. But current number "
+                                    "of cpu on host is %s."
+                                    % (cpu_list, host_cpu_count))
 
-    # Run test case
-    for vcpu in range(int(guest_vcpu_count)):
-        if cpu_list == "x":
-            for cpu in range(int(host_cpu_count)):
-                run_and_check_vcpupin(args, vcpu, str(cpu), options, pid)
-        else:
-            cpu_max = int(host_cpu_count) - 1
-            if cpu_list == "x-y":
-                cpus = "0-%s" % cpu_max
-            elif cpu_list == "x,y":
-                cpus = "0,%s" % cpu_max
-            elif cpu_list == "x-y,^z":
-                cpus = "0-%s,^%s" % (cpu_max, cpu_max)
-            elif cpu_list == "r":
-                cpus = "r"
-            elif cpu_list == "-1":
-                cpus = "-1"
-            elif cpu_list == "out_of_max":
-                cpus = str(cpu_max + 1)
+        # Get the guest vcpu count
+        guest_vcpu_count = virsh.vcpucount(vm_name,
+                                           "--live --active").stdout.strip()
+        # Run test case
+        for vcpu in range(int(guest_vcpu_count)):
+            if cpu_list == "x":
+                for cpu in range(int(host_cpu_count)):
+                    run_and_check_vcpupin(args, vcpu, str(cpu), options, pid)
             else:
-                raise error.TestNAError("Cpu_list=%s is not recognized."
-                                        % cpu_list)
-            run_and_check_vcpupin(args, vcpu, cpus, options, pid)
+                cpu_max = int(host_cpu_count) - 1
+                if cpu_list == "x-y":
+                    cpus = "0-%s" % cpu_max
+                elif cpu_list == "x,y":
+                    cpus = "0,%s" % cpu_max
+                elif cpu_list == "x-y,^z":
+                    cpus = "0-%s,^%s" % (cpu_max, cpu_max)
+                elif cpu_list == "r":
+                    cpus = "r"
+                elif cpu_list == "-1":
+                    cpus = "-1"
+                elif cpu_list == "out_of_max":
+                    cpus = str(cpu_max + 1)
+                else:
+                    raise error.TestNAError("Cpu_list=%s is not recognized."
+                                            % cpu_list)
+                run_and_check_vcpupin(args, vcpu, cpus, options, pid)
+    finally:
+        # Recover xml of vm.
+        vmxml_backup.sync()
