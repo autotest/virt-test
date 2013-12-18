@@ -685,6 +685,12 @@ class Spawn(object):
         """
         return _locked(self.lock_server_running_filename)
 
+    def is_defunct(self):
+        """
+        Return True if the process is defunct (zombie).
+        """
+        return utils_misc.process_or_children_is_defunct(self.get_pid())
+
     def kill(self, sig=signal.SIGKILL):
         """
         Kill the child process if alive

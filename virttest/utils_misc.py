@@ -206,6 +206,22 @@ def kill_process_tree(pid, sig=signal.SIGKILL):
     safe_kill(pid, signal.SIGCONT)
 
 
+def process_or_children_is_defunct(ppid):
+    """Verify if any processes from PPID is defunct.
+
+    Attempt to verify if parent process and any children from PPID is defunct
+    (zombie) or not.
+    :param ppid: The parent PID of the process to verify.
+    """
+    defunct = False
+    for pid in utils.get_children_pids(ppid):
+        cmd = "ps --no-headers -o cmd %d" % int(pid)
+        proc_name = utils.system_output(cmd, ignore_status=True)
+        if '<defunct>' in proc_name:
+            defunct = True
+            break
+    return defunct
+
 # The following are utility functions related to ports.
 
 def is_port_free(port, address):
