@@ -208,9 +208,9 @@ def run_virsh_migrate_multi_vms(test, params, env):
                                                dest_ip=local_host)
 
     # Don't allow the defaults.
-    if srcuri.count('///') or src_uri.count('EXAMPLE'):
+    if srcuri.count('///') or srcuri.count('EXAMPLE'):
         raise error.TestNAError("The srcuri '%s' is invalid", srcuri)
-    if desturi.count('///') or dest_uri.count('EXAMPLE'):
+    if desturi.count('///') or desturi.count('EXAMPLE'):
         raise error.TestNAError("The desturi '%s' is invalid", desturi)
 
     # Prepare MigrationHelper instance

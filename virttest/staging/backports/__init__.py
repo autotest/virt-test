@@ -6,7 +6,7 @@ but are standard in more recent versions.
 import re, sys
 
 # Import backported modules
-import json
+import simplejson
 import collections
 import itertools
 if not hasattr(itertools, 'product'):
