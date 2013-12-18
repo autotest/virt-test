@@ -134,10 +134,6 @@ def preprocess_vm(test, params, env, name):
                 vm.create(migration_mode=params.get("migration_mode"),
                           migration_fd=params.get("migration_fd"),
                           migration_exec_cmd=params.get("migration_exec_cmd_dst"))
-            # Update mac and IP info for assigned device
-            # NeedFix: Can we find another way to get guest ip?
-            if params.get("mac_changeable") == "yes":
-                utils_net.update_mac_ip_address(vm, params)
     elif not vm.is_alive():    # VM is dead and won't be started, update params
         vm.devices = None
         vm.params = params

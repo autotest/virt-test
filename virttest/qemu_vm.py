@@ -2164,6 +2164,11 @@ class VM(virt_vm.BaseVM):
                         else:
                             raise e
 
+            # Update mac and IP info for assigned device
+            # NeedFix: Can we find another way to get guest ip?
+            if params.get("mac_changeable") == "yes":
+                utils_net.update_mac_ip_address(self, params)
+
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
