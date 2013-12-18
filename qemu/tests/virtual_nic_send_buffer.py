@@ -63,11 +63,11 @@ def run_virtual_nic_send_buffer(test, params, env):
         sessions.append(vm.wait_for_login(timeout=timeout))
         addresses.append(vm.get_address())
 
-    logging.info("Creating %dMb file on host", filesize)
-    cmd = dd_cmd % (host_file, filesize)
-    utils.run(cmd)
-    orig_md5 = utils.hash_file(host_file, method="md5")
-
+    if params.get("copy_protocol", ""):
+        logging.info("Creating %dMb file on host", filesize)
+        cmd = dd_cmd % (host_file, filesize)
+        utils.run(cmd)
+        orig_md5 = utils.hash_file(host_file, method="md5")
     try:
         if "tcp" in params.get("copy_protocol", ""):
             error.context("Transfer data from host to each guest")
