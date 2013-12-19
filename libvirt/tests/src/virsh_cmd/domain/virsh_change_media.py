@@ -2,7 +2,7 @@ import os
 import shutil
 import logging
 from autotest.client.shared import error, utils
-from virttest import virsh, data_dir, virt_vm
+from virttest import virsh, data_dir, virt_vm, utils_misc
 from virttest.libvirt_xml import vm_xml
 
 
@@ -44,7 +44,7 @@ def run(test, params, env):
         if action != "--eject ":
             error.context("Checking guest %s files" % target_device)
             if target_device == "hdc":
-                mount_cmd = "mount /dev/cdrom /media"
+                mount_cmd = "mount /dev/sr0 /media"
             else:
                 session.cmd("mknod /dev/fd0 b 2 0")
                 mount_cmd = "mount /dev/fd0 /media"
@@ -55,7 +55,7 @@ def run(test, params, env):
         else:
             error.context("Ejecting guest cdrom files")
             if target_device == "hdc":
-                if session.cmd_status("mount /dev/cdrom /media -o loop") == 32:
+                if session.cmd_status("mount /dev/sr0 /media -o loop") == 32:
                     logging.info("Eject succeeded")
             else:
                 session.cmd("mknod /dev/fd0 b 2 0")
@@ -103,7 +103,7 @@ def run(test, params, env):
             cmd_options += " --config"
 
         # Give domain the ISO image file
-        virsh.update_device(domainarg=vm_name,
+        return virsh.update_device(domainarg=vm_name,
                             filearg=update_iso_xml, flagstr=cmd_options,
                             debug=True)
 
@@ -128,7 +128,7 @@ def run(test, params, env):
         raise error.TestNAError("Got a invalid device type:/n%s" % device_type)
 
     # Backup for recovery.
-    vmxml_backup = vm_xml.VMXML.new_from_dumpxml(vm_name, options="--inactive")
+    vmxml_backup = vm_xml.VMXML.new_from_inactive_dumpxml(vm_name)
 
     iso_dir = os.path.join(data_dir.get_tmp_dir(), "tmp")
     old_iso = os.path.join(iso_dir, old_iso_name)
@@ -161,7 +161,13 @@ def run(test, params, env):
         vm.start()
 
     # If test target is floppy, you need to set selinux to Permissive mode.
-    update_device(vm_name, init_iso, options, start_vm)
+    result = update_device(vm_name, init_iso, options, start_vm)
+
+    # If the selinux is set to enforcing, if we FAIL, then just SKIP
+    force_SKIP = False
+    if result.exit_status == 1 and utils_misc.selinux_enforcing() and \
+       result.stderr.count("unable to execute QEMU command 'change':"):
+        force_SKIP = True
 
     # Libvirt will ignore --source when action is eject
     if action == "--eject ":
@@ -221,6 +227,10 @@ def run(test, params, env):
     # Positive testing
     elif status_error == "no":
         if status:
+            if force_SKIP:
+                raise error.TestNAError("SELinux is set to enforcing and has "
+                                        "resulted in this test failing to open "
+                                        "the iso file for a floppy.")
             raise error.TestFail("Unexpected error (positive testing). "
                                  "Output: %s" % result.stderr.strip())
         else:
