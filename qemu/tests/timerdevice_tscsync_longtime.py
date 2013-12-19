@@ -7,7 +7,7 @@ from virttest import data_dir
 
 
 @error.context_aware
-def run_timerdevice_tscsync_longtime(test, params, env):
+def run(test, params, env):
     """
     Timer device check TSC synchronity for long time test:
 

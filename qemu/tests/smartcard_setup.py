@@ -13,7 +13,7 @@ from virttest import utils_misc, utils_spice, aexpect
 from autotest.client.shared import error
 
 
-def run_smartcard_setup(test, params, env):
+def run(test, params, env):
     """
     Simple setup test to create certs on the client to be passed to VM's
     smartcard.

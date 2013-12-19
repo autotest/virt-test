@@ -8,7 +8,7 @@ from virttest import utils_misc, data_dir
 
 
 @error.context_aware
-def run_block_stream_drop_backingfile(test, params, env):
+def run(test, params, env):
     """
     block_stream_without_backingfile test:
     1). bootup guest

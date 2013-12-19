@@ -5,7 +5,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_live_snapshot_base(test, params, env):
+def run(test, params, env):
     """
     live_snapshot_base test:
     1). Boot up guest

@@ -7,7 +7,7 @@ from virttest import utils_test, utils_net, aexpect
 
 
 @error.context_aware
-def run_nic_promisc(test, params, env):
+def run(test, params, env):
     """
     Test nic driver in promisc mode:
 

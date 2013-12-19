@@ -5,7 +5,7 @@ from virttest import utils_test, utils_net
 
 
 @error.context_aware
-def run_multi_nics_verify(test, params, env):
+def run(test, params, env):
     """
     Verify guest NIC numbers again whats provided in test config file.
 

@@ -125,7 +125,7 @@ class NFSCorruptConfig(object):
 
 
 @error.context_aware
-def run_nfs_corrupt(test, params, env):
+def run(test, params, env):
     """
     Test if VM paused when image NFS shutdown, the drive option 'werror' should
     be stop, the drive option 'cache' should be none.

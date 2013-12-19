@@ -3,7 +3,7 @@ from virttest import virsh, utils_libvirtd
 from xml.dom.minidom import parseString
 
 
-def run_virsh_domifstat(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh domifstat.
 

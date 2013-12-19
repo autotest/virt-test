@@ -37,7 +37,7 @@ def some_failed(failed_list):
     return False
 
 
-def run_lvsb_date(test, params, env):
+def run(test, params, env):
     """
     Executes date command in a sanbox and verifies it is correct
 

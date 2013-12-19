@@ -7,7 +7,7 @@ from virttest import utils_test, remote, virt_vm, utils_misc, qemu_monitor
 
 
 @error.context_aware
-def run_migration_multi_host_firewall_block(test, params, env):
+def run(test, params, env):
     """
     KVM multi-host migration test:
 

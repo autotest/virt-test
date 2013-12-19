@@ -145,7 +145,7 @@ def set_numa_parameter(params):
                                      " inconsistent with numatune XML")
 
 
-def run_virsh_numatune(test, params, env):
+def run(test, params, env):
     """
     Test numa tuning
 

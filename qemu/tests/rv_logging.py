@@ -12,7 +12,7 @@ from autotest.client.shared import error
 from virttest import utils_misc, utils_spice
 
 
-def run_rv_logging(test, params, env):
+def run(test, params, env):
     """
     Tests the logging of remote-viewer
 

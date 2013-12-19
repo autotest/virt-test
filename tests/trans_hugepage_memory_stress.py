@@ -11,7 +11,7 @@ except ImportError:
 
 
 @error.context_aware
-def run_trans_hugepage_memory_stress(test, params, env):
+def run(test, params, env):
     """
     Run stress as a memory stress in guest for THP testing
 

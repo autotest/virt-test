@@ -2,7 +2,7 @@ from autotest.client.shared import error
 from virttest import qemu_monitor
 
 
-def run_qmp_basic(test, params, env):
+def run(test, params, env):
     """
     QMP Specification test-suite: this checks if the *basic* protocol conforms
     to its specification, which is file QMP/qmp-spec.txt in QEMU's source tree.

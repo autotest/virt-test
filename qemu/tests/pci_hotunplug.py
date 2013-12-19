@@ -5,7 +5,7 @@ from virttest import utils_misc, utils_test
 
 
 @error.context_aware
-def run_pci_hotunplug(test, params, env):
+def run(test, params, env):
     """
     Test hot unplug of PCI devices.
 

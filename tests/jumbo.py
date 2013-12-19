@@ -7,7 +7,7 @@ from virttest import utils_misc, utils_test, utils_net
 
 
 @error.context_aware
-def run_jumbo(test, params, env):
+def run(test, params, env):
     """
     Test the RX jumbo frame function of vnics:
 

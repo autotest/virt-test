@@ -8,7 +8,7 @@ from autotest.client import utils
 from autotest.client.shared import software_manager
 
 
-def run_install(test, params, env):
+def run(test, params, env):
     """
     Installs virtualization software using the selected installers
 

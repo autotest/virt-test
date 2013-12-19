@@ -444,7 +444,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         self.setup_gagent_in_guest(params, self.vm)
 
 
-def run_qemu_guest_agent(test, params, env):
+def run(test, params, env):
     """
     Test qemu guest agent, this case will:
     1) Start VM with virtio serial port.

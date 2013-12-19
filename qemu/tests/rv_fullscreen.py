@@ -12,7 +12,7 @@ from autotest.client.shared import error
 from virttest.aexpect import ShellCmdError
 
 
-def run_rv_fullscreen(test, params, env):
+def run(test, params, env):
     """
     Tests the --full-screen option
     Positive test: full_screen param = yes, verify guest res = client res

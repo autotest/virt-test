@@ -34,7 +34,7 @@ class DriveMirrorPowerdown(drive_mirror_stress.DriveMirrorStress):
         self.vm = vm
 
 
-def run_drive_mirror_powerdown(test, params, env):
+def run(test, params, env):
     """
     drive_mirror_powerdown test:
     1). boot guest, do kernel build

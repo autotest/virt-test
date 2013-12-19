@@ -2,7 +2,7 @@ import os
 from autotest.client.shared import error
 
 
-def run_getfd(test, params, env):
+def run(test, params, env):
     """
     Test QEMU's getfd command
 

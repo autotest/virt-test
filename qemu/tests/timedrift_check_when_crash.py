@@ -8,7 +8,7 @@ from virttest.virt_vm import VMDeadKernelCrashError
 
 
 @error.context_aware
-def run_timedrift_check_when_crash(test, params, env):
+def run(test, params, env):
     """
     Time clock offset check when guest crash/bsod test:
 

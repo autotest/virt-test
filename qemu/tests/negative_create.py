@@ -8,7 +8,7 @@ class VMCreateSuccess(Exception):
         return "VM succeeded to create. This was not expected"
 
 
-def run_negative_create(test, params, env):
+def run(test, params, env):
     """
     :param test: kvm test object
     :param params: Dictionary with the test parameters

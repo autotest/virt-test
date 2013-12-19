@@ -90,7 +90,7 @@ def time_diff_host_guest(host_guest_time_before,
 
 
 @error.context_aware
-def run_timedrift_no_net_win(test, params, env):
+def run(test, params, env):
     """
     Test suspend commands in qemu guest agent.
 

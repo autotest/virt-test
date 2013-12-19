@@ -5,7 +5,7 @@ from virttest import env_process, utils_misc
 
 
 @error.context_aware
-def run_enforce_quit(test, params, env):
+def run(test, params, env):
     """
     enforce quit test:
     steps:

@@ -6,7 +6,7 @@ from autotest.client.shared import error
 
 # This decorator makes the test function aware of context strings
 @error.context_aware
-def run_hello_world(test, params, env):
+def run(test, params, env):
     """
     QEMU 'Hello, world!' test
 

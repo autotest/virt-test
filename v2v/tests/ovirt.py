@@ -18,7 +18,7 @@ def get_args_dict(params):
     return args_dict
 
 
-def run_ovirt(test, params, env):
+def run(test, params, env):
     """
     Test ovirt class
     """

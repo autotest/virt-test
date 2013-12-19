@@ -14,7 +14,7 @@ from virttest.libvirt_xml.devices.controller import Controller
 from virttest import data_dir
 
 
-def run_libvirt_scsi(test, params, env):
+def run(test, params, env):
     # Get variables.
     status_error = ('yes' == params.get("status_error", 'no'))
     img_type = ('yes' == params.get("libvirt_scsi_img_type", "no"))

@@ -167,7 +167,7 @@ def iface_trans_rollback(params):
                              % status_error)
 
 
-def run_virsh_iface_trans(test, params, env):
+def run(test, params, env):
     """
     Test the network transaction and cover virsh iface-{begin,commit,rollback}
 

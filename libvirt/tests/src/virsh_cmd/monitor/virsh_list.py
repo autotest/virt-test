@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import virsh, libvirt_vm, remote, utils_libvirtd
 
 
-def run_virsh_list(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh list.
 

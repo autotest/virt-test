@@ -278,7 +278,7 @@ def add_device_random(params, name_idxs, parent_bus, addr):
 
 
 @error.context_aware
-def run_pci_devices(test, params, env):
+def run(test, params, env):
     """
     PCI Devices test
     1) print outs the used setup

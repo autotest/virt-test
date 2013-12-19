@@ -4,7 +4,7 @@ from virttest.libvirt_xml import VMXML, LibvirtXMLError
 from virttest import virt_vm
 
 
-def run_virsh_define(test, params, env):
+def run(test, params, env):
     """
     Test defining/undefining domain by dumping xml, changing it, and re-adding.
 

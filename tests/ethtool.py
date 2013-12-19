@@ -7,7 +7,7 @@ from virttest import utils_net, utils_misc, remote, aexpect
 
 
 @error.context_aware
-def run_ethtool(test, params, env):
+def run(test, params, env):
     """
     Test offload functions of ethernet device using ethtool
 

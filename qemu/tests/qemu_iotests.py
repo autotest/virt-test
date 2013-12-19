@@ -5,7 +5,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_qemu_iotests(test, params, env):
+def run(test, params, env):
     """
     Fetch from git and run qemu-iotests using the qemu binaries under test.
 

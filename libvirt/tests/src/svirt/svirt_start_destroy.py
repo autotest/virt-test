@@ -6,7 +6,7 @@ from virttest import utils_selinux, virt_vm
 from virttest.libvirt_xml.vm_xml import VMXML
 
 
-def run_svirt_start_destroy(test, params, env):
+def run(test, params, env):
     """
     Test svirt in adding disk to VM.
 

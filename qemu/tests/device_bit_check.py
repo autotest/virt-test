@@ -5,7 +5,7 @@ from virttest import env_process
 
 
 @error.context_aware
-def run_device_bit_check(test, params, env):
+def run(test, params, env):
     """
     Device bit check test:
     We can set up some properties bits though qemu-kvm command line. This case

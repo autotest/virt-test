@@ -6,7 +6,7 @@ from virttest import libvirt_vm, virsh
 from virttest.libvirt_xml import vm_xml
 
 
-def run_virsh_domif_setlink_getlink(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh domif-setlink and domif-getlink.
 

@@ -5,7 +5,7 @@ from virttest import env_process
 
 
 @error.context_aware
-def run_qemu_nobody(test, params, env):
+def run(test, params, env):
     """
     Check smbios table :
     1) Run the qemu command as nobody

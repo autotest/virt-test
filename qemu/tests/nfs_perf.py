@@ -9,7 +9,7 @@ STEP_1, STEP_2, STEP_3, STEP_4, STEP_5, STEP_6 = range(6)
 
 
 @error.context_aware
-def run_nfs_perf(test, params, env):
+def run(test, params, env):
     """
     KVM nfs performance test:
     1) boot guest over virtio driver.

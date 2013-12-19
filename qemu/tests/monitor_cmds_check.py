@@ -4,7 +4,7 @@ from virttest import qemu_monitor
 
 
 @error.context_aware
-def run_monitor_cmds_check(test, params, env):
+def run(test, params, env):
     """
     monitor_cmds_check test:
     1). bootup vm with human and qmp monitor

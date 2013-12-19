@@ -6,7 +6,7 @@ from virttest import data_dir, storage, utils_disk, env_process
 
 
 @error.context_aware
-def run_timerdevice_clock_drift_with_sleep(test, params, env):
+def run(test, params, env):
     """
     Timer device measure clock drift after sleep in guest with kvmclock:
 

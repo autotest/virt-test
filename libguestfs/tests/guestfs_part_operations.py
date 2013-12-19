@@ -405,7 +405,7 @@ def test_fscked_partition(vm, params):
         raise error.TestFail("Md5 of new vm is not match with old one.")
 
 
-def run_guestfs_part_operations(test, params, env):
+def run(test, params, env):
     """
     Test guestfs with partition commands.
     """

@@ -50,7 +50,7 @@ class RebaseTest(qemu_disk_img.QemuImgTest):
             utils.run("rm -f %s" % _image)
 
 
-def run_qemu_disk_img_rebase(test, params, env):
+def run(test, params, env):
     """
     'qemu-img' rebase function test:
 

@@ -190,7 +190,8 @@ class Test(object):
 
                     # Run the test function
                     for t_type, test_module in test_modules.items():
-                        run_func = getattr(test_module, "run_%s" % t_type)
+                        run_func = utils_misc.get_test_entrypoint_func(
+                            t_type, test_module)
                         try:
                             run_func(self, params, env)
                             self.verify_background_errors()

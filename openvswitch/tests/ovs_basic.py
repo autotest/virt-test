@@ -89,7 +89,7 @@ class InfrastructureInit(MiniSubtest):
 
 
 @error.context_aware
-def run_ovs_basic(test, params, env):
+def run(test, params, env):
     """
     Run basic test of OpenVSwitch driver.
     """

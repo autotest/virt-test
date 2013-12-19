@@ -5,7 +5,7 @@ from virttest import utils_misc, utils_net
 
 
 @error.context_aware
-def run_mac_change(test, params, env):
+def run(test, params, env):
     """
     Change MAC address of guest.
 

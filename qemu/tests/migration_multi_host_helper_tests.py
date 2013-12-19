@@ -23,7 +23,7 @@ class MiniSubtest(object):
 
 
 @error.context_aware
-def run_migration_multi_host_helper_tests(test, params, env):
+def run(test, params, env):
     """
     KVM multi-host migration test:
 

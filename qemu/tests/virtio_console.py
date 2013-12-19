@@ -35,7 +35,7 @@ def __set_exit_event():
 
 
 @error.context_aware
-def run_virtio_console(test, params, env):
+def run(test, params, env):
     """
     KVM virtio_console test
 

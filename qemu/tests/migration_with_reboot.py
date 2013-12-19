@@ -1,7 +1,7 @@
 from autotest.client.shared import utils
 
 
-def run_migration_with_reboot(test, params, env):
+def run(test, params, env):
     """
     KVM migration test:
     1) Get a live VM and clone it.

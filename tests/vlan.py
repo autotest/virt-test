@@ -6,7 +6,7 @@ from virttest import utils_misc, utils_test, aexpect, utils_net
 
 
 @error.context_aware
-def run_vlan(test, params, env):
+def run(test, params, env):
     """
     Test 802.1Q vlan of NIC, config it by vconfig/ip command.
 

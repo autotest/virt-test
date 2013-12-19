@@ -5,7 +5,7 @@ from virttest import aexpect, env_process
 
 
 @error.context_aware
-def run_readonly_disk(test, params, env):
+def run(test, params, env):
     """
     KVM reboot test:
     1) Log into a guest with virtio data disk

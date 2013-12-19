@@ -53,7 +53,7 @@ class QemuGASuspendTest(QemuGuestAgentTest):
 
 
 @error.context_aware
-def run_qemu_guest_agent_suspend(test, params, env):
+def run(test, params, env):
     """
     Test suspend commands in qemu guest agent.
 

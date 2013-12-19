@@ -4,7 +4,7 @@ from autotest.client import utils
 from virttest import virsh, utils_libvirtd
 
 
-def run_virsh_nodecpustats(test, params, env):
+def run(test, params, env):
     """
     Test the command virsh nodecpustats
 

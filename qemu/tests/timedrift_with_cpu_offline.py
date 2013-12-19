@@ -5,7 +5,7 @@ from virttest import utils_test
 
 
 @error.context_aware
-def run_timedrift_with_cpu_offline(test, params, env):
+def run(test, params, env):
     """
     Time drift test with vm's cpu offline/online:
 

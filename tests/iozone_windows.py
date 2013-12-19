@@ -5,7 +5,7 @@ from virttest import postprocess_iozone
 from virttest import utils_misc
 
 
-def run_iozone_windows(test, params, env):
+def run(test, params, env):
     """
     Run IOzone for windows on a windows guest:
     1) Log into a guest

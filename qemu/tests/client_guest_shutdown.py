@@ -4,7 +4,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_client_guest_shutdown(test, params, env):
+def run(test, params, env):
     """
     KVM shutdown test:
     For a test with two VMs: client & guest

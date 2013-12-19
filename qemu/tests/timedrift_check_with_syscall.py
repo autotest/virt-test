@@ -6,7 +6,7 @@ from virttest import data_dir
 
 
 @error.context_aware
-def run_timedrift_check_with_syscall(test, params, env):
+def run(test, params, env):
     """
     Time clock offset check test (only for Linux guest):
 

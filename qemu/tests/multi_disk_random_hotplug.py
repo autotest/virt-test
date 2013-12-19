@@ -57,7 +57,7 @@ def convert_params(params, args):
 
 
 @error.context_aware
-def run_multi_disk_random_hotplug(test, params, env):
+def run(test, params, env):
     """
     This tests the disk hotplug/unplug functionality.
     1) prepares multiple disks to be hotplugged

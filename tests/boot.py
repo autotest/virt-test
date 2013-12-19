@@ -5,7 +5,7 @@ from virttest import utils_test
 
 
 @error.context_aware
-def run_boot(test, params, env):
+def run(test, params, env):
     """
     Qemu reboot test:
     1) Log into a guest

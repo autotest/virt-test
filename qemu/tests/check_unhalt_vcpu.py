@@ -4,7 +4,7 @@ from autotest.client.shared import error
 from autotest.client import utils
 
 
-def run_check_unhalt_vcpu(test, params, env):
+def run(test, params, env):
     """
     Check unhalt vcpu of guest.
     1) Use qemu-img create any image which can not boot.

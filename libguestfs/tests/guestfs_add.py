@@ -65,7 +65,7 @@ def mount_filesystem(guestfs, filesystem, mountpoint):
     logging.debug("Mount filesystem successfully.")
 
 
-def run_guestfs_add(test, params, env):
+def run(test, params, env):
     """
     Test of built-in 'add-xxx' commands in guestfish.
 

@@ -6,7 +6,7 @@ from virttest import utils_test, utils_misc, utils_net
 
 
 @error.context_aware
-def run_sr_iov_hotplug_negative(test, params, env):
+def run(test, params, env):
     """
     KVM sr-iov hotplug negatvie test:
     1) Boot up VM.

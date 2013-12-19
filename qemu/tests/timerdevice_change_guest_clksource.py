@@ -5,7 +5,7 @@ from virttest import data_dir, storage, utils_disk, env_process
 
 
 @error.context_aware
-def run_timerdevice_change_guest_clksource(test, params, env):
+def run(test, params, env):
     """
     Timer device check guest after update kernel line without kvmclock:
 

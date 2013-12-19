@@ -6,7 +6,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_qemu_killer_report(test, params, env):
+def run(test, params, env):
     """
     Test that QEMU report the process ID that sent it kill signals.
 

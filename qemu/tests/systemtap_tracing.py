@@ -8,7 +8,7 @@ from virttest import utils_misc, env_process, data_dir
 
 
 @error.context_aware
-def run_systemtap_tracing(test, params, env):
+def run(test, params, env):
     """
     TestStep:
     1) Exec the stap script in host

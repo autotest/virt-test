@@ -8,7 +8,7 @@ from autotest.client import utils
 from virttest import aexpect
 
 
-def run_netstress_kill_guest(test, params, env):
+def run(test, params, env):
     """
     Try stop network interface in VM when other VM try to communicate.
 

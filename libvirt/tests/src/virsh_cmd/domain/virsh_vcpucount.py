@@ -125,7 +125,7 @@ def reset_env(vm_name, xml_file):
         os.remove(xml_file)
 
 
-def run_virsh_vcpucount(test, params, env):
+def run(test, params, env):
     """
     Test the command virsh vcpucount
 

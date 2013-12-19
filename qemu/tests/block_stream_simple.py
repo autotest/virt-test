@@ -18,7 +18,7 @@ class BlockStreamSimple(blk_stream.BlockStream):
             raise error.TestFail("No active job")
 
 
-def run_block_stream_simple(test, params, env):
+def run(test, params, env):
     """
     block_stream_simple test:
     1). launch block streaming job w/o set max speed

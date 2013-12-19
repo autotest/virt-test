@@ -6,7 +6,7 @@ from virttest import env_process
 
 
 @error.context_aware
-def run_time_manage(test, params, env):
+def run(test, params, env):
     """
     Time manage test:
 

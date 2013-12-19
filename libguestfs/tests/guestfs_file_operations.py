@@ -236,7 +236,7 @@ def test_copy_out(vm, params):
             raise error.TestFail("Catted file do not match.")
 
 
-def run_guestfs_file_operations(test, params, env):
+def run(test, params, env):
     """
     Test guestfs with file commands: tar-in, tar-out, copy-in, copy-out
     """

@@ -106,7 +106,7 @@ class EnospcConfig(object):
 
 
 @error.context_aware
-def run_enospc(test, params, env):
+def run(test, params, env):
     """
     ENOSPC test
 

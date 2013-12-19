@@ -645,7 +645,7 @@ def analyze_results(test_params, operational_results,
         raise error.TestFail(fail_msg)
 
 
-def run_virsh_attach_device(test, params, env):
+def run(test, params, env):
     """
     Test virsh {at|de}tach-interface command.
 

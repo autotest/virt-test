@@ -144,7 +144,7 @@ def test_inspect_get(vm, params):
         raise error.TestFail(fail_info)
 
 
-def run_guestfs_inspect_operations(test, params, env):
+def run(test, params, env):
     """
     Test guestfs with inspect commands: inspect-*
     """

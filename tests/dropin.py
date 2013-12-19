@@ -4,7 +4,7 @@ from autotest.client.shared import error
 from virttest import data_dir
 
 
-def run_dropin(test, params, env):
+def run(test, params, env):
     """
     Run a dropin test.
     """

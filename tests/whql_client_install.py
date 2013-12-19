@@ -6,7 +6,7 @@ from virttest import utils_misc, utils_test, remote
 from virttest import rss_client
 
 
-def run_whql_client_install(test, params, env):
+def run(test, params, env):
     """
     WHQL DTM client installation:
     1) Log into the guest (the client machine) and into a DTM server machine

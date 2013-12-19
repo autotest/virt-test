@@ -4,7 +4,7 @@ from virttest import virsh
 from virttest.libvirt_xml import vm_xml, capability_xml
 
 
-def run_virsh_cpu_compare(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh cpu-compare.
 

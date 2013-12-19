@@ -9,7 +9,7 @@ except ImportError:
 
 
 @error.context_aware
-def run_numa_basic(test, params, env):
+def run(test, params, env):
     """
     Qemu numa basic test:
     1) Get host numa topological structure

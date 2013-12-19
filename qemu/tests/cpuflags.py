@@ -13,7 +13,7 @@ from virttest import utils_misc, utils_test, aexpect
 from autotest.client.shared.syncdata import SyncData
 
 
-def run_cpuflags(test, params, env):
+def run(test, params, env):
     """
     Boot guest with different cpu flags and check if guest works correctly.
 

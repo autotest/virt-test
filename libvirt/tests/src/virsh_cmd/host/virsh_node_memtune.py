@@ -155,7 +155,7 @@ def set_node_memtune_parameter(params):
                                      "mismatch with result")
 
 
-def run_virsh_node_memtune(test, params, env):
+def run(test, params, env):
     """
     Test node memory tuning
 

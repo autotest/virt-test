@@ -6,7 +6,7 @@ from virttest import utils_misc, remote, utils_net, data_dir
 
 
 @error.context_aware
-def run_netperf_udp(test, params, env):
+def run(test, params, env):
     """
     Run netperf on server and client side, we need run this case on two
     machines. If dsthost is not set will start netperf server on local

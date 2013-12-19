@@ -6,7 +6,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_boot_order_check(test, params, env):
+def run(test, params, env):
     """
     KVM Autotest set boot order for multiple NIC and block devices
     1) Boot the vm with deciding bootorder for multiple block and NIC devices

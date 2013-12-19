@@ -8,7 +8,7 @@ from autotest.client import local_host
 from virttest import data_dir
 
 
-def run_tsc_drift(test, params, env):
+def run(test, params, env):
     """
     Check the TSC(time stamp counter) frequency of guest and host whether match
     or not

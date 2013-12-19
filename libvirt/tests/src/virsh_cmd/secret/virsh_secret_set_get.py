@@ -184,7 +184,7 @@ def cleanup(params):
             raise error.TestFail(result.stderr)
 
 
-def run_virsh_secret_set_get(test, params, env):
+def run(test, params, env):
     """
     Test set/get secret value for a volume
 

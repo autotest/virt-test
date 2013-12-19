@@ -54,7 +54,7 @@ def do_nodedev_dumpxml(dev_name, dev_opt=""):
                   "for device %s.", dev_name)
 
 
-def run_virsh_nodedev_dumpxml(test, params, env):
+def run(test, params, env):
     """
     Test command virsh nodedev-dumpxml.
 

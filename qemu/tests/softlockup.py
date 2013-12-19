@@ -6,7 +6,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 
 
-def run_softlockup(test, params, env):
+def run(test, params, env):
     """
     soft lockup/drift test with stress.
 

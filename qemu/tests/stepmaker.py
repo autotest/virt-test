@@ -338,7 +338,7 @@ class StepMaker(step_editor.StepMakerWindow):
         pass
 
 
-def run_stepmaker(test, params, env):
+def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 

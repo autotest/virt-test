@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import aexpect, utils_misc, remote, rss_client
 
 
-def run_whql_submission(test, params, env):
+def run(test, params, env):
     """
     WHQL submission test:
     1) Log into the client machines and into a DTM server machine

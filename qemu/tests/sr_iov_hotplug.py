@@ -5,7 +5,7 @@ from virttest import utils_misc, aexpect, utils_test, utils_net, test_setup
 
 
 @error.context_aware
-def run_sr_iov_hotplug(test, params, env):
+def run(test, params, env):
     """
     Test hotplug of sr-iov devices.
 

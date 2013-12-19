@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import qemu_monitor
 
 
-def run_balloon_disable(test, params, env):
+def run(test, params, env):
     """
     KVM balloon disable test:
     1) Log into a guest

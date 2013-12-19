@@ -15,7 +15,7 @@ except ImportError:
     from autotest.client.shared import utils_cgroup
 
 
-def run_virsh_memtune(test, params, env):
+def run(test, params, env):
     """
     Test the command virsh memtune
 

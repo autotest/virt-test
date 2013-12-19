@@ -4,7 +4,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_nmi_watchdog(test, params, env):
+def run(test, params, env):
     """
     Test the function of nmi injection and verify the response of guest
 

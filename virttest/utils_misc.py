@@ -2012,3 +2012,42 @@ def get_image_info(image_file):
     except (KeyError, IndexError, error.CmdError), detail:
         raise error.TestError("Fail to get information of %s:\n%s" %
                               (image_file, detail))
+
+
+def get_test_entrypoint_func(name, module):
+    '''
+    Returns the test entry point function for a loaded module
+
+    :param name: the name of the test. Usually supplied on a cartesian
+                 config file using the "type" key
+    :type name: str
+    :param module: a loaded python module for containing the code
+                        for the test named on ``name``
+    :type module: module
+    :raises: ValueError if module does not have a suitable function
+    :returns: the test entry point function
+    :rtype: func
+    '''
+    has_run = hasattr(module, "run")
+    legacy_run = "run_%s" % name
+    has_legacy_run = hasattr(module, legacy_run)
+
+    if has_run:
+        if has_legacy_run:
+            msg = ('Both legacy and new test entry point function names '
+                   'present. Please update your test and use "run()" '
+                   'instead of "%s()". Also, please avoid using "%s()" '
+                   'as a regular function name in your test as it causes '
+                   'confusion with the legacy naming standard. Function '
+                   '"run()" will be used in favor of "%s()"')
+            logging.warn(msg, legacy_run, legacy_run, legacy_run)
+        return getattr(module, "run")
+
+    elif has_legacy_run:
+        logging.warn('Legacy test entry point function name found. Please '
+                     'update your test and use "run()" as the new function '
+                     'name')
+        return getattr(module, legacy_run)
+
+    else:
+        raise ValueError("Missing test entry point")

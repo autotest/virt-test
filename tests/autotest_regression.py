@@ -4,7 +4,7 @@ from virttest import aexpect, utils_misc
 
 
 @error.context_aware
-def run_autotest_regression(test, params, env):
+def run(test, params, env):
     """
     Autotest regression test:
 

@@ -10,7 +10,7 @@ except ImportError:
     from autotest.client.shared import utils_cgroup
 
 
-def run_virsh_schedinfo_qemu_posix(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh schedinfo.
 

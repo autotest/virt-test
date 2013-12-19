@@ -66,7 +66,7 @@ def start_netserver_win(session, start_cmd):
 
 
 @error.context_aware
-def run_netperf(test, params, env):
+def run(test, params, env):
     """
     Network stress test with netperf.
 

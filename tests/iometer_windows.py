@@ -10,7 +10,7 @@ from virttest import utils_test, utils_misc
 
 
 @error.context_aware
-def run_iometer_windows(test, params, env):
+def run(test, params, env):
     """
     Run Iometer for Windows on a Windows guest:
 

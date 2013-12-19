@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import utils_test, utils_misc
 
 
-def run_libvirt_bench_dump_with_unixbench(test, params, env):
+def run(test, params, env):
     """
     Test steps:
 

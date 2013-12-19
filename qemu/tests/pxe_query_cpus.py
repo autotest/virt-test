@@ -6,7 +6,7 @@ from virttest import utils_test, utils_misc, env_process
 
 
 @error.context_aware
-def run_pxe_query_cpus(test, params, env):
+def run(test, params, env):
     """
     Qemu guest pxe boot test:
     1). check npt/ept function enable, then boot vm

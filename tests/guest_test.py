@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import utils_misc
 
 
-def run_guest_test(test, params, env):
+def run(test, params, env):
     """
     A wrapper for running customized tests in guests.
 

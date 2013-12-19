@@ -67,7 +67,7 @@ def cleanup_dest(vm, src_uri, dest_uri):
     vm.connect_uri = src_uri
 
 
-def run_virsh_migrate_setmaxdowntime(test, params, env):
+def run(test, params, env):
     """
     Test virsh migrate-setmaxdowntime command.
 

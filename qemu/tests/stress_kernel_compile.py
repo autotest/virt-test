@@ -9,7 +9,7 @@ except ImportError:
     from autotest.client.shared import utils_memory
 
 
-def run_stress_kernel_compile(tests, params, env):
+def run(test, params, env):
     """
     Boot VMs and run kernel compile inside VM parallel.
 

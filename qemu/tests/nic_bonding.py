@@ -5,7 +5,7 @@ from virttest import utils_test, aexpect, utils_net
 from autotest.client.shared import error, utils
 
 
-def run_nic_bonding(test, params, env):
+def run(test, params, env):
     """
     Nic bonding test in guest.
 

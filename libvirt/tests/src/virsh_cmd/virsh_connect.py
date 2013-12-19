@@ -34,7 +34,7 @@ def do_virsh_connect(uri, options):
     return uri_result
 
 
-def run_virsh_connect(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh connect.
     """

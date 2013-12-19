@@ -9,7 +9,7 @@ from autotest.client.shared.syncdata import SyncData
 from virttest import utils_test, utils_misc
 
 
-def run_migration_multi_host_with_speed_measurement(test, params, env):
+def run(test, params, env):
     """
     KVM migration test:
     1) Get a live VM and clone it.

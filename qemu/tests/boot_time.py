@@ -9,7 +9,7 @@ except ImportError:
 
 
 @error.context_aware
-def run_boot_time(test, params, env):
+def run(test, params, env):
     """
     KVM boot time test:
     1) Set init run level to 1

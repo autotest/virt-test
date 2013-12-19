@@ -5,7 +5,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_readonly_floppy(test, params, env):
+def run(test, params, env):
     """
     KVM readonly_floppy test:
     1) pre_command on the host to generate the floppy media

@@ -5,7 +5,7 @@ from virttest import utils_test, virt_vm, utils_net
 
 
 @error.context_aware
-def run_migration_after_nichotplug(test, params, env):
+def run(test, params, env):
     """
     KVM migration test:
     1) Get a live VM and clone it.

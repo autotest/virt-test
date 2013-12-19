@@ -7,7 +7,7 @@ import virttest.utils_libguestfs as lgf
 from autotest.client import utils
 
 
-def run_virt_sysprep(test, params, env):
+def run(test, params, env):
     """
     Test the command virt-sysprep
 

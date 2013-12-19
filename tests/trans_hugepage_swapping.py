@@ -7,7 +7,7 @@ from virttest import env_process
 
 
 @error.context_aware
-def run_trans_hugepage_swapping(test, params, env):
+def run(test, params, env):
     """
     KVM khugepage user side test:
     1) Verify that the hugepages can be swapped in/out.

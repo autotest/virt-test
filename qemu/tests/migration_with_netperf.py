@@ -4,7 +4,7 @@ from virttest import utils_netperf
 
 
 @error.context_aware
-def run_migration_with_netperf(test, params, env):
+def run(test, params, env):
     """
     KVM migration test:
     1) Start a guest.

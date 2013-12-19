@@ -5,7 +5,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_system_reset_bootable(test, params, env):
+def run(test, params, env):
     """
     KVM reset test:
     1) Boot guest.

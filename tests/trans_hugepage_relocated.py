@@ -12,7 +12,7 @@ except ImportError:
     from autotest.client.shared import utils_memory
 
 
-def run_trans_hugepage_relocated(test, params, env):
+def run(test, params, env):
     """
     Transparent hugepage relocated test with quantification.
     The pages thp deamon will scan for one round set to 4096, and the sleep

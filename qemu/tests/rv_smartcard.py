@@ -12,7 +12,7 @@ from virttest import aexpect
 from autotest.client.shared import error
 
 
-def run_rv_smartcard(test, params, env):
+def run(test, params, env):
     """
     Tests disconnection of remote-viewer.
 

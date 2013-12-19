@@ -2,7 +2,7 @@ from autotest.client.shared import error
 from virttest import virsh
 
 
-def run_virsh_net_name(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh net-name.
 

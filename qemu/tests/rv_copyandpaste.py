@@ -915,7 +915,7 @@ def copyandpasteimg_cpdisabled_neg(session_to_copy_from, session_to_paste_to,
                            final_image_path, test_timeout)
 
 
-def run_rv_copyandpaste(test, params, env):
+def run(test, params, env):
     """
     Testing copying and pasting between a client and guest
     Supported configurations:

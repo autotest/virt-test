@@ -67,7 +67,7 @@ def verify_recording(recording, params):
     return True
 
 
-def run_rv_audio(test, params, env):
+def run(test, params, env):
 
     guest_vm = env.get_vm(params["guest_vm"])
     guest_vm.verify_alive()

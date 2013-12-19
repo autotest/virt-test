@@ -962,7 +962,7 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     test_module = imp.load_module(sub_type, f, p, d)
     f.close()
     # Run the test function
-    run_func = getattr(test_module, "run_%s" % sub_type)
+    run_func = utils_misc.get_test_entrypoint_func(sub_type, test_module)
     if tag is not None:
         params = params.object_params(tag)
     run_func(test, params, env)

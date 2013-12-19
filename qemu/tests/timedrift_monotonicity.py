@@ -7,7 +7,7 @@ from autotest.client.shared import error, utils
 from virttest import utils_test
 
 
-def run_timedrift_monotonicity(test, params, env):
+def run(test, params, env):
     """
     Check guest time monotonicity during migration:
 

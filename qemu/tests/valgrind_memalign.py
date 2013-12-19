@@ -5,7 +5,7 @@ from virttest import env_process
 
 
 @error.context_aware
-def run_valgrind_memalign(test, params, env):
+def run(test, params, env):
     """
     This case is from [general operation] Work around valgrind choking on our
     use of memalign():

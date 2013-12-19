@@ -29,7 +29,7 @@ def get_network_xml_instance(virsh_dargs, test_xml, net_name,
     return test_netxml
 
 
-def run_virsh_net_define_undefine(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh net-define/net-undefine.
 

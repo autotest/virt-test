@@ -4,7 +4,7 @@ from virttest import utils_test, utils_net, virt_vm
 
 
 @error.context_aware
-def run_nic_hotplug(test, params, env):
+def run(test, params, env):
     """
     Test hotplug of NIC devices
 

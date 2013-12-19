@@ -6,7 +6,7 @@ from virttest import utils_test, remote, utils_net
 
 
 @error.context_aware
-def run_multi_vms_nics(test, params, env):
+def run(test, params, env):
     """
     KVM multi test:
     1) Log into guests

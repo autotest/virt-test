@@ -2,7 +2,7 @@ from autotest.client.shared import error
 from virttest import installer
 
 
-def run_build(test, params, env):
+def run(test, params, env):
     """
     Installs virtualization software using the selected installers
 

@@ -5,7 +5,7 @@ from virttest import aexpect, virt_vm, virsh, remote
 from virttest.libvirt_xml import vm_xml
 
 
-def run_virsh_attach_detach_disk(test, params, env):
+def run(test, params, env):
     """
     Test virsh {at|de}tach-disk command.
 

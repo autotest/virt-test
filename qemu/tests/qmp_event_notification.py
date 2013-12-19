@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import utils_misc
 
 
-def run_qmp_event_notification(test, params, env):
+def run(test, params, env):
     """
     Test qmp event notification function:
     1) Boot up guest with qmp.

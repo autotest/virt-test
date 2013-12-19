@@ -4,7 +4,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_check_roms(test, params, env):
+def run(test, params, env):
     """
     QEMU check roms test:
 

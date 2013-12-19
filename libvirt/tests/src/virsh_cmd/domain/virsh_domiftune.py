@@ -130,7 +130,7 @@ def set_domiftune_parameter(params):
                                " and/or virsh command output")
 
 
-def run_virsh_domiftune(test, params, env):
+def run(test, params, env):
     """
     Test domiftune tuning
 

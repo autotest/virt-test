@@ -4,7 +4,7 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_nx(test, params, env):
+def run(test, params, env):
     """
     try to exploit the guest to test whether nx(cpu) bit takes effect.
 

@@ -109,7 +109,7 @@ class GuestSuspendNegativeTest(GuestSuspendBaseTest):
 
 
 @error.context_aware
-def run_guest_suspend(test, params, env):
+def run(test, params, env):
     """
     Suspend guest to memory/disk, supports both Linux and Windows.
 

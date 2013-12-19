@@ -22,7 +22,7 @@ def get_re_average(opt, re_str):
 
 
 @error.context_aware
-def run_ipi_x2apic(test, params, env):
+def run(test, params, env):
     """
     Measure overhead of IPI with and without x2apic:
     1) Enable ept if the host supports it.

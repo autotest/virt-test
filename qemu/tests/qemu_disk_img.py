@@ -125,5 +125,5 @@ class QemuImgTest(qemu_storage.QemuImg):
             utils.run("rm -f %s" % _file)
 
 
-def run_qemu_disk_img(test, params, env):
+def run(test, params, env):
     pass

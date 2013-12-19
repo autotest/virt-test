@@ -5,7 +5,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_qemu_no_shutdown(test, params, env):
+def run(test, params, env):
     """
     KVM -no-shutdown flag test:
     1. Boot a guest, with -no-shutdown flag on command line

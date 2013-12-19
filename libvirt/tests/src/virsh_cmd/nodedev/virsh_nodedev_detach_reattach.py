@@ -61,7 +61,7 @@ def do_nodedev_detach_reattach(device_name, options=""):
     logging.debug('Nodedev-reattach %s successed.', device_name)
 
 
-def run_virsh_nodedev_detach_reattach(test, params, env):
+def run(test, params, env):
     """
     Test virsh nodedev-detach and virsh nodedev-reattach
 

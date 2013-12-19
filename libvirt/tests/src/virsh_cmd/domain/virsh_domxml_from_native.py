@@ -5,7 +5,7 @@ from autotest.client import utils
 from virttest import virsh, utils_libvirtd
 
 
-def run_virsh_domxml_from_native(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh domxml-from-native.
 

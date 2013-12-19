@@ -63,7 +63,7 @@ def do_high_level_test(virsh_dargs, test_xml, net_name, net_uuid, bridge):
         return False
 
 
-def run_virsh_net_create(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh net-create.
 

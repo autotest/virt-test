@@ -5,7 +5,7 @@ from autotest.client.shared import error
 from virttest import utils_test
 
 
-def run_autotest_control(test, params, env):
+def run(test, params, env):
     """
     Run an autotest test inside a guest.
 
@@ -31,13 +31,13 @@ def run_autotest_control(test, params, env):
 def run_autotest_control_background(test, params, env,
                                     test_control_file="control"):
     """
-    Wrapper of run_autotest_control() and make it run in the background through
+    Wrapper of run() and make it run in the background through
     fork() and let it run in the child process.
     1) Flush the stdio.
     2) Build test params which is recevied from arguments and used by
-       run_autotest_control()
-    3) Fork the process and let the run_autotest_control() run in the child
-    4) Catch the exception raise by run_autotest_control() and exit the child with
+       run()
+    3) Fork the process and let the run() run in the child
+    4) Catch the exception raise by run() and exit the child with
        non-zero return code.
     5) If no exception catched, reutrn 0
 
@@ -62,7 +62,7 @@ def run_autotest_control_background(test, params, env,
     try:
         params['test_control_file'] = test_control_file
         # Launch autotest
-        run_autotest_control(test, params, env)
+        run(test, params, env)
         os.remove(flag_fname)
     except error.TestFail, message_fail:
         logging.info("[Autotest Background FAIL] %s" % message_fail)

@@ -5,7 +5,7 @@ from virttest import aexpect
 
 
 @error.context_aware
-def run_hdparm(test, params, env):
+def run(test, params, env):
     """
     Test hdparm setting on linux guest os. This case will:
     1) Set/record parameters value of hard disk to low performance status.

@@ -7,7 +7,7 @@ from virttest import utils_misc, env_process
 
 
 @error.context_aware
-def run_watchdog(test, params, env):
+def run(test, params, env):
     """
     Configure watchdog, crash the guest and check if watchdog_action occurs.
     Test Step:

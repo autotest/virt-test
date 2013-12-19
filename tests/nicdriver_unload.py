@@ -8,7 +8,7 @@ from virttest import utils_misc, utils_net, aexpect, data_dir
 
 
 @error.context_aware
-def run_nicdriver_unload(test, params, env):
+def run(test, params, env):
     """
     Test nic driver load/unload.
 

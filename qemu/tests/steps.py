@@ -190,7 +190,7 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
         raise error.TestFail(message)
 
 
-def run_steps(test, params, env):
+def run(test, params, env):
     vm = env.get_vm(params.get("vms", "main_vm").split(" ")[0])
     vm.verify_alive()
 

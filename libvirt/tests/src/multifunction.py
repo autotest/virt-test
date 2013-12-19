@@ -146,7 +146,7 @@ def check_disk(vm, target_dev, part_size):
         raise error.TestFail("Can not mount '%s' to /mnt." % device)
 
 
-def run_multifunction(test, params, env):
+def run(test, params, env):
     """
     Test multi function of vm devices.
     """

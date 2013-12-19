@@ -33,7 +33,7 @@ def do_virsh_start(vm_name):
         raise StartError(vm_name, cmd_result.stderr)
 
 
-def run_virsh_start(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh start.
 

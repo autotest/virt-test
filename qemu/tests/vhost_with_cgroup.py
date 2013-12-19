@@ -11,7 +11,7 @@ except ImportError:
 
 
 @error.context_aware
-def run_vhost_with_cgroup(test, params, env):
+def run(test, params, env):
     """
     Test Step:
         1. boot guest with vhost enabled

@@ -194,7 +194,7 @@ def check_irqbalance(session, devname, cpu_count, irqs, count=6,
 
 
 @error.context_aware
-def run_sr_iov_irqbalance(test, params, env):
+def run(test, params, env):
     """
     Qemu guest irqbalance inactive/active test:
     1) Setup host for sr-iov test.

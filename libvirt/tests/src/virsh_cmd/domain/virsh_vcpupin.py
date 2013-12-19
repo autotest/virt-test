@@ -6,7 +6,7 @@ from autotest.client.shared import error
 from virttest import virsh, utils_test
 
 
-def run_virsh_vcpupin(test, params, env):
+def run(test, params, env):
     """
     Test the command virsh vcpupin
 

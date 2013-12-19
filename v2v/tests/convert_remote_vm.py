@@ -127,7 +127,7 @@ def cleanup_vm(vm_name=None, disk=None):
         pass
 
 
-def run_convert_remote_vm(test, params, env):
+def run(test, params, env):
     """
     Convert a remote vm to local libvirt(KVM).
     """

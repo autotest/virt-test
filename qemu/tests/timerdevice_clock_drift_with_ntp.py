@@ -6,7 +6,7 @@ from virttest import data_dir, utils_misc, aexpect
 
 
 @error.context_aware
-def run_timerdevice_clock_drift_with_ntp(test, params, env):
+def run(test, params, env):
     """
     Timer device check clock frequency offset using NTP on CPU starved guest:
 

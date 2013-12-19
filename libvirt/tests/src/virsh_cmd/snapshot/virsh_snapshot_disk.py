@@ -7,7 +7,7 @@ from autotest.client.shared import error
 from virttest import virsh, qemu_storage, data_dir
 
 
-def run_virsh_snapshot_disk(test, params, env):
+def run(test, params, env):
     """
     Test virsh snapshot command when disk in all kinds of type.
 

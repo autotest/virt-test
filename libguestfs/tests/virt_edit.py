@@ -34,7 +34,7 @@ def login_to_check_foo_line(vm, file_ref, foo_line):
     return True
 
 
-def run_virt_edit(test, params, env):
+def run(test, params, env):
     """
     Test of virt-edit.
 

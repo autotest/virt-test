@@ -4,7 +4,7 @@ from autotest.client import utils
 
 
 @error.context_aware
-def run_timerdevice_tscwrite(test, params, env):
+def run(test, params, env):
     """
     Timer device tscwrite test:
 

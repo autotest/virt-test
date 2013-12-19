@@ -223,7 +223,7 @@ def test_resized_vm(vm, params):
     utils_test.libguestfs.cleanup_vm(disk=vt.outdisk)
 
 
-def run_guestfs_operated_disk(test, params, env):
+def run(test, params, env):
     """
     Test guestfs with operated disk: cloned, spasified, resized
     """

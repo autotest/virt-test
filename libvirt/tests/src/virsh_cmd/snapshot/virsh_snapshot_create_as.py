@@ -269,7 +269,7 @@ def check_snapslist(vm_name, options, option_dict, output,
                                          " %s", mem_dict['file'])
 
 
-def run_virsh_snapshot_create_as(test, params, env):
+def run(test, params, env):
     """
     Test snapshot-create-as command
     Make sure that the clean repo can be used because qemu-guest-agent need to

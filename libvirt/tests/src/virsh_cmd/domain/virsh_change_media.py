@@ -6,7 +6,7 @@ from virttest import virsh, data_dir, virt_vm
 from virttest.libvirt_xml import vm_xml
 
 
-def run_virsh_change_media(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh change-media.
 

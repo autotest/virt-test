@@ -21,7 +21,7 @@ def ssh_cmd(session, cmd, timeout=60):
 
 
 @error.context_aware
-def run_multi_nic_stress(test, params, env):
+def run(test, params, env):
     """
     Network stress with multi nics test with netperf.
 

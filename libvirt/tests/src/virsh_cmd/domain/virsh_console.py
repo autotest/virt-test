@@ -104,7 +104,7 @@ def verify_virsh_console(session, user, passwd, debug=False):
     return True
 
 
-def run_virsh_console(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh console.
     """

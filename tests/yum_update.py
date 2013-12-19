@@ -29,7 +29,7 @@ def internal_yum_update(session, command, prompt, timeout):
             return False
 
 
-def run_yum_update(test, params, env):
+def run(test, params, env):
     """
     Runs yum update and yum update kernel on the remote host (yum enabled
     hosts only).
