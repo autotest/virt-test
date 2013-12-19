@@ -116,7 +116,7 @@ def run_guest_test_background(test, params, env):
     open(flag_fname, 'w').close()
     try:
         # Launch guest_test
-        run_guest_test(test, params, env)
+        run(test, params, env)
         os.remove(flag_fname)
     except error.TestFail, message_fail:
         logging.info("[Guest_test Background FAIL] %s" % message_fail)
