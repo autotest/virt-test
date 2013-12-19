@@ -2798,7 +2798,9 @@ class VM(virt_vm.BaseVM):
 
         if wait:
             logging.info("waiting for the guest to finish the unplug")
-            if not utils_misc.wait_for(lambda: nic.nic_name not in
+            nic_eigenvalue = r'dev:\s+%s,\s+id\s+"%s"' % (nic.nic_model,
+                                                          nic.nic_name)
+            if not utils_misc.wait_for(lambda: nic_eigenvalue not in
                                        self.monitor.info("qtree"),
                                        wait, 5, 1):
                 raise virt_vm.VMDelNicError("Device is not unplugged by "
@@ -2825,7 +2827,8 @@ class VM(virt_vm.BaseVM):
             self.monitor.send_args_cmd(nic_del_cmd, convert=True)
 
         network_info = self.monitor.info("network")
-        if netdev_id in network_info:
+        netdev_eigenvalue = r'netdev\s+=\s+%s' % netdev_id
+        if netdev_eigenvalue in network_info:
             raise virt_vm.VMDelNetDevError("Fail to remove netdev %s" %
                                            netdev_id)
 
