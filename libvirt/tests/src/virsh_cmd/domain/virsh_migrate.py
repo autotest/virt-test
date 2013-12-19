@@ -4,7 +4,8 @@ import re
 import time
 import codecs
 from autotest.client.shared import error
-from virttest import utils_test, virsh, utils_libvirtd
+from virttest import utils_test, virsh, utils_libvirtd, utils_misc
+from virttest.libvirt_xml import vm_xml
 
 
 def run(test, params, env):
@@ -75,11 +76,11 @@ def run(test, params, env):
     vm.verify_alive()
 
     # For safety reasons, we'd better back up  xmlfile.
-    vm_xmlfile_bak = vm.backup_xml()
-    if not vm_xmlfile_bak:
+    orig_config_xml = vm_xml.VMXML.new_from_inactive_dumpxml(vm_name)
+    if not orig_config_xml:
         logging.error("Backing up xmlfile failed.")
 
-    src_uri = vm.connect_uri
+    src_uri = params.get("virsh_migrate_connect_uri")
     dest_uri = params.get("virsh_migrate_desturi")
     # Identify easy config. mistakes early
     warning_text = ("Migration VM %s URI %s appears problematic "
@@ -88,10 +89,10 @@ def run(test, params, env):
                     "fully-qualified network-based style.")
 
     if src_uri.count('///') or src_uri.count('EXAMPLE'):
-        logging.warning(warning_text % ('source', src_uri))
+        raise error.TestNAError(warning_text % ('source', src_uri))
 
     if dest_uri.count('///') or dest_uri.count('EXAMPLE'):
-        logging.warning(warning_text % ('destination', dest_uri))
+        raise error.TestNAError(warning_text % ('destination', dest_uri))
 
     vm_ref = params.get("vm_ref", vm.name)
     options = params.get("virsh_migrate_options")
@@ -100,11 +101,50 @@ def run(test, params, env):
     status_error = params.get("status_error", 'no')
     libvirtd_state = params.get("virsh_migrate_libvirtd_state", 'on')
     src_state = params.get("virsh_migrate_src_state", "running")
-    new_nic_mac = "ff:ff:ff:ff:ff:ff"
+    migrate_uri = params.get("virsh_migrate_migrateuri", None)
+    shared_storage = params.get("virsh_migrate_shared_storage", None)
     dest_xmlfile = ""
+
+    # Direct migration is supported only for Xen in libvirt
+    if options.count("direct") or extra.count("direct"):
+        if params.get("driver_type") is not "xen":
+            raise error.TestNAError("Direct migration is supported only for "
+                                    "Xen in libvirt.")
+
+    # Add migrateuri if exists and check for default example
+    if migrate_uri:
+        if migrate_uri.count("EXAMPLE"):
+            raise error.TestNAError("Set up the migrate_uri.")
+        extra = ("%s --migrateuri=%s" %(extra, migrate_uri))
+
+    # To migrate you need to have a shared disk between hosts
+    if shared_storage is None:
+        raise error.TestError("For migration you need to have a shared "
+                              "storage.")
 
     exception = False
     try:
+        # Change the disk of the vm to shared disk
+        if vm.is_alive():
+            vm.destroy(gracefully=False)
+
+        devices = vm.get_blk_devices()
+        for device in devices:
+            s_detach = virsh.detach_disk(vm_name, device,  "--config", debug=True)
+            if not s_detach:
+                logging.error("Detach vda failed before test.")
+
+        subdriver = utils_misc.get_image_info(shared_storage)['format']
+        extra_attach = ("--config --driver qemu --subdriver %s --cache none"
+                        % subdriver)
+        s_attach = virsh.attach_disk(vm_name, shared_storage, "vda",
+                                     extra_attach, debug=True)
+        if s_attach.exit_status != 0:
+            logging.error("Attach vda failed before test.")
+
+        vm.start()
+        vm.wait_for_login()
+
         # Confirm VM can be accessed through network.
         time.sleep(delay)
         vm_ip = vm.get_address()
@@ -120,11 +160,14 @@ def run(test, params, env):
             dest_xmlfile = params.get("virsh_migrate_xml", "")
             if dest_xmlfile:
                 ret_attach = vm.attach_interface("--type bridge --source "
-                                                 "virbr0 --mac %s" % new_nic_mac, True, True)
+                                                 "virbr0 --target tmp-vnet",
+                                                 True, True)
                 if not ret_attach:
                     exception = True
-                    raise error.TestError(
-                        "Attaching nic to %s failed." % vm.name)
+                    raise error.TestError("Attaching nic to %s failed."
+                                          % vm.name)
+                ifaces = vm_xml.VMXML.get_net_dev(vm.name)
+                new_nic_mac = vm.get_virsh_mac_address(ifaces.index("tmp-vnet"))
                 vm_xml_new = vm.get_xml()
                 logging.debug("Xml file on source: %s" % vm_xml_new)
                 f = codecs.open(dest_xmlfile, 'wb', encoding='utf-8')
@@ -243,17 +286,13 @@ def run(test, params, env):
         cleanup_dest(vm, src_uri)
 
     # Recover source (just in case).
-    # vm.connect_uri has been set back to src_uri in cleanup_dest().
-    if not virsh.domain_exists(vm_name, uri=src_uri):
-        vm.define(vm_xmlfile_bak)
-    else:
-        # if not vm.shutdown():
-        vm.destroy()
+    # Simple sync cannot be used here, because the vm may not exists and
+    # it cause the sync to fail during the internal backup.
+    vm.destroy()
+    vm.undefine()
+    orig_config_xml.define()
 
     # Cleanup source.
-    if os.path.exists(vm_xmlfile_bak):
-        os.remove(vm_xmlfile_bak)
-        logging.info("%s removed." % vm_xmlfile_bak)
     if os.path.exists(dest_xmlfile):
         os.remove(dest_xmlfile)
 
