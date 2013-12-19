@@ -39,7 +39,7 @@ def ifup_down_interface(interface, action="up"):
 
 
 @error.context_aware
-def run_sr_iov_sanity(test, params, env):
+def run(test, params, env):
     """
     SR-IOV devices sanity test:
     1) Bring up VFs by following instructions How To in Setup.

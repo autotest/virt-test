@@ -4,7 +4,7 @@ from virttest import env_process
 
 
 @error.context_aware
-def run_gluster_create_images(test, params, env):
+def run(test, params, env):
     """
     Run an gluster test.
     steps:

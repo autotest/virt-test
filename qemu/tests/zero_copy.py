@@ -5,7 +5,7 @@ from virttest import env_process, utils_test
 
 
 @error.context_aware
-def run_zero_copy(test, params, env):
+def run(test, params, env):
     """
     Vhost zero copy test
     1) Enable/Disable vhost_net zero copy in host

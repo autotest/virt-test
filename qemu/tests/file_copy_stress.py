@@ -6,7 +6,7 @@ from autotest.client import utils
 from virttest import data_dir, utils_misc
 
 @error.context_aware
-def run_file_copy_stress(test, params, env):
+def run(test, params, env):
     """
     Transfer a file back and forth between host and guest.
 
