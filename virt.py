@@ -130,11 +130,9 @@ class virt(test.test):
                     finally:
                         env.save()
                     # Run the test function
-                    for t_type, test_module in test_modules:
-                        msg = "Running function: %s.run_%s()" % (
-                            t_type, t_type)
-                        logging.info(msg)
-                        run_func = getattr(test_module, "run")
+                    for t_type, test_module in test_modules.items():
+                        run_func = utils_misc.get_test_entrypoint_func(
+                            t_type, test_module)
                         try:
                             run_func(self, params, env)
                             self.verify_background_errors()
