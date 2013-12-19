@@ -19,7 +19,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 from virttest import qemu_virtio_port, env_process, utils_test, utils_misc
 from virttest import funcatexit
-from virttest import qemu_devices
+from virttest.qemu_devices import qdevices
 
 
 EXIT_EVENT = threading.Event()
@@ -1642,9 +1642,9 @@ def run_virtio_console(test, params, env):
         for i in xrange(int(params.get("virtio_console_loops", 10))):
             error.context("Hotpluging virtio_pci (iteration %d)" % i)
             vm.devices.set_dirty()
-            new_dev = qemu_devices.QDevice("virtio-serial-pci",
-                                           {'id': 'virtio_serial_pci%d' % idx},
-                                           parent_bus={'aobject': 'pci.0'})
+            new_dev = qdevices.QDevice("virtio-serial-pci",
+                                       {'id': 'virtio_serial_pci%d' % idx},
+                                       parent_bus={'aobject': 'pci.0'})
 
             # Hotplug
             out = new_dev.hotplug(monitor)

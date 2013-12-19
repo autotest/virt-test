@@ -13,7 +13,8 @@ import os
 
 import common
 from autotest.client.shared.test_utils import mock
-import qemu_devices
+from qemu_devices import qdevices, qbuses, qcontainer
+from qemu_devices.utils import DeviceHotplugError, DeviceRemoveError
 import data_dir
 import qemu_monitor
 
@@ -68,11 +69,11 @@ class Devices(unittest.TestCase):
 
     def test_q_base_device(self):
         """ QBaseDevice tests """
-        qdevice = qemu_devices.QBaseDevice('MyType',
-                                           {'ParamA': 'ValueA',
-                                               'AUTOREMOVE': None},
-                                           'Object1',
-                                           {'type': 'pci'})
+        qdevice = qdevices.QBaseDevice('MyType',
+                                       {'ParamA': 'ValueA',
+                                        'AUTOREMOVE': None},
+                                       'Object1',
+                                       {'type': 'pci'})
         self.assertEqual(qdevice['ParamA'], 'ValueA', 'Param added during '
                          '__init__ is corrupted %s != %s' % (qdevice['ParamA'],
                                                              'ValueA'))
@@ -97,15 +98,15 @@ class Devices(unittest.TestCase):
 
     def test_q_string_device(self):
         """ QStringDevice tests """
-        qdevice = qemu_devices.QStringDevice('MyType', {'addr': '0x7'},
-                                             cmdline='-qdevice ahci,addr=%(addr)s')
+        qdevice = qdevices.QStringDevice('MyType', {'addr': '0x7'},
+                                         cmdline='-qdevice ahci,addr=%(addr)s')
         self.assertEqual(qdevice.cmdline(), '-qdevice ahci,addr=0x7', "Cmdline"
                          " doesn't match expected one:\n%s\n%s"
                          % (qdevice.cmdline(), '-qdevice ahci,addr=0x7'))
 
     def test_q_device(self):
         """ QDevice tests """
-        qdevice = qemu_devices.QDevice('ahci', {'addr': '0x7'})
+        qdevice = qdevices.QDevice('ahci', {'addr': '0x7'})
 
         self.assertEqual(str(qdevice), "a'ahci'", "Alternative name error %s "
                          "!= %s" % (str(qdevice), "a'ahci'"))
@@ -132,13 +133,13 @@ class Buses(unittest.TestCase):
 
     def test_q_sparse_bus(self):
         """ Sparse bus tests (general bus testing) """
-        bus = qemu_devices.QSparseBus('bus',
-                                      (['addr1', 'addr2', 'addr3'], [2, 6, 4]),
-                                      'my_bus',
-                                      'bus_type',
-                                      'autotest_bus')
+        bus = qbuses.QSparseBus('bus',
+                                (['addr1', 'addr2', 'addr3'], [2, 6, 4]),
+                                'my_bus',
+                                'bus_type',
+                                'autotest_bus')
 
-        qdevice = qemu_devices.QDevice
+        qdevice = qdevices.QDevice
 
         # Correct records
         params = {'addr1': '0', 'addr2': '0', 'addr3': '0', 'bus': 'my_bus'}
@@ -342,8 +343,8 @@ Slots:
 
     def test_q_pci_bus(self):
         """ PCI bus tests """
-        bus = qemu_devices.QPCIBus('pci.0', 'pci', 'my_pci')
-        qdevice = qemu_devices.QDevice
+        bus = qbuses.QPCIBus('pci.0', 'pci', 'my_pci')
+        qdevice = qdevices.QDevice
 
         # Good devices
         params = {'addr': '0'}
@@ -398,8 +399,8 @@ Slots:
 
     def test_q_pci_bus_strict(self):
         """ PCI bus tests in strict_mode (enforce additional options) """
-        bus = qemu_devices.QPCIBus('pci.0', 'pci', 'my_pci')
-        qdevice = qemu_devices.QDevice
+        bus = qbuses.QPCIBus('pci.0', 'pci', 'my_pci')
+        qdevice = qdevices.QDevice
 
         params = {}
         bus.insert(qdevice('dev1', params, parent_bus={'type': 'pci'}), True)
@@ -482,59 +483,59 @@ Slots:
 
     def test_usb_bus(self):
         """ Tests the specific handlings of QUSBBus """
-        usbc1 = qemu_devices.QUSBBus(2, 'usb1.0', 'uhci')
+        usbc1 = qbuses.QUSBBus(2, 'usb1.0', 'uhci')
 
         # Insert device into usb controller, default port
-        dev = qemu_devices.QDevice('usb-kbd', parent_bus={'type': 'uhci'})
+        dev = qdevices.QDevice('usb-kbd', parent_bus={'type': 'uhci'})
         assert usbc1.insert(dev) == []
 
         # Insert usb-hub into usb controller, default port
-        dev = qemu_devices.QDevice('usb-hub', parent_bus={'type': 'uhci'})
+        dev = qdevices.QDevice('usb-hub', parent_bus={'type': 'uhci'})
         assert usbc1.insert(dev) == []
         hub1 = dev.child_bus[-1]
 
         # Insert usb-hub into usb-hub, exact port
-        dev = qemu_devices.QDevice('usb-hub', {'port': '2.4'},
-                                   parent_bus={'type': 'uhci'})
+        dev = qdevices.QDevice('usb-hub', {'port': '2.4'},
+                               parent_bus={'type': 'uhci'})
         assert hub1.insert(dev) == []
         hub2 = dev.child_bus[-1]
 
         # Insert usb-hub into usb-hub in usb-hub, exact port
-        dev = qemu_devices.QDevice('usb-hub', {'port': '2.4.3'},
-                                   parent_bus={'type': 'uhci'})
+        dev = qdevices.QDevice('usb-hub', {'port': '2.4.3'},
+                               parent_bus={'type': 'uhci'})
         assert hub2.insert(dev) == []
         hub3 = dev.child_bus[-1]
         # verify that port is updated correctly
         self.assertEqual("2.4.3", dev.get_param("port"))
 
         # Insert usb-device into usb-hub in usb-hub in usb-hub, exact port
-        dev = qemu_devices.QDevice('usb-kbd', {'port': '2.4.3.1'},
-                                   parent_bus={'type': 'uhci'})
+        dev = qdevices.QDevice('usb-kbd', {'port': '2.4.3.1'},
+                               parent_bus={'type': 'uhci'})
         assert hub3.insert(dev) == []
         # Insert usb-device into usb-hub in usb-hub in usb-hub, default port
-        dev = qemu_devices.QDevice('usb-kbd', parent_bus={'type': 'uhci'})
+        dev = qdevices.QDevice('usb-kbd', parent_bus={'type': 'uhci'})
         assert hub3.insert(dev) == []
 
         # Try to insert device into specific port which belongs to inferior bus
-        out = hub2.insert(qemu_devices.QDevice('usb-kbd',
-                                               {'port': '2.4.3.3'},
-                                               parent_bus={'type': 'uhci'}))
+        out = hub2.insert(qdevices.QDevice('usb-kbd',
+                                           {'port': '2.4.3.3'},
+                                           parent_bus={'type': 'uhci'}))
         assert out == "BusId"
 
         # Try to insert device into specific port which belongs to superior bus
-        out = hub2.insert(qemu_devices.QDevice('usb-kbd', {'port': '2.4'},
-                                               parent_bus={'type': 'uhci'}))
+        out = hub2.insert(qdevices.QDevice('usb-kbd', {'port': '2.4'},
+                                           parent_bus={'type': 'uhci'}))
         assert out == "BusId"
 
         # Try to insert device into specific port which belongs to same level
         # but different port
-        out = hub2.insert(qemu_devices.QDevice('usb-kbd', {'port': '2.3.4'},
-                                               parent_bus={'type': 'uhci'}))
+        out = hub2.insert(qdevices.QDevice('usb-kbd', {'port': '2.3.4'},
+                                           parent_bus={'type': 'uhci'}))
         assert out == "BusId"
 
         # Force insert device with port which belongs to other hub
-        dev = qemu_devices.QDevice('usb-hub', {'port': '2.4.3.4'},
-                                   parent_bus={'type': 'uhci'})
+        dev = qdevices.QDevice('usb-hub', {'port': '2.4.3.4'},
+                               parent_bus={'type': 'uhci'})
 
         # Check the overall buses correctness
         self.assertEqual("usb1.0(uhci): {1:a'usb-kbd',2:a'usb-hub'}",
@@ -553,49 +554,49 @@ class Container(unittest.TestCase):
 
     def setUp(self):
         self.god = mock.mock_god(ut=self)
-        self.god.stub_function(qemu_devices.utils, "system_output")
+        self.god.stub_function(qcontainer.utils, "system_output")
 
     def tearDown(self):
         self.god.unstub_all()
 
     def create_qdev(self, vm_name='vm1', strict_mode="no",
                     allow_hotplugged_vm="yes"):
-        """ :return: Initialized qemu_devices.DevContainer object """
+        """ :return: Initialized qcontainer.DevContainer object """
         qemu_cmd = '/usr/bin/qemu_kvm'
-        qemu_devices.utils.system_output.expect_call('%s -help' % qemu_cmd,
-                                                     timeout=10, ignore_status=True
-                                                     ).and_return(QEMU_HELP)
-        qemu_devices.utils.system_output.expect_call("%s -device ? 2>&1"
-                                                     % qemu_cmd, timeout=10,
-                                                     ignore_status=True
-                                                     ).and_return(QEMU_DEVICES)
-        qemu_devices.utils.system_output.expect_call("%s -M ?" % qemu_cmd,
-                                                     timeout=10, ignore_status=True
-                                                     ).and_return(QEMU_MACHINE)
+        qcontainer.utils.system_output.expect_call('%s -help' % qemu_cmd,
+                                                   timeout=10, ignore_status=True
+                                                   ).and_return(QEMU_HELP)
+        qcontainer.utils.system_output.expect_call("%s -device ? 2>&1"
+                                                   % qemu_cmd, timeout=10,
+                                                   ignore_status=True
+                                                   ).and_return(QEMU_DEVICES)
+        qcontainer.utils.system_output.expect_call("%s -M ?" % qemu_cmd,
+                                                   timeout=10, ignore_status=True
+                                                   ).and_return(QEMU_MACHINE)
         cmd = "echo -e 'help\nquit' | %s -monitor stdio -vnc none" % qemu_cmd
-        qemu_devices.utils.system_output.expect_call(cmd, timeout=10,
-                                                     ignore_status=True
-                                                     ).and_return(QEMU_HMP)
+        qcontainer.utils.system_output.expect_call(cmd, timeout=10,
+                                                   ignore_status=True
+                                                   ).and_return(QEMU_HMP)
         cmd = ('echo -e \'{ "execute": "qmp_capabilities" }\n'
                '{ "execute": "query-commands", "id": "RAND91" }\n'
                '{ "execute": "quit" }\''
                '| %s -qmp stdio -vnc none | grep return |'
                ' grep RAND91' % qemu_cmd)
-        qemu_devices.utils.system_output.expect_call(cmd, timeout=10,
-                                                     ignore_status=True
-                                                     ).and_return('')
+        qcontainer.utils.system_output.expect_call(cmd, timeout=10,
+                                                   ignore_status=True
+                                                   ).and_return('')
 
         cmd = ('echo -e \'{ "execute": "qmp_capabilities" }\n'
                '{ "execute": "query-commands", "id": "RAND91" }\n'
                '{ "execute": "quit" }\' | (sleep 1; cat )'
                '| %s -qmp stdio -vnc none | grep return |'
                ' grep RAND91' % qemu_cmd)
-        qemu_devices.utils.system_output.expect_call(cmd, timeout=10,
-                                                     ignore_status=True
-                                                     ).and_return(QEMU_QMP)
+        qcontainer.utils.system_output.expect_call(cmd, timeout=10,
+                                                   ignore_status=True
+                                                   ).and_return(QEMU_QMP)
 
-        qdev = qemu_devices.DevContainer(qemu_cmd, vm_name, strict_mode, 'no',
-                                         allow_hotplugged_vm)
+        qdev = qcontainer.DevContainer(qemu_cmd, vm_name, strict_mode, 'no',
+                                       allow_hotplugged_vm)
 
         self.god.check_playback()
         return qdev
@@ -675,11 +676,11 @@ fdc
                                                                          exp)
 
         # Insert some good devices
-        qdevice = qemu_devices.QDevice
+        qdevice = qdevices.QDevice
 
         # Device with child bus
-        bus = qemu_devices.QSparseBus('bus', [['addr'], [6]], 'hba1.0', 'hba',
-                                      'a_hba')
+        bus = qbuses.QSparseBus('bus', [['addr'], [6]], 'hba1.0', 'hba',
+                                'a_hba')
         dev = qdevice('HBA', {'id': 'hba1', 'addr': 10},
                       parent_bus={'aobject': 'pci.0'}, child_bus=bus)
         out = qdev.insert(dev)
@@ -776,7 +777,7 @@ fdc
                          % ('hba1__0', qdev.str_long()))
 
         # Remove device which contains other devices (without recursive)
-        self.assertRaises(qemu_devices.DeviceRemoveError, qdev.remove, 'hba1',
+        self.assertRaises(qcontainer.DeviceRemoveError, qdev.remove, 'hba1',
                           False)
 
         # Remove device which contains other devices (recursive)
@@ -856,7 +857,7 @@ fdc
         assert out == 8, "Number of devices of this VM is not 8 (%s)" % out
 
         # Hotplug is expected to pass but monitor reports failure
-        dev3 = qemu_devices.QDrive('a_dev1')
+        dev3 = qdevices.QDrive('a_dev1')
         dev3.hotplug = lambda _monitor: ("could not open disk image /tmp/qqq: "
                                          "No such file or directory")
 
@@ -875,9 +876,9 @@ fdc
         assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
 
         # Hotplug is expected to fail, qdev should stay unaffected
-        dev4 = qemu_devices.QBaseDevice("bad_dev", parent_bus={'type': "XXX"})
+        dev4 = qdevices.QBaseDevice("bad_dev", parent_bus={'type': "XXX"})
         dev4.hotplug = lambda _monitor: ("")
-        self.assertRaises(qemu_devices.DeviceHotplugError, qdev.simple_hotplug,
+        self.assertRaises(qcontainer.DeviceHotplugError, qdev.simple_hotplug,
                           dev4, True)
         out = qdev.get_state()
         assert out == 0, "Status after impossible hotplug is not 0 (%s)" % out
@@ -931,12 +932,12 @@ fdc
         assert out == -1, "qdev state is incorrect %s != %s" % (out, 1)
 
         # __create_unique_aid
-        dev = qemu_devices.QDevice()
+        dev = qdevices.QDevice()
         qdev.insert(dev)
         out = dev.get_aid()
         self.assertEqual(out, '__0', "incorrect aid %s != %s" % (out, '__0'))
 
-        dev = qemu_devices.QDevice(None, {'id': 'qid'})
+        dev = qdevices.QDevice(None, {'id': 'qid'})
         qdev.insert(dev)
         out = dev.get_aid()
         self.assertEqual(out, 'qid', "incorrect aid %s != %s" % (out, 'qid'))
@@ -972,15 +973,15 @@ fdc
         self.assertFalse(qdev.has_qmp_cmd('RAND91'))
 
         # Add some buses
-        bus1 = qemu_devices.QPCIBus('pci.0', 'pci', 'a_pci0')
-        qdev.insert(qemu_devices.QDevice(params={'id': 'pci0'},
-                                         child_bus=bus1))
-        bus2 = qemu_devices.QPCIBus('pci.1', 'pci', 'a_pci1')
-        qdev.insert(qemu_devices.QDevice(child_bus=bus2))
-        bus3 = qemu_devices.QPCIBus('pci.2', 'pci', 'a_pci2')
-        qdev.insert(qemu_devices.QDevice(child_bus=bus3))
-        bus4 = qemu_devices.QPCIBus('pcie.0', 'pcie', 'a_pcie0')
-        qdev.insert(qemu_devices.QDevice(child_bus=bus4))
+        bus1 = qbuses.QPCIBus('pci.0', 'pci', 'a_pci0')
+        qdev.insert(qdevices.QDevice(params={'id': 'pci0'},
+                                     child_bus=bus1))
+        bus2 = qbuses.QPCIBus('pci.1', 'pci', 'a_pci1')
+        qdev.insert(qdevices.QDevice(child_bus=bus2))
+        bus3 = qbuses.QPCIBus('pci.2', 'pci', 'a_pci2')
+        qdev.insert(qdevices.QDevice(child_bus=bus3))
+        bus4 = qbuses.QPCIBus('pcie.0', 'pcie', 'a_pcie0')
+        qdev.insert(qdevices.QDevice(child_bus=bus4))
 
         # get_buses (all buses of this type)
         out = qdev.get_buses({'type': 'pci'})
@@ -993,7 +994,7 @@ fdc
 
         # fill the first pci bus
         for _ in xrange(32):
-            qdev.insert(qemu_devices.QDevice(parent_bus={'type': 'pci'}))
+            qdev.insert(qdevices.QDevice(parent_bus={'type': 'pci'}))
 
         # get_first_free_bus (last one is full, return the previous one)
         out = qdev.get_first_free_bus({'type': 'pci'}, [None, None])
@@ -1013,14 +1014,14 @@ fdc
                          ' %s' % (out, 3))
 
         # get_children
-        dev = qemu_devices.QDevice(parent_bus={'aobject': 'a_pci0'})
-        bus = qemu_devices.QPCIBus('test1', 'test', 'a_test1')
+        dev = qdevices.QDevice(parent_bus={'aobject': 'a_pci0'})
+        bus = qbuses.QPCIBus('test1', 'test', 'a_test1')
         dev.add_child_bus(bus)
-        bus = qemu_devices.QPCIBus('test2', 'test', 'a_test2')
+        bus = qbuses.QPCIBus('test2', 'test', 'a_test2')
         dev.add_child_bus(bus)
         qdev.insert(dev)
-        qdev.insert(qemu_devices.QDevice(parent_bus={'aobject': 'a_test1'}))
-        qdev.insert(qemu_devices.QDevice(parent_bus={'aobject': 'a_test2'}))
+        qdev.insert(qdevices.QDevice(parent_bus={'aobject': 'a_test1'}))
+        qdev.insert(qdevices.QDevice(parent_bus={'aobject': 'a_test2'}))
         out = dev.get_children()
         assert len(out) == 2, ("Not all children were listed %d != 2:\n%s"
                                % (len(out), out))
@@ -1042,21 +1043,21 @@ fdc
                                 % (qdev1.str_long(), qdev2.str_long()))
 
         # Insert a device to qdev1
-        dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
+        dev = qdevices.QDevice('dev1', {'id': 'dev1'})
         qdev1.insert(dev)
 
         assert qdev1 != qdev2, ("Different qdevs match:\n%s\n%s"
                                 % (qdev1.str_long(), qdev2.str_long()))
 
         # Insert similar device to qdev2
-        dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
+        dev = qdevices.QDevice('dev1', {'id': 'dev1'})
         qdev2.insert(dev)
 
         assert qdev1 == qdev2, ("Similar qdevs are not alike\n%s\n%s"
                                 % (qdev1.str_long(), qdev2.str_long()))
 
         # Hotplug similar device to qdev3
-        dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
+        dev = qdevices.QDevice('dev1', {'id': 'dev1'})
         dev.hotplug = lambda _monitor: ""   # override the hotplug method
         dev.verify_hotplug = lambda _out, _monitor: True
         qdev3.simple_hotplug(dev, monitor)
@@ -1093,27 +1094,27 @@ fdc
                                                   'type': 'pci-bridge'})
         qdev.insert(devs)
 
-        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_bridge'},
-                                         parent_bus={'type': ('PCI', 'PCIE'),
-                                                     'aobject': 'pci_bridge'}))
+        qdev.insert(qdevices.QDevice("ahci", {'id': 'in_bridge'},
+                                     parent_bus={'type': ('PCI', 'PCIE'),
+                                                 'aobject': 'pci_bridge'}))
 
-        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_switch1'},
-                                         parent_bus={'type': ('PCI', 'PCIE'),
-                                                     'aobject': 'pci_switch'}))
-        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_switch2'},
-                                         parent_bus={'type': ('PCI', 'PCIE'),
-                                                     'aobject': 'pci_switch'}))
-        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_switch3'},
-                                         parent_bus={'type': ('PCI', 'PCIE'),
-                                                     'aobject': 'pci_switch'}))
+        qdev.insert(qdevices.QDevice("ahci", {'id': 'in_switch1'},
+                                     parent_bus={'type': ('PCI', 'PCIE'),
+                                                 'aobject': 'pci_switch'}))
+        qdev.insert(qdevices.QDevice("ahci", {'id': 'in_switch2'},
+                                     parent_bus={'type': ('PCI', 'PCIE'),
+                                                 'aobject': 'pci_switch'}))
+        qdev.insert(qdevices.QDevice("ahci", {'id': 'in_switch3'},
+                                     parent_bus={'type': ('PCI', 'PCIE'),
+                                                 'aobject': 'pci_switch'}))
 
-        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_root1'},
-                                         parent_bus={'type': ('PCI', 'PCIE'),
-                                                     'aobject': 'root.1'}))
+        qdev.insert(qdevices.QDevice("ahci", {'id': 'in_root1'},
+                                     parent_bus={'type': ('PCI', 'PCIE'),
+                                                 'aobject': 'root.1'}))
 
-        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_pci.0'},
-                                         parent_bus={'type': ('PCI', 'PCIE'),
-                                                     'aobject': 'pci.0'}))
+        qdev.insert(qdevices.QDevice("ahci", {'id': 'in_pci.0'},
+                                     parent_bus={'type': ('PCI', 'PCIE'),
+                                                 'aobject': 'pci.0'}))
 
         exp = ("-M pc -device ioh3420,id=root.1,bus=pci.0,addr=02 "
                "-device x3130-upstream,id=pci_switch,bus=root.1,addr=00 "
