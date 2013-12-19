@@ -69,7 +69,7 @@ def run(test, params, env):
     params["start_vm"] = "yes"
     login_timeout = int(params.get("login_timeout", 360))
 
-    env_process.preprocess(tests, params, env)
+    env_process.preprocess(test, params, env)
 
     sessions_info = []
     for vm_name in params["vms"].split():
