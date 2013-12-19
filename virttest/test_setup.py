@@ -8,7 +8,7 @@ import re
 import random
 import math
 from autotest.client.shared import error, utils
-from autotest.client import kvm_control, os_dep
+from autotest.client import os_dep
 import utils_misc
 
 try:
