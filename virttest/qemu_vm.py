@@ -2220,11 +2220,14 @@ class VM(virt_vm.BaseVM):
                 if nic.nettype == 'macvtap':
                     tap = utils_net.Macvtap(nic.ifname)
                     tap.delete()
-                elif nic.get('ifname') is not None:
-                    if nic.ifname not in utils_net.get_net_if():
-                        _, br_name = utils_net.find_current_bridge(nic.ifname)
+                elif nic.nettype in ('bridge', 'network'):
+                    ifname = nic.get('ifname')
+                    if ifname is not None and ifname not in utils_net.get_net_if():
+                        _, br_name = utils_net.find_current_bridge(ifname)
                         if br_name == nic.netdst:
-                            utils_net.del_from_bridge(nic.ifname, nic.netdst)
+                            utils_net.del_from_bridge(ifname, br_name)
+                else: # user mode networking
+                    pass
 
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
