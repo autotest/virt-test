@@ -1,0 +1,3 @@
+Tests for class virSecret.
+
+class virSecret provides all kinds of functionalities related secret, such as setValue, undefine.

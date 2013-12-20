@@ -1,0 +1,3 @@
+Tests for class virDomainSnapshot.
+
+class virDomainSnapshot provides all kinds of functionalities related domain snapshot, such as getName, getParent.

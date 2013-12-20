@@ -1,0 +1,3 @@
+Tests for class virStorageVol.
+
+class virStorageVol provides all kinds of functionalities related volume storage, such as download, path.

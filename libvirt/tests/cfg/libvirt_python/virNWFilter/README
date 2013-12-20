@@ -1,0 +1,3 @@
+Tests for class virNWFilter.
+
+class virNWFilter provides all kinds of functionalities related network filter, such as UUID, undefine.

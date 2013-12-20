@@ -1,0 +1,3 @@
+Tests for class virStoragePool.
+
+class virStoragePool provides all kinds of functionalities related pool storage, such as build, create.
