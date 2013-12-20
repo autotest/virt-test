@@ -2,10 +2,13 @@
 Module to wrap functions of libvirt bindings for python.
 """
 from autotest.client.shared import error
+
 try:
     import libvirt
+    libvirtError = libvirt.libvirtError
 except ImportError:
     libvirt = None
+
 
 def get_connect(params={}):
     """
@@ -18,6 +21,8 @@ def get_connect(params={}):
                                 "installed.")
     # Default value for open() is "".
     connect_uri = params.get("connect_uri", "")
+    if connect_uri == "default":
+        connect_uri = ""
     return libvirt.open(connect_uri)
 
 
