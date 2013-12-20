@@ -692,7 +692,7 @@ class QSCSIBus(QSparseBus):
         :param atype: Autotest bus type
         :type atype: str
         """
-        super(QSCSIBus, self).__init__('bus', [['scsiid', 'lun'], addr_spec],
+        super(QSCSIBus, self).__init__('bus', [['scsi-id', 'lun'], addr_spec],
                                        busid, bus_type, aobject, atype)
 
     def _increment_addr(self, addr, last_addr=None):
