@@ -6,7 +6,7 @@ from virttest import virsh, aexpect, utils_test
 from virttest.libvirt_xml import vm_xml
 
 
-def run_virsh_snapshot_edit(test, params, env):
+def run(test, params, env):
     """
     Test command: snapshot-edit
     Test options: --current, --rename, --clone
