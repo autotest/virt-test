@@ -1274,10 +1274,14 @@ class VirtIface(propcan.PropCan, object):
         Return True if nic has no mac or an incomplete mac
         """
         if hasattr(self, 'mac'):
-            if self.mac is None or len(self.mac) < 17:
+            if self.mac is None:
+                return True
+            elif self.mac is '':
+                return True
+            elif len(self.mac) < 17:
                 return True
             else:
-                return self.mac_is_valid(self.mac)
+                return False
         return True
 
     def generate_mac_address(self, existing_macs=None, attempts=1024):
