@@ -9,7 +9,7 @@ import time
 from autotest.client.shared import error
 from virttest import funcatexit, arch
 from virttest import qemu_qtree, utils_test, env_process
-from virttest.qemu_devices import qcontainer
+from virttest.qemu_devices import utils
 
 
 def stop_stresser(vm, stop_cmd):
@@ -154,7 +154,7 @@ def run(test, params, env):
             try:
                 for dev in devs:
                     qdev.insert(dev)
-            except qcontainer.DeviceInsertError:
+            except utils.DeviceInsertError:
                 # All buses are full, (TODO add bus) or remove this format
                 for dev in devs:
                     if dev in qdev:
