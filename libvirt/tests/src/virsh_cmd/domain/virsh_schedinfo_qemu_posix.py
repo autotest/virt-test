@@ -36,12 +36,19 @@ def run(test, params, env):
         """
         cgroup_path = \
             utils_cgroup.resolve_task_cgroup_path(vm.get_pid(), "cpu")
+
+        # When a VM has an 'emulator' child cgroup present, we must
+        # strip off that suffix when detecting the cgroup for a machine
+        if os.path.basename(cgroup_path) == "emulator":
+            cgroup_path = os.path.dirname(cgroup_path)
         cgroup_file = os.path.join(cgroup_path, parameter)
-        if not os.path.exists(cgroup_file):
-            raise error.TestNAError("Unknown path to cgroups", cgroup_file)
-        get_value_cmd = "cat %s" % cgroup_file
-        result = utils.run(get_value_cmd, ignore_status=True)
-        return result.stdout.strip()
+        try:
+            with open(cgroup_file) as cg_file:
+                result = cg_file.read()
+        except IOError:
+            raise error.TestError("Failed to open cgroup file %s"
+                                  % cgroup_file)
+        return result.strip()
 
     def schedinfo_output_analyse(result, set_ref, scheduler="posix"):
         """
