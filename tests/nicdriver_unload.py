@@ -4,7 +4,7 @@ import time
 import random
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_misc, utils_net, aexpect, data_dir
+from virttest import utils_misc, utils_net, data_dir
 
 
 @error.context_aware
@@ -22,7 +22,20 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+    def reset_guest_udevrules(session, rules_file, rules_content):
+        """
+        Write guest udev rules, then reboot the guest and
+        return the new session
+        """
+        set_cmd = "echo '%s' > %s" % (rules_content, rules_file)
+        session.cmd_output_safe(set_cmd)
+        return vm.reboot()
+
+
     def all_threads_done(threads):
+        """
+        Check whether all threads have finished
+        """
         for thread in threads:
             if thread.isAlive():
                 return False
@@ -30,13 +43,18 @@ def run(test, params, env):
                 continue
         return True
 
+
     def all_threads_alive(threads):
+        """
+        Check whether all threads is alive
+        """
         for thread in threads:
             if not thread.isAlive():
                 return False
             else:
                 continue
         return True
+
 
     timeout = int(params.get("login_timeout", 360))
     transfer_timeout = int(params.get("transfer_timeout", 1000))
@@ -45,6 +63,14 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
+    vm_mac_address = vm.get_mac_address()
+    udev_rules_file = "/etc/udev/rules.d/70-persistent-net.rules"
+    rules = params.get("rules")
+    if not session.cmd_status("[ -e %s ]" % udev_rules_file):
+        if not rules:
+            raise error.TestNAError("You must set udev rules before test")
+        rules = rules % vm_mac_address
+        session = reset_guest_udevrules(session, udev_rules_file, rules)
 
     error.base_context("Test env prepare")
     error.context("Get NIC interface name in guest.", logging.info)
