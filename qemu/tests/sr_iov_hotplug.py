@@ -217,8 +217,8 @@ def run(test, params, env):
     if vm.pci_assignable is None:
         logging.info("*** vm.pci_assignable ***")
         vm.pci_assignable = test_setup.PciAssignable(
-            driver=params.get("driver"),
-            driver_option=params.get("driver_option"),
+            driver=params.get("pa_driver"),
+            driver_option=params.get("pa_driver_option"),
             host_set_flag=params.get("host_setup_flag"),
             kvm_params=params.get("kvm_default"),
             vf_filter_re=params.get("vf_filter_re"),
