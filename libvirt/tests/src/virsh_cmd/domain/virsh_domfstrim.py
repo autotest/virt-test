@@ -7,7 +7,7 @@ from virttest.libvirt_xml.devices.disk import Disk
 from virttest.libvirt_xml.devices.controller import Controller
 
 
-def run_virsh_domfstrim(test, params, env):
+def run(test, params, env):
     """
     Test domfstrim command, make sure that all supported options work well
 

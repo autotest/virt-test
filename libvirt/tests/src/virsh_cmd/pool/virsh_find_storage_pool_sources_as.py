@@ -5,7 +5,7 @@ from autotest.client import utils, lv_utils
 from autotest.client.shared import error
 
 
-def run_virsh_find_storage_pool_sources_as(test, params, env):
+def run(test, params, env):
     """
     Test command: virsh find-storage-pool-sources-as
 
