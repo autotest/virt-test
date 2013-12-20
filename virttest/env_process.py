@@ -691,7 +691,7 @@ def postprocess(test, params, env):
             logging.warn("Found corrupt PPM file: %s", f)
 
     # Should we convert PPM files to PNG format?
-    if params.get("convert_ppm_files_to_png") == "yes":
+    if params.get("convert_ppm_files_to_png", "no") == "yes":
         try:
             for f in glob.glob(os.path.join(test.debugdir, "*.ppm")):
                 if ppm_utils.image_verify_ppm_file(f):
