@@ -381,6 +381,8 @@ class QSparseBus(object):
                     if bus_type == self.type:
                         return True
                 return False
+            elif self.type == bus_spec['type']:
+                return True
         for key, value in bus_spec.iteritems():
             if isinstance(value, (tuple, list)):
                 for val in value:
