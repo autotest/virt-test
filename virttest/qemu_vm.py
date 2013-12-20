@@ -2597,6 +2597,8 @@ class VM(virt_vm.BaseVM):
         nic_index = self.virtnet.nic_name_index(nic_name)
         nic.set_if_none('netdev_id', utils_misc.generate_random_id())
         nic.set_if_none('ifname', self.virtnet.generate_ifname(nic_index))
+        nic.set_if_none('netdev_extra_params',
+                        params.get('netdev_extra_params'))
         nic.set_if_none('nettype', 'bridge')
         if nic.nettype in ['bridge', 'macvtap']:  # implies tap
             # destination is required, hard-code reasonable default if unset
@@ -2733,7 +2735,7 @@ class VM(virt_vm.BaseVM):
         else:  # unsupported nettype
             raise virt_vm.VMUnknownNetTypeError(self.name, nic_index_or_name,
                                                 nic.nettype)
-        if nic.has_key('netdev_extra_params'):
+        if nic.has_key('netdev_extra_params') and nic.netdev_extra_params:
             attach_cmd += nic.netdev_extra_params
         error.context("Hotplugging " + msg_sfx + attach_cmd, logging.debug)
 
