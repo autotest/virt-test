@@ -7,7 +7,6 @@ import os
 import sys
 import tempfile
 import glob
-import logging
 import shutil
 
 _ROOT_PATH = os.path.join(sys.modules[__name__].__file__, "..", "..")
