@@ -1700,8 +1700,9 @@ class VM(virt_vm.BaseVM):
 
     def _nic_tap_add_helper(self, nic):
         if nic.nettype == 'macvtap':
-            logging.info("Adding macvtap ifname: %s", nic.ifname)
-            utils_net.add_nic_macvtap(nic)
+            macvtap_mode = self.params.get("macvtap_mode", "vepa")
+            nic.tapfds = utils_net.create_and_open_macvtap(nic.ifname,
+                    macvtap_mode, nic.queues, nic.netdst, nic.mac)
         else:
             nic.tapfds = utils_net.open_tap("/dev/net/tun", nic.ifname,
                                             queues=nic.queues, vnet_hdr=True)
@@ -1709,7 +1710,7 @@ class VM(virt_vm.BaseVM):
                           self.name, nic.ifname, nic.netdst)
             if nic.nettype == 'bridge':
                 utils_net.add_to_bridge(nic.ifname, nic.netdst)
-            utils_net.bring_up_ifname(nic.ifname)
+        utils_net.bring_up_ifname(nic.ifname)
 
     def _nic_tap_remove_helper(self, nic):
         try:
@@ -2663,7 +2664,6 @@ class VM(virt_vm.BaseVM):
         :raise:: IOError if TAP device node cannot be opened
         :raise:: VMAddNetDevError: if operation failed
         """
-        tapfds = []
         nic = self.virtnet[nic_index_or_name]
         error.context("Activating netdev for %s based on %s" %
                       (self.name, nic))
@@ -2671,28 +2671,41 @@ class VM(virt_vm.BaseVM):
                    (self.virtnet[nic_index_or_name], self.name))
 
         attach_cmd = "netdev_add"
-        if nic.nettype == 'bridge':  # implies tap
+        if nic.nettype in ['bridge', 'macvtap']:
             error.context("Opening tap device node for %s " % nic.ifname,
                           logging.debug)
-            python_tapfds = utils_net.open_tap("/dev/net/tun",
-                                               nic.ifname,
-                                               queues=nic.queues,
-                                               vnet_hdr=False)
+            if nic.nettype == "bridge":
+                tun_tap_dev = "/dev/net/tun"
+                python_tapfds = utils_net.open_tap(tun_tap_dev,
+                                                   nic.ifname,
+                                                   queues=nic.queues,
+                                                   vnet_hdr=False)
+            elif nic.nettype == "macvtap":
+                macvtap_mode = self.params.get("macvtap_mode", "vepa")
+                o_macvtap= utils_net.create_macvtap(nic.ifname, macvtap_mode,
+                                                    nic.netdst, nic.mac)
+                tun_tap_dev = o_macvtap.get_device()
+                python_tapfds = utils_net.open_macvtap(o_macvtap, nic.queues)
+
+            qemu_fds = "/proc/%s/fd" % self.get_pid()
+            openfd_list = os.listdir(qemu_fds)
             for i in range(int(nic.queues)):
                 error.context("Assigning tap %s to qemu by fd" %
                               nic.tapfd_ids[i], logging.info)
-                lsof_cmd = "lsof -a -p %s -Ff -- /dev/net/tun" % self.get_pid()
-                openfd_list = utils.system_output(lsof_cmd).splitlines()
                 self.monitor.getfd(int(python_tapfds.split(':')[i]),
                                    nic.tapfd_ids[i])
-                n_openfd_list = utils.system_output(lsof_cmd).splitlines()
-                new_qemu_fd = list(set(n_openfd_list) - set(openfd_list))
-                if not new_qemu_fd:
-                    err_msg = "Can't get the tap fd in qemu process!"
-                    raise virt_vm.VMAddNetDevError(err_msg)
-                tapfds.append(new_qemu_fd[0].lstrip("f"))
+            n_openfd_list = os.listdir(qemu_fds)
+            new_fds = list(set(n_openfd_list) - set(openfd_list))
 
-            nic.set_if_none("tapfds", ":".join(tapfds))
+            if not new_fds:
+                err_msg = "Can't get the fd that qemu process opened!"
+                raise virt_vm.VMAddNetDevError(err_msg)
+            qemu_tapfds = [fd for fd in new_fds if os.readlink(
+                              os.path.join(qemu_fds, fd)) == tun_tap_dev]
+            if not qemu_tapfds or len(qemu_tapfds) != int(nic.queues):
+                err_msg = "Can't get the tap fd in qemu process!"
+                raise virt_vm.VMAddNetDevError(err_msg)
+            nic.set_if_none("tapfds", ":".join(qemu_tapfds))
 
             if not self.devices:
                 err_msg = "Can't add nic for VM which is not running."
@@ -2707,13 +2720,11 @@ class VM(virt_vm.BaseVM):
             error.context("Raising interface for " + msg_sfx + attach_cmd,
                           logging.debug)
             utils_net.bring_up_ifname(nic.ifname)
-            error.context("Raising bridge for " + msg_sfx + attach_cmd,
-                          logging.debug)
             # assume this will puke if netdst unset
-            if not nic.netdst is None:
+            if not nic.netdst is None and nic.nettype == "bridge":
+                error.context("Raising bridge for " + msg_sfx + attach_cmd,
+                              logging.debug)
                 utils_net.add_to_bridge(nic.ifname, nic.netdst)
-        elif nic.nettype == 'macvtap':
-            pass
         elif nic.nettype == 'user':
             attach_cmd += " user,id=%s" % nic.device_id
         elif nic.nettype == 'none':
@@ -2816,7 +2827,8 @@ class VM(virt_vm.BaseVM):
         :param: nic_index_or_name: name or index number for existing NIC
         """
         # FIXME: Need to down interface & remove from bridge????
-        netdev_id = self.virtnet[nic_index_or_name].device_id
+        nic = self.virtnet[nic_index_or_name]
+        netdev_id = nic.device_id
         error.context("removing netdev id %s from vm %s" %
                       (netdev_id, self.name))
         nic_del_cmd = "netdev_del id=%s" % netdev_id
@@ -2831,6 +2843,9 @@ class VM(virt_vm.BaseVM):
         if netdev_eigenvalue in network_info:
             raise virt_vm.VMDelNetDevError("Fail to remove netdev %s" %
                                            netdev_id)
+        if nic.nettype == 'macvtap':
+            tap = utils_net.Macvtap(nic.ifname)
+            tap.delete()
 
     @error.context_aware
     def del_nic(self, nic_index_or_name):

@@ -73,6 +73,38 @@ class TAPCreationError(NetError):
         return e_msg
 
 
+class MacvtapCreationError(NetError):
+
+    def __init__(self, ifname, base_interface, details=None):
+        NetError.__init__(self, ifname, details)
+        self.ifname = ifname
+        self.interface = base_interface
+        self.details = details
+
+    def __str__(self):
+        e_msg = "Cannot create macvtap device %s " % self.ifname
+        e_msg += "base physical interface %s." % self.interface
+        if self.details is not None:
+            e_msg += ": %s" % self.details
+        return e_msg
+
+
+class MacvtapGetBaseInterfaceError(NetError):
+
+    def __init__(self, ifname=None, details=None):
+        NetError.__init__(self, ifname, details)
+        self.ifname = ifname
+        self.details = details
+
+    def __str__(self):
+        e_msg = "Cannot get a valid physical interface to create macvtap."
+        if self.ifname:
+            e_msg += "physical interface is : %s " % self.ifname
+        if self.details is not None:
+            e_msg += "error info: %s" % self.details
+        return e_msg
+
+
 class TAPBringUpError(NetError):
 
     def __init__(self, ifname):
@@ -469,11 +501,9 @@ class Macvtap(Interface):
         :param mode: Creation mode.
         """
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
-        if os.path.exists(path):
-            return
-
-        self.ip_link_ctl(["link", "add", "link", device, "name",
-                          self.tapname, "type", "macvtap", "mode", mode])
+        if not os.path.exists(path):
+            self.ip_link_ctl(["link", "add", "link", device, "name",
+                             self.tapname, "type", "macvtap", "mode", mode])
 
     def delete(self):
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
@@ -488,27 +518,29 @@ class Macvtap(Interface):
             raise TAPModuleError(device, "open", e)
 
 
-def add_nic_macvtap(nic, base_interface=None):
+def get_macvtap_base_iface(base_interface=None):
     """
-    Add a macvtap nic, if you not have a macvtap switch in you env, run
-    this type case you need at least two nic on you host
-    If you not assign the base_interface will use the first physical interface
-    which is not a brport and up to create macvtap
+    Get physical interface to create macvtap, if you assigned base interface
+    is valid(not belong to any bridge and is up), will use it; else use the
+    first physical interface,  which is not a brport and up.
     """
     tap_base_device = None
 
     (dev_int, _) = get_sorted_net_if()
     if not dev_int:
-        raise TAPCreationError("Cannot get a physical interface on the host")
+        err_msg = "Cannot get any physical interface from the host"
+        raise MacvtapGetBaseInterfaceError(details=err_msg)
 
-    if base_interface:
-        if not base_interface in dev_int:
-            err_msg = "Macvtap must created base on a physical interface"
-            raise TAPCreationError(err_msg)
+    if base_interface and base_interface in dev_int:
         base_inter = Interface(base_interface)
         if (not base_inter.is_brport()) and base_inter.is_up():
             tap_base_device = base_interface
-    else:
+
+    if not tap_base_device:
+        if base_interface:
+            warn_msg = "Can not use '%s' as macvtap base interface, "
+            warn_msg += "will choice automatically"
+            logging.warn(warn_msg % base_interface)
         for interface in dev_int:
             base_inter = Interface(interface)
             if base_inter.is_brport():
@@ -521,17 +553,63 @@ def add_nic_macvtap(nic, base_interface=None):
         err_msg = ("Could not find a valid physical interface to create "
                    "macvtap, make sure the interface is up and it does not "
                    "belong to any bridge.")
-        raise TAPCreationError(nic.ifname, err_msg)
+        raise MacvtapGetBaseInterfaceError(details=err_msg)
+    return tap_base_device
 
+
+def create_macvtap(ifname, mode="vepa", base_if=None, mac_addr=None):
+    """
+    Create Macvtap device, return a object of Macvtap
+
+    :param ifname: macvtap interface name
+    :param mode:  macvtap type mode ("vepa, bridge,..)
+    :param base_if: physical interface to create macvtap
+    :param mac_addr: macvtap mac address
+    """
+    try:
+        base_if = get_macvtap_base_iface(base_if)
+        o_macvtap = Macvtap(ifname)
+        o_macvtap.create(base_if, mode)
+        if mac_addr:
+            o_macvtap.set_mac(mac_addr)
+        return o_macvtap
+    except Exception, e:
+        raise MacvtapCreationError(ifname, base_if, e)
+
+
+def open_macvtap(macvtap_object, queues=1):
+    """
+    Open a macvtap device and returns its file descriptors which are used by
+    fds=<fd1:fd2:..> parameter of qemu
+
+    For single queue, only returns one file descriptor, it's used by
+    fd=<fd> legacy parameter of qemu
+
+    If you not have a switch support vepa in you env, run this type case you
+    need at least two nic on you host [just workaround]
+
+    :param macvtap_object:  macvtap object
+    :param queues: Queue number
+    """
     tapfds = []
-    tap = Macvtap(nic.ifname)
-    tap.create(tap_base_device)
-    tap.set_mac(nic.mac)
-    for queue in range(int(nic.queues)):
-        tapfds.append(str(tap.open()))
-    nic.tapfds = ":".join(tapfds)
-    time.sleep(3)
-    tap.up()
+    for queue in range(int(queues)):
+        tapfds.append(str(macvtap_object.open()))
+    return ":".join(tapfds)
+
+
+def create_and_open_macvtap(ifname, mode="vepa", queues=1, base_if=None,
+                            mac_addr=None):
+    """
+    Create a new macvtap device, open it, and return the fds
+
+    :param ifname: macvtap interface name
+    :param mode:  macvtap type mode ("vepa, bridge,..)
+    :param queues: Queue number
+    :param base_if: physical interface to create macvtap
+    :param mac_addr: macvtap mac address
+    """
+    o_macvtap = create_macvtap(ifname, mode, base_if, mac_addr)
+    return open_macvtap(o_macvtap, queues)
 
 
 class Bridge(object):
