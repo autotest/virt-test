@@ -3,6 +3,7 @@ import logging
 from virttest.utils_test.libvirt import cpus_parser
 from autotest.client.shared import error, utils
 from virttest import libvirt_xml, virsh, utils_libvirtd
+from virttest.libvirt_xml.xcepts import LibvirtXMLAccessorError
 try:
     from virttest.staging import utils_cgroup
 except ImportError:
@@ -39,7 +40,13 @@ def check_numatune_xml(params):
     if not virsh.is_alive(vm_name):
         virsh.start(vm_name)
 
-    numa_params = libvirt_xml.VMXML.get_numa_params(vm_name)
+    try:
+        numa_params = libvirt_xml.VMXML.get_numa_params(vm_name)
+    # VM XML omit numa entry when the placement is auto and mode is strict
+    # So we need to set numa_params manually when exception happens.
+    except LibvirtXMLAccessorError:
+        numa_params = {'placement': 'auto', 'mode': 'strict'}
+
     if not numa_params:
         logging.error("Could not get numa parameters for %s", vm_name)
         return False
@@ -48,7 +55,7 @@ def check_numatune_xml(params):
     # if the placement is auto, there is no nodeset in numa param.
     try:
         nodeset_from_xml = numa_params['nodeset']
-    except KeyError():
+    except KeyError:
         nodeset_from_xml = ""
 
     if mode and mode != mode_from_xml:
@@ -209,10 +216,10 @@ def run(test, params, env):
                 get_numa_parameter(params)
             else:
                 set_numa_parameter(params)
+    finally:
         # Recover cgconfig and libvirtd service
         if not cgconfig_service.cgconfig_is_running():
             cgconfig_service.cgconfig_start()
             utils_libvirtd.libvirtd_restart()
-    finally:
         # Restore guest
         original_vm_xml.sync()
