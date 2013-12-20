@@ -300,7 +300,7 @@ class BackwardtimeTest(TimedriftTest):
 
 
 @error.context_aware
-def run_timedrift_adjust_time(test, params, env):
+def run(test, params, env):
     """
     Time drift after change host/guest sysclock test:
 

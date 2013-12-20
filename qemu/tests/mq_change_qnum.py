@@ -6,7 +6,7 @@ from virttest import utils_net, utils_test, utils_misc
 
 
 @error.context_aware
-def run_mq_change_qnum(test, params, env):
+def run(test, params, env):
     """
     MULTI_QUEUE chang queues number test
 

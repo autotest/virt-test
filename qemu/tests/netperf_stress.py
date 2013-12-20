@@ -6,7 +6,7 @@ from virttest import utils_net, utils_netperf, utils_misc
 
 
 @error.context_aware
-def run_netperf_stress(test, params, env):
+def run(test, params, env):
     """
     Run netperf on server and client side, we need run this case on two
     machines. if dsthost is not set will start netperf server on local

@@ -8,7 +8,7 @@ from virttest import remote, data_dir, utils_net, aexpect
 
 
 @error.context_aware
-def run_pktgen(test, params, env):
+def run(test, params, env):
     """
     Run Pktgen test between host/guest
 

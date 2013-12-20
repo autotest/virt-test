@@ -6,7 +6,7 @@ from virttest import data_dir
 
 
 @error.context_aware
-def run_gluster_boot_snap_boot(test, params, env):
+def run(test, params, env):
     """
     Run an gluster test.
     steps:

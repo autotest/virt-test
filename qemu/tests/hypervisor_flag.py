@@ -5,7 +5,7 @@ Sanity check for hypervisor flag in guest.
 import logging
 from autotest.client.shared import error
 
-def run_hypervisor_flag(test, params, env):
+def run(test, params, env):
     """
     Test if guest has 'hypervisor' flag in /proc/cpuinfo.
 

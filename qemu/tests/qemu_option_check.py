@@ -6,7 +6,7 @@ from virttest import utils_misc
 
 
 @error.context_aware
-def run_qemu_option_check(test, params, env):
+def run(test, params, env):
     """
     QEMU support options check test
 

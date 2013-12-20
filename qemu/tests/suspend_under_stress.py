@@ -6,7 +6,7 @@ from tests import guest_suspend
 
 
 @error.context_aware
-def run_suspend_under_stress(test, params, env):
+def run(test, params, env):
     """
     Run guest suspend under guest nic stress
 
