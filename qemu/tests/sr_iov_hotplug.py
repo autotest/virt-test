@@ -71,9 +71,10 @@ def run(test, params, env):
     def device_add_iov(pci_num):
         device_id = "%s" % pci_model + "-" + utils_misc.generate_random_id()
         pci_info.append([device_id])
-        check_support_device("pci-assign")
-        pci_add_cmd = ("device_add id=%s,driver=pci-assign,host=%s" %
-                       (pci_info[pci_num][0], pa_pci_ids[pci_num]))
+        driver  = params.get("device_driver", "pci-assign")
+        check_support_device(driver)
+        pci_add_cmd = ("device_add id=%s,driver=%s,host=%s" %
+                       (pci_info[pci_num][0], driver, pa_pci_ids[pci_num]))
         if params.get("hotplug_params"):
             assign_param = params.get("hotplug_params").split()
             for param in assign_param:
