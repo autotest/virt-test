@@ -63,6 +63,8 @@ class TestSimpleSandboxes(lvsb_base.TestSandboxes):
         self.for_each(lambda sb: sb.add_optarg('-c', self.uri))
         # Use each instances name() method to produce name argument
         self.for_each(lambda sb: sb.add_optarg('-n', sb.name))
+        # Add security options
+        self.for_each(lambda sb: sb.add_optarg('-s', self.secure_opt))
         # Command should follow after a --
         self.for_each(lambda sb: sb.add_mm())
         # Each one gets the same command (that's why it's simple)
