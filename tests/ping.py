@@ -38,7 +38,7 @@ def run(test, params, env):
     # most of linux distribution don't add IP configuration for extra nics,
     # so get IP for extra nics via pre_cmd;
     if params.get("pre_cmd"):
-        session.cmd(params["pre_cmd"], timeout=600)
+        session.cmd(params["pre_cmd"], timeout=600, ignore_all_errors=True)
 
     if ping_ext_host:
         default_host = "www.redhat.com"
