@@ -1154,7 +1154,7 @@ def migrate_getspeed(domain, **dargs):
     :return: standard output from command
     """
     cmd = "migrate-getspeed %s" % domain
-    return command(cmd, **dargs).stdout.strip()
+    return command(cmd, **dargs)
 
 
 def migrate_setmaxdowntime(domain, downtime, extra=None, **dargs):
