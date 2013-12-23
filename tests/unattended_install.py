@@ -205,15 +205,25 @@ class UnattendedInstallConfig(object):
         self.image_path = os.path.dirname(self.kernel)
 
         # Content server params
-        # lookup host ip address for first nic by interface name
-        try:
-            auto_ip = utils_net.get_ip_address_by_interface(
-                vm.virtnet[0].netdst)
-        except utils_net.NetError:
-            auto_ip = None
 
-        self.url_auto_content_ip = params.get('url_auto_ip', auto_ip)
-        self.url_auto_content_port = None
+        # Determine IP for content source if not specified
+        self.url_auto_content_ip = params.get('url_auto_ip')
+        if (self.url_auto_content_ip is None or
+            self.url_auto_content_ip == 'auto'):
+            # Don't assume VM state, but interperate params uniformly
+            virtnet = virtnet = utils_net.VirtNetParams()
+            virtnet.load_from(params, vm.name)
+            if len(virtnet) > 0:
+                first_nic = virtnet[0]
+                if nettype in ('network', 'bridge', 'macvtap'):
+                    # Destination is also content server interface dev name
+                    netdst = first_nic.netdst  # Mandatory parameter
+                    self.url_auto_content_ip = first_nic.giabi(netdst)
+                elif nettype == 'user': # netdst does not apply
+                    self.url_auto_content_ip = virtnet.host_ip()
+            else:
+                # Guest has no networking
+                self.url_auto_content_ip = None
 
         # Kickstart server params
         # use the same IP as url_auto_content_ip, but a different port
@@ -221,11 +231,12 @@ class UnattendedInstallConfig(object):
 
         # Embedded Syslog Server
         self.syslog_server_enabled = params.get('syslog_server_enabled', 'no')
-        self.syslog_server_ip = params.get('syslog_server_ip', auto_ip)
+        # Assume IP w/ content also will run syslog server
+        self.syslog_server_ip = params.get('syslog_server_ip',
+                                           self.url_auto_content_ip)
         self.syslog_server_port = int(params.get('syslog_server_port', 5140))
         self.syslog_server_tcp = params.get('syslog_server_proto',
                                             'tcp') == 'tcp'
-
         self.vm = vm
 
     @error.context_aware

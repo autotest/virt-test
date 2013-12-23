@@ -2015,15 +2015,35 @@ def get_ip_address_by_interface(ifname):
 
 def get_host_ip_address(params):
     """
-    returns ip address of host specified in host_ip_addr parameter If provided
-    otherwise ip address on interface specified in netdst parameter is returned
+    returns ip address of host specified in host_ip_addr parameter If provided.
+    Otherwise look up the ip address on interface used for the default route.
     :param params
     """
-    host_ip = params.get('host_ip_addr', None)
-    if not host_ip:
-        host_ip = get_ip_address_by_interface(params.get('netdst'))
-        logging.warning("No IP address of host was provided, using IP address"
-                        " on %s interface", str(params.get('netdst')))
+    host_ip = params.get('host_ip_addr')
+    if host_ip is None:
+        rt_tbl = open('/proc/net/route', 'rb')
+        header = rt_tbl.readline()
+        # Uniform lower-case for consistent references
+        col_names = [name.lower() for name in header.split()]
+        # Only need 3 columns data, using dict would be overkill
+        iface_idx = col_names.index('iface')
+        dest_idx = col_names.index('destination')
+        flag_idx = col_names.index('flags')
+        # Flags defined by kernel: include/linux/route.h
+        RTF_UP = 0x0001 #  route usable (flags)
+        # default route dest will be '00000000' and RTF_GATEWAY & RTF_UP set
+        for line in rt_tbl:
+            data = tuple([name.lower() for name in line.split()])
+            flags = int(data[flag_idx]) #  bit-field
+            dest = data[dest_idx] #  byte-reversed hexadecimal
+            iface = data[iface_idx] #  device name
+            if bool(flags & RTF_UP):
+                if dest == '00000000':  # 'default' route
+                    return get_ip_address_by_interface(iface)
+        # Command failed or no default route defined
+        raise NetError("Can't determine host ip from host_ip_addr param "
+                       "or from default route device name.")
+    # Not None, assume value is correct
     return host_ip
 
 
