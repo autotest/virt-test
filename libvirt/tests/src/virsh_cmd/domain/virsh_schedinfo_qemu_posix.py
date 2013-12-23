@@ -42,12 +42,18 @@ def run(test, params, env):
         if os.path.basename(cgroup_path) == "emulator":
             cgroup_path = os.path.dirname(cgroup_path)
         cgroup_file = os.path.join(cgroup_path, parameter)
+
+        cg_file = None
         try:
-            with open(cgroup_file) as cg_file:
+            try:
+                cg_file = open(cgroup_file)
                 result = cg_file.read()
-        except IOError:
-            raise error.TestError("Failed to open cgroup file %s"
-                                  % cgroup_file)
+            except IOError:
+                raise error.TestError("Failed to open cgroup file %s"
+                                      % cgroup_file)
+        finally:
+            if cg_file is not None:
+                cg_file.close()
         return result.strip()
 
     def schedinfo_output_analyse(result, set_ref, scheduler="posix"):
