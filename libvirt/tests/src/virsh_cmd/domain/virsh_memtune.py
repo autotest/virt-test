@@ -55,19 +55,26 @@ def run(test, params, env):
             cg_file_name = '%s/memory.soft_limit_in_bytes' % path
         elif limit_name == 'swap_hard_limit':
             cg_file_name = '%s/memory.memsw.limit_in_bytes' % path
+
+        cg_file = None
         try:
-            with open(cg_file_name) as cg_file:
+            try:
+                cg_file = open(cg_file_name)
                 output = cg_file.read()
-            value = int(output) / 1024
-            if int(expected_value) != int(value):
+                value = int(output) / 1024
+                if int(expected_value) != int(value):
+                    status_value = False
+                    logging.error("%s cgroup fs:\n\tExpected Value: %d"
+                                  "\n\tActual Value: "
+                                  "%d", limit_name,
+                                  int(expected_value), int(value))
+            except IOError:
                 status_value = False
-                logging.error("%s cgroup fs:\n\tExpected Value: %d"
-                              "\n\tActual Value: "
-                              "%d", limit_name,
-                              int(expected_value), int(value))
-        except IOError:
-            status_value = False
-            logging.error("Error while reading:\n%s", cg_file_name)
+                logging.error("Error while reading:\n%s", cg_file_name)
+        finally:
+            if cg_file is not None:
+                cg_file.close()
+
         return status_value
 
     # Get the vm name, pid of vm and check for alive

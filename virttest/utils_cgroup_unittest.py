@@ -129,21 +129,29 @@ class CgroupTest(unittest.TestCase):
 
     def test_get_cgroup_mountpoint(self):
         for case in mount_cases:
-            mount_file = tempfile.NamedTemporaryFile(delete=False)
+            # Let's work around the fact that NamedTemporaryFile
+            # on py 2.4 doesn't have the delete param
+            mount_file = tempfile.NamedTemporaryFile()
+            mount_file_path = mount_file.name
+            mount_file.close()
+
+            # Now let's do our own management of the file
+            mount_file = open(mount_file_path, 'w')
             mount_file.write(case["mount_txt"])
             mount_file.close()
+
             try:
                 for idx, controller in enumerate(case["controllers"]):
                     res = utils_cgroup.get_cgroup_mountpoint(
-                        controller, mount_file.name)
+                        controller, mount_file_path)
                     self.assertEqual(case["mount_points"][idx], res)
                 self.assertRaises(
                         error.TestError,
                         utils_cgroup.get_cgroup_mountpoint,
                         "non_exit_ctlr",
-                        mount_file.name)
+                        mount_file_path)
             finally:
-                os.remove(mount_file.name)
+                os.remove(mount_file_path)
 
 if __name__ == '__main__':
     unittest.main()
