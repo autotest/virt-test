@@ -108,7 +108,7 @@ class virt(test.test):
                     # Get the test routine corresponding to the specified
                     # test type
                     t_types = params.get("type").split()
-                    test_modules = []
+                    test_modules = {}
                     for t_type in t_types:
                         for d in subtest_dirs:
                             module_path = os.path.join(d, "%s.py" % t_type)
@@ -121,14 +121,15 @@ class virt(test.test):
                             raise error.TestError(msg)
                         # Load the test module
                         f, p, d = imp.find_module(t_type, [subtest_dir])
-                        test_modules.append((t_type,
-                                             imp.load_module(t_type, f, p, d)))
+                        test_modules[t_type] = imp.load_module(t_type, f, p, d)
                         f.close()
+
                     # Preprocess
                     try:
                         params = env_process.preprocess(self, params, env)
                     finally:
                         env.save()
+
                     # Run the test function
                     for t_type, test_module in test_modules.items():
                         run_func = utils_misc.get_test_entrypoint_func(
