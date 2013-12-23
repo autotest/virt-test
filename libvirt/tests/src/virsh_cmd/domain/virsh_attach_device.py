@@ -5,13 +5,12 @@ Module to exercize virsh attach-device command with various devices/options
 import os
 import os.path
 import logging
-from itertools import product, islice, count
 from string import ascii_lowercase
 from autotest.client.shared import error
 from virttest import virt_vm, virsh, remote, aexpect, utils_misc
 from virttest.libvirt_xml.vm_xml import VMXML
 # The backports module will take care of using the builtins if available
-from virttest.staging.backports.itertools import product, islice, count
+from virttest.staging.backports import itertools
 
 # TODO: Move all these helper classes someplace else
 class TestParams(object):
@@ -446,10 +445,10 @@ class VirtIODiskBasic(AttachDeviceBase):
         # python-pair-alphabets-after-loop-is-completed/14382997#14382997
         def multiletters():
             """Generator of count-by-letter strings"""
-            for num in count(1):
-                for prod in product(ascii_lowercase, repeat=num):
+            for num in itertools.count(1):
+                for prod in itertools.product(ascii_lowercase, repeat=num):
                     yield ''.join(prod)
-        return islice(multiletters(), index, index + 1).next()
+        return itertools.islice(multiletters(), index, index + 1).next()
 
     def make_image_file_path(self, index):
         """Create backing file for test disk device"""
