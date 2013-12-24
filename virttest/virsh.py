@@ -2835,3 +2835,15 @@ def domfstrim(name, minimum=None, mountpoint=None, options="", **dargs):
 
     cmd += " %s" % options
     return command(cmd, **dargs)
+
+
+def sendkey(name, options="", **dargs):
+    """
+    Send keycodes to the guest
+    :param name: name of domain
+    :param codeset: the codeset of keycodes
+    :param keycode: the key code
+    :return: CmdResult object
+    """
+    cmd = "send-key %s %s" % (name, options)
+    return command(cmd, **dargs)
