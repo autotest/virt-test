@@ -8,18 +8,18 @@ class StartError(Exception):
     Error in starting vm.
     """
 
-    def __init__(self, vm_name, output):
+    def __init__(self, vm_ref, output):
         Exception.__init__(self)
-        self.vm_name = vm_name
+        self.vm_ref = vm_ref
         self.output = output
 
     def __str__(self):
         return str("Start vm %s Failed.\n"
                    "Output:%s"
-                   % (self.vm_name, self.output))
+                   % (self.vm_ref, self.output))
 
 
-def do_virsh_start(vm_name):
+def do_virsh_start(vm_ref):
     """
     Start vm by using virsh start command.
 
@@ -27,10 +27,10 @@ def do_virsh_start(vm_name):
 
     :param vm_ref: option of virsh start command.
     """
-    cmd_result = virsh.command("start %s" % vm_name)
+    cmd_result = virsh.command("start %s" % vm_ref)
 
     if cmd_result.exit_status:
-        raise StartError(vm_name, cmd_result.stderr)
+        raise StartError(vm_ref, cmd_result.stderr)
 
 
 def run(test, params, env):
@@ -44,10 +44,15 @@ def run(test, params, env):
     5) clean up.
     """
     # get the params from params
-    vm_name = params.get("vm_name", "vm1")
-    backup_name = vm_name
-    if vm_name is not "":
-        vm = env.get_vm(vm_name)
+    vm_name = params.get("main_vm", "virt-tests-vm1")
+    vm_ref = params.get("vm_ref", "vm1")
+
+    # Backup for recovery.
+    vmxml_backup = libvirt_xml.vm_xml.VMXML.new_from_inactive_dumpxml(vm_name)
+
+    backup_name = vm_ref
+    if vm_ref is not "":
+        vm = env.get_vm(vm_ref)
     vmxml = libvirt_xml.VMXML()
 
     libvirtd_state = params.get("libvirtd", "on")
@@ -73,9 +78,9 @@ def run(test, params, env):
         if pre_operation == "rename":
             new_vm_name = params.get("vs_new_vm_name", "virsh_start_vm1")
             vm = libvirt_xml.VMXML.vm_rename(vm, new_vm_name)
-            vm_name = new_vm_name
+            vm_ref = new_vm_name
         elif pre_operation == "undefine":
-            vmxml = vmxml.new_from_dumpxml(vm_name)
+            vmxml = vmxml.new_from_dumpxml(vm_ref)
             vmxml.undefine()
 
         # do the start operation
@@ -87,12 +92,12 @@ def run(test, params, env):
                 # get uri of local
                 uri = libvirt_vm.complete_uri(local_ip)
 
-                cmd = "virsh -c %s start %s" % (uri, vm_name)
+                cmd = "virsh -c %s start %s" % (uri, vm_ref)
                 status, output = session.cmd_status_output(cmd)
                 if status:
-                    raise StartError(vm_name, output)
+                    raise StartError(vm_ref, output)
             else:
-                do_virsh_start(vm_name)
+                do_virsh_start(vm_ref)
 
             # start vm successfully
             if status_error == "yes":
@@ -108,8 +113,8 @@ def run(test, params, env):
         if libvirtd_state == "off":
             utils_libvirtd.libvirtd_start()
 
-        if (pre_operation == "undefine") and (not vmxml.xml is None):
-            if not vmxml.define():
-                raise error.TestError("Restore vm failed.")
         elif pre_operation == "rename":
             libvirt_xml.VMXML.vm_rename(vm, backup_name)
+
+        # Restore VM
+        vmxml_backup.sync()

@@ -342,11 +342,18 @@ class VMXML(VMXMLBase):
 
     def sync(self, options=None):
         """Rebuild VM with the config file."""
-        backup = self.new_from_dumpxml(self.vm_name)
+        # If target vm no longer exist, this will raise an exception.
+        try:
+            backup = self.new_from_dumpxml(self.vm_name)
+        except IOError:
+            logging.debug("Failed to backup %s.", self.vm_name)
+            backup = None
+
         if not self.undefine(options):
             raise xcepts.LibvirtXMLError("Failed to undefine %s.", self.vm_name)
         if not self.define():
-            backup.define()
+            if backup:
+                backup.define()
             raise xcepts.LibvirtXMLError("Failed to define %s, from %s."
                                          % (self.vm_name, self.xml))
 
