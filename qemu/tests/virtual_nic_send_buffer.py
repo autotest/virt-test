@@ -77,17 +77,10 @@ def run(test, params, env):
                 vm.copy_files_to(host_file, src_file, timeout=transfer_timeout)
             for session in sessions:
                 output = session.cmd_output("md5sum %s" % src_file)
-                if "such file" in output:
-                    remote_hash = "0"
-                elif output:
-                    remote_hash = output.split()[0]
-                else:
-                    warn_msg = "MD5 check for remote path %s did not return."
-                    logging.warning(warn_msg % src_file)
-                    remote_hash = "0"
-                if remote_hash != orig_md5:
-                    raise error.TestError("Md5sum mismatch, ori:cur - %s:%s" %
-                                          (orig_md5, remote_hash))
+                if orig_md5 not in output:
+                    msg = "Md5sum mismatch, Md5 for original file:%s" % orig_md5
+                    msg += "Md5sum command output in guest: %s" % output
+                    raise error.TestFail(msg)
 
             error.context("Transfer data from guest to host by tcp")
             for vm in vms:
@@ -99,7 +92,7 @@ def run(test, params, env):
                 current_md5 = utils.hash_file(host_file, method="md5")
                 if current_md5 != orig_md5:
                     raise error.TestError("Md5sum mismatch, ori:cur - %s:%s" %
-                                          (orig_md5, remote_hash))
+                                          (orig_md5, current_md5))
 
         if "udp" in params.get("copy_protocol", ""):
             # transfer data between guest
