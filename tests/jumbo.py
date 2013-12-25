@@ -82,8 +82,12 @@ def run(test, params, env):
                                                     mode=mode)
 
         error.context("Chaning the MTU of host tap ...", logging.info)
-        host_mtu_cmd = "ifconfig %s mtu %s" % (ifname, mtu)
-        utils.run(host_mtu_cmd)
+        host_mtu_cmd = "ifconfig %s mtu %s"
+        #Before change macvtap mtu, must set the base interface mtu
+        if params.get("nettype") == "macvtap":
+            base_if = utils_net.get_macvtap_base_iface(params.get("netdst"))
+            utils.run(host_mtu_cmd % (base_if, mtu))
+        utils.run(host_mtu_cmd % (ifname, mtu))
 
         error.context("Add a temporary static ARP entry ...", logging.info)
         arp_add_cmd = "arp -s %s %s -i %s" % (guest_ip, mac, ifname)
