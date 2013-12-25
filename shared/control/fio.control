@@ -10,4 +10,6 @@ fio is an I/O tool meant to be used both for benchmark and stress/hardware
 verification. This test runs the fio tool. Details can be found at :
 http://freecode.com/projects/fio
 '''
-job.run_test('fio', args="-rw=randread -bs=8k -size 1G -numjobs=8 -runtime=600 -iodepth=32 -iodepth_batch=16")
+args = dict([(arg.split("=", 1)[0], arg.split("=", 1)[1].strip("'"))
+                                                            for arg in args])
+job.run_test('fio', **args)
