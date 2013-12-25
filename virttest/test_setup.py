@@ -1204,7 +1204,7 @@ class PciAssignable(object):
                 if self.auai_path and self.kvm_params[self.auai_path] == "Y":
                     kvm_re_probe = False
         # Try to re probe kvm module with interrupt remapping support
-        if kvm_re_probe:
+        if kvm_re_probe and self.auai_path:
             cmd = "echo Y > %s" % self.auai_path
             error.context("enable PCI passthrough with '%s'" % cmd,
                           logging.info)
@@ -1230,7 +1230,7 @@ class PciAssignable(object):
                               ignore_status=True)
         if status:
             re_probe = True
-        elif not self.check_vfs_count():
+        elif not self.check_vfs_count() and self.driver:
             os.system("modprobe -r %s" % self.driver)
             re_probe = True
         else:
@@ -1238,11 +1238,13 @@ class PciAssignable(object):
             return True
 
         # Re-probe driver with proper number of VFs
-        if re_probe:
+        if re_probe and self.driver:
             cmd = "modprobe %s %s" % (self.driver, self.driver_option)
             error.context("Loading the driver '%s' with command '%s'" %
                           (self.driver, cmd), logging.info)
             status = utils.system(cmd, ignore_status=True)
+            # In some host, need sleep 3s after loading the driver.
+            time.sleep(3)
             dmesg = utils.system_output("dmesg", ignore_status=True)
             file_name = "host_dmesg_after_load_%s.txt" % self.driver
             logging.info("Log dmesg after loading '%s' to '%s'.", self.driver,
