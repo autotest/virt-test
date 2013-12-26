@@ -41,13 +41,14 @@ def run(test, params, env):
     # Time format for time.strptime()
     time_format = params.get("time_format")
     # Use this value to measure the drift.
-    drift_threshold = params.get("drift_threshold")
+    drift_threshold = int(params.get("drift_threshold", 10))
     # The time interval to check vm's time
     interval_gettime = int(params.get("interval_gettime", 600))
-    test_duration = float(params.get("test_duration", "60"))
+    test_duration = float(params.get("test_duration", "120"))
+    stop_time = int(params.get("stop_time", 60))
 
     try:
-        # Get time before set cpu offine
+        # Get time before set cpu offline
         # (ht stands for host time, gt stands for guest time)
         error.context("get time before set cpu offline")
         (ht0, gt0) = utils_test.get_time(session, time_command,
@@ -66,6 +67,9 @@ def run(test, params, env):
         if s != 0:
             logging.error(o)
             raise error.TestError("Failed set guest cpu offline")
+
+        # Sleep for a while after set cpu offline
+        time.sleep(stop_time)
 
         # Get time after set cpu offline
         error.context("get time after set cpu offline")

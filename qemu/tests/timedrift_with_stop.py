@@ -43,6 +43,7 @@ def run(test, params, env):
     time_filter_re = params["time_filter_re"]
     # Time format for time.strptime()
     time_format = params["time_format"]
+    rtc_clock = params.get("rtc_clock", "host")
     drift_threshold = float(params.get("drift_threshold", "10"))
     drift_threshold_single = float(params.get("drift_threshold_single", "3"))
     stop_iterations = int(params.get("stop_iterations", 1))
@@ -88,6 +89,12 @@ def run(test, params, env):
             host_delta = ht1_ - ht0_
             guest_delta = gt1_ - gt0_
             drift = abs(host_delta - guest_delta)
+            # kvm guests CLOCK_MONOTONIC not count when guest is paused,
+            # so drift need to subtract stop_time.
+            if not stop_with_signal:
+                drift = abs(drift - stop_time)
+                if params.get("os_type") == "windows" and rtc_clock == "host":
+                    drift = abs(host_delta - guest_delta)
             logging.info("Host duration (iteration %d): %.2f",
                          (i + 1), host_delta)
             logging.info("Guest duration (iteration %d): %.2f",
@@ -116,6 +123,12 @@ def run(test, params, env):
     host_delta = ht1 - ht0
     guest_delta = gt1 - gt0
     drift = abs(host_delta - guest_delta)
+    # kvm guests CLOCK_MONOTONIC not count when guest is paused,
+    # so drift need to subtract stop_time.
+    if not stop_with_signal:
+        drift = abs(drift - stop_time)
+        if params.get("os_type") == "windows" and rtc_clock == "host":
+            drift = abs(host_delta - guest_delta)
     logging.info("Host duration (%d stops): %.2f",
                  stop_iterations, host_delta)
     logging.info("Guest duration (%d stops): %.2f",
