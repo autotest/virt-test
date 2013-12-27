@@ -55,7 +55,7 @@ Execute the bootstrap script
 
 Let's say you're interested in the qemu tests:
 
-qemu/get_started.py
+./run -t qemu --bootstrap
 
 The script can help you to setup a data dir, copy the sample config files
 to actual config files, and download the JeOS image.
@@ -158,8 +158,7 @@ $ git pull
 
 And then, reset you configuration. If you're going to run qemu tests, run::
 
-$ qemu/update_config.py
-
+$ ./run -t qemu --update-config
 
 If you're still having problems after these basic troubleshoot steps,
 please contact us!
