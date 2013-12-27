@@ -191,6 +191,13 @@ class VirtTestRunParser(optparse.OptionParser):
                                                    "downloading JeOS and check "
                                                    "required programs and "
                                                    "libs. Requires -t to be set"))
+        general.add_option("--update-config", action="store_true",
+                           default=False,
+                           dest="update_config", help=("Forces configuration "
+                                                       "updates (all manual "
+                                                       "config file editing "
+                                                       "will be lost). "
+                                                       "Requires -t to be set"))
         general.add_option("-v", "--verbose", action="store_true",
                            dest="verbose", help=("Exhibit test "
                                                  "messages in the console "
@@ -740,6 +747,21 @@ class VirtTestApp(object):
             _restore_stdout()
             print("No type (-t) or config (-c) options specified, aborting...")
             sys.exit(1)
+
+        if self.options.update_config:
+            from autotest.client.shared import logging_manager
+            from virttest import utils_misc
+            _restore_stdout()
+            logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),
+                                              verbose=True)
+            test_dir = os.path.join(data_dir.get_root_dir(), self.options.type)
+            shared_dir = os.path.join(data_dir.get_root_dir(), "shared")
+            bootstrap.create_config_files(test_dir, shared_dir,
+                                          interactive=False,
+                                          force_update=True)
+            bootstrap.create_subtests_cfg(self.options.type)
+            bootstrap.create_guest_os_cfg(self.options.type)
+            sys.exit(0)
 
         if self.options.bootstrap:
             _restore_stdout()
