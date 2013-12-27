@@ -29,7 +29,8 @@ def run(test, params, env):
 
     # run test
     if vm_ref == "" or vm_ref == "xyz":
-        status = virsh.restore(vm_ref, ignore_status=True).exit_status
+        status = virsh.restore(vm_ref, extra_param, debug=True,
+                               ignore_status=True).exit_status
     else:
         if os_type == "linux":
             cmd = "cat /proc/cpuinfo"
@@ -40,21 +41,21 @@ def run(test, params, env):
             if not re.search("processor", output):
                 raise error.TestFail("Unable to read /proc/cpuinfo")
         tmp_file = os.path.join(test.tmpdir, "save.file")
+        virsh.save(vm_name, tmp_file)
         if vm_ref == "saved_file":
-            virsh.save(vm_name, vm_ref)
-            vm_ref = "%s %s" % (vm_ref, extra_param)
+            vm_ref = tmp_file
         elif vm_ref == "empty_new_file":
             tmp_file = os.path.join(test.tmpdir, "new.file")
-            open(vm_ref, 'w').close()
+            open(tmp_file, 'w').close()
+            vm_ref = tmp_file
         if vm.is_alive():
             vm.destroy()
         if pre_status == "start":
             virsh.start(vm_name)
         if libvirtd == "off":
             utils_libvirtd.libvirtd_stop()
-        status = virsh.restore(vm_ref, ignore_status=True).exit_status
-        if os.path.exists(tmp_file):
-            os.unlink(tmp_file)
+        status = virsh.restore(vm_ref, extra_param, debug=True,
+                               ignore_status=True).exit_status
     if status_error == "no":
         list_output = virsh.dom_list().stdout.strip()
 

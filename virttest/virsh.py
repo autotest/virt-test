@@ -993,14 +993,15 @@ def save(option, path, **dargs):
     return command("save %s %s" % (option, path), **dargs)
 
 
-def restore(path, **dargs):
+def restore(path, options="", **dargs):
     """
     Load state of VM from named file and remove file.
 
     :param path: absolute path to state file.
+    :param options: options for virsh restore.
     :param dargs: standardized virsh function API keywords
     """
-    return command("restore %s" % path, **dargs)
+    return command("restore %s %s" % (path, options), **dargs)
 
 
 def start(name, **dargs):
