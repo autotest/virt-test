@@ -2,7 +2,7 @@
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
 	<settings pass="windowsPE">
 		<component name="Microsoft-Windows-International-Core-WinPE"
-			processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35"
+			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
 			language="neutral" versionScope="nonSxS"
 			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -16,7 +16,7 @@
 			<UserLocale>en-us</UserLocale>
 		</component>
 		<component name="Microsoft-Windows-PnpCustomizationsWinPE"
-			processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35"
+			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
 			language="neutral" versionScope="nonSxS"
 			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -30,7 +30,7 @@
 			</DriverPaths>
 		</component>
 		<component name="Microsoft-Windows-Setup"
-			processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35"
+			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
 			language="neutral" versionScope="nonSxS"
 			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -66,7 +66,7 @@
 							<Key>/IMAGE/NAME</Key>
               <!--This index depends on your install ISO. Please update to a proper one if install failed. http://technet.microsoft.com/en-us/library/ff716384.aspx -->
               <!-- use "dism /get-wiminfo /wimfile:D:\sources\install.wim" to know which value should be used.-->
-							<Value>Windows Server 2012 R2 SERVERDATACENTER</Value>
+							<Value>Windows 8.1 Enterprise</Value>
 						</MetaData>
 					</InstallFrom>
 					<InstallTo>
@@ -87,7 +87,7 @@
 	</settings>
 	<settings pass="specialize">
 		<component name="Microsoft-Windows-Deployment"
-			processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35"
+			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
 			language="neutral" versionScope="nonSxS"
 			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -105,7 +105,7 @@
 			</RunSynchronous>
 		</component>
 		<component name="Microsoft-Windows-International-Core"
-			processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35"
+			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
 			language="neutral" versionScope="nonSxS"
 			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -117,7 +117,7 @@
 	</settings>
 	<settings pass="oobeSystem">
 		<component name="Microsoft-Windows-Shell-Setup"
-			processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35"
+			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
 			language="neutral" versionScope="nonSxS"
 			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -209,7 +209,7 @@
 					<Order>15</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c E:\software_install_64.bat</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c E:\software_install_32.bat</CommandLine>
 					<Order>16</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
