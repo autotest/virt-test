@@ -185,6 +185,19 @@ class VirtTestRunParser(optparse.OptionParser):
             nettype_default = 'user'
 
         general = optparse.OptionGroup(self, 'General Options')
+        general.add_option("-b", "--bootstrap", action="store_true",
+                           dest="bootstrap", help=("Perform test suite setup "
+                                                   "procedures, such as "
+                                                   "downloading JeOS and check "
+                                                   "required programs and "
+                                                   "libs. Requires -t to be set"))
+        general.add_option("--update-config", action="store_true",
+                           default=False,
+                           dest="update_config", help=("Forces configuration "
+                                                       "updates (all manual "
+                                                       "config file editing "
+                                                       "will be lost). "
+                                                       "Requires -t to be set"))
         general.add_option("-v", "--verbose", action="store_true",
                            dest="verbose", help=("Exhibit test "
                                                  "messages in the console "
@@ -728,12 +741,61 @@ class VirtTestApp(object):
         Process the options given in the command line.
         """
         from virttest import cartesian_config, standalone_test
-        from virttest import data_dir
+        from virttest import data_dir, bootstrap, arch
 
         if (not self.options.type) and (not self.options.config):
             _restore_stdout()
             print("No type (-t) or config (-c) options specified, aborting...")
             sys.exit(1)
+
+        if self.options.update_config:
+            from autotest.client.shared import logging_manager
+            from virttest import utils_misc
+            _restore_stdout()
+            logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),
+                                              verbose=True)
+            test_dir = os.path.join(data_dir.get_root_dir(), self.options.type)
+            shared_dir = os.path.join(data_dir.get_root_dir(), "shared")
+            bootstrap.create_config_files(test_dir, shared_dir,
+                                          interactive=False,
+                                          force_update=True)
+            bootstrap.create_subtests_cfg(self.options.type)
+            bootstrap.create_guest_os_cfg(self.options.type)
+            sys.exit(0)
+
+        if self.options.bootstrap:
+            _restore_stdout()
+            check_modules = []
+            online_docs_url = None
+            interactive = True
+            if self.options.type == "qemu":
+                default_userspace_paths = ["/usr/bin/qemu-kvm", "/usr/bin/qemu-img"]
+                check_modules = arch.get_kvm_module_list()
+                online_docs_url = "https://github.com/autotest/virt-test/wiki/GetStarted"
+            elif self.options.type == "libvirt":
+                default_userspace_paths = ["/usr/bin/qemu-kvm", "/usr/bin/qemu-img"]
+            elif self.options.type == "libguestfs":
+                default_userspace_paths = ["/usr/bin/libguestfs-test-tool"]
+            elif self.options.type == "lvsb":
+                default_userspace_paths = ["/usr/bin/virt-sandbox"]
+            elif self.options.type == "openvswitch":
+                default_userspace_paths = ["/usr/bin/qemu-kvm", "/usr/bin/qemu-img"]
+                check_modules = ["openvswitch"]
+                online_docs_url = "https://github.com/autotest/autotest/wiki/OpenVSwitch"
+            elif self.options.type == "v2v":
+                default_userspace_paths = ["/usr/bin/virt-v2v"]
+
+            test_dir = os.path.join(data_dir.get_root_dir(), self.options.type)
+            bootstrap.bootstrap(test_name=self.options.type, test_dir=test_dir,
+                                base_dir=data_dir.get_data_dir(),
+                                default_userspace_paths=default_userspace_paths,
+                                check_modules=check_modules,
+                                online_docs_url=online_docs_url,
+                                interactive=interactive,
+                                restore_image=(not self.options.keep_image),
+                                verbose=self.options.verbose)
+            sys.exit(0)
+
 
         if self.options.type:
             if self.options.type not in SUPPORTED_TEST_TYPES:
