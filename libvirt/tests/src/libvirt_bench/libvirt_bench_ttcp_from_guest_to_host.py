@@ -6,7 +6,7 @@ from autotest.client.shared import error
 from virttest import virsh, utils_net
 
 
-def run_libvirt_bench_ttcp_from_guest_to_host(test, params, env):
+def run(test, params, env):
     """
     Test steps:
 
