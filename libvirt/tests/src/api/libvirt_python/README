@@ -2,8 +2,8 @@ Tests for libvirt bindings for python.
 
 Outline of the structure of tests:
 
-libvirt----tests----cfg----libvirt_python/
-                                        |----LP_open.cfg (functions in libvirt.py)
+libvirt----tests----src----api----libvirt_python/
+                                        |----LP_open.py (functions in libvirt.py)
                                         |----virConnect/ (Tests for class virConnect.)
                                         |----virDomain/ (Tests for class virDomain.)
                                         |----virDomainSnapshot/ (Tests for class virDomainSnapshot.)
