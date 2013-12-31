@@ -339,8 +339,15 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 fd.write(row + "\n")
 
                 fd.flush()
+      
+                kill_cmd = "killall netperf"
+                if params.get("os_type") = "windows":
+                    kill_cmd = "taskkill /F /IM netperf*"
+                ssh_cmd(clients[-1], kill_cmd)
+ 
                 logging.debug("Remove temporary files")
                 commands.getoutput("rm -f /tmp/netperf.%s.nf" % ret['pid'])
+                logging.info("Netperf thread completed successfully")
     fd.close()
 
 
@@ -478,8 +485,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                client_path, server, int(l) * 1.5, nf_args)
         cmd += " >> %s" % fname
         logging.info("Start netperf thread by cmd '%s'" % cmd)
-        ssh_cmd(client_s, cmd, timeout)
-        logging.info("Netperf thread completed successfully")
+        ssh_cmd(client_s, cmd)
 
     def all_clients_up():
         try:
@@ -525,7 +531,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     fname = "/tmp/netperf.%s.nf" % pid
     ssh_cmd(clients[-1], "rm -f %s" % fname)
     numa_enable = params.get("netperf_with_numa", "yes") == "yes"
-    timeout_netperf_start = float(params.get("netperf_start_timeout", 360))
+    timeout_netperf_start = int(l) * 0.5
     client_thread = threading.Thread(target=netperf_thread,
                                      kwargs={"i": int(sessions),
                                              "numa_enable": numa_enable,
@@ -536,7 +542,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     ret = {}
     ret['pid'] = pid
 
-    if utils_misc.wait_for(all_clients_up, timeout_netperf_start, 30, 5,
+    if utils_misc.wait_for(all_clients_up, timeout_netperf_start, 0.0, 0.2,
                            "Wait until all netperf clients start to work"):
         logging.debug("All netperf clients start to work.")
     else:
