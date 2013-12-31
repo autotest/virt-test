@@ -76,9 +76,22 @@ def run(test, params, env):
     cmd_type = utils_misc.find_substring(str(cmd_o), "device_del")
 
     devices = find_pci()
+    context_msg = "Running sub test '%s' %s"
+    sub_type = params.get("sub_type_before_unplug")
+    if sub_type:
+        error.context(context_msg % (sub_type, "before unplug"),
+                      logging.info)
+        utils_test.run_virt_sub_test(test, params, env, sub_type)
+
     if devices:
         for device in devices[:pci_num]:
             # (lmr) I think here is the place where pci_info should go
             pci_info = []
             error.context("Hot unplug device %s" % device, logging.info)
             pci_del(device)
+
+    sub_type = params.get("sub_type_after_unplug")
+    if sub_type:
+        error.context(context_msg % (sub_type, "after hotunplug"),
+                      logging.info)
+        utils_test.run_virt_sub_test(test, params, env, sub_type)

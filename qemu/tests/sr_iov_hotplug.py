@@ -201,18 +201,21 @@ def run(test, params, env):
     pci_model = params.get("pci_model", "pci-assign")
     # Need udpate match_string if you use a card other than 82576
     match_string = params.get("match_string", "82576")
+    generate_mac = params.get("generate_mac", "yes")
     nic_filter = params["nic_interface_filter"]
     devices = []
     device_type = params.get("hotplug_device_type", "vf")
     for i in xrange(pci_num_range):
         device = {}
         device["type"] = device_type
-        device['mac'] = utils_net.generate_mac_address_simple()
+        if generate_mac == "yes":
+            device['mac'] = utils_net.generate_mac_address_simple()
         if params.get("device_name"):
             device["name"] = params.get("device_name")
         devices.append(device)
     device_driver = params.get("device_driver", "pci-assign")
     if vm.pci_assignable is None:
+        logging.info("*** vm.pci_assignable ***")
         vm.pci_assignable = test_setup.PciAssignable(
             driver=params.get("driver"),
             driver_option=params.get("driver_option"),
