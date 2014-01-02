@@ -300,7 +300,7 @@ class Env(UserDict.IterableUserDict):
         username = self._params.get('ovirt_node_user')
         password = self._params.get('ovirt_node_password')
 
-        cmd = "%s -npvi any 'port 68'" % utils_misc.find_command("tcpdump")
+        cmd = "%s -npvvvi any 'port 68'" % utils_misc.find_command("tcpdump")
         if self._params.get("remote_preprocess") == "yes":
             login_cmd = ("ssh -o UserKnownHostsFile=/dev/null -o "
                          "PreferredAuthentications=password -p %s %s@%s" %
