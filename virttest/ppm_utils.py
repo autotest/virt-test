@@ -9,6 +9,7 @@ import struct
 import time
 import re
 import glob
+import logging
 try:
     from PIL import Image
 except ImportError:
