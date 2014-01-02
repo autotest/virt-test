@@ -731,7 +731,7 @@ def test_expand_volume(vm, params):
     logging.info("Get correct md5 as expected.")
 
 
-def run_guestfs_volume_operations(test, params, env):
+def run(test, params, env):
     """
     Test guestfs with volume commands.
     """
