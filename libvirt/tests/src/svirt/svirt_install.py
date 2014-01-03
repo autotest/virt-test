@@ -31,7 +31,7 @@ def run(test, params, env):
 
     try:
         try:
-            unattended_install.run_unattended_install(test, params, env)
+            unattended_install.run(test, params, env)
             # Install completed.
             if status_error:
                 raise error.TestFail('Test successed in negative case.')
