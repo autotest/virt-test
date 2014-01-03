@@ -2869,3 +2869,14 @@ def domfstrim(name, minimum=None, mountpoint=None, options="", **dargs):
 
     cmd += " %s" % options
     return command(cmd, **dargs)
+
+
+def inject_nmi(name, **dargs):
+    """
+    Inject NMI to the guest
+
+    :param name: name of domain
+    :return CmdResult object
+    """
+    cmd = "inject-nmi %s" % name
+    return command(cmd, **dargs)
