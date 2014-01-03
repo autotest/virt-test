@@ -795,6 +795,7 @@ class VirtTestApp(object):
                                 check_modules=check_modules,
                                 online_docs_url=online_docs_url,
                                 interactive=interactive,
+                                download_image=(not self.options.no_downloads),
                                 selinux=self.options.selinux_setup,
                                 restore_image=(not self.options.keep_image),
                                 verbose=self.options.verbose)
