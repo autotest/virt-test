@@ -602,6 +602,7 @@ def bootstrap_tests(options):
               'check_modules': check_modules,
               'online_docs_url': online_docs_url,
               'download_image': not options.no_downloads,
+              'selinux': options.selinux_setup,
               'restore_image': not options.keep_image,
               'interactive': False}
 
