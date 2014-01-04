@@ -1936,7 +1936,7 @@ def run(test, params, env):
         env_process.preprocess(test, params, env)
         vm = env.get_vm(params["main_vm"])
         try:
-            vm.create()
+            vm.create(params=params)
         except Exception, details:
             if exp_error_message in str(details):
                 logging.info("Expected qemu failure. Test PASSED.")
