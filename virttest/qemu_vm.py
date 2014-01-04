@@ -2062,8 +2062,10 @@ class VM(virt_vm.BaseVM):
             # Make sure qemu is not defunct
             if self.process.is_defunct():
                 logging.error("Bad things happened, qemu process is defunct")
+                err = ("Qemu is defunct.\nQemu output:\n%s"
+                       % self.process.get_output())
                 self.destroy()
-                raise virt_vm.VMStartError(self.name, "Qemu is defunct")
+                raise virt_vm.VMStartError(self.name, err)
 
             # Make sure the process was started successfully
             if not self.process.is_alive():
