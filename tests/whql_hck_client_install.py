@@ -39,7 +39,7 @@ def run_whql_hck_client_install(test, params, env):
     services_installed = session.cmd_output("wmic service get")
     if "HCKcommunication" in services_installed:
         logging.info("HCK client already installed.")
-        exit()
+        return
 
     # Join the server's workgroup
     if params.get("join_domain") == "yes":
