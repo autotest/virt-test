@@ -87,8 +87,6 @@ def package_check(dict_test, verbose=False):
     return True
 
 qemu_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt/qemu')
-update_config = os.path.join(qemu_test_dir, 'update_config.py')
-utils.system(update_config)
 parser = cartesian_config.Parser()
 
 parser.parse_file(os.path.join(qemu_test_dir, "cfg", "tests-example.cfg"))
