@@ -214,7 +214,11 @@ def process_or_children_is_defunct(ppid):
     :param ppid: The parent PID of the process to verify.
     """
     defunct = False
-    for pid in utils.get_children_pids(ppid):
+    try:
+        pids = utils.get_children_pids(ppid)
+    except error.CmdError:  # Process doesn't exist
+        return True
+    for pid in pids:
         cmd = "ps --no-headers -o cmd %d" % int(pid)
         proc_name = utils.system_output(cmd, ignore_status=True)
         if '<defunct>' in proc_name:

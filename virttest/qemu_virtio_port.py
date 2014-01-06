@@ -185,6 +185,7 @@ class GuestWorker(object):
             guest_script_path = "/tmp/%s" % guest_script_py
             cmd_guest_size = ("du -b %s | cut -f1"
                               % guest_script_path)
+            cmd_already_compiled_chck = "ls %so" % guest_script_path
             cmd_compile = ("python -OO %s -c "
                            "&& echo -n 'PASS: Compile virtio_guest finished' "
                            "|| echo -n 'FAIL: Compile virtio_guest failed'"
@@ -198,6 +199,7 @@ class GuestWorker(object):
             guest_script_path = "C:\\%s" % guest_script_py
             cmd_guest_size = ("for %%I in (%s) do @echo %%~zI"
                               % guest_script_path)
+            cmd_already_compiled_chck = "dir %so" % guest_script_path
             cmd_compile = ("%s -c "
                            "&& echo PASS: Compile virtio_guest finished "
                            "|| echo FAIL: Compile virtio_guest failed"
@@ -215,7 +217,8 @@ class GuestWorker(object):
         script_size = utils.system_output("du -b %s | cut -f1"
                                           % guest_script_src).strip()
         script_size_guest = self.session.cmd_output(cmd_guest_size).strip()
-        if script_size != script_size_guest:
+        if (script_size != script_size_guest
+            or self.session.cmd_status(cmd_already_compiled_chck)):
             if self.os_linux:
                 # Disable serial-getty@hvc0.service on systemd-like hosts
                 self.session.cmd_status('systemctl mask '
