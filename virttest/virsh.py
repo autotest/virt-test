@@ -852,6 +852,29 @@ def edit(options, **dargs):
     return command("edit %s" % options, **dargs)
 
 
+def dompmsuspend(name, target, duration=0, **dargs):
+    """
+    Suspends a running domain using guest OS's power management.
+
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return CmdResult object
+    """
+    cmd = "dompmsuspend %s %s --duration %s" % (name, target, duration)
+    return command(cmd, **dargs)
+
+
+def dompmwakeup(name, **dargs):
+    """
+     Wakeup a domain that was previously suspended by power management.
+
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return CmdResult object
+    """
+    return command("dompmwakeup %s" % name, **dargs)
+
+
 def domjobabort(name, **dargs):
     """
     Aborts the currently running domain job.
