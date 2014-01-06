@@ -220,6 +220,9 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("--no-downloads", action="store_true",
                            dest="no_downloads", default=False,
                            help="Do not attempt to download JeOS images")
+        general.add_option("--selinux-setup", action="store_true",
+                           dest="selinux_setup", default=False,
+                           help="Define default contexts of directory.")
         general.add_option("-k", "--keep-image", action="store_true",
                            dest="keep_image",
                            help=("Don't restore the JeOS image from pristine "
@@ -792,6 +795,8 @@ class VirtTestApp(object):
                                 check_modules=check_modules,
                                 online_docs_url=online_docs_url,
                                 interactive=interactive,
+                                download_image=(not self.options.no_downloads),
+                                selinux=self.options.selinux_setup,
                                 restore_image=(not self.options.keep_image),
                                 verbose=self.options.verbose)
             sys.exit(0)
