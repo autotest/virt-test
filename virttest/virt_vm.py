@@ -815,7 +815,8 @@ class BaseVM(object):
             if match is not None:
                 raise VMDeadKernelCrashError(match.group(0))
         #For windows guest
-        if self.params.get("check_guest_bsod", "no") == 'yes':
+        if (self.params.get("check_guest_bsod", "no") == 'yes' and
+                ppm_utils.Image is not None):
             try:
                 scrdump_file = os.path.join("/tmp", "scrdump-img.ppm")
                 ref_img_path = self.params.get("bsod_reference_img", "")
@@ -828,14 +829,13 @@ class BaseVM(object):
                     logging.warn("Cannot catch guest screendump, %s" % err)
                     pass
                 if (os.path.exists(scrdump_file) and
-                    ppm_utils.have_similar_img(scrdump_file, ref_img)):
+                        ppm_utils.have_similar_img(scrdump_file, ref_img)):
                     err_msg = "Windows Guest appears to have suffered a BSOD,"
                     err_msg += " please check test video."
                     raise VMDeadKernelCrashError(err_msg)
             finally:
                 if os.path.exists(scrdump_file):
                     os.unlink(scrdump_file)
-
 
     def verify_illegal_instruction(self):
         """

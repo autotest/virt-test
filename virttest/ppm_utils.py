@@ -9,7 +9,15 @@ import struct
 import time
 import re
 import glob
-from PIL import Image
+import logging
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+    logging.warning('No python imaging library installed. Windows guest '
+                    'BSOD detection disabled. In order to enable it, '
+                    'please install python-imaging or the equivalent for your '
+                    'distro.')
 try:
     import hashlib
 except ImportError:
