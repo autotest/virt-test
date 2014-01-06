@@ -14,13 +14,30 @@ adapting the tests executed to the host machine.
 Online docs: https://github.com/autotest/virt-test/wiki
 """
 
-import sys, os, logging, re, commands
+import sys, os, logging, re, commands, inspect
 from distutils import version
+
 virt_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt')
 sys.path.insert(0, virt_test_dir)
-from virttest import utils_misc, cartesian_config
 
+from virttest import utils_misc, cartesian_config, data_dir, bootstrap
+from autotest.client.shared import logging_manager
 os.environ['LANG'] = 'en_US.UTF-8'
+
+
+def update_config(verbose=None):
+    if verbose:
+        logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),
+                                          verbose=verbose)
+    cur_file = inspect.getfile(inspect.currentframe())
+    t_type = os.path.basename(os.path.dirname(cur_file))
+    test_dir = os.path.join(data_dir.get_root_dir(), t_type)
+    shared_dir = os.path.join(data_dir.get_root_dir(), "shared")
+    bootstrap.create_config_files(test_dir, shared_dir,
+                                  interactive=False,
+                                  force_update=True)
+    bootstrap.create_subtests_cfg(t_type)
+    bootstrap.create_guest_os_cfg(t_type)
 
 
 def package_check(dict_test, verbose=False):
@@ -87,6 +104,7 @@ def package_check(dict_test, verbose=False):
     return True
 
 qemu_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt/qemu')
+update_config()
 parser = cartesian_config.Parser()
 
 parser.parse_file(os.path.join(qemu_test_dir, "cfg", "tests-example.cfg"))
