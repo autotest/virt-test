@@ -3536,3 +3536,21 @@ class VM(virt_vm.BaseVM):
         :param device: device ID
         """
         return self.monitor.query_block_job(device)
+
+    def eject_cdrom(self, device, force=False):
+        """
+        Eject cdrom and open door of the CDROM;
+
+        :param device: device ID;
+        :param force: force eject or not;
+        """
+        return self.monitor.eject_cdrom(device, force)
+
+    def change_media(self, device, target):
+        """
+        Change media of cdrom;
+
+        :param device: Device ID;
+        :param target: new media file;
+        """
+        return self.monitor.change_media(device, target)

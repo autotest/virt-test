@@ -1072,6 +1072,26 @@ class HumanMonitor(Monitor):
         cmd = "block_resize device=%s,size=%s" % (device, size)
         return self.send_args_cmd(cmd)
 
+    def eject_cdrom(self, device, force=False):
+        """
+        Eject media of cdrom and open cdrom door;
+        """
+        cmd = "eject"
+        self.verify_supported_cmd(cmd)
+        if force:
+            cmd += " -f "
+        cmd += " %s" % device
+        return self.cmd(cmd)
+
+    def change_media(self, device, target):
+        """
+        Change media of cdrom of drive;
+        """
+        cmd = "change"
+        self.verify_supported_cmd(cmd)
+        cmd += " %s %s" % (device, target)
+        return self.cmd(cmd)
+
 
 class QMPMonitor(Monitor):
 
@@ -1928,3 +1948,21 @@ class QMPMonitor(Monitor):
         """
         cmd = "block_resize device=%s,size=%s" % (device, size)
         return self.send_args_cmd(cmd)
+
+    def eject_cdrom(self, device, force=False):
+        """
+        Eject media of cdrom and open cdrom door;
+        """
+        cmd = "eject"
+        self.verify_supported_cmd(cmd)
+        args = {"device": device, "force": force}
+        return self.cmd(cmd, args)
+
+    def change_media(self, device, target):
+        """
+        Change media of cdrom of drive;
+        """
+        cmd = "change"
+        self.verify_supported_cmd(cmd)
+        args = {"device": device, "target": target}
+        return self.cmd(cmd, args)
