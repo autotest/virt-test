@@ -110,7 +110,7 @@ class VM(virt_vm.BaseVM):
             self.__dict__ = state
         else:
             self.process = None
-            self.serial_ports = None
+            self.serial_ports = []
             self.serial_console = None
             self.redirs = {}
             self.vnc_port = None
@@ -885,8 +885,7 @@ class VM(virt_vm.BaseVM):
         self.serial_console.set_log_file(output_filename)
 
     def setup_serial_ports(self):
-        if self.serial_ports is None:
-            self.serial_ports = []
+        if not self.serial_ports:
             for serial in self.params.objects("isa_serials"):
                 self.serial_ports.append(serial)
         if self.serial_console is None:
