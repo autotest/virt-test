@@ -61,8 +61,7 @@ def run(test, params, env):
 
     # get the params for remote test
     remote_ip = params.get("remote_ip", "ENTER.YOUR.REMOTE.IP")
-    remote_password = params.get(
-        "remote_password", "ENTER.YOUR.REMOTE.PASSWORD")
+    remote_pwd = params.get("remote_pwd", "ENTER.YOUR.REMOTE.PASSWORD")
     local_ip = params.get("local_ip", "ENTER.YOUR.LOCAL.IP")
     if pre_operation == "remote" and (remote_ip.count("ENTER.YOUR.") or
                                       local_ip.count("ENTER.YOUR.")):
@@ -88,7 +87,7 @@ def run(test, params, env):
             if pre_operation == "remote":
                 # get remote session
                 session = remote.wait_for_login("ssh", remote_ip, "22", "root",
-                                                remote_password, "#")
+                                                remote_pwd, "#")
                 # get uri of local
                 uri = libvirt_vm.complete_uri(local_ip)
 

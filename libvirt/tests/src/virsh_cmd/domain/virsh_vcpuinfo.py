@@ -31,7 +31,6 @@ def run(test, params, env):
         """
         Test remote case.
         """
-
         remote_ip = params.get("remote_ip", "REMOTE.EXAMPLE.COM")
         remote_pwd = params.get("remote_pwd", None)
         # Used for connecting from remote to local

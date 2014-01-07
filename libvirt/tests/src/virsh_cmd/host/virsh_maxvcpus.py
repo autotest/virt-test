@@ -22,8 +22,8 @@ def run(test, params, env):
     # params for transport connect.
     local_ip = params.get("local_ip", "ENTER.YOUR.LOCAL.IP")
     local_pwd = params.get("local_pwd", "ENTER.YOUR.LOCAL.ROOT.PASSWORD")
-    server_ip = params.get("server_ip", local_ip)
-    server_pwd = params.get("server_pwd", local_pwd)
+    server_ip = params.get("remote_ip", local_ip)
+    server_pwd = params.get("remote_pwd", local_pwd)
     transport_type = params.get("connect_transport_type", "local")
     transport = params.get("connect_transport", "ssh")
 

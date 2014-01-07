@@ -72,6 +72,7 @@ def run(test, params, env):
         if status != 0 or output == "":
             raise error.TestFail("Run failed with right command")
         if vm_ref == "remote":
-            if not (re.match("running", output) or re.match("blocked", output)
-                    or re.match("idle", output)):
+            if not (re.search("running", output)
+                    or re.search("blocked", output)
+                    or re.search("idle", output)):
                 raise error.TestFail("Run failed with right command")
