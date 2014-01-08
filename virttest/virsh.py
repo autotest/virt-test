@@ -1536,7 +1536,7 @@ def net_autostart(network, extra="", **dargs):
 
 def net_info(network, extra="", **dargs):
     """
-    Get network infomation
+    Get network information
 
     :param network: name/parameter for network option/argument
     :param extra: extra parameters to pass to command.

@@ -103,13 +103,13 @@ class TimedriftTest(object):
 
     def get_time(self, session, time_command, time_filter_re, time_format):
         """
-        Get a unix epoch time; 
+        Get a unix epoch time;
 
         :param session: ShellSession object;
         :param time_command: command to get time string from host/guest;
         :param time_filter_re: regrex to filter out formated time from string;
         :param time_format: time format of time_command out put;
-        :return: pair of host time and guest time;  
+        :return: pair of host time and guest time;
         """
         def make_time(output):
             # Get and parse host time
@@ -193,7 +193,7 @@ class BackwardtimeTest(TimedriftTest):
 
     def time_diff(self, session, clock="sys"):
         """
-        Calculate system/hardware time difference bewteen host and guest;
+        Calculate system/hardware time difference between host and guest;
 
         :param session: ShellSession object;
         :param clock: 'hw'or 'sys'

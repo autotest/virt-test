@@ -220,7 +220,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         """
         Accessor for 'define' property - does this name exist in network list
         """
-        params = {'only_names':True, 'virsh_instance':self.virsh}
+        params = {'only_names': True, 'virsh_instance': self.virsh}
         return self.name in self.virsh.net_state_dict(**params)
 
     def set_defined(self, value):
@@ -388,7 +388,7 @@ class NetworkXML(NetworkXMLBase):
         result = {}
         # Values should all share virsh property
         new_netxml = NetworkXML(virsh_instance=virsh_instance)
-        params = {'only_names':True, 'virsh_instance':virsh_instance}
+        params = {'only_names': True, 'virsh_instance': virsh_instance}
         networks = new_netxml.virsh.net_state_dict(**params).keys()
         for net_name in networks:
             new_copy = new_netxml.copy()

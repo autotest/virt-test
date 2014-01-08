@@ -1767,7 +1767,7 @@ ADDRESS_POOL_LOCK_FILENAME = ADDRESS_POOL_FILENAME + ".lock"
 
 def clean_tmp_files():
     """
-    Remove the base adress pool filename.
+    Remove the base address pool filename.
     """
     if os.path.isfile(ADDRESS_POOL_LOCK_FILENAME):
         os.unlink(ADDRESS_POOL_LOCK_FILENAME)

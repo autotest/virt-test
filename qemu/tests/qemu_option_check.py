@@ -49,7 +49,7 @@ def run(test, params, env):
         if not re.findall(r"%s\.(.*)=(.*)" % device_name,
                           device_support_option.stdout):
             raise error.TestFail("Qemu option check Failed")
-        logging.info("Qemu options check successfull. output is:\n%s" %
+        logging.info("Qemu options check successful. output is:\n%s" %
                      device_support_option.stdout)
 
     device_name = params.get("device_name")
