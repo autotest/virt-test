@@ -201,14 +201,17 @@ def run(test, params, env):
     device_id = vm.virtnet[0].device_id
     expect_down_status = params.get("down-status", "down")
     expect_up_status = params.get("up-status", "up")
+    operstate_always_up = params.get("operstate_always_up", "no") == "yes"
 
     error.context("Disable guest netdev link '%s' by set_link" % netdev_id,
                   logging.info)
-    set_link_test(netdev_id, False, expect_down_status, True, change_queues)
+    set_link_test(netdev_id, False, expect_down_status, operstate_always_up,
+                  change_queues)
 
     error.context("Re-enable guest netdev link '%s' by set_link" % netdev_id,
                   logging.info)
-    set_link_test(netdev_id, True, expect_up_status, True, change_queues)
+    set_link_test(netdev_id, True, expect_up_status, operstate_always_up,
+                  change_queues)
 
     error.context("Disable guest nic device '%s' by set_link" % device_id,
                   logging.info)
