@@ -7,7 +7,8 @@ INT64_MAX = (1 << 63) - 1
 UINT64_MAX = (1 << 64) - 1
 DEFAULT = INT64_MAX / (1024 * 1024)
 
-def run_virsh_migrate_set_get_speed(test, params, env):
+
+def run(test, params, env):
     """
     Test command: virsh migrate-setspeed <domain> <bandwidth>
                   virsh migrate-getspeed <domain>.
@@ -79,7 +80,8 @@ def run_virsh_migrate_set_get_speed(test, params, env):
 
         if int(actual_value) != int(expected_value):
             raise error.TestFail("Bandwidth value from getspeed "
-                                 "is different from expected value set by setspeed")
+                                 "is different from expected value "
+                                 "set by setspeed")
     finally:
         #restore bandwidth to default
         virsh.migrate_setspeed(vm_name, orig_value)
