@@ -251,7 +251,12 @@ def run(test, params, env):
                     failed_tests.append(e_msg)
             txt = "Run callback function %s" % callback.func_name
             error.context(txt, logging.info)
-            if not callback(status="on"):
+            #In old kernel will do tcpdump before gso split the big packet,
+            #so we can capture the big packets via tcpdump.
+            #Currently when enable gso, tcpdump only capture the packets
+            #after gso split the big packet, so the tcpdump can not capture
+            #big packet, this is not a suitable method for gso, disable it.
+            if not callback(status="on") and f_type != "gso":
                 e_msg = "Callback failed after enabling %s" % f_type
                 logging.error(e_msg)
                 failed_tests.append(e_msg)
