@@ -140,25 +140,43 @@ def unique(llist):
         return u.keys()
 
 
-def find_command(cmd):
+def find_command(cmd, session=None):
     """
     Try to find a command in the PATH, paranoid version.
 
     :param cmd: Command to be found.
+    :param session: An existing session to get remote command path
     :raise: ValueError in case the command was not found.
+            ShellError in case error happened when command executed in session
     """
     common_bin_paths = ["/usr/libexec", "/usr/local/sbin", "/usr/local/bin",
                         "/usr/sbin", "/usr/bin", "/sbin", "/bin"]
     try:
-        path_paths = os.environ['PATH'].split(":")
+        if session is None:
+            path_paths = os.environ['PATH'].split(":")
+        else:
+            path_paths = session.cmd_output("echo $PATH").strip().split(":")
     except IndexError:
         path_paths = []
     path_paths = unique(common_bin_paths + path_paths)
 
-    for dir_path in path_paths:
-        cmd_path = os.path.join(dir_path, cmd)
-        if os.path.isfile(cmd_path):
-            return os.path.abspath(cmd_path)
+    if session is None:
+        for dir_path in path_paths:
+            cmd_path = os.path.join(dir_path, cmd)
+            if os.path.isfile(cmd_path):
+                return os.path.abspath(cmd_path)
+    else:
+        # This step find command in PATH
+        status, output = session.cmd_status_output("which %s" % cmd)
+        if not status:
+            return output.strip()
+        else:
+            # This step find command in common_bin_paths
+            path_str = " ".join(common_bin_paths)
+            find_cmd = "find %s -name %s -executable" % (path_str, cmd)
+            output = session.cmd_output(find_cmd).strip()
+            if output:
+                return output
 
     raise ValueError('Missing command: %s' % cmd)
 
