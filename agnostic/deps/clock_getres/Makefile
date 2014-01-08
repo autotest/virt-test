@@ -1,6 +1,6 @@
 CC = gcc
-PROG = test_clock_getres
-SRC = test_clock_getres.c
+PROG = clock_getres
+SRC = clock_getres.c
 LIBS = -lrt
 
 all: $(PROG)

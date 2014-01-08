@@ -1,7 +1,7 @@
 import logging
 import os
 from autotest.client.shared import error
-from virttest import utils_test
+from virttest import utils_test, data_dir
 
 
 @error.context_aware
@@ -14,10 +14,10 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    source_name = "test_clock_getres/test_clock_getres.c"
-    source_name = os.path.join(test.virtdir, "deps", source_name)
-    dest_name = "/tmp/test_clock_getres.c"
-    bin_name = "/tmp/test_clock_getres"
+    source_name = "clock_getres/clock_getres.c"
+    source_name = os.path.join(data_dir.get_deps_dir(), source_name)
+    dest_name = "/tmp/clock_getres.c"
+    bin_name = "/tmp/clock_getres"
 
     if not os.path.isfile(source_name):
         raise error.TestError("Could not find %s" % source_name)
