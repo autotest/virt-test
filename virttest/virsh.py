@@ -1396,17 +1396,21 @@ def net_list(options, extra="", **dargs):
     return command("net-list %s %s" % (options, extra), **dargs)
 
 
-def net_state_dict(only_names=False, **dargs):
+def net_state_dict(only_names=False, virsh_instance=None, **dargs):
     """
     Return network name to state/autostart/persistent mapping
 
     :param only_names: When true, return network names as keys and None values
+    :param virsh_instance: Call net_list() on this instance instead of module
     :param dargs: standardized virsh function API keywords
     :return: dictionary
     """
     # Using multiple virsh commands in different ways
     dargs['ignore_status'] = False  # force problem detection
-    net_list_result = net_list("--all", **dargs)
+    if virsh_instance is not None:
+        net_list_result = virsh_instance.net_list("--all", **dargs)
+    else:
+        net_list_result = net_list("--all", **dargs)
     # If command failed, exception would be raised here
     netlist = net_list_result.stdout.strip().splitlines()
     # First two lines contain table header
@@ -1434,9 +1438,15 @@ def net_state_dict(only_names=False, **dargs):
                 # Rely on net_autostart will raise() if not persistent state
                 if autostart:  # Enabled, try enabling again
                     # dargs['ignore_status'] already False
-                    net_autostart(name, **dargs)
+                    if virsh_instance is not None:
+                        virsh_instance.net_autostart(name, **dargs)
+                    else:
+                        net_autostart(name, **dargs)
                 else:  # Disabled, try disabling again
-                    net_autostart(name, "--disable", **dargs)
+                    if virsh_instance is not None:
+                        virsh_instance.net_autostart(name, "--disable", **dargs)
+                    else:
+                        net_autostart(name, "--disable", **dargs)
                 # no exception raised, must be persistent
                 persistent = True
             except error.CmdError, detail:

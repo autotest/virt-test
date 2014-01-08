@@ -220,7 +220,8 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         """
         Accessor for 'define' property - does this name exist in network list
         """
-        return self.name in self.virsh.net_state_dict(only_names=True).keys()
+        params = {'only_names':True, 'virsh_instance':self.virsh}
+        return self.name in self.virsh.net_state_dict(**params)
 
     def set_defined(self, value):
         """Accessor method for 'define' property, set True to define."""
@@ -241,7 +242,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         """Accessor method for 'active' property (True/False)"""
         self.__check_undefined__("Cannot determine activation for undefined "
                                  "network")
-        state_dict = self.virsh.net_state_dict()
+        state_dict = self.virsh.net_state_dict(virsh_instance=self.virsh)
         return state_dict[self.name]['active']
 
     def set_active(self, value):
@@ -273,7 +274,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         """Accessor method for 'autostart' property, True if set"""
         self.__check_undefined__("Cannot determine autostart for undefined "
                                  "network")
-        state_dict = self.virsh.net_state_dict()
+        state_dict = self.virsh.net_state_dict(virsh_instance=self.virsh)
         return state_dict[self.name]['autostart']
 
     def set_autostart(self, value):
@@ -301,7 +302,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
 
     def get_persistent(self):
         """Accessor method for 'persistent' property"""
-        state_dict = self.virsh.net_state_dict()
+        state_dict = self.virsh.net_state_dict(virsh_instance=self.virsh)
         return state_dict[self.name]['persistent']
 
     # Copy behavior for consistency
@@ -387,7 +388,8 @@ class NetworkXML(NetworkXMLBase):
         result = {}
         # Values should all share virsh property
         new_netxml = NetworkXML(virsh_instance=virsh_instance)
-        networks = new_netxml.virsh.net_state_dict(only_names=True).keys()
+        params = {'only_names':True, 'virsh_instance':virsh_instance}
+        networks = new_netxml.virsh.net_state_dict(**params).keys()
         for net_name in networks:
             new_copy = new_netxml.copy()
             new_copy.xml = virsh.net_dumpxml(net_name).stdout.strip()
@@ -435,7 +437,7 @@ class NetworkXML(NetworkXMLBase):
                  and boolean as values or None if network doesn't exist.
         """
         if self.defined:
-            return self.virsh.net_state_dict()[self.name]
+            return self.virsh.net_state_dict(virsh_instance=self.virsh)[self.name]
 
     def create(self):
         """
