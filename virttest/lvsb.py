@@ -47,25 +47,30 @@ def make_sandboxes(params, env, extra_ns=None):
 # a test module.  They simply help the test-module iterate over many
 # aggregate manager classes and the sandboxes they contain.
 
-class TestSimpleSandboxes(lvsb_base.TestSandboxes):
+class TestBaseSandboxes(lvsb_base.TestSandboxes):
 
     """
-    Simplistic sandbox aggregate manager that just executes a command
+    Simplistic sandbox aggregate manager
     """
 
     def __init__(self, params, env):
         """
         Initialize to run, all SandboxCommandBase's
         """
-        super(TestSimpleSandboxes, self).__init__(params, env)
+        super(TestBaseSandboxes, self).__init__(params, env)
         self.init_sandboxes()  # create instances of SandboxCommandBase
         # Point all of them at the same local uri
         self.for_each(lambda sb: sb.add_optarg('-c', self.uri))
         # Use each instances name() method to produce name argument
         self.for_each(lambda sb: sb.add_optarg('-n', sb.name))
+
+    def command_suffixes(self):
+        """
+        Append command after a --
+        """
         # Command should follow after a --
         self.for_each(lambda sb: sb.add_mm())
-        # Each one gets the same command (that's why it's simple)
+        # Each one gets the same command
         self.for_each(lambda sb: sb.add_pos(self.command))
 
     def results(self, each_timeout=5):
@@ -105,3 +110,40 @@ class TestSimpleSandboxes(lvsb_base.TestSandboxes):
                      end - start)
         # Return a list of stdout contents from each
         return self.for_each(lambda sb: sb.recv())
+
+
+# TestBaseSandboxes subclasses which just runs simple default
+# options with the same command.
+
+class TestSimpleSandboxes(TestBaseSandboxes):
+
+    """
+    Executes a command with simple options
+    """
+
+    def __init__(self, params, env):
+        """
+        Initialize to run, all SandboxCommandBase's
+        """
+        super(TestSimpleSandboxes, self).__init__(params, env)
+        # Appends command after options
+        self.command_suffixes()
+
+
+# TestBaseSandboxes subclasses which runs complex options and allows
+# iterating for the options with the same command.
+
+class TestComplexSandboxes(TestBaseSandboxes):
+
+    """
+    Executes a command with complex options
+    """
+
+    def __init__(self, params, env):
+        super(TestComplexSandboxes, self).__init__(params, env)
+        # Appends command options
+        for tuples in self.opts:
+            k, v = tuples
+            self.for_each(lambda sb: sb.add_optarg(k, v))
+        # Appends command after options
+        self.command_suffixes()
