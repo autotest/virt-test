@@ -6,6 +6,46 @@ import logging
 import common
 from autotest.client import utils
 
+class bogusVirshFailureException(unittest.TestCase.failureException):
+
+    def __init__(self, *args, **dargs):
+        self.virsh_args = args
+        self.virsh_dargs = dargs
+
+    def __str__(self):
+        msg = ("Codepath under unittest attempted call to un-mocked virsh"
+               " method, with args: '%s' and dargs: '%s'"
+               % (self.virsh_args, self.virsh_dargs))
+        return msg
+
+def FakeVirshFactory(preserve=None):
+    """
+    Return Virsh() instance with methods to raise bogusVirshFailureException.
+
+    Users of this class should override methods under test on instance.
+    :param preserve: List of symbol names NOT to modify, None for all
+    """
+    import virsh
+
+    def raise_bogusVirshFailureException(*args, **dargs):
+        raise bogusVirshFailureException()
+
+    if preserve is None:
+        preserve = []
+    fake_virsh = virsh.Virsh(virsh_exec='/bin/false',
+                             uri='qemu:///system', debug=True,
+                             ignore_status=True)
+    # Make all virsh commands throw an exception by calling it
+    for symbol in dir(virsh):
+        # Get names of just closure functions by Virsh class
+        if symbol in virsh.NOCLOSE + preserve:
+            continue;
+        if isinstance(getattr(fake_virsh, symbol), virsh.VirshClosure):
+            xcpt = lambda *args, **dargs:raise_bogusVirshFailureException()
+            # fake_virsh is a propcan, can't use setattr.
+            fake_virsh.__super_set__(symbol, xcpt)
+    return fake_virsh
+
 
 class ModuleLoad(unittest.TestCase):
     import virsh
@@ -47,6 +87,14 @@ class TestVirshClosure(ModuleLoad):
         self.assertEqual(len(args), 1)
         self.assertEqual(args[0], 'foo')
         self.assertEqual(len(dargs), 0)
+
+    def test_fake_virsh(self):
+        fake_virsh = FakeVirshFactory()
+        for symb in dir(self.virsh):
+            if symb in self.virsh.NOCLOSE:
+                continue
+            value = fake_virsh.__super_get__(symb)
+            self.assertRaises(unittest.TestCase.failureException, value)
 
     def test_dargs(self):
         # save some typing
