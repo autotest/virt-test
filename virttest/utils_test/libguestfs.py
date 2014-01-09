@@ -344,6 +344,25 @@ class VirtTools(object):
         return (True, file_path)
 
 
+    def get_primary_disk_fs_type(self):
+        """
+        Get primary disk filesystem type
+        """
+        result = lgf.virt_filesystems(self.oldvm.name, long_format=True)
+        if result.exit_status:
+            raise error.TestNAError("Cannot get primary disk"
+                                    " filesystem information!")
+        fs_info = result.stdout.strip().splitlines()
+        if len(fs_info) <= 1:
+            raise error.TestNAError("No disk filesystem information!")
+        try:
+            primary_disk_info = fs_info[1]
+            fs_type = primary_disk_info.split()[2]
+            return fs_type
+        except (KeyError, ValueError), detail:
+            raise error.TestFail(str(detail))
+
+
 class GuestfishTools(lgf.GuestfishPersistent):
 
     """Useful Tools for Guestfish class."""
