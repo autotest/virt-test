@@ -108,6 +108,7 @@ class VM(virt_vm.BaseVM):
             self.__dict__ = state
         else:
             self.process = None
+            self.serial_ports = []
             self.serial_console = None
             self.redirs = {}
             self.spice_options = {}
@@ -2096,7 +2097,6 @@ class VM(virt_vm.BaseVM):
                 self.monitors += [monitor]
 
             # Create isa serial ports.
-            self.serial_ports = []
             for serial in params.objects("isa_serials"):
                 self.serial_ports.append(serial)
 
