@@ -1,0 +1,3 @@
+Test for method of class virConnect.
+
+Class virConnect provides all kinds of functionalities related connection, such as getCapabilities, getHostname.

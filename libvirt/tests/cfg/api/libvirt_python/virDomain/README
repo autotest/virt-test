@@ -1,0 +1,3 @@
+Tests for class virDomain.
+
+class virDomain provides all kinds of functionalities related domain, such as attachDevice, create, destroy.

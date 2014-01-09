@@ -1,0 +1,3 @@
+Tests for class virNetwork.
+
+class virNetwork provides all kinds of functionalities related network, such as bridgeName, create, destroy.

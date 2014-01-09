@@ -1,0 +1,17 @@
+Tests for libvirt bindings for python.
+
+Outline of the structure of tests:
+
+libvirt----tests----cfg----api----libvirt_python/
+                                        |----LP_open.cfg (functions in libvirt.py)
+                                        |----virConnect/ (Tests for class virConnect.)
+                                        |----virDomain/ (Tests for class virDomain.)
+                                        |----virDomainSnapshot/ (Tests for class virDomainSnapshot.)
+                                        |----virInterface/ (Tests for class virInterface.)
+                                        |----virNetwork/ (Tests for class virNetwork.)
+                                        |----virNodeDevice
+                                        |----virNWFilter
+                                        |----virSecret
+                                        |----virStoragePool
+                                        |----virStorageVol
+                                        |----virStream

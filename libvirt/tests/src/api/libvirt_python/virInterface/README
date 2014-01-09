@@ -1,0 +1,3 @@
+Tests for class virInterface.
+
+class virInterface provides all kinds of functionalities related interface, such as MACString, undefine.

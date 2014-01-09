@@ -1,0 +1,3 @@
+Tests for class virStream.
+
+class virStream provides all kinds of functionalities related stream, such as download, finish.

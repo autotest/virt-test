@@ -1,0 +1,3 @@
+Tests for class virNodedev.
+
+class virNodedev provides all kinds of functionalities related nodedev, such as detach, reatach.
