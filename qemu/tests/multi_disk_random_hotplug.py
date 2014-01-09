@@ -72,7 +72,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    @error.context_aware
     def verify_qtree(params, info_qtree, info_block, proc_scsi, qdev):
         """
         Verifies that params, info qtree, info block and /proc/scsi/ matches
@@ -105,7 +104,6 @@ def run(test, params, env):
             raise error.TestFail("%s errors occurred while verifying"
                                  " qtree vs. params" % err)
 
-    @error.context_aware
     def insert_into_qdev(qdev, param_matrix, no_disks, params):
         """
         Inserts no_disks disks int qdev using randomized args from param_matrix
@@ -120,6 +118,7 @@ def run(test, params, env):
         :return: (newly added devices, number of added disks)
         :rtype: tuple(list, integer)
         """
+        error.context("Insert devices into qdev", logging.debug)
         new_devices = []
         _new_devs_fmt = ""
         _formats = param_matrix.pop('fmt', [params.get('drive_format')])
@@ -179,11 +178,10 @@ def run(test, params, env):
             _new_devs_fmt += "%s(%s) " % (name, fmt)
             i += 1
         if _new_devs_fmt:
-            logging.info("Adding disks: %s", _new_devs_fmt[:-1])
+            logging.info("Using disks: %s", _new_devs_fmt[:-1])
         param_matrix['fmt'] = _formats
         return new_devices, params
 
-    @error.context_aware
     def hotplug_serial(new_devices, monitor):
         """
         Do the actual hotplug of the new_devices using monitor monitor.
@@ -192,6 +190,7 @@ def run(test, params, env):
         :param monitor: Monitor which should be used for hotplug
         :type monitor: virttest.qemu_monitor.Monitor
         """
+        error.context("Hotplug the devices", logging.debug)
         err = []
         for device in new_devices:
             time.sleep(float(params.get('wait_between_hotplugs', 0)))
@@ -212,7 +211,6 @@ def run(test, params, env):
                           "%d", passed, unverif, failed)
             raise error.TestFail("Hotplug of some devices failed.")
 
-    @error.context_aware
     def unplug_serial(new_devices, qdev, monitor):
         """
         Do the actual unplug of new_devices using monitor monitor
@@ -223,6 +221,7 @@ def run(test, params, env):
         :param monitor: Monitor which should be used for hotplug
         :type monitor: virttest.qemu_monitor.Monitor
         """
+        error.context("Unplug and remove the devices", logging.debug)
         failed = 0
         passed = 0
         unverif = 0
@@ -320,7 +319,7 @@ def run(test, params, env):
 
     rp_times = int(params.get("repeat_times", 1))
     context_msg = "Running sub test '%s' %s"
-    error.context("Verify before hotplug")
+    error.context("Verify disk before test", logging.info)
     info_qtree = vm.monitor.info('qtree', False)
     info_block = vm.monitor.info_block(False)
     proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
@@ -333,12 +332,14 @@ def run(test, params, env):
                           logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-        error.context("Hotplugging devices, iteration %d" % iteration)
+        error.context("Hotplugging/unplugging devices, iteration %d"
+                      % iteration, logging.info)
         qdev.set_dirty()
         new_devices, params = insert_into_qdev(qdev, param_matrix,
                                                stg_image_num, params)
         hotplug_serial(new_devices, monitor)
         time.sleep(float(params.get('wait_after_hotplug', 0)))
+        error.context("Verify disks after hotplug", logging.debug)
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
         proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
@@ -358,6 +359,7 @@ def run(test, params, env):
             utils_test.run_virt_sub_test(test, params, env, sub_type)
         unplug_serial(new_devices, qdev, monitor)
         time.sleep(float(params.get('wait_after_unplug', 0)))
+        error.context("Verify disks after unplug", logging.debug)
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
         proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
