@@ -28,8 +28,8 @@ def run(test, params, env):
     drift_threshold = float(params.get("drift_threshold"))
     interval = float(params.get("interval"))
     cpu_chk_cmd = params.get("cpu_chk_cmd")
-    tsc_freq_path = os.path.join(data_dir.get_root_dir(),
-                                 'shared/deps/get_tsc.c')
+    tsc_freq_path = os.path.join(data_dir.get_deps_dir(),
+                                 'get_tsc/get_tsc.c')
     host_freq = 0
 
     def get_tsc(machine="host", i=0):
