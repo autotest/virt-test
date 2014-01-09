@@ -149,11 +149,11 @@ def run(test, params, env):
             for key, value in param_matrix.iteritems():
                 args[key] = random.choice(value)
 
-            devs = qdev.images_define_by_variables(**args)
             try:
+                devs = qdev.images_define_by_variables(**args)
                 for dev in devs:
                     qdev.insert(dev)
-            except utils.DeviceInsertError:
+            except utils.DeviceError:
                 # All buses are full, (TODO add bus) or remove this format
                 for dev in devs:
                     if dev in qdev:
