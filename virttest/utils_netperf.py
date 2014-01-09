@@ -108,6 +108,9 @@ class NetperfPackage(remote.Remote_Package):
     def pack_compile(self, compile_option=""):
         pre_setup_cmd = "cd %s " % self.netperf_base_dir
         pre_setup_cmd += " && %s %s" % (self.decomp_cmd, self.netperf_exec)
+        netperf_dir = self.session.cmd("tar -tf %s | sed -n 1p" %
+                                       self.remote_path).strip()
+        self.netperf_dir = os.path.join(self.netperf_base_dir, netperf_dir)
         pre_setup_cmd += " && cd %s " % self.netperf_dir
         setup_cmd = "./configure %s > /dev/null " % compile_option
         setup_cmd += " && make > /dev/null"
