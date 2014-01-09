@@ -127,6 +127,9 @@ def run(test, params, env):
         while i < no_disks:
             # Set the format
             if len(formats) < 1:
+                if i == 0:
+                    raise error.TestError("Fail to add any disks, probably bad "
+                                          "configuration.")
                 logging.warn("Can't create desired number '%s' of disk types "
                              "'%s'. Using '%d' no disks.", no_disks,
                              _formats, i)
