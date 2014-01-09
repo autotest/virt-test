@@ -35,7 +35,7 @@ def run(test, params, env):
         """
         mq_set_cmd = "ethtool -L %s combined %s" % (ifname, q_number)
         try:
-            session.cmd_status_output(mq_set_cmd)
+            session.cmd_output_safe(mq_set_cmd)
         except aexpect.ShellError, err:
             err_msg = "Change queues number failed"
             err_msg += "Error info: '%s'" % err
@@ -105,10 +105,12 @@ def run(test, params, env):
         """
         if params.get("os_type") == "linux":
             if_operstate = utils_net.get_net_if_operstate(guest_ifname,
-                                                          session.cmd)
+                                                       session.cmd_output_safe)
         else:
             if_operstate = utils_net.get_windows_nic_attribute(session,
-                                                               "macaddress", vm.get_mac_address(), "netconnectionstatus")
+                                                               "macaddress",
+                                                          vm.get_mac_address(),
+                                                         "netconnectionstatus")
 
         if if_operstate != expect_status:
             err_msg = "Guest interface %s status error, " % guest_ifname
@@ -201,14 +203,17 @@ def run(test, params, env):
     device_id = vm.virtnet[0].device_id
     expect_down_status = params.get("down-status", "down")
     expect_up_status = params.get("up-status", "up")
+    operstate_always_up = params.get("operstate_always_up", "no") == "yes"
 
     error.context("Disable guest netdev link '%s' by set_link" % netdev_id,
                   logging.info)
-    set_link_test(netdev_id, False, expect_down_status, True, change_queues)
+    set_link_test(netdev_id, False, expect_down_status, operstate_always_up,
+                  change_queues)
 
     error.context("Re-enable guest netdev link '%s' by set_link" % netdev_id,
                   logging.info)
-    set_link_test(netdev_id, True, expect_up_status, True, change_queues)
+    set_link_test(netdev_id, True, expect_up_status, operstate_always_up,
+                  change_queues)
 
     error.context("Disable guest nic device '%s' by set_link" % device_id,
                   logging.info)
