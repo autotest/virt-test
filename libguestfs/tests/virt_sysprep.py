@@ -157,7 +157,8 @@ def run(test, params, env):
     fs_type = vt.get_primary_disk_fs_type()
     if fs_type != file_system:
         raise error.TestNAError("This test case gets wrong disk file system."
-                                "get: %s, expected: %s" % (fs_type, file_system))
+                                "get: %s, expected: %s" % (fs_type,
+                                                           file_system))
 
     # Do some prepare action
     vm_clone_name = "%s_clone" % vm_name

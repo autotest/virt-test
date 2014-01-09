@@ -241,7 +241,8 @@ class GuestfishSession(aexpect.ShellSession):
         """
         Send a guestfish command and return its exit status and output.
 
-        :param cmd: guestfish command to send (must not contain newline characters)
+        :param cmd: guestfish command to send
+                    (must not contain newline characters)
         :param timeout: The duration (in seconds) to wait for the prompt to
                 return
         :param internal_timeout: The timeout to pass to read_nonblocking
@@ -335,7 +336,8 @@ class GuestfishPersistent(Guestfish):
         Open new session, closing any existing
         """
         # Accessors may call this method, avoid recursion
-        guestfs_exec = self.__dict_get__('lgf_exec')  # Must exist, can't be None
+        # Must exist, can't be None
+        guestfs_exec = self.__dict_get__('lgf_exec')
         self.close_session()
         # Always create new session
         new_session = GuestfishSession(guestfs_exec)
@@ -606,7 +608,8 @@ class GuestfishPersistent(Guestfish):
         inspect-get-major-version - get major version of inspected operating
         system
 
-        This returns the major version number of the inspected operating system.
+        This returns the major version number of the inspected
+        operating system.
         """
         return self.inner_cmd("inspect-get-major-version %s" % root)
 
@@ -1139,7 +1142,8 @@ def virt_list_partitions_cmd(disk_or_domain, long=False, total=False,
 def guestmount(disk_or_domain, mountpoint, inspector=False,
                readonly=False, **dargs):
     """
-    guestmount - Mount a guest filesystem on the host using FUSE and libguestfs.
+    guestmount - Mount a guest filesystem on the host using
+                 FUSE and libguestfs.
 
     @param disk_or_domain: a disk or a domain to be mounted
            If you need to mount a disk, set is_disk to True in dargs

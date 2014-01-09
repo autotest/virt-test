@@ -21,7 +21,7 @@ class VTAttachError(VTError):
 
     def __str__(self):
         return ("Attach command failed:%s\n%s" % (self.cmd, self.output))
- 
+
 
 class VTMountError(VTError):
     def __init__(self, cmd, output):
@@ -342,7 +342,6 @@ class VirtTools(object):
         # Cleanup created file
         utils.run("rm -f %s" % file_path, ignore_status=True)
         return (True, file_path)
-
 
     def get_primary_disk_fs_type(self):
         """
