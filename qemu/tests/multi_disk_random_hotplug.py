@@ -229,7 +229,17 @@ def run(test, params, env):
         for device in new_devices[::-1]:
             if device in qdev:
                 time.sleep(float(params.get('wait_between_unplugs', 0)))
-                out = qdev.simple_unplug(device, monitor)
+                _out = device.unplug(monitor)
+                for _ in xrange(50):    # unplug waits for VM response
+                    out = device.verify_unplug(_out, monitor)
+                    if out is True:
+                        break
+                    time.sleep(0.1)
+                # Remove from qdev even when unplug failed because further in
+                # this test we compare VM with qdev, which should be without
+                # these devices. We can do this because we already set the VM
+                # as dirty.
+                qdev.remove(device)
             else:
                 continue
             if out is True:
