@@ -32,7 +32,7 @@ import time
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
-from virttest import aexpect, remote, utils_misc, virt_vm, data_dir
+from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net
 import virttest
 
 import libvirt
@@ -640,10 +640,34 @@ def run_autotest(vm, session, control_path, timeout,
             logging.error("Error processing guest autotest results: %s", e)
             return None
 
-    if not os.path.isfile(control_path):
-        raise error.TestError("Invalid path to autotest control file: %s" %
-                              control_path)
+    def config_control(control_path):
+        """
+        Edit the control file to adapt the current environment.
 
+        Replace CLIENTIP with guestip, and replace SERVERIP with hostip.
+
+        :return: Path of a temp file which contains the result of replacing.
+        """
+        pattern2repl_dict = {r'CLIENTIP': vm.get_address(),
+                             r'SERVERIP': utils_net.get_host_ip_address(params)}
+        control_file = open(control_path)
+        lines = control_file.readlines()
+        control_file.close()
+
+        for pattern, repl in pattern2repl_dict.items():
+            for index in range(len(lines)):
+                line = lines[index]
+                lines[index] = re.sub(pattern, repl, line)
+
+        fd, temp_control_path = tempfile.mkstemp(prefix="control",
+                                                 dir=data_dir.get_tmp_dir())
+        os.close(fd)
+
+        temp_control = open(temp_control_path, "w")
+        temp_control.writelines(lines)
+        temp_control.close()
+        return temp_control_path
+        
     migrate_background = params.get("migrate_background") == "yes"
     if migrate_background:
         mig_timeout = float(params.get("mig_timeout", "3600"))
@@ -704,13 +728,26 @@ def run_autotest(vm, session, control_path, timeout,
     vm.copy_files_to(g_path, global_config_guest)
     os.unlink(g_path)
 
-    vm.copy_files_to(control_path,
-                     os.path.join(destination_autotest_path, 'control'))
-
     if not single_dir_install:
         vm.copy_files_to(autotest_local_path,
                          os.path.join(destination_autotest_path,
                                       'autotest-local'))
+
+    # Support autotests that are in client-server model.
+    server_control_path = None
+    if os.path.isdir(control_path):
+        server_control_path = os.path.join(control_path, "control.server")
+        server_control_path = config_control(server_control_path)
+        control_path = os.path.join(control_path, "control.client")
+    # Edit control file and copy it to vm.
+    temp_control_path = config_control(control_path)
+    vm.copy_files_to(temp_control_path,
+                     os.path.join(destination_autotest_path, 'control'))
+
+    # remove the temp control file.
+    if os.path.exists(temp_control_path):
+        os.remove(temp_control_path)
+
     if not kernel_install_present:
         kernel_install_dir = os.path.join(virttest.data_dir.get_root_dir(),
                                           "shared", "deps",
@@ -746,6 +783,15 @@ def run_autotest(vm, session, control_path, timeout,
     # Run the test
     logging.info("Running autotest control file %s on guest, timeout %ss",
                  os.path.basename(control_path), timeout)
+
+    # Start a background job to run server process if needed.
+    server_process = None
+    if server_control_path:
+        command = ("%s %s --verbose -t %s" % (autotest_local_path,
+                                    server_control_path,
+                                    os.path.basename(server_control_path)))
+        server_process = aexpect.run_bg(command)
+
     try:
         bg = None
         try:
@@ -774,6 +820,23 @@ def run_autotest(vm, session, control_path, timeout,
             logging.info("------------- End of test output ------------")
             if migrate_background and bg:
                 bg.join()
+            # Do some cleanup work on host if test need a server.
+            if server_process:
+                if server_process.is_alive():
+                    utils_misc.kill_process_tree(server_process.get_pid(),
+                                                 signal.SIGINT)
+                server_process.close()
+
+                # Remove the result dir produced by server_process.
+                server_result = os.path.join(autotest_path,
+                                        "results",
+                                        os.path.basename(server_control_path))
+                if os.path.isdir(server_result):
+                    utils.safe_rmdir()
+                # Remove the control file for server.
+                if os.path.exists(server_control_path):
+                    os.remove(server_control_path)
+
     except aexpect.ShellTimeoutError:
         if vm.is_alive():
             get_results(destination_autotest_path)
@@ -1140,13 +1203,13 @@ class BackgroundTest(object):
         """
         self.thread.start()
 
-    def join(self, timeout=600):
+    def join(self, timeout=600, ignore_status=False):
         """
         Wait for the join of thread and raise its exception if any.
         """
         self.thread.join(timeout)
         # pylint: disable=E0702
-        if self.exception:
+        if self.exception and (not ignore_status):
             raise self.exception
 
     def is_alive(self):
