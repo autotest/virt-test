@@ -512,7 +512,7 @@ def run(test, params, env):
         if cpu_model_flags:
             full_cpu_model_name += ','
             full_cpu_model_name += cpu_model_flags.lstrip(',')
-        ref_file = os.path.join(test.virtdir, "deps",
+        ref_file = os.path.join(data_dir.get_deps_dir(), 'cpuid',
                                 "cpuid_dumps",
                                 kvm_enabled and "kvm" or "nokvm",
                                 machine_type, '%s-dump.txt' % (full_cpu_model_name))
