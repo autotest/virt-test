@@ -1,6 +1,7 @@
 import os
 import logging
 from autotest.client.shared import error
+from virttest import data_dir
 
 
 @error.context_aware
@@ -21,7 +22,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    exploit_file = os.path.join(test.virtdir, 'deps/x64_sc_rdo.c')
+    exploit_file = os.path.join(data_dir.get_deps_dir(), 'nx', 'x64_sc_rdo.c')
     dst_dir = '/tmp'
 
     error.context("Copy the Exploit file to guest.", logging.info)
