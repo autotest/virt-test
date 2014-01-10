@@ -1218,7 +1218,7 @@ def if_set_macaddress(ifname, mac):
     ctrl_sock.close()
 
 
-class VirtIface(propcan.PropCan):
+class VirtIface(propcan.PropCan, object):
 
     """
     Networking information for single guest interface and host connection.
