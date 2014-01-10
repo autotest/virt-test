@@ -29,7 +29,7 @@ def run(test, params, env):
     interval = float(params.get("interval"))
     cpu_chk_cmd = params.get("cpu_chk_cmd")
     tsc_freq_path = os.path.join(data_dir.get_deps_dir(),
-                                 'get_tsc/get_tsc.c')
+                                 'timedrift/get_tsc.c')
     host_freq = 0
 
     def get_tsc(machine="host", i=0):

@@ -176,7 +176,7 @@ class BackwardtimeTest(TimedriftTest):
         :param nsec: float seconds, if nsec >0 forward else backward time;
         :param session: ShellSession object;
         """
-        src_file = os.path.join(data_dir.get_deps_dir(), "change_time",
+        src_file = os.path.join(data_dir.get_deps_dir(), "timedrift",
                                 "change_time.py")
         python_bin = "python"
         if session:
