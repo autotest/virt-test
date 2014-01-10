@@ -194,19 +194,27 @@ def run(test, params, env):
         :type monitor: virttest.qemu_monitor.Monitor
         """
         error.context("Hotplug the devices", logging.debug)
-        err = []
-        for device in new_devices:
-            time.sleep(float(params.get('wait_between_hotplugs', 0)))
-            out = device.hotplug(monitor)
+        failed = 0
+        passed = 0
+        unverif = 0
+        hotplug_outputs = []
+        hotplug_sleep = float(params.get('wait_between_hotplugs', 0))
+        for device in new_devices:      # Hotplug all devices
+            time.sleep(hotplug_sleep)
+            hotplug_outputs.append(device.hotplug(monitor))
+        time.sleep(hotplug_sleep)
+        for device in new_devices:      # Verify the hotplug status
+            out = hotplug_outputs.pop(0)
             out = device.verify_hotplug(out, monitor)
-            err.append(out)
-        if err == [True] * len(err):    # No failures or unverified states
-            logging.debug("Hotplug status: verified %d", len(err))
-            return
-        failed = err.count(False)
-        passed = err.count(True)
-        unverif = len(err) - failed - passed
-        if failed == 0:
+            if out is True:
+                passed += 1
+            elif out is False:
+                failed += 1
+            else:
+                unverif += 1
+        if failed == 0 and unverif == 0:
+            logging.debug("Hotplug status: verified %d", passed)
+        elif failed == 0:
             logging.warn("Hotplug status: verified %d, unverified %d", passed,
                          unverif)
         else:
@@ -225,32 +233,40 @@ def run(test, params, env):
         :type monitor: virttest.qemu_monitor.Monitor
         """
         error.context("Unplug and remove the devices", logging.debug)
+        unplug_sleep = float(params.get('wait_between_unplugs', 0))
         failed = 0
         passed = 0
         unverif = 0
-        for device in new_devices[::-1]:
-            if device in qdev:
-                time.sleep(float(params.get('wait_between_unplugs', 0)))
-                _out = device.unplug(monitor)
-                for _ in xrange(50):    # unplug waits for VM response
-                    out = device.verify_unplug(_out, monitor)
-                    if out is True:
-                        break
-                    time.sleep(0.1)
+        unplug_outs = []
+        unplug_devs = []
+        for device in new_devices[::-1]:    # unplug all devices
+            if device in qdev:  # Some devices are removed with previous one
+                time.sleep(unplug_sleep)
+                unplug_devs.append(device)
+                unplug_outs.append(device.unplug(monitor))
                 # Remove from qdev even when unplug failed because further in
                 # this test we compare VM with qdev, which should be without
                 # these devices. We can do this because we already set the VM
                 # as dirty.
                 qdev.remove(device)
-            else:
-                continue
+        time.sleep(unplug_sleep)
+        for device in unplug_devs:          # Verify unplugs
+            _out = unplug_outs.pop(0)
+            # unplug effect can be delayed as it waits for OS respone before
+            # it removes the device form qtree
+            for _ in xrange(50):
+                out = device.verify_unplug(_out, monitor)
+                if out is True:
+                    break
+                time.sleep(0.1)
             if out is True:
                 passed += 1
             elif out is False:
                 failed += 1
             else:
                 unverif += 1
-        # remove the images
+
+        # remove and check the images
         _disks = []
         for disk in params['images'].split(' '):
             if disk.startswith("stg"):
