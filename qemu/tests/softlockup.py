@@ -4,6 +4,7 @@ import socket
 import time
 from autotest.client import utils
 from autotest.client.shared import error
+from virttest import data_dir
 
 
 def run(test, params, env):
@@ -109,7 +110,8 @@ def run(test, params, env):
             pass
 
         # Get required files and copy them from host to guest
-        monitor_path = os.path.join(test.virtdir, 'deps', 'heartbeat_slu.py')
+        monitor_path = os.path.join(data_dir.get_deps_dir(), 'softlockup',
+                                    'heartbeat_slu.py')
         stress_path = os.path.join(os.environ['AUTODIR'], "tests", "stress",
                                    "stress-1.0.4.tar.gz")
         vm.copy_files_to(monitor_path, "/tmp")
