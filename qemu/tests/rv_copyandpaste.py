@@ -9,7 +9,7 @@ import logging
 import os
 import time
 from autotest.client.shared import error
-from virttest import utils_misc, utils_spice, aexpect
+from virttest import utils_misc, utils_spice, aexpect, data_dir
 
 
 def wait_timeout(timeout=10):
