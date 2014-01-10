@@ -7,7 +7,7 @@ import logging
 import random
 import time
 from autotest.client.shared import error
-from virttest import funcatexit, arch
+from virttest import funcatexit
 from virttest import qemu_qtree, utils_test, env_process
 from virttest.qemu_devices import utils
 
@@ -128,8 +128,8 @@ def run(test, params, env):
             # Set the format
             if len(formats) < 1:
                 if i == 0:
-                    raise error.TestError("Fail to add any disks, probably bad "
-                                          "configuration.")
+                    raise error.TestError("Fail to add any disks, probably bad"
+                                          " configuration.")
                 logging.warn("Can't create desired number '%s' of disk types "
                              "'%s'. Using '%d' no disks.", no_disks,
                              _formats, i)
@@ -157,23 +157,12 @@ def run(test, params, env):
                 for dev in devs:
                     qdev.insert(dev)
             except utils.DeviceError:
-                # All buses are full, (TODO add bus) or remove this format
                 for dev in devs:
                     if dev in qdev:
                         qdev.remove(dev, recursive=True)
                 formats.remove(fmt)
                 continue
 
-            # TODO: Modify check_disk_params to use vm.devices
-            # 1) modify PCI bus to accept full pci addr (02.0, 01.3, ...)
-            # 2) add all devices into qemu_devices according to qtree
-            # 3) check qtree vs. qemu_devices PCI representation (+children)
-            #    (use qtree vs devices, if key and value_qtree == value_devices
-            #     match the device and remove it from comparison.
-            #     Also use blacklist to remove unnecessary stuff (like
-            #     kvmclock, smbus-eeprom, ... from qtree and drive, ... from
-            #     devices)
-            # => then modify this to use qtree verification
             params = convert_params(params, args)
             env_process.preprocess_image(test, params.object_params(name),
                                          name)
@@ -291,9 +280,8 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     out = vm.monitor.human_monitor_cmd("info qtree", debug=False)
     if "unknown command" in str(out):
-        verify_qtree = lambda _1, _2, _3: logging.warn("info qtree not "
-                                                       "supported. Can't verify qtree"
-                                                       "vs. guest disks.")
+        msg = "info qtree not supported. Can't verify qtree vs. guest disks."
+        verify_qtree = lambda _1, _2, _3: logging.warn(msg)
 
     stg_image_name = params['stg_image_name']
     stg_image_num = int(params['stg_image_num'])
@@ -343,7 +331,6 @@ def run(test, params, env):
     info_block = vm.monitor.info_block(False)
     proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
     verify_qtree(params, info_qtree, info_block, proc_scsi, qdev)
-    _images = params['images']
     for iteration in xrange(rp_times):
         sub_type = params.get("sub_type_before_plug")
         if sub_type:
