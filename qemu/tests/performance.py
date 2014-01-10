@@ -130,8 +130,8 @@ def run(test, params, env):
     session.cmd("mv /tmp/src_tmp/%s /tmp/src" % new_file)
 
     if test_patch:
-        test_patch_path = os.path.join(data_dir.get_root_dir(), 'shared',
-                                       'deps', 'performance', test_patch)
+        test_patch_path = os.path.join(data_dir.get_deps_dir(), 'performance',
+                                       test_patch)
         vm.copy_files_to(test_patch_path, "/tmp/src")
         session.cmd("cd /tmp/src && patch -p1 < /tmp/src/%s" % test_patch)
 
