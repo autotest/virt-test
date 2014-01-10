@@ -28,7 +28,7 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    src_dir = os.path.join(os.path.dirname(data_dir.get_data_dir()), "deps")
+    src_dir = os.path.join(data_dir.get_deps_dir(), 'timedrift')
     src_file = os.path.join(src_dir, "clktest.c")
     dst_file = os.path.join(tmp_dir, "clktest.c")
     error.context("transfer '%s' to guest('%s')" % (src_file, dst_file),
