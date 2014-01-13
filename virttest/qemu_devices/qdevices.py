@@ -563,9 +563,6 @@ class QRHDrive(QDrive):
         return "__com.redhat_drive_del", {'id': self.get_qid()}
 
 
-# TODO: Add QPCIDrive - using pci_add/pci_del
-
-
 class QDevice(QCustomDevice):
 
     """

@@ -771,9 +771,6 @@ class QBusUnitBus(QDenseBus):
 class QAHCIBus(QBusUnitBus):
 
     """ AHCI bus (ich9-ahci, ahci) """
-    # TODO: Search for 'ide' and 'ahci' buses when strict_mode not specified
-    # since qemu doesn't differentiate between those buses.
-
     def __init__(self, busid, aobject=None):
         """ 6xbus, 2xunit """
         super(QAHCIBus, self).__init__(busid, 'IDE', [6, 1], aobject, 'ahci')
