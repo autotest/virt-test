@@ -1065,7 +1065,9 @@ class VM(virt_vm.BaseVM):
         # Add numa memory cmd to pin guest memory to numa node
         if params.get("numa_node"):
             numa_node = int(params.get("numa_node"))
-            if numa_node < 0:
+            if int(utils_misc.get_node_count()) <= int(params.get("smp", 1)):
+                logging.info("Skip pinning, no enough nodes")
+            elif numa_node < 0:
                 p = utils_misc.NumaNode(numa_node)
                 n = int(utils_misc.get_node_count()) + numa_node
                 cmd += "numactl -m %s " % n
