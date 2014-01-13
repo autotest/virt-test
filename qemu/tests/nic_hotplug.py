@@ -35,11 +35,11 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
-    primary_nic = [ nic for nic in vm.virtnet ]
+    primary_nic = [nic for nic in vm.virtnet]
 
     run_dhclient = params.get("run_dhclient", "no")
-    guest_is_linux = ("linux" ==  params.get("os_type", ""))
-
+    guest_is_linux = ("linux" == params.get("os_type", ""))
+    host_ip_addr = utils_net.get_host_ip_address(params)
     if guest_is_linux:
         # Modprobe the module if specified in config file
         module = params.get("modprobe_module")
@@ -73,8 +73,8 @@ def run(test, params, env):
                     s_session.cmd_output_safe("killall -9 dhclient")
                     ifname = utils_net.get_linux_ifname(s_session,
                                                         hotplug_nic['mac'])
+                    s_session.cmd_output_safe("ifconfig %s up" % ifname)
                     s_session.cmd_output_safe("dhclient %s &" % ifname)
-
                 arp_clean = "arp -n|awk '/^[1-9]/{print \"arp -d \" $1}'|sh"
                 s_session.cmd_output_safe(arp_clean)
 
@@ -83,12 +83,24 @@ def run(test, params, env):
             try:
                 hotnic_ip = vm.wait_for_get_address(nic_name)
             except virt_vm.VMIPAddressMissingError, err:
-                err_msg = "Could not get or verify nic ip address"
-                err_msg += "error info: '%s' " % err
-                raise error.TestFail(err_msg)
+                if params.get("additional_operation"):
+                    p_cfg = "/etc/sysconfig/network-scripts/ifcfg-%s" % ifname
+                    cfg_con = "DEVICE=%s\nBOOTPROTO=dhcp\nONBOOT=yes" % ifname
+                    cmd = "echo '%s' > %s" % (cfg_con, p_cfg)
+                    s_session.cmd_output_safe(cmd)
+                    s_session.cmd_output_safe("killall -9 dhclient")
+                    s_session.cmd_output_safe("dhclient %s " % ifname)
+                    hotnic_ip = vm.wait_for_get_address(nic_name)
+                else:
+                    err_msg = "Could not get or verify nic ip address"
+                    err_msg += "error info: '%s' " % err
+                    raise error.TestFail(err_msg)
             logging.info("Got the ip address of new nic: %s", hotnic_ip)
 
             error.context("Ping guest's new ip from host", logging.info)
+            if params.get("additional_operation"):
+                s_session.cmd_output_safe("route add %s dev %s" %
+                                          (host_ip_addr, ifname))
             status, output = utils_test.ping(hotnic_ip, 10, timeout=30)
             if status:
                 err_msg = "New nic failed ping test, error info: '%s'"
@@ -104,6 +116,9 @@ def run(test, params, env):
                 err_msg += "error info: '%s'" % output
                 raise error.TestFail(err_msg)
 
+            if params.get("additional_operation"):
+                s_session.cmd_output_safe("route del %s dev %s" %
+                                          (host_ip_addr, ifname))
             # random hotunplug nic
             nic_hotplugged.append(hotplug_nic)
             if random.randint(0, 1) and params.get("do_random_unhotplug"):
