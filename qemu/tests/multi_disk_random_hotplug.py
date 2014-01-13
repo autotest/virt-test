@@ -6,10 +6,15 @@ multi_disk_random_hotplug test for Autotest framework.
 import logging
 import random
 import time
+import threading
 from autotest.client.shared import error
 from virttest import funcatexit
 from virttest import qemu_qtree, utils_test, env_process
 from virttest.qemu_devices import utils
+
+
+# qdev is not thread safe so in case of dangerous ops lock this thread
+LOCK = None
 
 
 def stop_stresser(vm, stop_cmd):
@@ -104,7 +109,7 @@ def run(test, params, env):
             raise error.TestFail("%s errors occurred while verifying"
                                  " qtree vs. params" % err)
 
-    def insert_into_qdev(qdev, param_matrix, no_disks, params):
+    def insert_into_qdev(qdev, param_matrix, no_disks, params, new_devices):
         """
         Inserts no_disks disks int qdev using randomized args from param_matrix
         :param qdev: qemu devices container
@@ -118,8 +123,7 @@ def run(test, params, env):
         :return: (newly added devices, number of added disks)
         :rtype: tuple(list, integer)
         """
-        error.context("Insert devices into qdev", logging.debug)
-        new_devices = []
+        dev_idx = 0
         _new_devs_fmt = ""
         _formats = param_matrix.pop('fmt', [params.get('drive_format')])
         formats = _formats[:]
@@ -166,7 +170,8 @@ def run(test, params, env):
             params = convert_params(params, args)
             env_process.preprocess_image(test, params.object_params(name),
                                          name)
-            new_devices.extend(devs)
+            new_devices[dev_idx].extend(devs)
+            dev_idx = (dev_idx + 1) % len(new_devices)
             _new_devs_fmt += "%s(%s) " % (name, fmt)
             i += 1
         if _new_devs_fmt:
@@ -174,7 +179,7 @@ def run(test, params, env):
         param_matrix['fmt'] = _formats
         return new_devices, params
 
-    def hotplug_serial(new_devices, monitor):
+    def _hotplug(new_devices, monitor, prefix=""):
         """
         Do the actual hotplug of the new_devices using monitor monitor.
         :param new_devices: List of devices which should be hotplugged
@@ -182,16 +187,15 @@ def run(test, params, env):
         :param monitor: Monitor which should be used for hotplug
         :type monitor: virttest.qemu_monitor.Monitor
         """
-        error.context("Hotplug the devices", logging.debug)
-        failed = 0
-        passed = 0
-        unverif = 0
         hotplug_outputs = []
         hotplug_sleep = float(params.get('wait_between_hotplugs', 0))
         for device in new_devices:      # Hotplug all devices
             time.sleep(hotplug_sleep)
             hotplug_outputs.append(device.hotplug(monitor))
         time.sleep(hotplug_sleep)
+        failed = 0
+        passed = 0
+        unverif = 0
         for device in new_devices:      # Verify the hotplug status
             out = hotplug_outputs.pop(0)
             out = device.verify_hotplug(out, monitor)
@@ -202,16 +206,44 @@ def run(test, params, env):
             else:
                 unverif += 1
         if failed == 0 and unverif == 0:
-            logging.debug("Hotplug status: verified %d", passed)
+            logging.debug("%sHotplug status: verified %d", prefix, passed)
         elif failed == 0:
-            logging.warn("Hotplug status: verified %d, unverified %d", passed,
-                         unverif)
+            logging.warn("%sHotplug status: verified %d, unverified %d",
+                         prefix, passed, unverif)
         else:
-            logging.error("Hotplug status: verified %d, unverified %d, failed "
-                          "%d", passed, unverif, failed)
+            logging.error("%sHotplug status: verified %d, unverified %d, "
+                          "failed %d", prefix, passed, unverif, failed)
             raise error.TestFail("Hotplug of some devices failed.")
 
-    def unplug_serial(new_devices, qdev, monitor):
+    def hotplug_serial(new_devices, monitor):
+        _hotplug(new_devices[0], monitor)
+
+    def hotplug_parallel(new_devices, monitors):
+        threads = []
+        for i in xrange(len(new_devices)):
+            name = "Th%s: " % i
+            logging.debug("%sworks with %s devices", name,
+                          [_.str_short() for _ in new_devices[i]])
+            thread = threading.Thread(target=_hotplug, name=name[:-2],
+                                      args=(new_devices[i], monitors[i], name))
+            thread.start()
+            threads.append(thread)
+        for thread in threads:
+            thread.join()
+        logging.debug("All threads finished.")
+
+    def _postprocess_images():
+        # remove and check the images
+        _disks = []
+        for disk in params['images'].split(' '):
+            if disk.startswith("stg"):
+                env_process.postprocess_image(test, params.object_params(disk),
+                                              disk)
+            else:
+                _disks.append(disk)
+            params['images'] = " ".join(_disks)
+
+    def _unplug(new_devices, qdev, monitor, prefix=""):
         """
         Do the actual unplug of new_devices using monitor monitor
         :param new_devices: List of devices which should be hotplugged
@@ -221,11 +253,7 @@ def run(test, params, env):
         :param monitor: Monitor which should be used for hotplug
         :type monitor: virttest.qemu_monitor.Monitor
         """
-        error.context("Unplug and remove the devices", logging.debug)
         unplug_sleep = float(params.get('wait_between_unplugs', 0))
-        failed = 0
-        passed = 0
-        unverif = 0
         unplug_outs = []
         unplug_devs = []
         for device in new_devices[::-1]:    # unplug all devices
@@ -237,8 +265,15 @@ def run(test, params, env):
                 # this test we compare VM with qdev, which should be without
                 # these devices. We can do this because we already set the VM
                 # as dirty.
+                if LOCK:
+                    LOCK.acquire()
                 qdev.remove(device)
+                if LOCK:
+                    LOCK.release()
         time.sleep(unplug_sleep)
+        failed = 0
+        passed = 0
+        unverif = 0
         for device in unplug_devs:          # Verify unplugs
             _out = unplug_outs.pop(0)
             # unplug effect can be delayed as it waits for OS respone before
@@ -255,27 +290,34 @@ def run(test, params, env):
             else:
                 unverif += 1
 
-        # remove and check the images
-        _disks = []
-        for disk in params['images'].split(' '):
-            if disk.startswith("stg"):
-                env_process.postprocess_image(test, params.object_params(disk),
-                                              disk)
-            else:
-                _disks.append(disk)
-        params['images'] = " ".join(_disks)
         if failed == 0 and unverif == 0:
-            logging.debug("Unplug status: verified %d", passed)
+            logging.debug("%sUnplug status: verified %d", prefix, passed)
         elif failed == 0:
-            logging.warn("Unplug status: verified %d, unverified %d", passed,
-                         unverif)
+            logging.warn("%sUnplug status: verified %d, unverified %d", prefix,
+                         passed, unverif)
         else:
-            logging.error("Unplug status: verified %d, unverified %d, failed "
-                          "%d", passed, unverif, failed)
+            logging.error("%sUnplug status: verified %d, unverified %d, "
+                          "failed %d", prefix, passed, unverif, failed)
             raise error.TestFail("Unplug of some devices failed.")
 
+    def unplug_serial(new_devices, qdev, monitor):
+        _unplug(new_devices[0], qdev, monitor)
+
+    def unplug_parallel(new_devices, qdev, monitors):
+        threads = []
+        for i in xrange(len(new_devices)):
+            name = "Th%s: " % i
+            logging.debug("%sworks with %s devices", name,
+                          [_.str_short() for _ in new_devices[i]])
+            thread = threading.Thread(target=_unplug,
+                                      args=(new_devices[i], qdev, monitors[i]))
+            thread.start()
+            threads.append(thread)
+        for thread in threads:
+            thread.join()
+        logging.debug("All threads finished.")
+
     vm = env.get_vm(params['main_vm'])
-    monitor = vm.monitor
     qdev = vm.devices
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     out = vm.monitor.human_monitor_cmd("info qtree", debug=False)
@@ -325,6 +367,19 @@ def run(test, params, env):
             stress_session.sendline(stress_cmd)
 
     rp_times = int(params.get("repeat_times", 1))
+    queues = params.get("multi_disk_type") == "parallel"
+    if queues:  # parallel
+        queues = xrange(len(vm.monitors))
+        hotplug = hotplug_parallel
+        unplug = unplug_parallel
+        monitor = vm.monitors
+        global LOCK
+        LOCK = threading.Lock()
+    else:   # serial
+        queues = xrange(1)
+        hotplug = hotplug_serial
+        unplug = unplug_serial
+        monitor = vm.monitor
     context_msg = "Running sub test '%s' %s"
     error.context("Verify disk before test", logging.info)
     info_qtree = vm.monitor.info('qtree', False)
@@ -332,19 +387,25 @@ def run(test, params, env):
     proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
     verify_qtree(params, info_qtree, info_block, proc_scsi, qdev)
     for iteration in xrange(rp_times):
+        error.context("Hotplugging/unplugging devices, iteration %d"
+                      % iteration, logging.info)
         sub_type = params.get("sub_type_before_plug")
         if sub_type:
             error.context(context_msg % (sub_type, "before hotplug"),
                           logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-        error.context("Hotplugging/unplugging devices, iteration %d"
-                      % iteration, logging.info)
+        error.context("Insert devices into qdev", logging.debug)
         qdev.set_dirty()
+        new_devices = [[] for _ in queues]
         new_devices, params = insert_into_qdev(qdev, param_matrix,
-                                               stg_image_num, params)
-        hotplug_serial(new_devices, monitor)
+                                               stg_image_num, params,
+                                               new_devices)
+
+        error.context("Hotplug the devices", logging.debug)
+        hotplug(new_devices, monitor)
         time.sleep(float(params.get('wait_after_hotplug', 0)))
+
         error.context("Verify disks after hotplug", logging.debug)
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
@@ -363,9 +424,13 @@ def run(test, params, env):
             error.context(context_msg % (sub_type, "before hotunplug"),
                           logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
-        unplug_serial(new_devices, qdev, monitor)
-        time.sleep(float(params.get('wait_after_unplug', 0)))
+
+        error.context("Unplug and remove the devices", logging.debug)
+        unplug(new_devices, qdev, monitor)
+        _postprocess_images()
+
         error.context("Verify disks after unplug", logging.debug)
+        time.sleep(float(params.get('wait_after_unplug', 0)))
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
         proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
