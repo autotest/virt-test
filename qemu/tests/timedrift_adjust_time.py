@@ -193,7 +193,7 @@ class BackwardtimeTest(TimedriftTest):
 
     def time_diff(self, session, clock="sys"):
         """
-        Calculate system/hardware time difference bewteen host and guest;
+        Calculate system/hardware time difference between host and guest;
 
         :param session: ShellSession object;
         :param clock: 'hw'or 'sys'

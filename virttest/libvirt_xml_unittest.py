@@ -6,7 +6,8 @@ import shutil
 import logging
 
 import common
-from virttest import xml_utils, virsh, utils_misc, data_dir
+from virttest import xml_utils, utils_misc, data_dir
+from virttest.virsh_unittest import FakeVirshFactory
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import accessors, vm_xml, xcepts, network_xml, base
@@ -176,32 +177,8 @@ class LibvirtXMLTestBase(unittest.TestCase):
         return utils.CmdResult('virsh nodedev-dumpxml pci_0000_00_00_0',
                                xml, '', 0)
 
-    class bogusVirshFailureException(unittest.TestCase.failureException):
-
-        def __init__(self, *args, **dargs):
-            self.virsh_args = args
-            self.virsh_dargs = dargs
-
-        def __str__(self):
-            msg = "Codepath under unittest attempted call to un-mocked virsh"
-            msg += (" method, with args: '%s' and dargs: '%s'" %
-                    (self.virsh_args, self.virsh_dargs))
-
     def setUp(self):
-        # Make all virsh commands fail the test unconditionally
-        for symbol in dir(virsh):
-            if symbol not in virsh.NOCLOSE:
-                # Exceptions are callable
-                setattr(virsh, symbol, self.bogusVirshFailureException)
-        # cause any called virsh commands to fail testing unless a mock declared
-        # necessary so virsh module doesn't complain about missing virsh command
-        # and to catch any libvirt_xml interface which calls virsh functions
-        # unexpectidly.
-        self.dummy_virsh = virsh.Virsh(virsh_exec='/bin/false',
-                                       uri='qemu:///system',
-                                       debug=True,
-                                       ignore_status=True)
-
+        self.dummy_virsh = FakeVirshFactory()
         # make a tmp_dir to store informations.
         LibvirtXMLTestBase.__doms_dir__ = os.path.join(data_dir.get_tmp_dir(),
                                                        'domains')

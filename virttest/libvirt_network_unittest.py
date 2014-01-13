@@ -5,7 +5,7 @@ Unit tests for Manipulator classes in libvirt_xml module.
 import unittest
 
 import common
-import virsh
+from virsh_unittest import FakeVirshFactory
 from autotest.client.utils import CmdResult
 from libvirt_xml.network_xml import NetworkXML
 from staging.backports import itertools
@@ -86,33 +86,9 @@ class NetworkTestBase(unittest.TestCase):
         else:
             _net_state['autostart'] = False
 
-    class bogusVirshFailureException(unittest.TestCase.failureException):
-        """Exception raised when a uncovered virsh command is called"""
-
-        def __init__(self, *args, **dargs):
-            self.virsh_args = args
-            self.virsh_dargs = dargs
-
-        def __str__(self):
-            msg = ('Codepath under unittest attempted call to un-mocked virsh'
-                   ' method, with args: "%s" and dargs: "%s"'
-                   % (self.virsh_args, self.virsh_dargs))
-            return msg
-
     def setUp(self):
-        # Make all virsh commands fail the test unconditionally
-        for symbol in dir(virsh):
-            # Preserve original net_state_dict command.
-            preserved_cmds = ['net_state_dict']
-            if symbol not in virsh.NOCLOSE + preserved_cmds:
-                # Exceptions are callable
-                setattr(virsh, symbol, self.bogusVirshFailureException)
-        # Redirect net_list called from net_state_dict to fake _net_list
-        setattr(virsh, 'net_list', self._net_list)
-        # Use defined virsh methods above
-        self.bogus_virsh = virsh.Virsh(virsh_exec='/bin/false',
-                                       uri='qemu:///system', debug=True,
-                                       ignore_status=True)
+        # Use defined virsh methods below
+        self.bogus_virsh = FakeVirshFactory(preserve=['net_state_dict'])
         self.bogus_virsh.__super_set__('net_list', self._net_list)
         self.bogus_virsh.__super_set__('net_define', self._net_define)
         self.bogus_virsh.__super_set__('net_undefine', self._net_undefine)
