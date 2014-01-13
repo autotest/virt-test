@@ -1135,6 +1135,9 @@ def get_pid_cpu(pid):
     return list(set([_.strip() for _ in cpu_pid.splitlines()]))
 
 
+# Utility functions for numa node pinning
+
+
 def get_node_count():
     """
     Get the number of nodes of current host.
@@ -1286,7 +1289,7 @@ class NumaNode(object):
             self.node_id = i - 1
         self.dict = {}
         for i in self.cpus:
-            self.dict[i] = "free"
+            self.dict[i] = []
 
     def get_node_cpus(self, i):
         """
@@ -1333,13 +1336,17 @@ class NumaNode(object):
 
         return cpus
 
-    def free_cpu(self, i):
+    def free_cpu(self, i, thread=None):
         """
         Release pin of one node.
 
         :param i: Index of the node.
+        :param thread: Thread ID, remove all threads if thread ID isn't set
         """
-        self.dict[i] = "free"
+        if not thread:
+            self.dict[i] = []
+        else:
+            self.dict[i].remove(thread)
 
     def _flush_pin(self):
         """
@@ -1348,21 +1355,27 @@ class NumaNode(object):
         cmd = utils.run("ps -eLf | awk '{print $4}'")
         all_pids = cmd.stdout
         for i in self.cpus:
-            if self.dict[i] != "free" and self.dict[i] not in all_pids:
-                self.free_cpu(i)
+            for j in self.dict[i]:
+                if str(j) not in all_pids:
+                    self.free_cpu(i, j)
 
     @error.context_aware
-    def pin_cpu(self, process):
+    def pin_cpu(self, process, cpu=None):
         """
         Pin one process to a single cpu.
 
-        :param process: Process ID.
+        @param process: Process ID.
+        @param cpu: CPU ID, pin thread to free CPU if cpu ID isn't set
         """
         self._flush_pin()
-        error.context("Pinning process %s to the CPU" % process)
+        if cpu:
+            error.context("Pinning process %s to the available CPU" % (process))
+        else:
+            error.context("Pinning process %s to the CPU(%s)" % (process, cpu))
+
         for i in self.cpus:
-            if self.dict[i] == "free":
-                self.dict[i] = str(process)
+            if (cpu != None and cpu == i) or (cpu == None and not self.dict[i]):
+                self.dict[i].append(process)
                 cmd = "taskset -p %s %s" % (hex(2 ** int(i)), process)
                 logging.debug("NumaNode (%s): " % i + cmd)
                 utils.run(cmd)
