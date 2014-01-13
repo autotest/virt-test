@@ -127,6 +127,10 @@ def run(test, params, env):
         _new_devs_fmt = ""
         _formats = param_matrix.pop('fmt', [params.get('drive_format')])
         formats = _formats[:]
+        if len(new_devices) == 1:
+            strict_mode = None
+        else:
+            strict_mode = True
         i = 0
         while i < no_disks:
             # Set the format
@@ -158,8 +162,8 @@ def run(test, params, env):
 
             try:
                 devs = qdev.images_define_by_variables(**args)
-                for dev in devs:
-                    qdev.insert(dev)
+                # parallel test adds devices in mixed order, force bus/addrs
+                qdev.insert(devs, strict_mode)
             except utils.DeviceError:
                 for dev in devs:
                     if dev in qdev:
