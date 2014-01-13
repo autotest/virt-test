@@ -726,8 +726,6 @@ class DevContainer(object):
             :param cmd: If set uses "-M $cmd" to force this machine type
             :return: List of added devices (including default buses)
             """
-            # TODO: Add all supported devices (AHCI, ...) and
-            # verify that PCIE works as pci bus (ranges, etc...)
             logging.warn('Using Q35 machine which is not yet fullytested on '
                          'virt-test. False errors might occur.')
             devices = []
@@ -1188,8 +1186,6 @@ class DevContainer(object):
         # Drive
         # -drive fmt or -drive fmt=none -device ...
         #
-        # TODO: Add qdevices.QRHDrive and PCIDrive for hotplug purposes
-        # TODO: Add special parameter to override the drive method
         if self.has_hmp_cmd('__com.redhat_drive_add') and use_device:
             devices.append(qdevices.QRHDrive(name))
         elif self.has_hmp_cmd('drive_add') and use_device:
