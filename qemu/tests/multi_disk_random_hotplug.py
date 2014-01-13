@@ -8,7 +8,7 @@ import random
 import time
 import threading
 from autotest.client.shared import error
-from virttest import funcatexit
+from virttest import funcatexit, data_dir
 from virttest import qemu_qtree, utils_test, env_process
 from virttest.qemu_devices import utils
 
@@ -326,6 +326,8 @@ def run(test, params, env):
         verify_qtree = lambda _1, _2, _3: logging.warn(msg)
 
     stg_image_name = params['stg_image_name']
+    if not stg_image_name[0] == "/":
+        stg_image_name = "%s/%s" % (data_dir.get_data_dir(), stg_image_name)
     stg_image_num = int(params['stg_image_num'])
     stg_params = params.get('stg_params', '').split(' ')
     i = 0
