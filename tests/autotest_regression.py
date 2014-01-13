@@ -35,6 +35,7 @@ def run(test, params, env):
     autotest_install_timeout = int(
         params.get('autotest_install_timeout', 1800))
     unittests_run_timeout = int(params.get('unittests_run_timeout', 1800))
+    unittests_args = params.get('unittests_args', '')
     pylint_run_timeout = int(params.get('pylint_run_timeout', 1800))
     vm_names = params["vms"].split()
     has_client_vm = len(vm_names) > 1
@@ -106,7 +107,7 @@ def run(test, params, env):
         step2 = "unittests"
         try:
             session_server.cmd("cd /usr/local/autotest")
-            session_server.cmd("utils/unittest_suite.py --full",
+            session_server.cmd("utils/unittest_suite.py %s" % unittests_args,
                                timeout=unittests_run_timeout)
         except aexpect.ShellCmdError, e:
             for line in e.output.splitlines():
