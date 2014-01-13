@@ -667,7 +667,7 @@ def run_autotest(vm, session, control_path, timeout,
         temp_control.writelines(lines)
         temp_control.close()
         return temp_control_path
-        
+
     migrate_background = params.get("migrate_background") == "yes"
     if migrate_background:
         mig_timeout = float(params.get("mig_timeout", "3600"))
