@@ -427,7 +427,7 @@ class DevContainer(object):
             if _ is not None and _ is not False:
                 return bus
 
-    def insert(self, devices):
+    def insert(self, devices, strict_mode=None):
         """
         Inserts devices into this VM representation
         :param devices: List of qdevices.QBaseDevice devices
@@ -444,7 +444,7 @@ class DevContainer(object):
         added = []
         for device in devices:
             try:
-                added.extend(self._insert(device))
+                added.extend(self._insert(device, strict_mode))
             except DeviceError, details:
                 cleanup()
                 raise DeviceError("%s\nError occurred while inserting device %s"
@@ -452,7 +452,7 @@ class DevContainer(object):
                                   % (details, device, devices))
         return added
 
-    def _insert(self, device):
+    def _insert(self, device, strict_mode=None):
         """
         Inserts device into this VM representation
         :param device: qdevices.QBaseDevice device
@@ -470,6 +470,12 @@ class DevContainer(object):
             for device in added_devices:
                 self.wash_the_device_out(device)
 
+        if strict_mode is None:
+            _strict_mode = self.strict_mode
+        if strict_mode is True:
+            _strict_mode = True
+        else:
+            _strict_mode = False
         added_devices = []
         if device.parent_bus is not None and not isinstance(device.parent_bus,
                                                             (list, tuple)):
@@ -486,7 +492,7 @@ class DevContainer(object):
                 clean(device, added_devices)
                 raise DeviceInsertError(device, err, self)
             bus_returns = []
-            strict_mode = self.strict_mode
+            strict_mode = _strict_mode
             for bus in buses:   # 2
                 if not bus.match_bus(parent_bus, False):
                     # First available bus in qemu is not of the same type as
