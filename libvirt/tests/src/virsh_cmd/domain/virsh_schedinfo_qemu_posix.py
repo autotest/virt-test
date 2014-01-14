@@ -29,8 +29,8 @@ def run(test, params, env):
         """
         Get vm's cgroup value.
 
-        @Param vm: the vm object
-        @Param parameter: the cgroup parameter of vm which we need to get.
+        :Param vm: the vm object
+        :Param parameter: the cgroup parameter of vm which we need to get.
         :return: False if expected controller is not mounted.
                  else return value's result object.
         """
