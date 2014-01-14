@@ -139,6 +139,23 @@ class DevContainer(object):
                 out.append(device)
         return out
 
+    def get_by_params(self, filt):
+        """
+        Return list of matching devices
+        :param filt: filter {'param': 'value', ...}
+        :type filt: dict
+        """
+        out = []
+        for device in self.__devices:
+            for key, value in filt.iteritems():
+                if not key in device.params:
+                    break
+                if device.params[key] != value:
+                    break
+            else:
+                out.append(device)
+        return out
+
     def __delitem__(self, item):
         """
         Delete specified item from devices list
