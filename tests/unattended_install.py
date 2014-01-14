@@ -1040,7 +1040,6 @@ def run(test, params, env):
 
     unattended_install_config = UnattendedInstallConfig(test, params, vm)
     unattended_install_config.setup()
-
     # params passed explicitly, because they may have been updated by
     # unattended install config code, such as when params['url'] == auto
     vm.create(params=params)
@@ -1068,8 +1067,9 @@ def run(test, params, env):
     log_file = utils_misc.get_path(test.debugdir,
                                    "serial-%s-%s.log" % (serial_name,
                                                          vm.name))
-    logging.debug("Monitoring serial console log for completion message: %s",
-                  log_file)
+    if params.get("wait_no_ack", "no") == "no":
+        logging.debug("Monitoring serial console for completion message: %s"
+                      " Log file: %s", post_finish_str,  log_file)
     serial_log_msg = ""
     serial_read_fails = 0
 
@@ -1100,28 +1100,30 @@ def run(test, params, env):
             copy_images()
             raise e
 
-        # To ignore the try:except:finally problem in old version of python
-        try:
-            serial_log_msg = open(log_file, 'r').read()
-        except IOError:
-            # Only make noise after several failed reads
-            serial_read_fails += 1
-            if serial_read_fails > 10:
-                logging.warn("Can not read from serial log file after %d tries",
-                             serial_read_fails)
-
-        if (params.get("wait_no_ack", "no") == "no" and
-                (post_finish_str in serial_log_msg)):
-            break
-
         # Due to libvirt automatically start guest after import
         # we only need to wait for successful login.
         if params.get("medium") == "import":
             try:
                 vm.login()
                 break
-            except (remote.LoginError, Exception), e:
+            except (remote.LoginError,
+                    virt_vm.VMAddressError): # networking can take a while
                 pass
+
+        # Check for kickstart post message if rpm-based os
+        if params.get("wait_no_ack", "no") == "no":
+            # To ignore the try:except:finally problem in old version of python
+            try:
+                serial_log_msg = open(log_file, 'r').read()
+            except IOError:
+                # Only make noise after several failed reads
+                serial_read_fails += 1
+                if serial_read_fails > 10:
+                    logging.warn("Can not read from serial log file after %d tries",
+                                 serial_read_fails)
+
+            if (post_finish_str in serial_log_msg):
+                break # Good! Got the message!
 
         if migrate_background:
             vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
