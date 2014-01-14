@@ -866,30 +866,27 @@ class VM(virt_vm.BaseVM):
 
         The libvirt version uses virsh console to manage it.
         """
-        try:
-            cmd = 'virsh'
-            if self.connect_uri:
-                cmd += ' --uri=%s' % self.connect_uri
-            cmd += (" console %s %s" % (self.name, self.serial_ports[0]))
-        except IndexError:
-            raise virt_vm.VMConfigMissingError(self.name, "isa_serial")
-        output_func = utils_misc.log_line  # Because qemu-kvm uses this
-        # Because qemu-kvm hard-codes this
-        output_filename = self.get_serial_console_filename(self.serial_ports[0])
-        output_params = (output_filename,)
-        prompt = self.params.get("shell_prompt", "[\#\$]")
-        self.serial_console = aexpect.ShellSession(command=cmd, auto_close=False,
-                                                   output_func=output_func,
-                                                   output_params=output_params)
-        # Cause serial_console.close() to close open log file
-        self.serial_console.set_log_file(output_filename)
-
-    def setup_serial_ports(self):
         if not self.serial_ports:
             for serial in self.params.objects("isa_serials"):
                 self.serial_ports.append(serial)
         if self.serial_console is None:
-            self.create_serial_console()
+            try:
+                cmd = 'virsh'
+                if self.connect_uri:
+                    cmd += ' --uri=%s' % self.connect_uri
+                cmd += (" console %s %s" % (self.name, self.serial_ports[0]))
+            except IndexError:
+                raise virt_vm.VMConfigMissingError(self.name, "isa_serial")
+            output_func = utils_misc.log_line  # Because qemu-kvm uses this
+            # Because qemu-kvm hard-codes this
+            output_filename = self.get_serial_console_filename(self.serial_ports[0])
+            output_params = (output_filename,)
+            prompt = self.params.get("shell_prompt", "[\#\$]")
+            self.serial_console = aexpect.ShellSession(command=cmd, auto_close=False,
+                                                       output_func=output_func,
+                                                       output_params=output_params)
+            # Cause serial_console.close() to close open log file
+            self.serial_console.set_log_file(output_filename)
 
     def set_root_serial_console(self, device, remove=False):
         """
@@ -1172,7 +1169,7 @@ class VM(virt_vm.BaseVM):
             self.uuid = virsh.domuuid(self.name,
                                       uri=self.connect_uri).stdout.strip()
             # Create isa serial ports.
-            self.setup_serial_ports()
+            self.create_serial_console()
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
@@ -1199,7 +1196,7 @@ class VM(virt_vm.BaseVM):
         # Since dest_uri could be None, checking it is necessary.
         if result.exit_status == 0 and dest_uri:
             self.connect_uri = dest_uri
-        self.setup_serial_ports()
+        self.create_serial_console()
         return result
 
     def attach_interface(self, option="", ignore_status=False,
@@ -1457,7 +1454,7 @@ class VM(virt_vm.BaseVM):
                                       uri=self.connect_uri).stdout.strip()
             # Establish a session with the serial console
             if autoconsole:
-                self.setup_serial_ports()
+                self.create_serial_console()
         else:
             raise virt_vm.VMStartError(self.name, result.stderr.strip())
 
@@ -1554,7 +1551,7 @@ class VM(virt_vm.BaseVM):
         if self.is_dead():
             raise virt_vm.VMStatusError(
                 "VM should not be %s after restore." % self.state())
-        self.setup_serial_ports()
+        self.create_serial_console()
 
     def vcpupin(self, vcpu, cpu_list, options=""):
         """
