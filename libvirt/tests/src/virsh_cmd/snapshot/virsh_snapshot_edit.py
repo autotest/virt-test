@@ -2,7 +2,7 @@ import re
 import time
 import logging
 from autotest.client.shared import error
-from virttest import virsh, aexpect, utils_test
+from virttest import virsh, aexpect, utils_test, remote
 from virttest.libvirt_xml import vm_xml
 
 
@@ -46,7 +46,7 @@ def run(test, params, env):
             # Save and quit
             session.send('ZZ')
             # use sleep(1) to make sure the modify has been completed.
-            time.sleep(1)
+            remote.handle_prompts(session, None, None, r"[\#\$]\s*$")
             session.close()
             logging.info("Succeed to do snapshot edit")
         except (aexpect.ShellError, aexpect.ExpectError), details:
