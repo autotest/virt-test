@@ -87,7 +87,7 @@ def run(test, params, env):
         vm.monitor.migrate_set_speed(mig_speed)
 
         cmd = ("%s/cpuflags-test --stressmem %d,%d" %
-              (os.path.join(install_path, "test_cpu_flags"),
+              (os.path.join(install_path, "cpu_flags"),
                vm_mem * 4, vm_mem / 2))
         logging.debug("Sending command: %s" % (cmd))
         session.sendline(cmd)

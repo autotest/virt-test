@@ -71,7 +71,7 @@ def run(test, params, env):
                                                        extra_flags="-msse3 -msse2")
 
                 cmd = ("%s/cpuflags-test --stressmem %d,%d %%" %
-                      (os.path.join(self.install_path, "test_cpu_flags"),
+                      (os.path.join(self.install_path, "cpu_flags"),
                        self.vm_mem * 10, self.vm_mem / 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)

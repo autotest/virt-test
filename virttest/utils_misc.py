@@ -896,8 +896,8 @@ def install_cpuflags_util_on_vm(test, vm, dst_dir, extra_flags=None):
     if not extra_flags:
         extra_flags = ""
 
-    cpuflags_src = os.path.join(test.virtdir, "deps", "test_cpu_flags")
-    cpuflags_dst = os.path.join(dst_dir, "test_cpu_flags")
+    cpuflags_src = os.path.join(test.virtdir, "deps", "cpu_flags")
+    cpuflags_dst = os.path.join(dst_dir, "cpu_flags")
     session = vm.wait_for_login()
     session.cmd("rm -rf %s" %
                 (cpuflags_dst))

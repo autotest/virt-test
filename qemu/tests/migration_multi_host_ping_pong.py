@@ -160,7 +160,7 @@ def run(test, params, env):
 
                 cmd = ("nohup %s/cpuflags-test --stressmem %d,32"
                        " > %s &" %
-                      (os.path.join(self.install_path, "test_cpu_flags"),
+                      (os.path.join(self.install_path, "cpu_flags"),
                        self.stress_memory,
                        self.cpuflags_test_out))
                 logging.debug("Sending command: %s" % (cmd))
