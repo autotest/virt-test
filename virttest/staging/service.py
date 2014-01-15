@@ -631,12 +631,39 @@ class Factory(object):
     so we do not have to create an instance of factory
     when create manager.
 
-    * ServiceManager:
+    * GenericServiceManager:
         * Interface: create_generic_service()
         * Description: Object to manage the all services(lldp, sshd and so on).
+                You can list the all services by GenericServiceManager.list().
+                And you can operate any service by passing the service name,
+                such as GenericServiceManager.start("sshd").
+
+                Example:
+                # Get the system service manager
+                service_manager = Factory.create_generic_service()
+
+                # Stating service/unit "sshd"
+                service_manager.start("sshd")
+
+                # Getting a list of available units
+                units = service_manager.list()
+
     * SpecificServiceManager:
-        * interface: create_specific_service()
-        * description: Object to manage specific service(such as sshd).
+        * interface: create_specific_service(service_name)
+        * description: Object to manage specific service(such as sshd). You can
+                not operate the other services nor list the all information on
+                this host.
+
+                # Get the specific service manager for sshd
+                sshd = Factory.create_specific_service("sshd")
+                sshd.start()
+                sshd.stop()
+
+    After all, there is an unified interface to create both of them,
+    create_service(service_name=None).
+    
+    If we pass a service_name to it, it will return a SpecificServiceManager,
+    otherwise, it will return GenericServiceManager.
     """
 
     class FactoryHelper(object):
@@ -689,7 +716,7 @@ class Factory(object):
             """
             Get the ServiceManager type using the auto-detect init command.
 
-            :return: Subclass type of _GenericServiceManager fro the current init command.
+            :return: Subclass type of _GenericServiceManager from the current init command.
             :rtype: _SysVInitServiceManager or _SystemdServiceManager.
             """
             return self._service_managers[self.init_name]
@@ -749,7 +776,7 @@ class Factory(object):
     def create_generic_service(run=utils.run):
         """
         Detect which init program is being used, init or systemd and return a
-        class has methods to start/stop services.
+        class with methods to start/stop services.
 
         # Get the system service manager
         service_manager = Factory.create_generic_service()
