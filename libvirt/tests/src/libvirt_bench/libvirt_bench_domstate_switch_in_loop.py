@@ -19,14 +19,14 @@ def run(test, params, env):
             destroy
     3) clean up.
     """
-    def for_each_vm(vms, virsh_func, state=None):
+    def for_each_vm(vms, virsh_func, state_list=None):
         """
         Execute the virsh_func with each vm in vms.
 
         :Param vms: List of vm.
         :Param virsh_func: Function in virsh module.
-        :Param state: State to verify the result of virsh_func.
-                      None means do not check the state.
+        :Param state_list: States to verify the result of virsh_func.
+                           None means do not check the state.
         """
         vm_names = []
         for vm in vms:
@@ -35,13 +35,14 @@ def run(test, params, env):
             cmd_result = virsh_func(vm_name)
             if cmd_result.exit_status:
                 raise error.TestFail(cmd_result)
-            if state is None:
+            if state_list is None:
                 continue
             actual_state = virsh.domstate(vm_name).stdout.strip()
-            if not (actual_state == state):
+            if not (actual_state in state_list):
                 raise error.TestFail("Command %s succeed, but the state is %s,"
                                      "but not %s." %
-                                     (virsh_func.__name__, actual_state, state))
+                                     (virsh_func.__name__, actual_state,
+                                      str(state_list)))
         logging.debug("Operation %s on %s succeed.",
                       virsh_func.__name__, vm_names)
 
@@ -50,20 +51,20 @@ def run(test, params, env):
     # Get operations from params.
     start_in_loop = ("yes" == params.get("LB_domstate_switch_start", "no"))
     start_post_state = params.get("LB_domstate_switch_start_post_state",
-                                  "running")
+                                  "running").split(',')
     shutdown_in_loop = ("yes" == params.get("LB_domstate_switch_shutdown",
                                             "no"))
     shutdown_post_state = params.get("LB_domstate_switch_shutdown_post_state",
-                                     "shutdown")
+                                     "shutdown").split(',')
     destroy_in_loop = ("yes" == params.get("LB_domstate_switch_destroy", "no"))
     destroy_post_state = params.get("LB_domstate_switch_destroy_post_state",
-                                    "shut off")
+                                    "shut off").split(',')
     suspend_in_loop = ("yes" == params.get("LB_domstate_switch_suspend", "no"))
     suspend_post_state = params.get("LB_domstate_switch_suspend_post_state",
-                                    "paused")
+                                    "paused").split(',')
     resume_in_loop = ("yes" == params.get("LB_domstate_switch_resume", "no"))
     resume_post_state = params.get("LB_domstate_switch_resume_post_state",
-                                   "running")
+                                   "running").split(',')
     # Get the loop_time.
     loop_time = int(params.get("LB_domstate_switch_loop_time", "600"))
     current_time = int(time.time())
