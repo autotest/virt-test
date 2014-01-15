@@ -24,8 +24,9 @@ def run(test, params, env):
     utils_misc.Flag.aliases = utils_misc.kvm_map_flags_aliases
     qemu_binary = utils_misc.get_qemu_binary(params)
 
-    cpuflags_src = os.path.join(test.virtdir, "deps", "cpu_flags")
-    cpuflags_def = os.path.join(test.virtdir, "deps", "cpu_map.xml")
+    cpuflags_src = os.path.join(test.virtdir, "deps", "cpu_flags", "src")
+    cpuflags_def = os.path.join(test.virtdir, "deps", "cpu_flags",
+                                "cpu_map.xml")
     smp = int(params.get("smp", 1))
 
     all_host_supported_flags = params.get("all_host_supported_flags", "no")
