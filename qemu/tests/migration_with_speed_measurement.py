@@ -4,6 +4,7 @@ import logging
 import time
 from virttest import utils_misc
 from autotest.client.shared import error, utils
+from provider_lib import cpuflags
 
 
 def run(test, params, env):
@@ -81,8 +82,8 @@ def run(test, params, env):
 
     try:
         # Reboot the VM in the background
-        utils_misc.install_cpuflags_util_on_vm(test, vm, install_path,
-                                               extra_flags="-msse3 -msse2")
+        cpuflags.install_cpuflags_util_on_vm(test, vm, install_path,
+                                             extra_flags="-msse3 -msse2")
 
         vm.monitor.migrate_set_speed(mig_speed)
 

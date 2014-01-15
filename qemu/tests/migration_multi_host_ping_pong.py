@@ -4,6 +4,7 @@ from autotest.client.shared import error
 from autotest.client import utils
 from virttest import env_process, utils_test, remote, virt_vm, utils_misc
 from autotest.client.shared.syncdata import SyncData
+from provider_lib import cpuflags
 
 
 @error.context_aware
@@ -154,9 +155,9 @@ def run(test, params, env):
                 vm = mig_data.vms[0]
                 session = vm.wait_for_login(timeout=self.login_timeout)
 
-                utils_misc.install_cpuflags_util_on_vm(test, vm,
-                                                       self.install_path,
-                                                       extra_flags="-msse3 -msse2")
+                cpuflags.install_cpuflags_util_on_vm(test, vm,
+                                                     self.install_path,
+                                                     extra_flags="-msse3 -msse2")
 
                 cmd = ("nohup %s/cpuflags-test --stressmem %d,32"
                        " > %s &" %
