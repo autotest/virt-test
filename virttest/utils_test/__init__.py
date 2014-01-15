@@ -750,7 +750,7 @@ def run_autotest(vm, session, control_path, timeout,
 
     if not kernel_install_present:
         kernel_install_dir = os.path.join(virttest.data_dir.get_root_dir(),
-                                          "shared", "deps",
+                                          "shared", "deps", "run_autotest",
                                           "kernel_install")
         kernel_install_dest = os.path.join(destination_autotest_path, 'tests',
                                            'kernelinstall')
@@ -761,7 +761,8 @@ def run_autotest(vm, session, control_path, timeout,
 
     # Copy a non crippled boottool and make it executable
     boottool_path = os.path.join(virttest.data_dir.get_root_dir(),
-                                 "shared", "deps", "boottool.py")
+                                 "shared", "deps", "run_autotest",
+                                 "boottool.py")
     boottool_dest = '/usr/local/autotest/tools/boottool.py'
     vm.copy_files_to(boottool_path, boottool_dest)
     session.cmd("chmod +x %s" % boottool_dest)
