@@ -2869,3 +2869,15 @@ def domfstrim(name, minimum=None, mountpoint=None, options="", **dargs):
 
     cmd += " %s" % options
     return command(cmd, **dargs)
+
+
+def create(name, options="", **dargs):
+    """
+    Create guest from xml
+
+    :param name: name of domain
+    :param options: --paused
+    :return: CmdResult object
+    """
+    cmd = "create %s %s" % (name, options)
+    return command(cmd, **dargs)
