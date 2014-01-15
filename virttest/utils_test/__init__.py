@@ -751,7 +751,7 @@ def run_autotest(vm, session, control_path, timeout,
     if not kernel_install_present:
         kernel_install_dir = os.path.join(virttest.data_dir.get_root_dir(),
                                           "shared", "deps",
-                                          "test_kernel_install")
+                                          "kernel_install")
         kernel_install_dest = os.path.join(destination_autotest_path, 'tests',
                                            'kernelinstall')
         vm.copy_files_to(kernel_install_dir, kernel_install_dest)
