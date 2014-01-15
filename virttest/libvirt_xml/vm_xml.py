@@ -490,6 +490,31 @@ class VMXML(VMXMLBase):
         return 0
 
     @staticmethod
+    def check_disk_exist(vm_name, disk_src, virsh_instance=base.virsh):
+        """
+        Check if given disk exist in VM.
+
+        :param vm_name: Domain name.
+        :param disk_src: Domian disk source path or darget dev.
+        :return: True/False
+        """
+        found = False
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        if not vmxml.get_disk_count(vm_name, virsh_instance=virsh_instance):
+            raise xcepts.LibvirtXMLError("No disk in domain %s." % vm_name)
+        blk_list = vmxml.get_disk_blk(vm_name, virsh_instance=virsh_instance)
+        disk_list = vmxml.get_disk_source(vm_name, virsh_instance=virsh_instance)
+        try:
+            file_list = []
+            for disk in disk_list:
+                file_list.append(disk.find('source').get('file'))
+        except AttributeError:
+            logging.debug("No 'file' type disk.")
+        if disk_src in file_list + blk_list:
+            found = True
+        return found
+
+    @staticmethod
     def get_numa_params(vm_name, virsh_instance=base.virsh):
         """
         Return VM's numa setting from XML definition
