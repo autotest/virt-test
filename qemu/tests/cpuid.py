@@ -118,7 +118,7 @@ def run(test, params, env):
 
     def get_guest_cpuid(self, cpu_model, feature=None, extra_params=None):
         test_kernel_dir = os.path.join(test.virtdir, "deps",
-                                       "cpuid_test_kernel")
+                                       "cpuid")
         os.chdir(test_kernel_dir)
         utils.make("cpuid_dump_kernel.bin")
 
