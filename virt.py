@@ -102,6 +102,9 @@ class virt(test.test):
                                                         bootstrap.test_filter)
                     virt_test_dir = os.path.join(self.bindir,
                                                  params.get("vm_type"), "tests")
+                    # Make sure we can load provider_lib in tests
+                    if os.path.dirname(virt_test_dir) not in sys.path:
+                        sys.path.insert(0, os.path.dirname(virt_test_dir))
                     subtest_dirs += data_dir.SubdirList(virt_test_dir,
                                                         bootstrap.test_filter)
                     subtest_dir = None

@@ -154,6 +154,9 @@ class Test(object):
                     specific_testdir = os.path.join(self.bindir,
                                                     params.get("vm_type"),
                                                     "tests")
+                    # Make sure we can load provider_lib in tests
+                    if os.path.dirname(specific_testdir) not in sys.path:
+                        sys.path.insert(0, os.path.dirname(specific_testdir))
                     subtest_dirs += data_dir.SubdirList(specific_testdir,
                                                         bootstrap.test_filter)
                     subtest_dir = None
