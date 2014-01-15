@@ -564,10 +564,14 @@ class VM(virt_vm.BaseVM):
             else:
                 logging.warning("Unknown/unsupported nettype %s" % nettype)
                 return ''
+
             if devices.has_option("netdev"):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
                 if vhost:
-                    cmd += ",%s" % vhost
+                    if vhost in ["on", "off"]:
+                        cmd += ",vhost=%s" % vhost
+                    elif vhost == "vhost=on":  # Keeps compatibility with old.
+                        cmd += ",%s" % vhost
                     if vhostfds:
                         if (int(queues) > 1 and
                            'vhostfds=' in devices.get_help_text()):
@@ -1297,11 +1301,11 @@ class VM(virt_vm.BaseVM):
                     tftp = None
                 nettype = nic.get("nettype", "bridge")
                 # don't force conversion add_nic()/add_net() optional parameter
-                if nic.has_key('tapfds'):
+                if 'tapfds' in nic:
                     tapfds = nic.tapfds
                 else:
                     tapfds = None
-                if nic.has_key('vhostfds'):
+                if 'vhostfds' in nic:
                     vhostfds = nic.vhostfds
                 else:
                     vhostfds = None
@@ -1310,7 +1314,7 @@ class VM(virt_vm.BaseVM):
                 # specify the number of MSI-X vectors that the card should have;
                 # this option currently only affects virtio cards
                 if nic_params.get("enable_msix_vectors") == "yes":
-                    if nic.has_key("vectors"):
+                    if "vectors" in nic:
                         vectors = nic.vectors
                     else:
                         vectors = 2 * int(queues) + 1
@@ -1922,8 +1926,10 @@ class VM(virt_vm.BaseVM):
                     if nic.nettype in ['bridge', 'network', 'macvtap']:
                         self._nic_tap_add_helper(nic)
 
-                    if ((nic_params.get("vhost") == 'vhost=on') and
-                            (nic_params.get("enable_vhostfd", "yes") == "yes")):
+                    if ((nic_params.get("vhost") in ['on',
+                                                     'force',
+                                                     'vhost=on']) and
+                        (nic_params.get("enable_vhostfd", "yes") == "yes")):
                         vhostfds = []
                         for i in xrange(int(nic.queues)):
                             vhostfds.append(str(os.open("/dev/vhost-net",
@@ -2688,8 +2694,8 @@ class VM(virt_vm.BaseVM):
                                                    vnet_hdr=False)
             elif nic.nettype == "macvtap":
                 macvtap_mode = self.params.get("macvtap_mode", "vepa")
-                o_macvtap= utils_net.create_macvtap(nic.ifname, macvtap_mode,
-                                                    nic.netdst, nic.mac)
+                o_macvtap = utils_net.create_macvtap(nic.ifname, macvtap_mode,
+                                                     nic.netdst, nic.mac)
                 tun_tap_dev = o_macvtap.get_device()
                 python_tapfds = utils_net.open_macvtap(o_macvtap, nic.queues)
 
