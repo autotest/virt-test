@@ -40,14 +40,16 @@ def run(test, params, env):
     uuid = vm.get_uuid()
     logging.info("Original uuid: %s", vm.get_uuid())
 
-    assert uuid is not None
-    # Rename to a new name
-    fail_info = do_rename(vm, new_name)
-    logging.info("Generated uuid: %s", vm.get_uuid())
-
-    # Rename back to original to maintain known-state
-    fail_info = do_rename(vm, vm_name, uuid, fail_info)
-    logging.info("Final uuid: %s", vm.get_uuid())
+    try:
+        fail_info = None # finally's do_rename needs this
+        assert uuid is not None
+        # Rename to a new name
+        fail_info = do_rename(vm, new_name)
+        logging.info("Generated uuid: %s", vm.get_uuid())
+    finally:
+        # Rename back to original to maintain known-state
+        fail_info = do_rename(vm, vm_name, uuid, fail_info)
+        logging.info("Final uuid: %s", vm.get_uuid())
 
     if len(fail_info):
         raise error.TestFail(fail_info)
