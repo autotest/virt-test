@@ -19,7 +19,7 @@ More specifically:
 import re
 import os
 import logging
-from virttest import virsh, xml_utils
+from virttest import virsh, xml_utils, aexpect
 from autotest.client import utils
 from virttest.libvirt_xml import vm_xml
 
@@ -161,3 +161,50 @@ def clean_up_snapshots(vm_name, snapshot_list=[]):
         for name in snapshot_list:
             snap_disk_path = disk_path.split(".")[0] + "." + name
             os.system('rm -f %s' % snap_disk_path)
+
+
+def verify_virsh_console(session, user, passwd, timeout=10, debug=False):
+    """
+    Run commands in console session.
+    """
+    log = ""
+    console_cmd = "cat /proc/cpuinfo"
+    try:
+        while True:
+            match, text = session.read_until_last_line_matches(
+                [r"[E|e]scape character is", r"login:",
+                 r"[P|p]assword:", session.prompt],
+                timeout, internal_timeout=1)
+
+            if match == 0:
+                if debug:
+                    logging.debug("Got '^]', sending '\\n'")
+                session.sendline()
+            elif match == 1:
+                if debug:
+                    logging.debug("Got 'login:', sending '%s'", user)
+                session.sendline(user)
+            elif match == 2:
+                if debug:
+                    logging.debug("Got 'Password:', sending '%s'", passwd)
+                session.sendline(passwd)
+            elif match == 3:
+                if debug:
+                    logging.debug("Got Shell prompt -- logged in")
+                break
+
+        status, output = session.cmd_status_output(console_cmd)
+        logging.info("output of command:\n%s", output)
+        session.close()
+    except (aexpect.ShellError,
+            aexpect.ExpectError), detail:
+        log = session.get_output()
+        logging.error("Verify virsh console failed:\n%s\n%s", detail, log)
+        session.close()
+        return False
+
+    if not re.search("processor", output):
+        logging.error("Verify virsh console failed: Result does not match.")
+        return False
+
+    return True
