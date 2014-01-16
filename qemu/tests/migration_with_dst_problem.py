@@ -8,6 +8,18 @@ from autotest.client import utils as client_utils
 from virttest import aexpect, env_process, utils_misc, qemu_storage
 
 
+def process_output_check(process, exp_str):
+    """
+    Check whether the output of process match regular expression.
+
+    :param process: Tail object in VM.
+    :param exp_str: regular expression string.
+    :return: a corresponding MatchObject instance or None
+    """
+    output = process.get_output()
+    return re.search(exp_str, output)
+
+
 @error.context_aware
 def run(test, params, env):
     """
@@ -309,10 +321,10 @@ def run(test, params, env):
             vm_guest.migrate(mig_timeout, mig_protocol,
                              not_wait_for_migration=True,
                              migration_exec_cmd_src=migration_exec_cmd_src)
-            try:
-                vm_guest.process.read_until_last_line_matches(exp_str,
-                                                              timeout=ro_timeout)
-            except aexpect.ExpectTimeoutError:
+
+            if not utils_misc.wait_for(lambda: process_output_check(
+                                       vm_guest.process, exp_str),
+                                       timeout=ro_timeout, first=2):
                 raise error.TestFail("The Read-only file system warning not"
                                      " come in time limit.")
 
@@ -358,9 +370,10 @@ def run(test, params, env):
             vm_guest.migrate(mig_timeout, mig_protocol,
                              not_wait_for_migration=True,
                              migration_exec_cmd_src=migration_exec_cmd_src)
-            try:
-                vm_guest.process.read_until_last_line_matches(exp_str)
-            except aexpect.ExpectTimeoutError:
+
+            if not utils_misc.wait_for(lambda: process_output_check(
+                                       vm_guest.process, exp_str),
+                                       timeout=60, first=1):
                 raise error.TestFail("The migration to destination with low "
                                      "storage space didn't fail as it should.")
 
