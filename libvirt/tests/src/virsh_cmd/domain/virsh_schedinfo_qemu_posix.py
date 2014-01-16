@@ -25,23 +25,27 @@ def run(test, params, env):
     5) Recover environment like vm's state
     6) Check result.
     """
-    def get_parameter_in_cgroup(vm, parameter):
+    def get_parameter_in_cgroup(vm, cgroup_type, parameter):
         """
         Get vm's cgroup value.
 
-        @Param vm: the vm object
-        @Param parameter: the cgroup parameter of vm which we need to get.
+        :Param vm: the vm object
+        :Param cgroup_type: type of cgroup we want, vcpu or emulator.
+        :Param parameter: the cgroup parameter of vm which we need to get.
         :return: False if expected controller is not mounted.
                  else return value's result object.
         """
         cgroup_path = \
             utils_cgroup.resolve_task_cgroup_path(vm.get_pid(), "cpu")
 
-        # When a VM has an 'emulator' child cgroup present, we must
-        # strip off that suffix when detecting the cgroup for a machine
-        if os.path.basename(cgroup_path) == "emulator":
-            cgroup_path = os.path.dirname(cgroup_path)
-        cgroup_file = os.path.join(cgroup_path, parameter)
+        if not cgroup_type == "emulator":
+            # When a VM has an 'emulator' child cgroup present, we must
+            # strip off that suffix when detecting the cgroup for a machine
+            if os.path.basename(cgroup_path) == "emulator":
+                cgroup_path = os.path.dirname(cgroup_path)
+            cgroup_file = os.path.join(cgroup_path, parameter)
+        else:
+            cgroup_file = os.path.join(cgroup_path, parameter)
 
         cg_file = None
         try:
@@ -93,6 +97,7 @@ def run(test, params, env):
     vm_ref = params.get("schedinfo_vm_ref", "domname")
     options_ref = params.get("schedinfo_options_ref", "")
     options_suffix = params.get("schedinfo_options_suffix", "")
+    schedinfo_param = params.get("schedinfo_param", "vcpu")
     set_ref = params.get("schedinfo_set_ref", "")
     cgroup_ref = params.get("schedinfo_cgroup_ref", "cpu.shares")
     set_value = params.get("schedinfo_set_value", "")
@@ -132,7 +137,8 @@ def run(test, params, env):
     # VM must be running to get cgroup parameters.
     if not vm.is_alive():
         vm.start()
-    set_value_of_cgroup = get_parameter_in_cgroup(vm, parameter=cgroup_ref)
+    set_value_of_cgroup = get_parameter_in_cgroup(vm, cgroup_type=schedinfo_param,
+                                                  parameter=cgroup_ref)
     vm.destroy()
 
     if set_ref:
