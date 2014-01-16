@@ -247,7 +247,7 @@ def test_create_volume(vm, params):
     3) Format additional disk with part-add
     4) Create a volume group
     5) Create a volume in created volume group
-    6) Get volume infomation with lvxxx commands
+    6) Get volume information with lvxxx commands
     7) Login vm to check whether volume is ok
     """
     add_device = params.get("gf_additional_device", "/dev/vdb")
