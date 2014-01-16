@@ -1352,12 +1352,8 @@ class VM(virt_vm.BaseVM):
         # Force CPU threads to 2 when smp > 8.
         if smp > 8 and vcpu_threads <= 1:
             vcpu_threads = 2
-
-        # Some versions of windows don't support more than 2 sockets of cpu,
-        # here is a workaround to make all windows use only 2 sockets.
-        if (vcpu_sockets and vcpu_sockets > 2
-                and params.get("os_type") == 'windows'):
-            vcpu_sockets = 2
+            if (vcpu_threads * vcpu_sockets) > smp:
+                vcpu_threads = 1
 
         if smp == 0 or vcpu_sockets == 0:
             vcpu_cores = vcpu_cores or 1
