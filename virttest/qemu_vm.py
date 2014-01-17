@@ -614,9 +614,15 @@ class VM(virt_vm.BaseVM):
                     "[,bootfile=" in devices.get_help_text()):
                     cmd += ",bootfile='%s'" % nic.bootfile
                 if "[,hostfwd=" in devices.get_help_text():
-                    for host_port, guest_port in hostfwd:
+                    for host_port, guest_port in redirs:
                         cmd += ",hostfwd=tcp::%s-:%s" % (host_port,
                                                          guest_port)
+            else:
+                if nic.ifname:
+                    cmd += ",ifname='%s'" % nic.ifname
+                if nic.get('script') is not None:
+                    cmd += ",script='%s'" % nic.script
+                cmd += ",downscript='%s'" % (nic.get('downscript') or "no")
             return cmd
 
         def add_floppy(devices, filename, index):
@@ -2507,8 +2513,10 @@ class VM(virt_vm.BaseVM):
         nic.nettype = nic.get('nettype', 'bridge')
         if nic.mode() == 'tap' and nic.nettype != 'network':
             nic.generate_tapfd_ids()
-        elif nic.nettype == 'user':
+        elif nic.mode() == 'user':
             pass  # nothing to do
+        elif nic.mode() == 'scripted':
+            pass # nothing to do
         else:  # unsupported nettype
             raise virt_vm.VMUnknownNetTypeError(self.name, nic_name,
                                                 nic.nettype)

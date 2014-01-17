@@ -1389,7 +1389,6 @@ class VirtIface(propcan.PropCan, object):
                                 'nettype %s', self.nic_name, value)
         return self.__dict_set__('nettype', value)
 
-
 class LibvirtQemuIface(VirtIface):
     """
     Networking information specific to libvirt qemu
@@ -1419,7 +1418,8 @@ class QemuIface(VirtIface):
                  'netdev_extra_params', 'queues', 'vhostfds',
                  'vectors', 'pci_assignable', 'enable_msix_vectors',
                  'root_dir', 'pci_addr', 'macvtap_mode'
-                 'device_driver', 'device_name', 'enable_vhostfd']
+                 'device_driver', 'device_name', 'enable_vhostfd',
+                 'script', 'downscript']
 
     # Wether or not full paths should be supplied on access
     MANGLE_PATHS = True
@@ -1444,13 +1444,28 @@ class QemuIface(VirtIface):
         else:
             self.__dict_set__('vectors', value)
 
-    # Store filename, return full path
+    # Store filename, return full path unless MANGLE_PATHS==False
     def get_tftp(self):
         tftp = self.__dict_get__('tftp')
         if self.MANGLE_PATHS and self.get('root_dir') is not None:
             return utils_misc.get_path(self.root_dir, tftp)
         else:
             return tftp
+
+    def get_script(self):
+        script = self.__dict_get__('script')
+        if self.MANGLE_PATHS:
+            return utils.misc.get_path(data_dir.get_data_dir(), script)
+        else:
+            return script
+
+    def get_downscript(self):
+        downscript = self.__dict_get__('downscript')
+        if self.MANGLE_PATHS:
+            data_dir = data_dir.get_data_dir()
+            return utils.misc.get_path(data_dir.get_data_dir(), downscript)
+        else:
+            return downscript
 
     # Some qemu_vm specific helpers
 
@@ -1462,8 +1477,11 @@ class QemuIface(VirtIface):
             mode = 'tap'
         elif self.nettype == 'user':
             mode = 'user'
+        elif self.haskey('script') or self.haskey('downscript'):
+            mode = 'scripted'
         else:
-            mode = None # Throw exception
+            raise ValueError("Unknown nettype '%s' requested for NIC %s"
+                             % (self.get('nettype'), self.nic_name))
         return mode
 
     def parse_extra(self, nic_or_net='nic'):
