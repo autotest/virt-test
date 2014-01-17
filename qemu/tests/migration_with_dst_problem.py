@@ -8,6 +8,7 @@ from autotest.client import utils as client_utils
 from virttest import aexpect, env_process, utils_misc, qemu_storage
 
 
+@error.context_aware
 def process_output_check(process, exp_str):
     """
     Check whether the output of process match regular expression.
@@ -18,6 +19,36 @@ def process_output_check(process, exp_str):
     """
     output = process.get_output()
     return re.search(exp_str, output)
+
+
+@error.context_aware
+def get_guest_service_status(session, service, init_service):
+    """
+    Get service's status in guest. It will return 'active' for 'running' and
+    'active'. Return 'inactive' for 'stopped' and 'inactive'.
+
+    :param session: An Expect or ShellSession instance to operate on
+    :param service: Service name that we want to check status.
+    :param init_service: service name used in service command.
+    :return: service's status in guest.  'active' or 'inactive'
+    """
+    try:
+        session.cmd("systemctl --version")
+        cmd = "systemctl status %s.service" % service
+        output = session.cmd_output(cmd)
+    except Exception:
+        cmd = "service %s status" % init_service
+        output = session.cmd_output(cmd)
+    service_status_filter = "running|active"
+    if re.search("running|active", output, re.I):
+        status = "active"
+    elif re.search("stopped|inactive", output, re.I):
+        status = "inactive"
+    else:
+        msg = "Fail to get '%s' service status. " % service
+        msg += " Command output in guest: %s" % output
+        raise error.TestError(msg)
+    return status
 
 
 @error.context_aware
@@ -85,6 +116,15 @@ def run(test, params, env):
         :param action: action with service (start|stop|restart)
         :param init_service: name of service for old service control.
         """
+        status = get_guest_service_status(session, service, init_service)
+        if action == "start" and status == "active":
+            logging.debug("%s already started, no need start it again.",
+                          service)
+            return
+        if action == "stop" and status == "inactive":
+            logging.debug("%s already stopped, no need stop it again.",
+                          service)
+            return
         try:
             session.cmd("systemctl --version", timeout=timeout)
             session.cmd("systemctl %s %s.service" % (action, service),
