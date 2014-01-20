@@ -534,7 +534,8 @@ def run(test, params, env):
             if "host doesn't support requested feature:" in e.reason \
                 or ("host cpuid" in e.reason and
                     ("lacks requested flag" in e.reason or
-                     "flag restricted to guest" in e.reason)):
+                     "flag restricted to guest" in e.reason)) \
+                or ("Unable to find CPU definition:" in e.reason):
                 raise error.TestNAError(
                     "Can't run CPU model %s on this host" % (full_cpu_model_name))
             else:
