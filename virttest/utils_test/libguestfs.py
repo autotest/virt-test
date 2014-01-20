@@ -315,7 +315,8 @@ class VirtTools(object):
         return (True, mountpoint)
 
     def write_file_with_guestmount(self, mountpoint, path,
-                                   content=None, vm_ref=None):
+                                   content=None, vm_ref=None,
+                                   cleanup=True):
         """
         Write content to file with guestmount
         """
@@ -338,9 +339,10 @@ class VirtTools(object):
         except IOError, detail:
             logging.error(detail)
             return (False, detail)
-        logging.info("Create file %s successfully", path)
+        logging.info("Create file %s successfully", file_path)
         # Cleanup created file
-        utils.run("rm -f %s" % file_path, ignore_status=True)
+        if cleanup:
+            utils.run("rm -f %s" % file_path, ignore_status=True)
         return (True, file_path)
 
     def get_primary_disk_fs_type(self):
@@ -360,6 +362,41 @@ class VirtTools(object):
             return fs_type
         except (KeyError, ValueError), detail:
             raise error.TestFail(str(detail))
+
+    def tar_in(self, tar_file, dest="/tmp", vm_ref=None):
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        result = lgf.virt_tar_in(vm_ref, tar_file, dest,
+                                 debug=True, ignore_status=True)
+        return result
+
+    def tar_out(self, directory, tar_file="temp.tar", vm_ref=None):
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        result = lgf.virt_tar_out(vm_ref, directory, tar_file,
+                                  debug=True, ignore_status=True)
+        return result
+
+    def cat(self, filename, vm_ref=None):
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        result = lgf.virt_cat_cmd(vm_ref, filename, debug=True,
+                                  ignore_status=True)
+        return result
+
+    def copy_in(self, filename, dest="/tmp", vm_ref=None):
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        result = lgf.virt_copy_in(vm_ref, filename, dest, debug=True,
+                                  ignore_status=True)
+        return result
+
+    def copy_out(self, file_path, localdir="/tmp", vm_ref=None):
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        result = lgf.virt_copy_out(vm_ref, file_path, localdir,
+                                   debug=True, ignore_status=True)
+        return result
 
 
 class GuestfishTools(lgf.GuestfishPersistent):
