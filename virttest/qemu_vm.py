@@ -2365,8 +2365,12 @@ class VM(virt_vm.BaseVM):
                 logging.debug("Ending VM %s process (monitor)", self.name)
                 try:
                     self.monitor.quit()
-                except qemu_monitor.MonitorError, e:
+                except Exception, e:
                     logging.warn(e)
+                    if self.is_dead():
+                        logging.warn("VM %s down during try to kill it "
+                                      "by monitor", self.name)
+                        return
                 else:
                     # Wait for the VM to be really dead
                     if self.wait_until_dead(5, 0.5, 0.5):
