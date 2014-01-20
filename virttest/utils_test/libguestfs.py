@@ -329,7 +329,7 @@ class VirtTools(object):
             return (False, gmo)
 
         # file's path on host's mountpoint
-        file_path = "%s/%s" % (mountpoint, path)
+        file_path = os.path.join(mountpoint, path)
         if content is None:
             content = "This is a temp file with guestmount."
         try:
@@ -396,6 +396,26 @@ class VirtTools(object):
             vm_ref = self.oldvm.name
         result = lgf.virt_copy_out(vm_ref, file_path, localdir,
                                    debug=True, ignore_status=True)
+        return result
+
+    def format_disk(self, disk_path=None, filesystem=None, partition=None,
+                    lvm=None):
+        """
+        :param disk_path: None for additional disk by update_vm_disk() only
+        """
+        if disk_path is None:
+            disk_path = self.params.get("added_disk_path")
+        result = lgf.virt_format(disk_path, filesystem,
+                                 lvm=lvm, partition=partition,
+                                 debug=True, ignore_status=True)
+        return result
+
+    def get_filesystems_info(self, vm_ref=None):
+        if vm_ref is None:
+            vm_ref = self.oldvm.name
+        result = lgf.virt_filesystems(vm_ref, long_format=True,
+                                      debug=True, all=True,
+                                      ignore_status=True)
         return result
 
 
