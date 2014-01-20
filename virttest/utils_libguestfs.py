@@ -41,7 +41,7 @@ def lgf_cmd_check(cmd):
                        'virt-ls', 'virt-make-fs', 'virt-rescue',
                        'virt-resize', 'virt-sparsify', 'virt-sysprep',
                        'virt-tar', 'virt-tar-in', 'virt-tar-out',
-                       'virt-win-reg']
+                       'virt-win-reg', 'virt-inspector2']
 
     if not (cmd in libguestfs_cmds):
         raise LibguestfsCmdError(
@@ -1402,4 +1402,25 @@ def virt_format(disk, filesystem=None, image_format=None, lvm=None,
         cmd += " --partition=%s" % partition
     if wipe is True:
         cmd += " --wipe"
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_inspector(disk_or_domain, is_disk=False, ignore_status=True,
+                   debug=False, timeout=30):
+    """
+    virt-inspector2 examines a virtual machine or disk image and tries to
+    determine the version of the operating system and other information
+    about the virtual machine.
+    """
+    # virt-inspector has been replaced by virt-inspector2 in RHEL7
+    # Check it here to choose which one to be used.
+    cmd = lgf_cmd_check("virt-inspector2")
+    if cmd is None:
+        cmd = "virt-inspector"
+
+    # If you need to mount a disk, set is_disk to True
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
     return lgf_command(cmd, ignore_status, debug, timeout)
