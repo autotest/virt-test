@@ -52,4 +52,5 @@ echo "exec /sbin/getty -L 115200 ttyS0 vt102" >> /target/etc/init/ttyS0.conf; \
 echo "GRUB_RECORDFAIL_TIMEOUT=0" >> /target/etc/default/grub; \
 echo "#!/bin/sh -e" > /target/etc/rc.local; \
 echo "/usr/sbin/update-grub" >> /target/etc/rc.local; \
-echo "exit 0" >> /target/etc/rc.local
+echo "exit 0" >> /target/etc/rc.local; \
+sed -i "s/ alias/ #alias/g" /target/root/.bashrc
