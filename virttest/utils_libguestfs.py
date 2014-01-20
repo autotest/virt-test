@@ -1382,3 +1382,24 @@ def virt_copy_out(disk_or_domain, file_path, localdir, is_disk=False,
         cmd += " -d %s" % disk_or_domain
     cmd += " %s %s" % (file_path, localdir)
     return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_format(disk, filesystem=None, image_format=None, lvm=None,
+                partition=None, wipe=False, ignore_status=False,
+                debug=False, timeout=60):
+    """
+    Virt-format takes an existing disk file (or it can be a host partition,
+    LV etc), erases all data on it, and formats it as a blank disk.
+    """
+    cmd = "virt-format -a %s" % disk
+    if filesystem is not None:
+        cmd += " --filesystem=%s" % filesystem
+    if image_format is not None:
+        cmd += " --format=%s" % image_format
+    if lvm is not None:
+        cmd += " --lvm=%s" % lvm
+    if partition is not None:
+        cmd += " --partition=%s" % partition
+    if wipe is True:
+        cmd += " --wipe"
+    return lgf_command(cmd, ignore_status, debug, timeout)
