@@ -4,14 +4,14 @@ import glob
 import os
 import re
 import socket
+from autotest.client import utils
 from autotest.client.shared import error
+import data_dir
 import utils_misc
 import utils_net
 import remote
 import aexpect
 import ppm_utils
-import data_dir
-
 
 class VMError(Exception):
     pass
@@ -446,6 +446,13 @@ class CpuInfo(object):
         self.cores = cores
         self.threads = threads
 
+CREATE_LOCK_FILENAME = os.path.join('/tmp', 'virt-test-vm-create.lock')
+
+
+def clean_tmp_files():
+    if os.path.isfile(CREATE_LOCK_FILENAME):
+        os.unlink(CREATE_LOCK_FILENAME)
+
 
 class BaseVM(object):
 
@@ -497,10 +504,13 @@ class BaseVM(object):
     MIGRATE_TIMEOUT = 3600
     REBOOT_TIMEOUT = 240
     CREATE_TIMEOUT = 5
+    VIRTNETCCLASS = utils_net.VirtIface
 
-    def __init__(self, name, params):
+    def __init__(self, name, params, root_dir, address_cache):
         self.name = name
         self.params = params
+        self.root_dir = root_dir
+        self.address_cache = address_cache
         #
         # Assuming all low-level hypervisors will have a serial (like) console
         # connection to the guest. libvirt also supports serial (like) consoles
@@ -512,20 +522,11 @@ class BaseVM(object):
         # Create instance if not already set
         if not hasattr(self, 'instance'):
             self._generate_unique_id()
-        # Don't overwrite existing state, update from params
-        if hasattr(self, 'virtnet'):
-            # Direct reference to self.virtnet makes pylint complain
-            # note: virtnet.__init__() supports being called anytime
-            getattr(self, 'virtnet').__init__(self.params,
-                                              self.name,
-                                              self.instance)
-        else:  # Create new
-            self.virtnet = utils_net.VirtNet(self.params,
-                                             self.name,
-                                             self.instance)
-
         if not hasattr(self, 'cpuinfo'):
             self.cpuinfo = CpuInfo()
+        # Setup as needed by subclasses and higher-level callers
+        self.virtnet = None
+        self.virtnet_cache = None
 
     def _generate_unique_id(self):
         """
@@ -537,12 +538,23 @@ class BaseVM(object):
             if not glob.glob("/tmp/*%s" % self.instance):
                 break
 
-    def update_vm_id(self):
+    def init_params_networking(self):
         """
-        Update vm identifier, we need do that when force reboot vm, since vm
-        virnet params may be changed.
+        Initialize networking from params, using macs from db if possible
         """
-        self._generate_unique_id()
+        # Don't double-init if already setup
+        if self.virtnet is not None:
+            return
+        self.virtnet = utils_net.VirtNetParams(self.VIRTNETCCLASS)
+        self.virtnet.load_from(self.params, self.name)
+        self.freshen_virtnet_cache()
+        for nic in self.virtnet:
+            if nic.nic_name in self.virtnet_cache.nic_name_list():
+                db_mac = self.virtnet_cache[nic.nic_name].get('mac')
+                if db_mac is not None:
+                    logging.debug("Using nic %s mac %s from virtnet cache",
+                                  nic.nic_name, db_mac)
+                    nic.mac = db_mac
 
     @staticmethod
     def lookup_vm_class(vm_type, target):
@@ -560,38 +572,41 @@ class BaseVM(object):
                 import ovirt
                 return ovirt.VMManager
 
+    def clone(self, name=None, params=None, root_dir=None, address_cache=None,
+              copy_state=False):
+        """
+        Return a clone of the VM object with optionally modified parameters.
+        The clone is initially not alive and needs to be started using create().
+        Any parameters not passed to this function are copied from the source
+        VM.
+
+        :param name: Optional new VM name
+        :param params: Optional new VM creation parameters
+        :param root_dir: Optional new base directory for relative filenames
+        :param address_cache: A dict that maps MAC addresses to IP addresses
+        :param copy_state: If True, copy the original VM's state to the clone.
+                Mainly useful for make_qemu_command().
+        """
+        if name is None:
+            name = self.name
+        if params is None:
+            params = self.params.copy()
+        if root_dir is None:
+            root_dir = self.root_dir
+        if address_cache is None:
+            address_cache = self.address_cache
+        if copy_state:
+            state = self.__dict__.copy()
+        else:
+            state = None
+        return self.__class__(name, params, root_dir, address_cache, state)
+
     #
     # Public API - could be reimplemented with virt specific code
     #
-    def needs_restart(self, name, params, basedir):
-        """
-        Verifies whether the current virt_install commandline matches the
-        requested one, based on the test parameters.
-        """
-        try:
-            need_restart = (self.make_create_command() !=
-                            self.make_create_command(name, params, basedir))
-        except Exception:
-            need_restart = True
-        if need_restart:
-            logging.debug(
-                "VM params in env don't match requested, restarting.")
-            return True
-        else:
-            # Command-line encoded state doesn't include all params
-            # TODO: Check more than just networking
-            other_virtnet = utils_net.VirtNet(params, name, self.instance)
-            if self.virtnet != other_virtnet:
-                logging.debug("VM params in env match, but network differs, "
-                              "restarting")
-                logging.debug("\t" + str(self.virtnet))
-                logging.debug("\t!=")
-                logging.debug("\t" + str(other_virtnet))
-                return True
-            else:
-                logging.debug(
-                    "VM params in env do match requested, continuing.")
-                return False
+    def needs_restart(self, name, params, root_dir):
+        # FIXME: Kill this function, logic is all in env_process
+        return True
 
     def verify_alive(self):
         """
@@ -663,7 +678,7 @@ class BaseVM(object):
 
         # Make sure the IP address is assigned to one or more macs
         # for this guest
-        macs = self.virtnet.mac_list()
+        macs = [nic.mac for nic in self.virtnet]
 
         # SR-IOV card may not in same subnet with the card used by host by
         # default. So arp check cannot work.
@@ -696,12 +711,12 @@ class BaseVM(object):
                                     "ipv6":['addrs',]},
                           ...}
         """
-        for virtnet in self.virtnet:
+        for nic in self.virtnet:
             for iface_name, iface in addrs.iteritems():
-                if virtnet.mac in iface["mac"]:
-                    virtnet.ip = {"ipv4": iface["ipv4"],
-                                  "ipv6": iface["ipv6"]}
-                    virtnet.g_nic_name = iface_name
+                if nic.mac in iface["mac"]:
+                    nic.ip = {"ipv4": iface["ipv4"],
+                              "ipv6": iface["ipv6"]}
+                    nic.g_nic_name = iface_name
 
     def get_port(self, port, nic_index=0):
         """
@@ -725,11 +740,16 @@ class BaseVM(object):
 
     def free_mac_address(self, nic_index_or_name=0):
         """
-        Free a NIC's MAC address.
+        Remove nic_index_or_name from this instance in database
 
         :param nic_index: Index of the NIC
         """
-        self.virtnet.free_mac_address(nic_index_or_name)
+        self.freshen_virtnet_cache()
+        try:
+            del self.virtnet_cache[nic_index_or_name]
+        except KeyError:
+            logging.debug("Ignoring non-existant cache of nic %s + instance %s",
+                          nic_index_or_name, self.instance)
 
     @error.context_aware
     def wait_for_get_address(self, nic_index_or_name, timeout=30, internal_timeout=1):
@@ -749,29 +769,22 @@ class BaseVM(object):
     # Adding/setup networking devices methods split between 'add_*' for
     # setting up virtnet, and 'activate_' for performing actions based
     # on settings.
-    def add_nic(self, **params):
+    def add_nic(self, nic):
         """
         Add new or setup existing NIC with optional model type and mac address
 
-        :param **params: Additional NIC parameters to set.
-        :param nic_name: Name for device
-        :param mac: Optional MAC address, None to randomly generate.
-        :param ip: Optional IP address to register in address_cache
-        :return: Dict with new NIC's info.
+        :param nic: A dict-like containing networking parameters
+        :return: A dict-like containing possibily modified parameters
         """
-        if not params.has_key('nic_name'):
-            params['nic_name'] = utils_misc.generate_random_id()
-        nic_name = params['nic_name']
+        nic_name = nic['nic_name']
+        # Make certain nic gets converted to VIRTNETCCLASS in self.virtnet
         if nic_name in self.virtnet.nic_name_list():
-            self.virtnet[nic_name].update(**params)
+            self.virtnet[nic_name] = nic
         else:
-            self.virtnet.append(params)
+            self.virtnet.append(nic)
+        # Implies above did conversion to VIRTNETCCLASS
         nic = self.virtnet[nic_name]
-        if not nic.has_key('mac'):  # generate random mac
-            logging.debug("Generating random mac address for nic")
-            self.virtnet.generate_mac_address(nic_name)
-        # mac of '' or invaid format results in not setting a mac
-        if nic.has_key('ip') and nic.has_key('mac'):
+        if nic.has_key('ip') and not nic.needs_mac():
             if not self.address_cache.has_key(nic.mac):
                 logging.debug("(address cache) Adding static "
                               "cache entry: %s ---> %s" % (nic.mac, nic.ip))
@@ -779,24 +792,33 @@ class BaseVM(object):
                 logging.debug("(address cache) Updating static "
                               "cache entry from: %s ---> %s"
                               " to: %s ---> %s" % (nic.mac,
-                                                   self.address_cache[nic.mac], nic.mac, nic.ip))
+                                                   self.address_cache[nic.mac],
+                                                   nic.mac, nic.ip))
             self.address_cache[nic.mac] = nic.ip
+        elif nic.needs_mac():
+            self.freshen_virtnet_cache()
+            existing_macs = self.virtnet.all_macs(self.virtnet_cache.all_macs())
+            nic.generate_mac_address(existing_macs)
+            logging.debug("Generated new MAC %s for nic %s",
+                          nic.mac, nic.nic_name)
+        self.update_virtnet_cache()
         return nic
 
     def del_nic(self, nic_index_or_name):
         """
-        Remove the nic specified by name, or index number
+        Remove the nic specified by name, or index number and free it's mac
         """
-        nic = self.virtnet[nic_index_or_name]
-        nic_mac = nic.mac.lower()
-        self.free_mac_address(nic_index_or_name)
+        try:
+            del self.address_cache[self.virtnet[nic_index_or_name].mac]
+        except (KeyError, IndexError):
+            pass
         try:
             del self.virtnet[nic_index_or_name]
-            del self.address_cache[nic_mac]
-        except IndexError:
-            pass  # continue to not exist
-        except KeyError:
-            pass  # continue to not exist
+        except (KeyError, IndexError):
+            logging.warning("Can't find nic %s to delete, ignoring",
+                            nic_index_or_name)
+            pass
+        self.update_virtnet_cache()
 
     def verify_kernel_crash(self):
         """
@@ -1185,9 +1207,57 @@ class BaseVM(object):
         cmd = self.params.get("mem_chk_cur_cmd")
         return self.get_memory_size(cmd)
 
+    def verify_iso_md5s(self, params):
+        """
+        Check md5sums of iso if used for install
+        """
+        if params.get("medium") == "import":
+            return
+        # Verify the md5sum of the ISO images
+        for cdrom in params.objects("cdroms"):
+            cdrom_params = params.object_params(cdrom)
+            iso = cdrom_params.get("cdrom")
+            if iso:
+                iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
+                if not os.path.exists(iso):
+                    raise VMImageMissingError(iso)
+                compare = False
+                if cdrom_params.get("md5sum_1m"):
+                    logging.debug("Comparing expected MD5 sum with MD5 sum of "
+                                  "first MB of ISO file...")
+                    actual_hash = utils.hash_file(iso, 1048576, method="md5")
+                    expected_hash = cdrom_params.get("md5sum_1m")
+                    compare = True
+                elif cdrom_params.get("md5sum"):
+                    logging.debug("Comparing expected MD5 sum with MD5 sum of "
+                                  "ISO file...")
+                    actual_hash = utils.hash_file(iso, method="md5")
+                    expected_hash = cdrom_params.get("md5sum")
+                    compare = True
+                elif cdrom_params.get("sha1sum"):
+                    logging.debug("Comparing expected SHA1 sum with SHA1 sum "
+                                  "of ISO file...")
+                    actual_hash = utils.hash_file(iso, method="sha1")
+                    expected_hash = cdrom_params.get("sha1sum")
+                    compare = True
+                if compare:
+                    if actual_hash == expected_hash:
+                        logging.debug("Hashes match")
+                    else:
+                        raise VMHashMismatchError(actual_hash,
+                                                  expected_hash)
+
     #
     # Public API - *must* be reimplemented with virt specific code
     #
+    def freshen_virtnet_cache(self):
+        """Try to (re)load virtnet_cache from persistent storage"""
+        raise NotImplementedError
+
+    def update_virtnet_cache(self):
+        """Try to store virtnet into persistent virtnet_cache storage"""
+        raise NotImplementedError
+
     def is_alive(self):
         """
         Return True if the VM is alive and the management interface is responsive.
@@ -1227,14 +1297,6 @@ class BaseVM(object):
         Verify if the userspace component of the virtualization backend crashed.
         """
         pass
-
-    def clone(self, name, **params):
-        """
-        Return a clone of the VM object with optionally modified parameters.
-
-        This method should be implemented by
-        """
-        raise NotImplementedError
 
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """

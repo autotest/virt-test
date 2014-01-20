@@ -14,6 +14,7 @@ import tempfile
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc
+import utils_net
 import virt_vm
 import storage
 import aexpect
@@ -106,38 +107,58 @@ class VM(virt_vm.BaseVM):
         :param state: If provided, use this as self.__dict__
         """
 
-        if state:
-            self.__dict__ = state
-        else:
-            self.process = None
-            self.serial_ports = []
-            self.serial_console = None
-            self.redirs = {}
-            self.vnc_port = None
-            self.vnc_autoport = True
-            self.pci_assignable = None
-            self.netdev_id = []
-            self.device_id = []
-            self.pci_devices = []
-            self.uuid = None
-
+        # Even if state, don't assume init was complete
+        self.process = None
+        self.serial_ports = []
+        self.serial_console = None
+        self.redirs = {}
+        self.vnc_port = None
+        self.vnc_autoport = True
+        self.pci_assignable = None
+        self.netdev_id = []
+        self.device_id = []
+        self.pci_devices = []
+        self.uuid = None
+        super(VM, self).__init__(name, params, root_dir, address_cache)
         self.spice_port = 8000
-        self.name = name
-        self.params = params
-        self.root_dir = root_dir
-        self.address_cache = address_cache
         self.vnclisten = "0.0.0.0"
         self.connect_uri = normalize_connect_uri(params.get("connect_uri",
                                                             "default"))
-        if self.connect_uri:
-            self.driver_type = virsh.driver(uri=self.connect_uri)
+        if self.is_xen():
+            self.VIRTNETCCLASS = utils_net.LibvirtXenIface
         else:
-            self.driver_type = 'qemu'
-        self.params['driver_type_' + self.name] = self.driver_type
-        # virtnet init depends on vm_type/driver_type being set w/in params
-        super(VM, self).__init__(name, params)
-        logging.info("Libvirt VM '%s', driver '%s', uri '%s'",
-                     self.name, self.driver_type, self.connect_uri)
+            self.VIRTNETCCLASS = utils_net.LibvirtQemuIface
+        if state:
+            self.__dict__ = state
+
+    def is_xen(self):
+        """Return true if this is a xen VM"""
+        if virsh.driver(uri=self.connect_uri) == 'xen':
+            if self.params.get('hvm_or_pv', 'hvm') == 'pv':
+                return True
+        return False
+
+    def freshen_virtnet_cache(self, critical=False):
+        """
+        Try to (re)load virtnet_cache from persistent storage
+
+        :param critical: Raise exception if True.
+        """
+        self.virtnet_cache = utils_net.VirtNetLibvirt(self.VIRTNETCCLASS)
+        vrsh = virsh.Virsh(uri=self.connect_uri)
+        try:
+            self.virtnet_cache.load_from(vrsh, self.name)
+        except KeyError:
+            if not critical:
+                pass  # ignore undefined vm
+            else:
+                raise virt_vm.VMConfigMissingError(self.name,
+                                                   'libvirt definition')
+
+    def update_virtnet_cache(self):
+        """Try to store virtnet into persistent virtnet_cache storage"""
+        # Assumed to be handled automatically by libvirt or specialized test
+        pass
 
     def verify_alive(self):
         """
@@ -265,38 +286,9 @@ class VM(virt_vm.BaseVM):
             logging.error("Failed to backup xml file:\n%s", detail)
             return ""
 
-    def clone(self, name=None, params=None, root_dir=None, address_cache=None,
-              copy_state=False):
-        """
-        Return a clone of the VM object with optionally modified parameters.
-        The clone is initially not alive and needs to be started using create().
-        Any parameters not passed to this function are copied from the source
-        VM.
-
-        :param name: Optional new VM name
-        :param params: Optional new VM creation parameters
-        :param root_dir: Optional new base directory for relative filenames
-        :param address_cache: A dict that maps MAC addresses to IP addresses
-        :param copy_state: If True, copy the original VM's state to the clone.
-                Mainly useful for make_create_command().
-        """
-        if name is None:
-            name = self.name
-        if params is None:
-            params = self.params.copy()
-        if root_dir is None:
-            root_dir = self.root_dir
-        if address_cache is None:
-            address_cache = self.address_cache
-        if copy_state:
-            state = self.__dict__.copy()
-        else:
-            state = None
-        return VM(name, params, root_dir, address_cache, state)
-
     def make_create_command(self, name=None, params=None, root_dir=None):
         """
-        Generate a libvirt command line. All parameters are optional. If a
+        Generate a virt-install command line. All parameters are optional. If a
         parameter is not supplied, the corresponding value stored in the
         class attributes is used.
 
@@ -330,6 +322,7 @@ class VM(virt_vm.BaseVM):
                nic_model -- string to pass as 'model' parameter for this
                NIC (e.g. e1000)
         """
+
         # helper function for command line option wrappers
         def has_option(help_text, option):
             return bool(re.search(r"--%s" % option, help_text, re.MULTILINE))
@@ -516,15 +509,17 @@ class VM(virt_vm.BaseVM):
 
             return result
 
-        def add_nic(help_text, nic_params):
+        def add_nic(help_text, nic):
             """
             Return additional command line params based on dict-like nic_params
+
+            :param nic: dict-like of NIC parameters
             """
-            mac = nic_params.get('mac')
-            nettype = nic_params.get('nettype')
-            netdst = nic_params.get('netdst')
-            nic_model = nic_params.get('nic_model')
-            if nettype:
+            mac = nic.get('mac')
+            nettype = nic.get('nettype')
+            netdst = nic.get('netdst')
+            nic_model = nic.get('nic_model')
+            if nettype is not None:
                 result = " --network=%s" % nettype
             else:
                 result = ""
@@ -533,20 +528,20 @@ class VM(virt_vm.BaseVM):
                 # --mac=mac)
                 if nettype != 'user':
                     result += ':%s' % netdst
-                if mac:  # possible to specify --mac w/o --network
+                if mac is not None:  # possible to specify --mac w/o --network
                     result += " --mac=%s" % mac
             else:
                 # newer libvirt (--network=mynet,model=virtio,mac=00:11)
                 if nettype != 'user':
                     result += '=%s' % netdst
-                if nettype and nic_model:  # only supported along with nettype
-                    result += ",model=%s" % nic_model
-                if nettype and mac:
-                    result += ',mac=%s' % mac
-                elif mac:  # possible to specify --mac w/o --network
-                    result += " --mac=%s" % mac
-            logging.debug("vm.make_create_command.add_nic returning: %s",
-                          result)
+                if nettype is not None:
+                    if nic_model is not None:
+                        result += ",model=%s" % nic_model
+                    if mac is not None:
+                        result += ',mac=%s' % mac
+                else:
+                    if mac is not None:  # --mac w/o --network
+                        result += " --mac=%s" % mac
             return result
 
         # End of command line option wrappers
@@ -559,7 +554,8 @@ class VM(virt_vm.BaseVM):
             root_dir = self.root_dir
 
         # Clone this VM using the new params
-        vm = self.clone(name, params, root_dir, copy_state=True)
+        vm = self.clone(name=name, params=params, root_dir=root_dir,
+                        address_cache=self.address_cache, copy_state=True)
 
         virt_install_binary = utils_misc.get_path(
             root_dir,
@@ -754,8 +750,7 @@ class VM(virt_vm.BaseVM):
 
         unattended_integrated = (params.get('unattended_delivery_method') !=
                                  'integrated')
-        xen_pv = self.driver_type == 'xen' and params.get('hvm_or_pv') == 'pv'
-        if unattended_integrated and not xen_pv:
+        if unattended_integrated and not self.is_xen():
             for cdrom in params.objects("cdroms"):
                 cdrom_params = params.object_params(cdrom)
                 iso = cdrom_params.get("cdrom")
@@ -806,13 +801,17 @@ class VM(virt_vm.BaseVM):
                                           None,
                                           None)
 
-        # setup networking parameters
+        # make_create_command can be called w/o vm.create()
+        if vm.virtnet is None:
+            # setup networking parameters
+            vm.init_params_networking()
+            for nic in vm.virtnet:
+                nic = vm.add_nic(nic)
         for nic in vm.virtnet:
-            # make_create_command can be called w/o vm.create()
-            nic = vm.add_nic(**dict(nic))
-            logging.debug("make_create_command() setting up command for"
-                          " nic: %s" % str(nic))
             virt_install_cmd += add_nic(help_text, nic)
+
+        logging.debug("vm.make_create_command() produced networking setup: "
+                      "%s", vm.virtnet)
 
         if params.get("use_no_reboot") == "yes":
             virt_install_cmd += " --noreboot"
@@ -990,38 +989,38 @@ class VM(virt_vm.BaseVM):
         logging.debug("Set inittab for %s failed.", device)
         return False
 
+    def verify_iso_md5s(self, params):
+        if params.get("medium") != "import":
+            for cdrom in params.objects("cdroms"):
+                cdrom_params = params.object_params(cdrom)
+                iso = cdrom_params.get("cdrom")
+                if params.get("medium") == "import":
+                    break
+                iso_is_ks = os.path.basename(iso) == 'ks.iso'
+                if self.is_xen() and iso_is_ks:
+                    continue
+        super(VM, self).verify_iso_md5s(params)
+
     @error.context_aware
-    def create(self, name=None, params=None, root_dir=None, timeout=5.0,
-               migration_mode=None, mac_source=None, autoconsole=True):
+    def create(self, name=None, params=None, root_dir=None, timeout=60):
         """
-        Start the VM by running a qemu command.
+        Start the VM by running a virt-install command
         All parameters are optional. If name, params or root_dir are not
         supplied, the respective values stored as class attributes are used.
 
         :param name: The name of the object
         :param params: A dict containing VM params
         :param root_dir: Base directory for relative filenames
-        :param migration_mode: If supplied, start VM for incoming migration
-                using this protocol (either 'tcp', 'unix' or 'exec')
-        :param migration_exec_cmd: Command to embed in '-incoming "exec: ..."'
-                (e.g. 'gzip -c -d filename') if migration_mode is 'exec'
-        :param mac_source: A VM object from which to copy MAC addresses. If not
-                specified, new addresses will be generated.
-
-        :raise VMCreateError: If qemu terminates unexpectedly
-        :raise VMKVMInitError: If KVM initialization fails
-        :raise VMHugePageError: If hugepage initialization fails
+        :param timeout:  virt-install timeout in seconds
         :raise VMImageMissingError: If a CD image is missing
         :raise VMHashMismatchError: If a CD image hash has doesn't match the
                 expected hash
-        :raise VMBadPATypeError: If an unsupported PCI assignment type is
-                requested
-        :raise VMPAError: If no PCI assignable devices could be assigned
         """
-        error.context("creating '%s'" % self.name)
-        self.destroy(free_mac_addresses=False)
+        self.destroy()
+
         if name is not None:
             self.name = name
+        error.context("creating '%s'" % self.name)
         if params is not None:
             self.params = params
         if root_dir is not None:
@@ -1030,50 +1029,11 @@ class VM(virt_vm.BaseVM):
         params = self.params
         root_dir = self.root_dir
 
-        # Verify the md5sum of the ISO images
-        for cdrom in params.objects("cdroms"):
-            if params.get("medium") == "import":
-                break
-            cdrom_params = params.object_params(cdrom)
-            iso = cdrom_params.get("cdrom")
-            xen_pv = (self.driver_type == 'xen' and
-                      params.get('hvm_or_pv') == 'pv')
-            iso_is_ks = os.path.basename(iso) == 'ks.iso'
-            if xen_pv and iso_is_ks:
-                continue
-            if iso:
-                iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
-                if not os.path.exists(iso):
-                    raise virt_vm.VMImageMissingError(iso)
-                compare = False
-                if cdrom_params.get("md5sum_1m"):
-                    logging.debug("Comparing expected MD5 sum with MD5 sum of "
-                                  "first MB of ISO file...")
-                    actual_hash = utils.hash_file(iso, 1048576, method="md5")
-                    expected_hash = cdrom_params.get("md5sum_1m")
-                    compare = True
-                elif cdrom_params.get("md5sum"):
-                    logging.debug("Comparing expected MD5 sum with MD5 sum of "
-                                  "ISO file...")
-                    actual_hash = utils.hash_file(iso, method="md5")
-                    expected_hash = cdrom_params.get("md5sum")
-                    compare = True
-                elif cdrom_params.get("sha1sum"):
-                    logging.debug("Comparing expected SHA1 sum with SHA1 sum "
-                                  "of ISO file...")
-                    actual_hash = utils.hash_file(iso, method="sha1")
-                    expected_hash = cdrom_params.get("sha1sum")
-                    compare = True
-                if compare:
-                    if actual_hash == expected_hash:
-                        logging.debug("Hashes match")
-                    else:
-                        raise virt_vm.VMHashMismatchError(actual_hash,
-                                                          expected_hash)
+        self.verify_iso_md5s(params)
 
         # Make sure the following code is not executed by more than one thread
         # at the same time
-        lockfile = open("/tmp/libvirt-autotest-vm-create.lock", "w+")
+        lockfile = open(virt_vm.CREATE_LOCK_FILENAME, "w+")
         fcntl.lockf(lockfile, fcntl.LOCK_EX)
 
         try:
@@ -1081,6 +1041,7 @@ class VM(virt_vm.BaseVM):
             redir_names = params.objects("redirs")
             host_ports = utils_misc.find_free_ports(
                 5000, 6000, len(redir_names))
+
             self.redirs = {}
             for i in range(len(redir_names)):
                 redir_params = params.object_params(redir_names[i])
@@ -1111,22 +1072,17 @@ class VM(virt_vm.BaseVM):
                 self.uuid = f.read().strip()
                 f.close()
 
+            # Attempt to pull existing mac from existing libvirt defined vm
+            self.init_params_networking()
             # Generate or copy MAC addresses for all NICs
             for nic in self.virtnet:
-                nic_params = dict(nic)
-                if mac_source is not None:
-                    # Will raise exception if source doesn't
-                    # have cooresponding nic
-                    logging.debug("Copying mac for nic %s from VM %s",
-                                  nic.nic_name, mac_source.name)
-                    nic_params['mac'] = mac_source.get_mac_address(
-                        nic.nic_name)
-                # make_create_command() calls vm.add_nic (i.e. on a copy)
-                nic = self.add_nic(**nic_params)
-                logging.debug('VM.create activating nic %s' % nic)
-                self.activate_nic(nic.nic_name)
+                # Handle any static mac/ip assignments
+                self.add_nic(nic)
 
-            # Make qemu command
+            logging.debug("vm.create() produced networking setup: %s",
+                          self.virtnet)
+
+            # Make virt-install command
             install_command = self.make_create_command()
 
             logging.info("Running libvirt command (reformatted):")
@@ -1163,7 +1119,7 @@ class VM(virt_vm.BaseVM):
                 # some other problem happened, raise normally
                 raise
             # Wait for the domain to be created
-            utils_misc.wait_for(func=self.is_alive, timeout=60,
+            utils_misc.wait_for(func=self.is_alive, timeout=timeout,
                                 text=("waiting for domain %s to start" %
                                       self.name))
             self.uuid = virsh.domuuid(self.name,
@@ -1219,7 +1175,7 @@ class VM(virt_vm.BaseVM):
                                       ignore_status=ignore_status,
                                       debug=debug)
 
-    def destroy(self, gracefully=True, free_mac_addresses=True):
+    def destroy(self, gracefully=True, free_mac_addresses=None):
         """
         Destroy the VM.
 
@@ -1229,8 +1185,7 @@ class VM(virt_vm.BaseVM):
         :param gracefully: If True, an attempt will be made to end the VM
                 using a shell command before trying to end the qemu process
                 with a 'quit' or a kill signal.
-        :param free_mac_addresses: If vm is undefined with libvirt, also
-                                   release/reset associated mac address
+        :param free_mac_addresses: Unused parameter
         """
         try:
             # Is it already dead?
@@ -1259,20 +1214,15 @@ class VM(virt_vm.BaseVM):
 
         finally:
             self.cleanup_serial_console()
-        if free_mac_addresses:
-            if self.is_persistent():
-                logging.warning("Requested MAC address release from "
-                                "persistent vm %s. Ignoring." % self.name)
-            else:
-                logging.debug("Releasing MAC addresses for vm %s." % self.name)
-                for nic_name in self.virtnet.nic_name_list():
-                    self.virtnet.free_mac_address(nic_name)
+        if free_mac_addresses is not None:
+            logging.warning("Ignoring vm.destroy() parameter "
+                            "free_mac_addresses=%s" % free_mac_addresses)
 
     def remove(self):
-        self.destroy(gracefully=True, free_mac_addresses=False)
+        self.destroy(gracefully=True)
         if not self.undefine():
             raise virt_vm.VMRemoveError("VM '%s' undefine error" % self.name)
-        self.destroy(gracefully=False, free_mac_addresses=True)
+        self.destroy(gracefully=False)
         logging.debug("VM '%s' was removed", self.name)
 
     def get_uuid(self):
@@ -1370,14 +1320,6 @@ class VM(virt_vm.BaseVM):
         # statm stores informations in pages, translate it to MB
         return shm * 4.0 / 1024
 
-    def activate_nic(self, nic_index_or_name):
-        # TODO: Implement nic hotplugging
-        pass  # Just a stub for now
-
-    def deactivate_nic(self, nic_index_or_name):
-        # TODO: Implement nic hot un-plugging
-        pass  # Just a stub for now
-
     @error.context_aware
     def reboot(self, session=None, method="shell", nic_index=0, timeout=240):
         """
@@ -1421,25 +1363,25 @@ class VM(virt_vm.BaseVM):
         """
         Starts this VM.
         """
+        # Make sure address_cache knows about any static assignments
+        if getattr(self, 'virtnet', None) is None:
+            logging.debug("VM object missing networking info while starting."
+                          "Attempting to recreate from libvirt definition "
+                          "of %s", self.name)
+            # Can't build virtnet from params b/c state may have changed
+            if self.virtnet_cache is None:
+                # Normally cache isn't required, this is exception
+                self.freshen_virtnet_cache(critical=True)
+            # else assume cache is loaded + sane
+            # Create virtnet from libvirt definition
+            svc = self.virtnet_cache
+            self.virtnet = svc.convert_to(utils_net.VirtNetParams)
+        # Stuff cache with any static MAC:IP mapping
+        for nic in self.virtnet:
+            if nic.has_key('ip') and not nic.needs_mac():
+                self.address_cache[nic.mac] = nic.ip
         self.uuid = virsh.domuuid(self.name,
                                   uri=self.connect_uri).stdout.strip()
-        # Pull in mac addresses from libvirt guest definition
-        for index, nic in enumerate(self.virtnet):
-            try:
-                mac = self.get_virsh_mac_address(index)
-                if not nic.has_key('mac'):
-                    logging.debug("Updating nic %d with mac %s on vm %s"
-                                  % (index, mac, self.name))
-                    nic.mac = mac
-                elif nic.mac != mac:
-                    logging.warning("Requested mac %s doesn't match mac %s "
-                                    "as defined for vm %s", nic.mac, mac,
-                                    self.name)
-                # TODO: Checkout/Set nic_model, nettype, netdst also
-            except virt_vm.VMMACAddressMissingError:
-                logging.warning("Nic %d requested by test but not defined for"
-                                " vm %s" % (index, self.name))
-
         logging.debug("Starting vm '%s'", self.name)
         result = virsh.start(self.name, uri=self.connect_uri)
         if not result.exit_status:

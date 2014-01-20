@@ -17,7 +17,6 @@ class FakeVm(object):
         self.name = vm_name
         self.params = params
         self.vm_type = self.params.get('vm_type')
-        self.driver_type = self.params.get('driver_type')
         self.instance = ("%s-%s" % (
             time.strftime("%Y%m%d-%H%M%S"),
             utils_misc.generate_random_string(16)))

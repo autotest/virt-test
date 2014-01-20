@@ -22,6 +22,7 @@ import cartesian_config
 import arch
 import funcatexit
 import version
+import virt_vm
 import qemu_vm
 
 global GUEST_NAME_LIST
@@ -662,7 +663,7 @@ def cleanup_env(parser, options):
                      "files and VM processes...")
         logging.info("")
     else:
-        logging.info("Cleaning tmp files and VM processes...")
+        logging.info("Cleaning virt-test temp files...")
         d = parser.get_dicts().next()
         env_filename = os.path.join(data_dir.get_root_dir(),
                                     options.type, d.get("env", "env"))
@@ -671,8 +672,8 @@ def cleanup_env(parser, options):
         # Kill all tail_threads which env constructor recreate.
         aexpect.kill_tail_threads()
         aexpect.clean_tmp_files()
-        utils_net.clean_tmp_files()
         data_dir.clean_tmp_files()
+        virt_vm.clean_tmp_files()
         qemu_vm.clean_tmp_files()
         logging.info("")
 

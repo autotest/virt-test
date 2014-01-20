@@ -205,15 +205,25 @@ class UnattendedInstallConfig(object):
         self.image_path = os.path.dirname(self.kernel)
 
         # Content server params
-        # lookup host ip address for first nic by interface name
-        try:
-            auto_ip = utils_net.get_ip_address_by_interface(
-                vm.virtnet[0].netdst)
-        except utils_net.NetError:
-            auto_ip = None
 
-        self.url_auto_content_ip = params.get('url_auto_ip', auto_ip)
-        self.url_auto_content_port = None
+        # Determine IP for content source if not specified
+        self.url_auto_content_ip = params.get('url_auto_ip')
+        if (self.url_auto_content_ip is None or
+            self.url_auto_content_ip == 'auto'):
+            # Don't assume VM state, but interperate params uniformly
+            virtnet = virtnet = utils_net.VirtNetParams()
+            virtnet.load_from(params, vm.name)
+            if len(virtnet) > 0:
+                first_nic = virtnet[0]
+                if nettype in ('network', 'bridge', 'macvtap'):
+                    # Destination is also content server interface dev name
+                    netdst = first_nic.netdst  # Mandatory parameter
+                    self.url_auto_content_ip = first_nic.giabi(netdst)
+                elif nettype == 'user': # netdst does not apply
+                    self.url_auto_content_ip = virtnet.host_ip()
+            else:
+                # Guest has no networking
+                self.url_auto_content_ip = None
 
         # Kickstart server params
         # use the same IP as url_auto_content_ip, but a different port
@@ -221,11 +231,12 @@ class UnattendedInstallConfig(object):
 
         # Embedded Syslog Server
         self.syslog_server_enabled = params.get('syslog_server_enabled', 'no')
-        self.syslog_server_ip = params.get('syslog_server_ip', auto_ip)
+        # Assume IP w/ content also will run syslog server
+        self.syslog_server_ip = params.get('syslog_server_ip',
+                                           self.url_auto_content_ip)
         self.syslog_server_port = int(params.get('syslog_server_port', 5140))
         self.syslog_server_tcp = params.get('syslog_server_proto',
                                             'tcp') == 'tcp'
-
         self.vm = vm
 
     @error.context_aware
@@ -766,21 +777,7 @@ class UnattendedInstallConfig(object):
             self.preseed_initrd()
 
         if self.params.get("vm_type") == "libvirt":
-            if self.vm.driver_type == 'qemu':
-                # Virtinstall command needs files "vmlinuz" and "initrd.img"
-                os.chdir(self.image_path)
-                base_kernel = os.path.basename(self.kernel)
-                base_initrd = os.path.basename(self.initrd)
-                if base_kernel != 'vmlinuz':
-                    utils.run("mv %s vmlinuz" % base_kernel, verbose=DEBUG)
-                if base_initrd != 'initrd.img':
-                    utils.run("mv %s initrd.img" % base_initrd, verbose=DEBUG)
-                if (self.params.get('unattended_delivery_method') !=
-                        'integrated'):
-                    i.close()
-                    utils_disk.cleanup(self.cdrom_cd1_mount)
-            elif ((self.vm.driver_type == 'xen') and
-                  (self.params.get('hvm_or_pv') == 'pv')):
+            if self.vm.is_xen():
                 logging.debug("starting unattended content web server")
 
                 self.url_auto_content_port = utils_misc.find_free_port(8100,
@@ -813,6 +810,19 @@ class UnattendedInstallConfig(object):
                                                (self.url_auto_content_ip,
                                                 self.url_auto_content_port),
                                                 self.kernel_params)
+            else:
+                # Virtinstall command needs files "vmlinuz" and "initrd.img"
+                os.chdir(self.image_path)
+                base_kernel = os.path.basename(self.kernel)
+                base_initrd = os.path.basename(self.initrd)
+                if base_kernel != 'vmlinuz':
+                    utils.run("mv %s vmlinuz" % base_kernel, verbose=DEBUG)
+                if base_initrd != 'initrd.img':
+                    utils.run("mv %s initrd.img" % base_initrd, verbose=DEBUG)
+                if (self.params.get('unattended_delivery_method') !=
+                        'integrated'):
+                    i.close()
+                    utils_disk.cleanup(self.cdrom_cd1_mount)
 
     @error.context_aware
     def setup_url_auto(self):
@@ -1030,7 +1040,6 @@ def run(test, params, env):
 
     unattended_install_config = UnattendedInstallConfig(test, params, vm)
     unattended_install_config.setup()
-
     # params passed explicitly, because they may have been updated by
     # unattended install config code, such as when params['url'] == auto
     vm.create(params=params)
@@ -1058,8 +1067,9 @@ def run(test, params, env):
     log_file = utils_misc.get_path(test.debugdir,
                                    "serial-%s-%s.log" % (serial_name,
                                                          vm.name))
-    logging.debug("Monitoring serial console log for completion message: %s",
-                  log_file)
+    if params.get("wait_no_ack", "no") == "no":
+        logging.debug("Monitoring serial console for completion message: %s"
+                      " Log file: %s", post_finish_str,  log_file)
     serial_log_msg = ""
     serial_read_fails = 0
 
@@ -1090,28 +1100,30 @@ def run(test, params, env):
             copy_images()
             raise e
 
-        # To ignore the try:except:finally problem in old version of python
-        try:
-            serial_log_msg = open(log_file, 'r').read()
-        except IOError:
-            # Only make noise after several failed reads
-            serial_read_fails += 1
-            if serial_read_fails > 10:
-                logging.warn("Can not read from serial log file after %d tries",
-                             serial_read_fails)
-
-        if (params.get("wait_no_ack", "no") == "no" and
-                (post_finish_str in serial_log_msg)):
-            break
-
         # Due to libvirt automatically start guest after import
         # we only need to wait for successful login.
         if params.get("medium") == "import":
             try:
                 vm.login()
                 break
-            except (remote.LoginError, Exception), e:
+            except (remote.LoginError,
+                    virt_vm.VMAddressError): # networking can take a while
                 pass
+
+        # Check for kickstart post message if rpm-based os
+        if params.get("wait_no_ack", "no") == "no":
+            # To ignore the try:except:finally problem in old version of python
+            try:
+                serial_log_msg = open(log_file, 'r').read()
+            except IOError:
+                # Only make noise after several failed reads
+                serial_read_fails += 1
+                if serial_read_fails > 10:
+                    logging.warn("Can not read from serial log file after %d tries",
+                                 serial_read_fails)
+
+            if (post_finish_str in serial_log_msg):
+                break # Good! Got the message!
 
         if migrate_background:
             vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
