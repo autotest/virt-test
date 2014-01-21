@@ -205,6 +205,14 @@ class StoragePool(object):
                 info[name] = value
         return info
 
+    def get_pool_uuid(self, name):
+        """
+        Get pool's uuid.
+
+        :return: Pool uuid.
+        """
+        return self.pool_info(name)["UUID"]
+
     def is_pool_active(self, name):
         """
         Check whether pool is active on given libvirt
@@ -280,6 +288,20 @@ class StoragePool(object):
             return False
         logging.info("Started pool '%s'", name)
         return True
+
+    def destroy_pool(self, name):
+        """
+        Destroy pool if it is active.
+        """
+        if not self.is_pool_active(name):
+            logging.info("pool '%s' is already inactive.", name)
+            return True
+        try:
+            cmd_result = self.virsh_instance.pool_destroy(name)
+            return (not cmd_result.exit_status)
+        except error.CmdError:
+            logging.error("Destroy pool '%s' failed.", name)
+            return False
 
     def define_dir_pool(self, name, target_path):
         """
