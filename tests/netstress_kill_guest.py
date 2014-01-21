@@ -5,7 +5,7 @@ import re
 import time
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc, data_dir
+from virttest import utils_misc, data_dir, utils_net
 
 
 @error.context_aware
@@ -30,19 +30,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    def get_corespond_ip(ip):
-        """
-        Get local ip address which is used for contact ip.
-
-        :param ip: Remote ip
-        :return: Local corespond IP.
-        """
-        result = utils.run("ip route get %s" % (ip)).stdout
-        ip = re.search("src (.+)", result)
-        if ip is not None:
-            ip = ip.groups()[0]
-        return ip
-
     def get_ethernet_driver(session):
         """
         Get driver of network cards.
@@ -100,9 +87,8 @@ def run(test, params, env):
             vm.copy_files_to(netperf_link, remote_dir)
             utils.force_copy(netperf_link, remote_dir)
 
-
         guest_ip = vm.get_address(0)
-        server_ip = get_corespond_ip(guest_ip)
+        server_ip = utils_net.get_correspond_ip(guest_ip)
 
         error.context("Setup and run netperf server in host and guest",
                       logging.info)
