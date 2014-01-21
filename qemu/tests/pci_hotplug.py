@@ -294,7 +294,8 @@ def run(test, params, env):
                               logging.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-            error.context("Start hot-adding pci device, repeat %d" % j)
+            error.context("Start hot-adding pci device, repeat %d" % j,
+                          logging.info)
             add_device(pci_num, queues)
 
             sub_type = params.get("sub_type_after_plug")
@@ -309,7 +310,8 @@ def run(test, params, env):
                               logging.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-            error.context("start hot-deleting pci device, repeat %d" % j)
+            error.context("start hot-deleting pci device, repeat %d" % j,
+                          logging.info)
             pci_del(-(pci_num + 1))
 
             sub_type = params.get("sub_type_after_unplug")
