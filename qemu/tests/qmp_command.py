@@ -80,6 +80,9 @@ def run(test, params, env):
                     hmp_version, hmp_package = re.findall(re_str, res[i])[0]
                     if not hmp_package:
                         hmp_package = package
+                    hmp_package = hmp_package.strip()
+                    package = package.strip()
+                    hmp_version = hmp_version.strip()
                     if version != hmp_version or package != hmp_package:
                         raise error.TestFail(msg)
                 else:
