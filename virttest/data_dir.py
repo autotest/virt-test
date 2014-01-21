@@ -155,7 +155,10 @@ def get_download_dir():
 
 def clean_tmp_files():
     if os.path.isdir(TMP_DIR):
-        shutil.rmtree(TMP_DIR, ignore_errors=True)
+        hidden_paths = glob.glob(os.path.join(TMP_DIR, ".??*")
+        paths = glob.glob(os.path.join(TMP_DIR, "*"))
+        for path in paths + hidden_paths:
+            shutil.rmtree(path, ignore_errors=True)
 
 
 if __name__ == '__main__':
