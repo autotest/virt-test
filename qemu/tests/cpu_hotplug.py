@@ -37,7 +37,7 @@ def run(test, params, env):
     maxcpus = int(params.get("maxcpus", 160))
     current_cpus = int(params.get("smp", 1))
     onoff_iterations = int(params.get("onoff_iterations", 20))
-    cpu_hotplug_cmd = params['cpu_hotplug_cmd']
+    cpu_hotplug_cmd = params.get("cpu_hotplug_cmd", "")
 
     if n_cpus_add + current_cpus > maxcpus:
         logging.warn("CPU quantity more than maxcpus, set it to %s", maxcpus)
@@ -50,9 +50,9 @@ def run(test, params, env):
     if not utils_misc.check_if_vm_vcpu_match(current_cpus, vm):
         raise error.TestError("CPU quantity mismatch cmd before hotplug !")
 
-    for i in range(current_cpus, total_cpus):
-        error.context("hot-pluging vCPU %s" % i, logging.info)
-        vm.monitor.send_args_cmd(cpu_hotplug_cmd % i)
+    for cpu in range(current_cpus, total_cpus):
+        error.context("hot-pluging vCPU %s" % cpu, logging.info)
+        vm.hotplug_vcpu(cpu_id=cpu, plug_command=cpu_hotplug_cmd)
 
     output = vm.monitor.send_args_cmd("info cpus")
     logging.debug("Output of info CPUs:\n%s", output)
