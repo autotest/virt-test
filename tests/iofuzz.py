@@ -2,7 +2,7 @@ import logging
 import re
 import random
 from autotest.client.shared import error
-from virttest import aexpect
+from virttest import aexpect, qemu_vm, virt_vm
 
 
 def run(test, params, env):
@@ -37,8 +37,8 @@ def run(test, params, env):
                     (oct(data), port))
         try:
             session.cmd(outb_cmd)
-        except aexpect.ShellError, e:
-            logging.debug(e)
+        except aexpect.ShellError, err:
+            logging.debug(err)
 
     def inb(session, port):
         """
@@ -51,8 +51,8 @@ def run(test, params, env):
         inb_cmd = "dd if=/dev/port seek=%d of=/dev/null bs=1 count=1" % port
         try:
             session.cmd(inb_cmd)
-        except aexpect.ShellError, e:
-            logging.debug(e)
+        except aexpect.ShellError, err:
+            logging.debug(err)
 
     def fuzz(session, inst_list):
         """
@@ -66,16 +66,24 @@ def run(test, params, env):
         :raise error.TestFail: If the VM process dies in the middle of the
                 fuzzing procedure.
         """
-        for (op, operand) in inst_list:
-            if op == "read":
+        for (wr_op, operand) in inst_list:
+            if wr_op == "read":
                 inb(session, operand[0])
-            elif op == "write":
+            elif wr_op == "write":
                 outb(session, operand[0], operand[1])
             else:
-                raise error.TestError("Unknown command %s" % op)
+                raise error.TestError("Unknown command %s" % wr_op)
 
             if not session.is_responsive():
                 logging.debug("Session is not responsive")
+                try:
+                    vm.verify_alive()
+                except qemu_vm.QemuSegFaultError, err:
+                    raise error.TestFail("Qemu crash, error info: %s" % err)
+                except virt_vm.VMDeadKernelCrashError, err:
+                    raise error.TestFail("Guest kernel crash, info: %s" % err)
+                else:
+                    pass
                 if vm.process.is_alive():
                     logging.debug("VM is alive, try to re-login")
                     try:
@@ -85,7 +93,7 @@ def run(test, params, env):
                         session = vm.reboot(method="system_reset")
                 else:
                     raise error.TestFail("VM has quit abnormally during "
-                                         "%s: %s" % (op, operand))
+                                         "%s: %s" % (wr_op, operand))
 
     login_timeout = float(params.get("login_timeout", 240))
     vm = env.get_vm(params["main_vm"])
@@ -94,12 +102,12 @@ def run(test, params, env):
 
     try:
         ports = {}
-        r = random.SystemRandom()
+        o_random = random.SystemRandom()
 
         logging.info("Enumerate guest devices through /proc/ioports")
         ioports = session.cmd_output("cat /proc/ioports")
         logging.debug(ioports)
-        devices = re.findall("(\w+)-(\w+)\ : (.*)", ioports)
+        devices = re.findall(r"(\w+)-(\w+)\ : (.*)", ioports)
 
         skip_devices = params.get("skip_devices", "")
         fuzz_count = int(params.get("fuzz_count", 10))
@@ -127,9 +135,9 @@ def run(test, params, env):
             # Write random values to random ports of the range
             for _ in range(fuzz_count * (end - beg + 1)):
                 inst.append(("write",
-                             [r.randint(beg, end), r.randint(0, 255)]))
+                    [o_random.randint(beg, end), o_random.randint(0, 255)]))
 
             fuzz(session, inst)
-
+        vm.verify_alive()
     finally:
         session.close()
