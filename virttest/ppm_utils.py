@@ -319,7 +319,12 @@ def img_similar(base_img, comp_img, threshold=10):
     """
     check whether two images are similar by hamming distance
     """
-    if img_ham_distance(base_img, comp_img) < threshold:
+    try:
+        hamming_distance = img_ham_distance(base_img, comp_img)
+    except IOError:
+        return False
+
+    if hamming_distance < threshold:
         return True
     else:
         return False
