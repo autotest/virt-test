@@ -184,7 +184,13 @@ def postprocess_image(test, params, image_name):
             elif clone_master == "yes":
                 if image_name in params.get("master_images_clone").split():
                     image.check_image(params, base_dir)
-            if params.get("restore_image", "no") == "yes":
+            # Allow test to overwrite any pre-testing  automatic backup
+            # with a new backup. i.e. assume pre-existing image/backup
+            # would not be usable after this test succeeds. The best
+            # example for this is when 'unattended_install' is run.
+            if params.get("backup_image", "no") == "yes":
+                image.backup_image(params, base_dir, "backup", True)
+            elif params.get("restore_image", "no") == "yes":
                 image.backup_image(params, base_dir, "restore", True)
         except Exception, e:
             if params.get("restore_image_on_check_error", "no") == "yes":
