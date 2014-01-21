@@ -41,7 +41,7 @@ class Test(object):
     def __init__(self, params, options):
         self.params = utils_params.Params(params)
         self.bindir = data_dir.get_root_dir()
-        self.testdir = os.path.join(self.bindir, 'agnostic', 'tests')
+        self.testdir = os.path.join(self.bindir, 'generic', 'tests')
         self.virtdir = os.path.join(self.bindir, 'shared')
         self.builddir = os.path.join(self.bindir, params.get("vm_type"))
 

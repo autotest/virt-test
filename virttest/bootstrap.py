@@ -205,7 +205,7 @@ def create_subtests_cfg(t_type):
     specific_test_list = data_dir.SubdirGlobList(specific_test,
                                                  '*.py',
                                                  test_filter)
-    shared_test = os.path.join(root_dir, 'agnostic', 'tests')
+    shared_test = os.path.join(root_dir, 'generic', 'tests')
     if t_type == 'lvsb':
         shared_test_list = []
     else:
@@ -229,7 +229,7 @@ def create_subtests_cfg(t_type):
 
     specific_test_cfg = os.path.join(root_dir, t_type,
                                      'tests', 'cfg')
-    shared_test_cfg = os.path.join(root_dir, 'agnostic', 'tests', 'cfg')
+    shared_test_cfg = os.path.join(root_dir, 'generic', 'tests', 'cfg')
 
     # lvsb tests can't use VM shared tests
     if t_type == 'lvsb':

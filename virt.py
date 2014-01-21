@@ -96,7 +96,7 @@ class virt(test.test):
                                                             bootstrap.test_filter)
                     # Verify if we have the correspondent source file for it
                     shared_test_dir = os.path.dirname(self.virtdir)
-                    shared_test_dir = os.path.join(shared_test_dir, "agnostic",
+                    shared_test_dir = os.path.join(shared_test_dir, "generic",
                                                    "tests")
                     subtest_dirs += data_dir.SubdirList(shared_test_dir,
                                                         bootstrap.test_filter)
