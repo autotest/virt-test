@@ -385,39 +385,12 @@ class HugePageConfig(object):
             logging.debug("Hugepage memory successfully dealocated")
 
 
-class KSMError(Exception):
-
-    """
-    Base exception for KSM setup
-    """
-    pass
-
-
-class KSMNotSupportedError(KSMError):
-
-    """
-    Thrown when host does not support KSM.
-    """
-    pass
-
-
-class KSMConfigError(KSMError):
-
-    """
-    Thrown when host does not config KSM as expect.
-    """
-    pass
-
-
 class KSMConfig(object):
 
     def __init__(self, params, env):
         """
-
         :param params: Dict like object containing parameters for the test.
         """
-        KSM_PATH = "/sys/kernel/mm/ksm"
-
         self.pages_to_scan = params.get("ksm_pages_to_scan")
         self.sleep_ms = params.get("ksm_sleep_ms")
         self.run = params.get("ksm_run", "1")
@@ -429,120 +402,67 @@ class KSMConfig(object):
             self.run == "0"
 
         # Get KSM module status if there is one
-        # Set the ksm_module_loaded to True in default as we consider it is
-        # compiled into kernel
-        self.ksm_module_loaded = True
-        if self.ksm_module:
-            status = utils.system("lsmod |grep ksm", ignore_status=True)
-            if status != 0:
-                self.ksm_module_loaded = False
+        self.ksmctler = utils_misc.KSMController()
+        self.ksm_module_loaded = self.ksmctler.is_module_loaded()
 
         # load the ksm module for furthur information check
-        if not self.ksm_module_loaded:
-            utils.system("modprobe ksm")
+        if self.ksm_module and not self.ksm_module_loaded:
+            self.ksmctler.load_ksm_module()
 
-        if os.path.isdir(KSM_PATH):
-            self.interface = "sysfs"
-            ksm_cmd = "cat /sys/kernel/mm/ksm/run;"
-            ksm_cmd += " cat /sys/kernel/mm/ksm/pages_to_scan;"
-            ksm_cmd += " cat /sys/kernel/mm/ksm/sleep_millisecs"
-            self.ksm_path = KSM_PATH
-        else:
-            try:
-                os_dep.command("ksmctl")
-            except ValueError:
-                raise KSMNotSupportedError
-            self.interface = "ksmctl"
-            ksm_cmd = "ksmctl info"
-            # For ksmctl both pages_to_scan and sleep_ms should have value
-            # So give some default value when it is not set up in params
-            if self.pages_to_scan is None:
-                self.pages_to_scan = "5000"
-            if self.sleep_ms is None:
-                self.sleep_ms = "50"
+        # For ksmctl both pages_to_scan and sleep_ms should have value
+        # So give some default value when it is not set up in params
+        if self.pages_to_scan is None:
+            self.pages_to_scan = "5000"
+        if self.sleep_ms is None:
+            self.sleep_ms = "50"
 
-        self.ksmtuned_process = 0
         # Check if ksmtuned is running before the test
-        ksmtuned_process = utils.system_output("ps -C ksmtuned -o pid=",
-                                               ignore_status=True)
-        if ksmtuned_process:
-            self.ksmtuned_process = int(re.findall("\d+",
-                                                   ksmtuned_process)[0])
+        self.ksmtuned_process = self.ksmctler.get_ksmtuned_pid()
 
         # As ksmtuned may update KSM config most of the time we should disable
         # it when we test KSM
         self.disable_ksmtuned = params.get("disable_ksmtuned", "yes") == "yes"
 
-        output = utils.system_output(ksm_cmd)
-        self.default_status = re.findall("\d+", output)
-        if len(self.default_status) != 3:
-            raise KSMError("Can not get KSM default setting: %s" % output)
+        self.default_status = []
+        self.default_status.append(self.ksmctler.get_ksm_feature("run"))
+        self.default_status.append(self.ksmctler.get_ksm_feature(
+                                                        "pages_to_scan"))
+        self.default_status.append(self.ksmctler.get_ksm_feature(
+                                                        "sleep_millisecs"))
         self.default_status.append(int(self.ksmtuned_process))
         self.default_status.append(self.ksm_module_loaded)
 
     def setup(self, env):
-        if self.ksmtuned_process != 0 and self.disable_ksmtuned:
-            kill_cmd = "kill -1 %s" % self.ksmtuned_process
-            utils.system(kill_cmd)
+        if self.disable_ksmtuned:
+            self.ksmctler.stop_ksmtuned()
 
         env.data["KSM_default_config"] = self.default_status
-        ksm_cmd = ""
-        if self.interface == "sysfs":
-            if self.run != self.default_status[0]:
-                ksm_cmd += " echo %s > KSM_PATH/run;" % self.run
-            if (self.pages_to_scan
-                    and self.pages_to_scan != self.default_status[1]):
-                ksm_cmd += " echo %s > KSM_PATH" % self.pages_to_scan
-                ksm_cmd += "/pages_to_scan;"
-            if (self.sleep_ms
-                    and self.sleep_ms != self.default_status[2]):
-                ksm_cmd += " echo %s > KSM_PATH" % self.sleep_ms
-                ksm_cmd += "/sleep_millisecs"
-            ksm_cmd = re.sub("KSM_PATH", self.ksm_path, ksm_cmd)
-        elif self.interface == "ksmctl":
-            if self.run == "1":
-                ksm_cmd += "ksmctl start %s %s" % (self.pages_to_scan,
-                                                   self.sleep_ms)
-            else:
-                ksm_cmd += "ksmctl stop"
-
-        utils.system(ksm_cmd)
+        self.ksmctler.set_ksm_feature({"run": self.run,
+                                       "pages_to_scan": self.pages_to_scan,
+                                       "sleep_millisecs": self.sleep_ms})
 
     def cleanup(self, env):
         default_status = env.data.get("KSM_default_config")
 
-        if default_status[3] != 0:
+        # Get original ksm loaded status
+        default_ksm_loaded = default_status.pop()
+        # Remove pid of ksmtuned
+        if default_status.pop() != 0:
             # ksmtuned used to run in host. Start the process
             # and don't need set up the configures.
-            utils.system("ksmtuned")
+            self.ksmctler.start_ksmtuned()
             return
 
         if default_status == self.default_status:
             # Nothing changed
             return
 
-        ksm_cmd = ""
-        if self.interface == "sysfs":
-            if default_status[0] != self.default_status[0]:
-                ksm_cmd += " echo %s > KSM_PATH/run;" % default_status[0]
-            if default_status[1] != self.default_status[1]:
-                ksm_cmd += " echo %s > KSM_PATH" % default_status[1]
-                ksm_cmd += "/pages_to_scan;"
-            if default_status[2] != self.default_status[2]:
-                ksm_cmd += " echo %s > KSM_PATH" % default_status[2]
-                ksm_cmd += "/sleep_millisecs"
-            ksm_cmd = re.sub("KSM_PATH", self.ksm_path, ksm_cmd)
-        elif self.interface == "ksmctl":
-            if default_status[0] == "1":
-                ksm_cmd += "ksmctl start %s %s" % (default_status[1],
-                                                   default_status[2])
-            else:
-                ksm_cmd += "ksmctl stop"
+        self.ksmctler.set_ksm_feature({"run": default_status[0],
+                                       "pages_to_scan": default_status[1],
+                                       "sleep_millisecs": default_status[2]})
 
-        utils.system(ksm_cmd)
-
-        if not default_status[4]:
-            utils.system("modprobe -r ksm")
+        if not default_ksm_loaded:
+            self.ksmctler.unload_ksm_module()
 
 
 class PrivateBridgeError(Exception):
