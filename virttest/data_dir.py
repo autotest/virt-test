@@ -14,6 +14,9 @@ ROOT_DIR = os.path.abspath(_ROOT_PATH)
 DATA_DIR = os.path.join(ROOT_DIR, 'shared', 'data')
 DEPS_DIR = os.path.join(ROOT_DIR, 'shared', 'deps')
 DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'shared', 'downloads')
+TEST_PROVIDERS_DIR = os.path.join(ROOT_DIR, 'test-providers.d')
+TEST_PROVIDERS_DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'test-providers.d',
+                                           'downloads')
 TMP_DIR = os.path.join(ROOT_DIR, 'tmp')
 BACKING_DATA_DIR = None
 
@@ -181,6 +184,25 @@ def get_download_dir():
     return DOWNLOAD_DIR
 
 
+def get_test_providers_dir():
+    """
+    Return the base test providers dir (at the moment, test-providers.d).
+    """
+    if not os.path.isdir(TEST_PROVIDERS_DOWNLOAD_DIR):
+        os.makedirs(TEST_PROVIDERS_DOWNLOAD_DIR)
+    return TEST_PROVIDERS_DIR
+
+
+def get_test_provider_dir(provider):
+    """
+    Return a specific test providers dir, inside the base dir.
+    """
+    provider_dir = os.path.join(TEST_PROVIDERS_DOWNLOAD_DIR, provider)
+    if not provider_dir:
+        os.makedirs(provider_dir)
+    return provider_dir
+
+
 def clean_tmp_files():
     if os.path.isdir(TMP_DIR):
         hidden_paths = glob.glob(os.path.join(TMP_DIR, ".??*"))
@@ -195,3 +217,4 @@ if __name__ == '__main__':
     print "data dir:         " + DATA_DIR
     print "deps dir:         " + DEPS_DIR
     print "backing data dir: " + BACKING_DATA_DIR
+    print "test providers dir: " + TEST_PROVIDERS_DIR
