@@ -1,4 +1,3 @@
-import os
 import logging
 import time
 from autotest.client.shared import error, utils
@@ -33,24 +32,24 @@ class DriveMirror(block_copy.BlockCopy):
 
     def get_target_image(self):
         params = self.parser_test_args()
-        t_params = {}
-        t_params["image_name"] = params["target_image"]
-        t_params["image_format"] = params["target_format"]
-        target_image = storage.get_image_filename(t_params,
-                                                  self.data_dir)
+        if params.get("target_image_type") == "iscsi":
+            image = qemu_storage.Iscsidev(params, self.data_dir, "")
+            target_image = image.setup()
+            return target_image
+
         if params.get("target_image_type") == "nfs":
             image = nfs.Nfs(params)
             image.setup()
             # sleep 30s to wait nfs ready, it's requried by some rhel6 host
             time.sleep(30)
-        elif params.get("target_image_type") == "iscsi":
-            image = qemu_storage.Iscsidev(params, self.data_dir, "")
-            target_image = image.setup()
-        if (params["create_mode"] == "existing" and
-                not os.path.exists(target_image)):
-            image = qemu_storage.QemuImg(t_params, self.data_dir, "")
-            image.create(t_params)
-        return target_image
+
+        params["image_name"] = params["target_image"]
+        params["image_format"] = params["target_format"]
+        target_image = storage.get_image_filename(params, self.data_dir)
+        if params["create_mode"] != "existing":
+            image = qemu_storage.QemuImg(params, self.data_dir, "")
+            image.create(params)
+        return storage.get_image_filename(params, self.data_dir)
 
     @error.context_aware
     def start(self):
@@ -166,7 +165,3 @@ class DriveMirror(block_copy.BlockCopy):
             image = nfs.Nfs(params)
             image.cleanup()
         super(DriveMirror, self).clean()
-
-
-def run(test, params, env):
-    pass
