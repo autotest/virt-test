@@ -336,3 +336,33 @@ class StoragePool(object):
             return False
         logging.info("Defined pool '%s'", name)
         return True
+
+    def define_iscsi_pool(self, name, source_host, source_dev, target_path):
+        """
+        Define a iscsi type pool.
+        """
+        try:
+            extra = "--source-host %s  --source-dev %s" % (source_host,
+                                                           source_dev)
+            self.virsh_instance.pool_define_as(name, "iscsi", target_path,
+                                               extra, ignore_status=False)
+        except error.CmdError:
+            logging.error("Define iscsi pool '%s' failed.", name)
+            return False
+        logging.info("Define pool '%s'", name)
+        return True
+
+    def define_netfs_pool(self, name, source_host, source_path, target_path):
+        """
+        Define a netfs type pool.
+        """
+        try:
+            extra = "--source-host %s --source-path %s" % (source_host,
+                                                           target_path)
+            self.virsh_instance.pool_define_ad(name, "netfs", target_path,
+                                               extra, ignore_status=False)
+        except error.CmdError:
+            logging.error("Define netfs pool '%s' failed.", name)
+            return False
+        logging.info("Define pool '%s'", name)
+        return True
