@@ -34,7 +34,7 @@ def run(test, params, env):
     output = session.cmd_output(cdrom_check_cmd, timeout)
     cdrom = re.findall(cdrom_filter, output)
     if cdrom:
-        cygwin_install_cmd = re.sub("WINUTILS", cdrom[0],
+        cygwin_install_cmd = re.sub("WIN_UTILS", cdrom[0],
                                     cygwin_install_cmd)
     else:
         raise error.TestError("Can not find tools iso in guest")
