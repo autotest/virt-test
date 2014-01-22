@@ -2,7 +2,7 @@ import logging
 import time
 import os
 from virttest import utils_misc, aexpect, utils_net, openvswitch, ovs_utils
-from virttest import versionable_class
+from virttest import versionable_class, data_dir
 from autotest.client.shared import error
 
 
@@ -150,7 +150,7 @@ def run(test, params, env):
             return speeds
 
         def test(self, test, params, env):
-            iperf_src_path = os.path.join(test.virtdir, "deps")
+            iperf_src_path = os.path.join(data_dir.get_deps_dir(), "iperf")
             self.iperf_b_path = os.path.join("iperf-2.0.4", "src", "iperf")
 
             error.context("Install iperf to vms machine.")

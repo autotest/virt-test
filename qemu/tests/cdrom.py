@@ -360,8 +360,8 @@ def run(test, params, env):
         error.context("Copy test script to guest")
         tray_check_src = params.get("tray_check_src")
         if tray_check_src:
-            tray_check_src = utils_misc.get_path(data_dir.get_deps_dir(),
-                                                 tray_check_src)
+            tray_check_src = os.path.join(data_dir.get_deps_dir(), "cdrom",
+                                          tray_check_src)
             vm.copy_files_to(tray_check_src, params["tmp_dir"])
 
         if is_tray_opened(vm, qemu_cdrom_device) is None:

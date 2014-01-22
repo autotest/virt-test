@@ -3,7 +3,7 @@ import time
 import os
 from autotest.client.shared import error
 from virttest import utils_misc, utils_test, remote
-from virttest import rss_client
+from virttest import rss_client, data_dir
 
 
 def run(test, params, env):
@@ -38,10 +38,9 @@ def run(test, params, env):
     server_password = params.get("server_password")
     client_username = params.get("client_username")
     client_password = params.get("client_password")
-    dsso_delete_machine_binary = params.get("dsso_delete_machine_binary",
-                                            "deps/whql_delete_machine_15.exe")
-    dsso_delete_machine_binary = utils_misc.get_path(test.bindir,
-                                                     dsso_delete_machine_binary)
+    dsso_bin = params.get("dsso_delete_machine_binary",
+                          "whql/whql_delete_machine_15.exe")
+    dsso_delete_machine_binary = os.path.join(data_dir.get_deps_dir(), dsso_bin)
     install_timeout = float(params.get("install_timeout", 600))
     install_cmd = params.get("install_cmd")
     wtt_services = params.get("wtt_services")

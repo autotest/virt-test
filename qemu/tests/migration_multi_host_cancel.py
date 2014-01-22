@@ -4,9 +4,10 @@ import time
 import errno
 import os
 import fcntl
-from virttest import utils_test, utils_misc, remote, virt_vm
 from autotest.client.shared import error
 from autotest.client.shared.syncdata import SyncData
+from virttest import utils_test, utils_misc, remote, virt_vm
+from provider_lib import cpuflags
 
 
 @error.context_aware
@@ -66,12 +67,12 @@ def run(test, params, env):
                 vm = mig_data.vms[0]
                 session = vm.wait_for_login(timeout=self.login_timeout)
 
-                utils_misc.install_cpuflags_util_on_vm(test, vm,
-                                                       self.install_path,
-                                                       extra_flags="-msse3 -msse2")
+                cpuflags.install_cpuflags_util_on_vm(test, vm,
+                                                     self.install_path,
+                                                     extra_flags="-msse3 -msse2")
 
                 cmd = ("%s/cpuflags-test --stressmem %d,%d %%" %
-                      (os.path.join(self.install_path, "test_cpu_flags"),
+                      (os.path.join(self.install_path, "cpu_flags"),
                        self.vm_mem * 10, self.vm_mem / 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)

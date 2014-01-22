@@ -123,7 +123,7 @@ def run(test, params, env):
 
     # Get all models' info from dump file
     dump_file = params.get("dump_file")
-    dump_path = params.get("dump_path", data_dir.get_root_dir())
+    dump_path = params.get("dump_path", data_dir.get_deps_dir(), "cpuid")
     cpuinfo_file = utils.unmap_url(dump_path, dump_file, dump_path)
     host_flags = utils_misc.get_cpu_flags()
 

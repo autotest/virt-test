@@ -9,7 +9,7 @@ import logging
 import os
 import time
 from autotest.client.shared import error
-from virttest import utils_misc, utils_spice, aexpect
+from virttest import utils_misc, utils_spice, aexpect, data_dir
 
 
 def wait_timeout(timeout=10):
@@ -961,10 +961,8 @@ def run(test, params, env):
 
     # The following is to copy the test image to either the client or guest
     # if the test deals with images.
-    imagedir = os.path.join("deps", image_name)
-    imagedir_bmp = os.path.join("deps", image_name_bmp)
-    image_path = utils_misc.get_path(test.virtdir, imagedir)
-    image_path_bmp = utils_misc.get_path(test.virtdir, imagedir_bmp)
+    image_path = os.path.join(data_dir.get_deps_dir(), 'spice', image_name)
+    image_path_bmp = os.path.join(data_dir.get_deps_dir(), 'spice', image_name_bmp)
 
     logging.info("Transferring the clipboard script to client & guest,"
                  "destination directory: %s, source script location: %s",

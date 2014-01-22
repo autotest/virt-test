@@ -5,8 +5,9 @@
 import logging
 import time
 import re
+import os
 from autotest.client.shared import error
-from virttest import utils_test, utils_misc
+from virttest import utils_test, utils_misc, data_dir
 
 
 @error.context_aware
@@ -52,7 +53,7 @@ def run(test, params, env):
     icf_name = params["icf_name"]
     ins_path = params["install_path"]
     res_file = params["result_file"]
-    icf_file = utils_misc.get_path(test.virtdir, "deps/%s" % icf_name)
+    icf_file = os.path.join(data_dir.get_deps_dir(), "iometer", icf_name)
     vm.copy_files_to(icf_file, "%s\\%s" % (ins_path, icf_name))
 
     # Run Iometer

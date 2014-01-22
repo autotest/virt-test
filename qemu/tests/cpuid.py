@@ -7,7 +7,7 @@ import os
 import string
 from autotest.client.shared import error, utils
 from autotest.client.shared import test as test_module
-from virttest import utils_misc, env_process, virt_vm
+from virttest import utils_misc, env_process, virt_vm, data_dir
 
 import logging
 logger = logging.getLogger(__name__)
@@ -117,8 +117,7 @@ def run(test, params, env):
         return result
 
     def get_guest_cpuid(self, cpu_model, feature=None, extra_params=None):
-        test_kernel_dir = os.path.join(test.virtdir, "deps",
-                                       "cpuid_test_kernel")
+        test_kernel_dir = os.path.join(data_dir.get_deps_dir(), "cpuid", "src")
         os.chdir(test_kernel_dir)
         utils.make("cpuid_dump_kernel.bin")
 
@@ -512,7 +511,7 @@ def run(test, params, env):
         if cpu_model_flags:
             full_cpu_model_name += ','
             full_cpu_model_name += cpu_model_flags.lstrip(',')
-        ref_file = os.path.join(test.virtdir, "deps",
+        ref_file = os.path.join(data_dir.get_deps_dir(), 'cpuid',
                                 "cpuid_dumps",
                                 kvm_enabled and "kvm" or "nokvm",
                                 machine_type, '%s-dump.txt' % (full_cpu_model_name))

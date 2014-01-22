@@ -41,7 +41,7 @@ class Test(object):
     def __init__(self, params, options):
         self.params = utils_params.Params(params)
         self.bindir = data_dir.get_root_dir()
-        self.testdir = os.path.join(self.bindir, 'tests')
+        self.testdir = os.path.join(self.bindir, 'generic', 'tests')
         self.virtdir = os.path.join(self.bindir, 'shared')
         self.builddir = os.path.join(self.bindir, params.get("vm_type"))
 
@@ -154,6 +154,9 @@ class Test(object):
                     specific_testdir = os.path.join(self.bindir,
                                                     params.get("vm_type"),
                                                     "tests")
+                    # Make sure we can load provider_lib in tests
+                    if os.path.dirname(specific_testdir) not in sys.path:
+                        sys.path.insert(0, os.path.dirname(specific_testdir))
                     subtest_dirs += data_dir.SubdirList(specific_testdir,
                                                         bootstrap.test_filter)
                     subtest_dir = None

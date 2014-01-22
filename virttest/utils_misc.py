@@ -885,31 +885,6 @@ def install_host_kernel(job, params):
                            {'software_version_kernel': k_version})
 
 
-def install_cpuflags_util_on_vm(test, vm, dst_dir, extra_flags=None):
-    """
-    Install stress to vm.
-
-    :param vm: virtual machine.
-    :param dst_dir: Installation path.
-    :param extra_flags: Extraflags for gcc compiler.
-    """
-    if not extra_flags:
-        extra_flags = ""
-
-    cpuflags_src = os.path.join(test.virtdir, "deps", "test_cpu_flags")
-    cpuflags_dst = os.path.join(dst_dir, "test_cpu_flags")
-    session = vm.wait_for_login()
-    session.cmd("rm -rf %s" %
-                (cpuflags_dst))
-    session.cmd("sync")
-    vm.copy_files_to(cpuflags_src, dst_dir)
-    session.cmd("sync")
-    session.cmd("cd %s; make EXTRA_FLAGS='%s';" %
-               (cpuflags_dst, extra_flags))
-    session.cmd("sync")
-    session.close()
-
-
 def install_disktest_on_vm(test, vm, src_dir, dst_dir):
     """
     Install stress to vm.

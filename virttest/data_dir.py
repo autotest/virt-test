@@ -2,6 +2,7 @@
 """
 Library used to provide the appropriate data dir for virt test.
 """
+import inspect
 import os
 import sys
 import tempfile
@@ -17,6 +18,8 @@ DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'shared', 'downloads')
 TMP_DIR = os.path.join(ROOT_DIR, 'tmp')
 BACKING_DATA_DIR = None
 
+class MissingDepsDirError(Exception):
+    pass
 
 class SubdirList(list):
 
@@ -140,7 +143,33 @@ def get_data_dir():
 
 
 def get_deps_dir():
-    return DEPS_DIR
+    """
+    For a given test provider, report the appropriate deps dir.
+
+    The little inspect trick is used to avoid callers having to do
+    sys.modules[] tricks themselves.
+    """
+    # Get the frame that called this function
+    frame = inspect.stack()[1]
+    # This is the module that called the function
+    module = inspect.getmodule(frame[0])
+    # With the module path, we can keep searching with a parent dir with 'deps'
+    # in it, which should be the correct deps directory.
+    p = os.path.dirname(module.__file__)
+    nesting_limit = 10
+    index = 0
+    while 'deps' not in os.listdir(p):
+        if '.git' in os.listdir(p):
+            raise MissingDepsDirError("Could not find a deps dir for git "
+                                      "repo %s" % p)
+        if index >= nesting_limit:
+            raise MissingDepsDirError("Could not find a deps dir after "
+                                      "looking %s parent directories" %
+                                      nesting_limit)
+        p = os.path.dirname(p)
+        index += 1
+
+    return os.path.join(p, 'deps')
 
 
 def get_tmp_dir():

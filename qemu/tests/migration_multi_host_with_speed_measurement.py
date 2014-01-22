@@ -7,6 +7,7 @@ from autotest.client.shared import error, utils
 from autotest.client.shared.barrier import listen_server
 from autotest.client.shared.syncdata import SyncData
 from virttest import utils_test, utils_misc
+from provider_lib import cpuflags
 
 
 def run(test, params, env):
@@ -127,11 +128,11 @@ def run(test, params, env):
                 vm = mig_data.vms[0]
                 session = vm.wait_for_login(timeout=self.login_timeout)
 
-                utils_misc.install_cpuflags_util_on_vm(test, vm, install_path,
-                                                       extra_flags="-msse3 -msse2")
+                cpuflags.install_cpuflags_util_on_vm(test, vm, install_path,
+                                                     extra_flags="-msse3 -msse2")
 
                 cmd = ("%s/cpuflags-test --stressmem %d,%d" %
-                      (os.path.join(install_path, "test_cpu_flags"),
+                      (os.path.join(install_path, "cpu_flags"),
                        vm_mem * 4, vm_mem / 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)

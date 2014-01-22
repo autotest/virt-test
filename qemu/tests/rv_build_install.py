@@ -11,7 +11,7 @@ import time
 import re
 from autotest.client.shared import error
 from virttest.aexpect import ShellCmdError
-from virttest import utils_misc, utils_spice
+from virttest import utils_misc, utils_spice, data_dir
 
 
 def connect_to_vm(vm_name, env, params):
@@ -196,11 +196,8 @@ def run(test, params, env):
     # Get root session for the VM
     (vm, vm_root_session) = connect_to_vm(vm_name, env, params)
 
-    # The following is to copy build_install.py script to the VM and do the test
-    scriptdir = os.path.join("deps", script)
-
     # location of the script on the host
-    host_script_path = utils_misc.get_path(test.virtdir, scriptdir)
+    host_script_path = os.path.join(data_dir.get_deps_dir(), "spice", script)
 
     logging.info("Transferring the script to %s,"
                  "destination directory: %s, source script location: %s",
