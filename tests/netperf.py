@@ -131,9 +131,11 @@ def run(test, params, env):
     if (params.get("os_type") == "windows"
             and params.get("use_cygwin") == "yes"):
         cygwin_prompt = params.get("cygwin_prompt", r"\$\s+$")
+        cygwin_install_cmd = params.get("cygwin_install_cmd")
         cygwin_start = params.get("cygwin_start")
         server_cyg = vm.wait_for_login(timeout=login_timeout)
         server_cyg.set_prompt(cygwin_prompt)
+        server_cyg.cmd_output(cygwin_install_cmd)
         server_cyg.cmd_output(cygwin_start)
     else:
         server_cyg = None
