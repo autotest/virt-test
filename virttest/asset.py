@@ -2,10 +2,125 @@ import urllib2
 import logging
 import os
 import glob
-import ConfigParser
-from autotest.client import utils
+from autotest.client import utils, test_config
+from autotest.client.shared import git, error
 import data_dir
 import re
+
+# This will be later replaced with a function in data_dir that checks
+# the future 'backends' dir.
+KNOWN_BACKENDS = ['generic', 'qemu', 'openvswitch', 'libvirt', 'libvirt',
+                  'libguestfs', 'openvswitch']
+
+
+def get_all_test_provider_names():
+    """
+    Get the names of all test providers available in test-providers.d.
+
+    :return: List with the names of all test providers.
+    """
+    provider_name_list = []
+    provider_dir = data_dir.get_test_providers_dir()
+    for provider in glob.glob(os.path.join(provider_dir, '*.ini')):
+        provider_name = os.path.basename(provider).split('.')[0]
+        provider_name_list.append(provider_name)
+    return provider_name_list
+
+
+def get_test_provider_subdirs(backend=None):
+    """
+    Get information of all test provider subdirs for a given backend.
+
+    If no backend is provided, return all subdirs with tests.
+
+    :param backend: Backend type, such as 'qemu'.
+    :return: List of directories that contain tests for the given backend.
+    """
+    subdir_list = []
+    for provider_name in get_all_test_provider_names():
+        provider_info = get_test_provider_info(provider_name)
+        backends_info = provider_info['backends']
+        if backend is not None:
+            if backend in backends_info:
+                subdir_list.append(backends_info[backend]['path'])
+        else:
+            for b in backends_info:
+                subdir_list.append(backends_info[b]['path'])
+    return subdir_list
+
+
+def get_test_provider_info(provider):
+    """
+    Get a dictionary with relevant test provider info, such as:
+
+    * provider uri (git repo or filesystem location)
+    * provider git repo data, such as branch, ref, pubkey
+    * backends that this provider has tests for. For each backend type the
+        provider has tests for, the 'path' will be also available.
+
+    :param provider: Test provider name, such as 'io-github-autotest-qemu'.
+    """
+    provider_info = {}
+    provider_path = os.path.join(data_dir.get_test_providers_dir(),
+                                 '%s.ini' % provider)
+    provider_cfg = test_config.config_loader(provider_path)
+    provider_info['name'] = provider
+    provider_info['uri'] = provider_cfg.get('provider', 'uri')
+    provider_info['branch'] = provider_cfg.get('provider', 'branch', 'master')
+    provider_info['ref'] = provider_cfg.get('provider', 'ref')
+    provider_info['pubkey'] = provider_cfg.get('provider', 'pubkey')
+    provider_info['backends'] = {}
+
+    for backend in KNOWN_BACKENDS:
+        subdir = provider_cfg.get(backend, 'subdir')
+        if subdir is not None:
+            if provider_info['uri'].startswith('file:/'):
+                src = os.path.join(provider_info['uri'].lstrip('file:/'),
+                                   subdir)
+            else:
+                src = os.path.join(data_dir.get_test_provider_dir(provider),
+                                   subdir)
+            provider_info['backends'].update({backend: {'path': src}})
+
+    return provider_info
+
+
+def download_test_provider(provider):
+    """
+    Download a test provider defined on a .ini file inside test-providers.d.
+
+    This function will only download test providers that are in git repos.
+    Local filesystems don't need this functionality.
+
+    :param provider: Test provider name, such as 'io-github-autotest-qemu'.
+    """
+    provider_info = get_test_provider_info(provider)
+    uri = provider_info.get('uri')
+    if not uri.startswith('file:/'):
+        uri = provider_info.get('uri')
+        branch = provider_info.get('branch')
+        ref = provider_info.get('ref')
+        pubkey = provider_info.get('pubkey')
+        download_dst = data_dir.get_test_provider_dir(provider)
+        repo_downloaded = os.path.isdir(os.path.join(download_dst, '.git'))
+        if not repo_downloaded:
+            download_dst = git.get_repo(uri=uri, branch=branch, commit=ref,
+                                        destination_dir=download_dst)
+            os.chdir(download_dst)
+            try:
+                utils.run('git remote add origin %s' % uri)
+            except error.CmdError:
+                pass
+            utils.run('git pull origin %s' % branch)
+        utils.system('git log -1')
+
+
+def download_all_test_providers():
+    """
+    Download all available test providers.
+    """
+    for provider in get_all_test_provider_names():
+        download_test_provider(provider_name)
 
 
 def get_all_assets():
@@ -42,41 +157,28 @@ def get_file_asset(title, src_path, destination):
 
 
 def get_asset_info(asset):
+    asset_info = {}
     asset_path = os.path.join(data_dir.get_download_dir(), '%s.ini' % asset)
-    asset_cfg = ConfigParser.ConfigParser()
-    asset_cfg.read(asset_path)
+    asset_cfg = test_config.config_loader(asset_path)
 
-    url = asset_cfg.get(asset, 'url')
-    try:
-        sha1_url = asset_cfg.get(asset, 'sha1_url')
-    except ConfigParser.NoOptionError:
-        sha1_url = None
-    title = asset_cfg.get(asset, 'title')
+    asset_info['url'] = asset_cfg.get(asset, 'url')
+    asset_info['sha1_url'] = asset_cfg.get(asset, 'sha1_url')
+    asset_info['title'] = asset_cfg.get(asset, 'title')
     destination = asset_cfg.get(asset, 'destination')
     if not os.path.isabs(destination):
         destination = os.path.join(data_dir.get_data_dir(), destination)
-    asset_exists = os.path.isfile(destination)
+    asset_info['destination'] = destination
+    asset_info['asset_exists'] = os.path.isfile(destination)
 
     # Optional fields
-    try:
-        destination_uncompressed = asset_cfg.get(asset,
-                                                 'destination_uncompressed')
-        if not os.path.isabs(destination_uncompressed):
-            destination_uncompressed = os.path.join(data_dir.get_data_dir(),
-                                                    destination_uncompressed)
-    except:
-        destination_uncompressed = None
+    d_uncompressed = asset_cfg.get(asset, 'destination_uncompressed')
+    if d_uncompressed is not None and not os.path.isabs(d_uncompressed):
+        d_uncompressed = os.path.join(data_dir.get_data_dir(),
+                                      d_uncompressed)
+    asset_info['destination_uncompressed'] = d_uncompressed
+    asset_info['uncompress_cmd'] = asset_cfg.get(asset, 'uncompress_cmd')
 
-    try:
-        uncompress_cmd = asset_cfg.get(asset, 'uncompress_cmd')
-    except:
-        uncompress_cmd = None
-
-    return {'url': url, 'sha1_url': sha1_url, 'destination': destination,
-            'destination_uncompressed': destination_uncompressed,
-            'uncompress_cmd': uncompress_cmd, 'shortname': asset,
-            'title': title,
-            'downloaded': asset_exists}
+    return asset_info
 
 
 def uncompress_asset(asset_info, force=False):
