@@ -32,7 +32,7 @@ import time
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
-from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net
+from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net, storage
 import virttest
 
 import libvirt
@@ -351,7 +351,7 @@ def run_image_copy(test, params, env):
     src = params.get('images_good')
     asset_name = '%s' % (os.path.split(params['image_name'])[1])
     image = '%s.%s' % (params['image_name'], params['image_format'])
-    dst_path = '%s/%s' % (virttest.data_dir.get_data_dir(), image)
+    dst_path = storage.get_image_filename(params, data_dir.get_data_dir())
     image_dir = os.path.dirname(dst_path)
     if params.get("rename_error_image", "no") == "yes":
         error_image = os.path.basename(params['image_name']) + "-error"
