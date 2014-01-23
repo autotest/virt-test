@@ -563,9 +563,6 @@ class QRHDrive(QDrive):
         return "__com.redhat_drive_del", {'id': self.get_qid()}
 
 
-# TODO: Add QPCIDrive - using pci_add/pci_del
-
-
 class QDevice(QCustomDevice):
 
     """
@@ -619,7 +616,7 @@ class QDevice(QCustomDevice):
     def unplug_qmp(self):
         """ :return: the unplug monitor command """
         if self.get_qid():
-            return "device_del", self.get_qid()
+            return "device_del", {'id': self.get_qid()}
         else:
             raise DeviceError("Device has no qemu_id.")
 
