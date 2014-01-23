@@ -51,7 +51,13 @@ last_subtest = {'qemu': ['shutdown'],
                 'lvsb': []}
 
 test_filter = ['__init__', 'cfg', 'dropin.py']
-config_filter = ['__init__', ]
+def _get_config_filter():
+    config_filter = ['__init__', ]
+    for provider_subdir in asset.get_test_providers_subdir():
+        config_filter.append('%s/cfg' % provider_subdir)
+    return config_filter
+
+config_filter = _get_config_filter()
 
 
 def verify_recommended_programs(t_type):
