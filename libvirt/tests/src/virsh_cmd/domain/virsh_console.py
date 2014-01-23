@@ -1,7 +1,7 @@
 import re
 import logging
 from autotest.client.shared import error
-from virttest import aexpect
+from virttest import aexpect, utils_test
 from virttest.libvirt_xml import vm_xml, xcepts
 
 
@@ -54,53 +54,6 @@ def vm_console_config(vm, device='ttyS0', speed='115200'):
     vm.destroy()
     # Confirm vm is down
     vm.wait_for_shutdown()
-    return True
-
-
-def verify_virsh_console(session, user, passwd, debug=False):
-    """
-    Run commands in console session.
-    """
-    log = ""
-    console_cmd = "cat /proc/cpuinfo"
-    try:
-        while True:
-            match, text = session.read_until_last_line_matches(
-                [r"[E|e]scape character is", r"login:",
-                 r"[P|p]assword:", session.prompt],
-                timeout=10, internal_timeout=1)
-
-            if match == 0:
-                if debug:
-                    logging.debug("Got '^]', sending '\\n'")
-                session.sendline()
-            elif match == 1:
-                if debug:
-                    logging.debug("Got 'login:', sending '%s'", user)
-                session.sendline(user)
-            elif match == 2:
-                if debug:
-                    logging.debug("Got 'Password:', sending '%s'", passwd)
-                session.sendline(passwd)
-            elif match == 3:
-                if debug:
-                    logging.debug("Got Shell prompt -- logged in")
-                break
-
-        status, output = session.cmd_status_output(console_cmd)
-        logging.info("output of command:\n%s", output)
-        session.close()
-    except (aexpect.ShellError,
-            aexpect.ExpectError), detail:
-        log = session.get_output()
-        logging.error("Verify virsh console failed:\n%s\n%s", detail, log)
-        session.close()
-        return False
-
-    if not re.search("processor", output):
-        logging.error("Verify virsh console failed: Result does not match.")
-        return False
-
     return True
 
 
@@ -158,8 +111,8 @@ def run(test, params, env):
         command = "virsh console %s" % vm_ref
         console_session = aexpect.ShellSession(command)
 
-        status = verify_virsh_console(console_session, login_user,
-                                      login_passwd, debug=True)
+        status = utils_test.libvirt.verify_virsh_console(
+            console_session, login_user, login_passwd, timeout=10, debug=True)
         console_session.close()
 
     finally:

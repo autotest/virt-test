@@ -91,7 +91,7 @@ class VMXMLBase(base.LibvirtXMLBase):
     __slots__ = ('hypervisor_type', 'vm_name', 'uuid', 'vcpu', 'max_mem',
                  'current_mem', 'numa', 'devices', 'seclabel',
                  'cputune', 'emulatorpin', 'cpuset', 'placement',
-                 'current_vcpu')
+                 'current_vcpu', 'os', 'os_type', 'os_arch', 'os_init')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -141,6 +141,27 @@ class VMXMLBase(base.LibvirtXMLBase):
                                 forbidden=None,
                                 parent_xpath='/',
                                 tag_name='currentMemory')
+        accessors.XMLElementText(property_name="os",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='os')
+        accessors.XMLElementText(property_name="os_type",
+                                libvirtxml=self,
+                                forbidden=None,
+                                parent_xpath='/os',
+                                tag_name='type')
+        accessors.XMLAttribute(property_name="os_arch",
+                               libvirtxml=self,
+                               forbidden=None,
+                               parent_xpath='/os',
+                               tag_name='type',
+                               attribute='arch')
+        accessors.XMLElementText(property_name="os_init",
+                                libvirtxml=self,
+                                forbidden=None,
+                                parent_xpath='/os',
+                                tag_name='init')
         accessors.XMLElementDict(property_name="numa",
                                  libvirtxml=self,
                                  forbidden=None,
@@ -187,7 +208,9 @@ class VMXMLBase(base.LibvirtXMLBase):
                                          "subclass not a %s"
                                          % (str(value), str(value_type)))
         # Start with clean slate
-        self.del_devices()
+        exist_dev = self.xmltreefile.find('devices')
+        if exist_dev is not None:
+            self.del_devices()
         if len(value) > 0:
             devices_element = xml_utils.ElementTree.SubElement(
                 self.xmltreefile.getroot(), 'devices')
