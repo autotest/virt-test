@@ -193,19 +193,20 @@ def get_directory_structure(rootdir, guest_file):
 def create_guest_os_cfg(t_type):
     root_dir = data_dir.get_root_dir()
     guest_os_cfg_dir = os.path.join(root_dir, 'shared', 'cfg', 'guest-os')
-    guest_os_cfg_path = os.path.join(root_dir, t_type, 'cfg', 'guest-os.cfg')
+    guest_os_cfg_path = data_dir.get_backend_cfg_path(t_type, 'guest-os.cfg')
     guest_os_cfg_file = open(guest_os_cfg_path, 'w')
     get_directory_structure(guest_os_cfg_dir, guest_os_cfg_file)
 
 
 def create_subtests_cfg(t_type):
-    root_dir = data_dir.get_root_dir()
+    specific_root_dir = data_dir.get_backend_dir(t_type)
+    generic_root_dir = data_dir.get_backend_dir('generic')
 
-    specific_test = os.path.join(root_dir, t_type, 'tests')
+    specific_test = os.path.join(specific_root_dir, 'tests')
     specific_test_list = data_dir.SubdirGlobList(specific_test,
                                                  '*.py',
                                                  test_filter)
-    shared_test = os.path.join(root_dir, 'generic', 'tests')
+    shared_test = os.path.join(generic_root_dir, 'tests')
     if t_type == 'lvsb':
         shared_test_list = []
     else:
@@ -227,9 +228,8 @@ def create_subtests_cfg(t_type):
     all_shared_test_list.sort()
     all_test_list = set(all_specific_test_list + all_shared_test_list)
 
-    specific_test_cfg = os.path.join(root_dir, t_type,
-                                     'tests', 'cfg')
-    shared_test_cfg = os.path.join(root_dir, 'generic', 'tests', 'cfg')
+    specific_test_cfg = os.path.join(specific_root_dir, 'cfg')
+    shared_test_cfg = os.path.join(generic_root_dir, 'cfg')
 
     # lvsb tests can't use VM shared tests
     if t_type == 'lvsb':
@@ -337,7 +337,7 @@ def create_subtests_cfg(t_type):
     dropin_cfg_file.close()
     dropin_file_list_2.append(dropin_cfg_path)
 
-    subtests_cfg = os.path.join(root_dir, t_type, 'cfg', 'subtests.cfg')
+    subtests_cfg = data_dir.get_backend_cfg_path(t_type, 'subtests.cfg')
     subtests_file = open(subtests_cfg, 'w')
     subtests_file.write(
         "# Do not edit, auto generated file from subtests config\n")

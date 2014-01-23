@@ -24,7 +24,7 @@ BACKING_DATA_DIR = None
 class MissingDepsDirError(Exception):
     pass
 
-class UnkownBackendError(Exception):
+class UnknownBackendError(Exception):
     def __init__(self, backend):
         self.backend = backend
     def __str__(self):
