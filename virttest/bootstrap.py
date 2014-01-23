@@ -622,7 +622,7 @@ def verify_selinux(datadir, imagesdir, isosdir, tmpdir,
 def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
               check_modules, online_docs_url, restore_image=False,
               download_image=True, interactive=True, selinux=False,
-              verbose=False):
+              verbose=False, update_providers=False):
     """
     Common virt test assistant module.
 
@@ -638,7 +638,9 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     :param restore_image: Whether to restore the image from the pristine.
     :param interactive: Whether to ask for confirmation.
     :param verbose: Verbose output.
-    :param selinux: Whether setup SELinux contexts for shared/data
+    :param selinux: Whether setup SELinux contexts for shared/data.
+    :param update_providers: Whether to update test providers if they are already
+            downloaded.
 
     :raise error.CmdError: If JeOS image failed to uncompress
     :raise ValueError: If 7za was not found
@@ -648,6 +650,11 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
                                           verbose=verbose)
     logging.info("%s test config helper", test_name)
     step = 0
+
+    logging.info("")
+    step += 1
+    logging.info("%d - Updating all test providers", step)
+    asset.download_all_test_providers(update_providers)
 
     logging.info("")
     step += 1

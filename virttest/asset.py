@@ -85,7 +85,7 @@ def get_test_provider_info(provider):
     return provider_info
 
 
-def download_test_provider(provider):
+def download_test_provider(provider, update=False):
     """
     Download a test provider defined on a .ini file inside test-providers.d.
 
@@ -103,7 +103,7 @@ def download_test_provider(provider):
         pubkey = provider_info.get('pubkey')
         download_dst = data_dir.get_test_provider_dir(provider)
         repo_downloaded = os.path.isdir(os.path.join(download_dst, '.git'))
-        if not repo_downloaded:
+        if not repo_downloaded or update:
             download_dst = git.get_repo(uri=uri, branch=branch, commit=ref,
                                         destination_dir=download_dst)
             os.chdir(download_dst)
@@ -115,12 +115,12 @@ def download_test_provider(provider):
         utils.system('git log -1')
 
 
-def download_all_test_providers():
+def download_all_test_providers(update=False):
     """
     Download all available test providers.
     """
     for provider in get_all_test_provider_names():
-        download_test_provider(provider_name)
+        download_test_provider(provider, update)
 
 
 def get_all_assets():

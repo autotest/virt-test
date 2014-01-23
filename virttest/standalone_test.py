@@ -607,7 +607,8 @@ def bootstrap_tests(options):
               'download_image': not options.no_downloads,
               'selinux': options.selinux_setup,
               'restore_image': not options.keep_image,
-              'interactive': False}
+              'interactive': False,
+              'update_providers': options.update_providers}
 
     # Tolerance we have without printing a message for the user to wait (3 s)
     tolerance = 3
