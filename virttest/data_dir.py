@@ -159,6 +159,10 @@ def get_backend_dir(backend_type):
     return os.path.join(BASE_BACKEND_DIR, backend_type)
 
 
+def get_backend_cfg_path(backend_type, cfg_basename):
+    return os.path.join(BASE_BACKEND_DIR, backend_type, 'cfg', cfg_basename)
+
+
 def get_deps_dir():
     """
     For a given test provider, report the appropriate deps dir.
