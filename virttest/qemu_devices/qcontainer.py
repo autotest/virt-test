@@ -673,14 +673,14 @@ class DevContainer(object):
                 return i
             i += 1
 
-    def cmdline(self):
+    def cmdline(self, dynamic=True):
         """
         Creates cmdline arguments for creating all defined devices
         :return: cmdline of all devices (without qemu-cmd itself)
         """
         out = ""
         for device in self.__devices:
-            _out = device.cmdline()
+            _out = device.cmdline() if dynamic else device.cmdline_nd()
             if _out:
                 out += " %s" % _out
         if out:
