@@ -2869,3 +2869,14 @@ def domfstrim(name, minimum=None, mountpoint=None, options="", **dargs):
 
     cmd += " %s" % options
     return command(cmd, **dargs)
+
+
+def domdisplay(name, options="", **dargs):
+    """
+    Get domain display connection URI
+    :param name: name of domain
+    :param options: options of domdisplay
+    :return: CmdResult object
+    """
+    cmd = "domdisplay %s %s" % (name, options)
+    return command(cmd, **dargs)
