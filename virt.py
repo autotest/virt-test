@@ -6,7 +6,7 @@ import Queue
 from autotest.client import test
 from autotest.client.shared import error
 from virttest import utils_misc, utils_params, utils_env, env_process
-from virttest import data_dir, bootstrap, funcatexit, version
+from virttest import data_dir, bootstrap, funcatexit, version, asset
 
 
 class virt(test.test):
@@ -94,24 +94,34 @@ class virt(test.test):
                                                   " exist." % (subtestdir))
                         subtest_dirs += data_dir.SubdirList(subtestdir,
                                                             bootstrap.test_filter)
+
                     # Verify if we have the correspondent source file for it
-                    shared_test_dir = os.path.dirname(self.virtdir)
-                    shared_test_dir = os.path.join(shared_test_dir, "generic",
-                                                   "tests")
-                    subtest_dirs += data_dir.SubdirList(shared_test_dir,
-                                                        bootstrap.test_filter)
-                    virt_test_dir = os.path.join(self.bindir,
-                                                 params.get("vm_type"), "tests")
-                    # Make sure we can load provider_lib in tests
-                    if os.path.dirname(virt_test_dir) not in sys.path:
-                        sys.path.insert(0, os.path.dirname(virt_test_dir))
-                    subtest_dirs += data_dir.SubdirList(virt_test_dir,
-                                                        bootstrap.test_filter)
+                    for generic_subdir in asset.get_test_provider_subdirs('generic'):
+                        subtest_dirs += data_dir.SubdirList(generic_subdir,
+                                                            bootstrap.test_filter)
+
+                    for specific_subdir in asset.get_test_provider_subdirs(params.get("vm_type")):
+                        subtest_dirs += data_dir.SubdirList(specific_subdir,
+                                                            bootstrap.test_filter)
+
                     subtest_dir = None
 
                     # Get the test routine corresponding to the specified
                     # test type
+                    logging.debug("Searching for test modules that match "
+                                  "'type = %s' and 'provider = %s' "
+                                  "on this cartesian dict",
+                                  params.get("type"), params.get("provider", None))
+
                     t_types = params.get("type").split()
+                    provider = params.get("provider", None)
+                    if provider is not None:
+                        subtest_dirs = [d for d in subtest_dirs if provider in d]
+                    # Make sure we can load provider_lib in tests
+                    for s in subtest_dirs:
+                        if os.path.dirname(s) not in sys.path:
+                            sys.path.insert(0, os.path.dirname(s))
+
                     test_modules = {}
                     for t_type in t_types:
                         for d in subtest_dirs:
