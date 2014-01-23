@@ -2582,7 +2582,7 @@ def nodedev_reattach(name, options="", **dargs):
     return CmdResult
 
 
-def vcpucount(name, options, **dargs):
+def vcpucount(name, options="", **dargs):
     """
     Get the vcpu count of guest.
 
@@ -2594,17 +2594,47 @@ def vcpucount(name, options, **dargs):
     return command(cmd, **dargs)
 
 
+def blockcopy(name, path, dest, options="", **dargs):
+    """
+    Start a block copy operation.
+
+    :param name: name of domain.
+    :param path: fully-qualified path or target of disk.
+    :param dest: path of the copy to create.
+    :param options: options of blockcopy.
+    :param dargs: standardized virsh function API keywords.
+    :return: CmdResult instance.
+    """
+    cmd = "blockcopy %s %s %s %s" % (name, path, dest, options)
+    return command(cmd, **dargs)
+
+
+def blockjob(name, path, options="", **dargs):
+    """
+    Manage active block operations.
+
+    :param name: name of domain.
+    :param path: fully-qualified path or target of disk.
+    :param options: options of blockjob.
+    :param dargs: standardized virsh function API keywords.
+    :return: CmdResult instance.
+    """
+    cmd = "blockjob %s %s %s" % (name, path, options)
+    return command(cmd, **dargs)
+
+
 def domiftune(name, interface, options=None, inbound=None,
               outbound=None, **dargs):
     """
-    Set/get parameters of a virtual interface
-    :param name: name of domain
-    :param interface: interface device (MAC Address)
-    :param inbound: control domain's incoming traffics
-    :param outbound: control domain's outgoing traffics
-    :param options: options may be live, config and current
-    :param dargs: standardized virsh function API keywords
-    :return: CmdResult instance
+    Set/get parameters of a virtual interface.
+
+    :param name: name of domain.
+    :param interface: interface device (MAC Address).
+    :param inbound: control domain's incoming traffics.
+    :param outbound: control domain's outgoing traffics.
+    :param options: options may be live, config and current.
+    :param dargs: standardized virsh function API keywords.
+    :return: CmdResult instance.
     """
     cmd = "domiftune %s %s" % (name, interface)
     if inbound:
@@ -2620,10 +2650,10 @@ def desc(name, options, desc_str, **dargs):
     """
     Show or modify description or title of a domain.
 
-    :param name: name of domain,
+    :param name: name of domain.
     :param options: options for desc command.
-    :param desc_str: new desc message
-    :param dargs: standardized virsh function API keywords
+    :param desc_str: new desc message.
+    :param dargs: standardized virsh function API keywords.
     :return: CmdResult object.
     """
     if desc_str:

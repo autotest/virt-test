@@ -7,6 +7,7 @@ This exports:
 """
 import logging
 import os
+import re
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc
@@ -332,6 +333,17 @@ class QemuImg(storage.QemuImg):
             logging.debug("Image file %s not found", self.image_filename)
             output = None
         return output
+
+    def get_format(self):
+        """
+        Get the fimage file format.
+        """
+        image_info = self.info()
+        if image_info:
+            image_format = re.findall("file format: (\w+)", image_info)[0]
+        else:
+            image_format = None
+        return image_format
 
     def support_cmd(self, cmd):
         """
