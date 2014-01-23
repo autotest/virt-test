@@ -990,7 +990,7 @@ class VM(virt_vm.BaseVM):
 
         def add_numa_node(devices, mem=None, cpus=None, nodeid=None):
             """
-            This function used to add numa node to guest command line
+            This function is used to add numa node to guest command line
             """
             if not devices.has_option("numa"):
                 return ""
@@ -1002,6 +1002,18 @@ class VM(virt_vm.BaseVM):
             if nodeid is not None:
                 numa_cmd += ",nodeid=%s" % nodeid
             return numa_cmd
+
+        def add_balloon(devices, devid=None, bus=None):
+            """
+            This function is used to add balloon device
+            """
+            if not devices.has_option("device"):
+                devices.insert(StrDev('balloon', cmdline=" -balloon virtio"))
+                return
+            dev = QDevice("virtio-balloon-pci", parent_bus=bus)
+            if devid:
+                dev.set_param("id", devid)
+            devices.insert(dev)
 
         # End of command line option wrappers
 
@@ -1704,6 +1716,14 @@ class VM(virt_vm.BaseVM):
                 cmd += add_option_rom(devices, opt_rom)
             if cmd:
                 devices.insert(StrDev('ROM', cmdline=cmd))
+
+        for balloon_device in params.objects("balloon"):
+            params_balloon = params.object_params(balloon_device)
+            balloon_devid = params_balloon.get("balloon_dev_devid")
+            balloon_bus = None
+            if params_balloon.get("balloon_dev_add_bus") == "yes":
+                balloon_bus = pci_bus
+            add_balloon(devices, devid=balloon_devid, bus=balloon_bus)
 
         return devices
 

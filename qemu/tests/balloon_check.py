@@ -85,7 +85,7 @@ class BallooningTest(object):
         if self.params["monitor_type"] == "qmp":
             new_mem = new_mem * 1024 * 1024
         # This should be replaced by proper monitor method call
-        self.vm.monitor.send_args_cmd("balloon value=%s" % new_mem)
+        self.vm.monitor.send_args_cmd("balloon value=%s" % int(new_mem))
         balloon_timeout = float(self.params.get("balloon_timeout", 100))
         status = utils_misc.wait_for((lambda: compare_mem
                                       == self.get_ballooned_memory()),
