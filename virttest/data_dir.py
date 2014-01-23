@@ -11,6 +11,7 @@ import shutil
 
 _ROOT_PATH = os.path.join(sys.modules[__name__].__file__, "..", "..")
 ROOT_DIR = os.path.abspath(_ROOT_PATH)
+BASE_BACKEND_DIR = os.path.join(ROOT_DIR, 'backends')
 DATA_DIR = os.path.join(ROOT_DIR, 'shared', 'data')
 DEPS_DIR = os.path.join(ROOT_DIR, 'shared', 'deps')
 DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'shared', 'downloads')
@@ -22,6 +23,14 @@ BACKING_DATA_DIR = None
 
 class MissingDepsDirError(Exception):
     pass
+
+class UnkownBackendError(Exception):
+    def __init__(self, backend):
+        self.backend = backend
+    def __str__(self):
+        return ("Virt Backend %s is not currently supported by virt-test. "
+                "Check for typos and the list of supported backends" %
+                self.backend)
 
 class SubdirList(list):
 
@@ -142,6 +151,12 @@ def get_root_dir():
 
 def get_data_dir():
     return DATA_DIR
+
+
+def get_backend_dir(backend_type):
+    if not backend_type in os.listdir(BASE_BACKEND_DIR):
+        raise UnknownBackendError(backend_type)
+    return os.path.join(BASE_BACKEND_DIR, backend_type)
 
 
 def get_deps_dir():
