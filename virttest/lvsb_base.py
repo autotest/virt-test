@@ -8,6 +8,15 @@ import logging
 import signal
 import aexpect
 
+# The dictionary maps lvsb_$name_options in the *.cfg to short
+# option in the virt-sandbox command, the $name must be the
+# dictionary key, it's a naming convention for options in the *.cfg.
+_lvsb_option_mapper = {'version': '-V', 'verbose': '-v', \
+                       'debug': '-d', 'connect': '-c', \
+                       'name': '-n', 'mount': '-m', \
+                       'include': '-i', 'includefile': '-I', \
+                       'network': '-N', 'security': '-s', \
+                       'privileged': '-p', 'shell': '-l'}
 
 class SandboxException(Exception):
 
@@ -439,6 +448,19 @@ class TestSandboxes(object):
         self.uri = pop.get('lvsb_uri', 'lxc:///')
         # The command to run inside the sandbox
         self.command = pop.get('lvsb_command')
+        # Allows iterating for the options
+        self.opts_count = int(pop.get('lvsb_opts_count', '1'))
+        # The list to save options
+        self.opts = []
+        for i in range(1, self.opts_count + 1):
+            # Traverse dictionary and get option value
+            for k, v in _lvsb_option_mapper.items():
+                val = pop.get('lvsb_%s_options%d' % (k, i))
+                if val and v:
+                    # If the option and option value exist then append
+                    # them as a tuple into options list
+                    self.opts.append((v, val))
+        logging.debug("All of options: %s", self.opts)
 
     def init_sandboxes(self):
         """
