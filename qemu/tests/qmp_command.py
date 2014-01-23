@@ -17,7 +17,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environmen.
     """
-    def check_result(qmp_o, output=None):
+    def check_result(qmp_o, output=None, exception_list=""):
         """
         Check test result with difference way accoriding to
         result_check.
@@ -34,6 +34,7 @@ def run(test, params, env):
 
         :param qmp_o: output from pre_cmd, qmp_cmd or post_cmd.
         :param o: output from pre_cmd, qmp_cmd or post_cmd or an execpt
+        :param exception_list: element no need check.
         result set in config file.
         """
         if result_check == "equal":
@@ -45,6 +46,8 @@ def run(test, params, env):
         elif result_check == "contain":
             values = output.split(';')
             for value in values:
+                if value in exception_list:
+                    continue
                 if value.strip() not in str(qmp_o):
                     raise error.TestFail("QMP command output does not contain "
                                          "expect result. Expect result: '%s'\n"
@@ -53,6 +56,8 @@ def run(test, params, env):
         elif result_check == "not_contain":
             values = output.split(';')
             for value in values:
+                if value in exception_list:
+                    continue
                 if value in str(qmp_o):
                     raise error.TestFail("QMP command output contains unexpect"
                                          " result. Unexpect result: '%s'\n"
@@ -80,11 +85,16 @@ def run(test, params, env):
                     hmp_version, hmp_package = re.findall(re_str, res[i])[0]
                     if not hmp_package:
                         hmp_package = package
+                    hmp_package = hmp_package.strip()
+                    package = package.strip()
+                    hmp_version = hmp_version.strip()
                     if version != hmp_version or package != hmp_package:
                         raise error.TestFail(msg)
                 else:
                     matches = re.findall(re_str, res[i])
                     for key, val in matches:
+                        if key in exception_list:
+                            continue
                         if '0x' in val:
                             val = long(val, 16)
                             if val != qmp_o[i][key]:
@@ -127,6 +137,8 @@ def run(test, params, env):
             for i in range(len(res)):
                 params = res[i].rstrip().split()
                 for param in params:
+                    if param.rstrip() in exception_list:
+                        continue
                     try:
                         str_o = str(qmp_o.values())
                     except AttributeError:
@@ -221,6 +233,7 @@ def run(test, params, env):
     post_cmd = params.get("post_cmd")
     result_check = params.get("cmd_result_check")
     cmd_return_value = params.get("cmd_return_value")
+    exception_list = params.get("exception_list", "")
 
     # HOOKs
     if result_check == 'qmp_cpu':
@@ -264,12 +277,12 @@ def run(test, params, env):
         if result_check == 'qmp_cpu':
             qmp_cpu_check(output)
         elif result_check == "equal" or result_check == "contain":
-            check_result(output, cmd_return_value)
+            check_result(output, cmd_return_value, exception_list)
         elif result_check == "m_format_q":
-            check_result(output, cmd_return_value)
+            check_result(output, cmd_return_value, exception_list)
         elif 'post' in result_check:
             result_check = result_check.split('_', 1)[1]
-            check_result(post_o, cmd_return_value)
+            check_result(post_o, cmd_return_value, exception_list)
         else:
-            check_result(output, post_o)
+            check_result(output, post_o, exception_list)
     session.close()
