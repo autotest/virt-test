@@ -7,10 +7,9 @@ from autotest.client.shared import git, error
 import data_dir
 import re
 
-# This will be later replaced with a function in data_dir that checks
-# the future 'backends' dir.
-KNOWN_BACKENDS = ['generic', 'qemu', 'openvswitch', 'libvirt', 'libvirt',
-                  'libguestfs', 'openvswitch']
+
+def get_known_backends():
+    return os.listdir(data_dir.BASE_BACKEND_DIR)
 
 
 def get_all_test_provider_names():
@@ -71,7 +70,7 @@ def get_test_provider_info(provider):
     provider_info['pubkey'] = provider_cfg.get('provider', 'pubkey')
     provider_info['backends'] = {}
 
-    for backend in KNOWN_BACKENDS:
+    for backend in get_known_backends():
         subdir = provider_cfg.get(backend, 'subdir')
         if subdir is not None:
             if provider_info['uri'].startswith('file:/'):
