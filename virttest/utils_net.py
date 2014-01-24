@@ -235,6 +235,19 @@ class HwAddrGetError(NetError):
         return "Can not get mac of interface %s" % self.ifname
 
 
+class IPAddrGetError(NetError):
+
+    def __init__(self, mac_addr, details=None):
+        NetError.__init__(self, mac_addr)
+        self.mac_addr = mac_addr
+        self.details = details
+
+    def __str__(self):
+        details_msg = "Get guest nic ['%s'] IP address error" % self.mac_addr
+        details_msg += "error info: %s" % self.details
+        return details_msg
+
+
 class HwOperstarteGetError(NetError):
 
     def __init__(self, ifname, details=None):
@@ -903,6 +916,21 @@ def get_net_if_addrs(if_name, runner=None):
             "mac": re.findall("link/ether (.+?) ", result, re.MULTILINE)}
 
 
+def get_net_if_addrs_win(session, mac_addr):
+    """
+    Try to get windows guest nic address by serial session
+
+    :param session: serial sesssion
+    :param mac_addr:  guest nic mac address
+    :return: List ip addresses of network interface.
+    """
+    ip_address = get_windows_nic_attribute(session, "macaddress",
+                                           mac_addr, "IPAddress",
+                                           global_switch="nicconfig")
+    return  {"ipv4": re.findall('(\d+.\d+.\d+.\d+)"', ip_address),
+             "ipv6": re.findall('(fe80.*?)"', ip_address)}
+
+
 def get_net_if_and_addrs(runner=None):
     """
     :return: Dict of interfaces and their addresses {"ifname": addrs}.
@@ -912,6 +940,56 @@ def get_net_if_and_addrs(runner=None):
     for iface in ifs:
         ret[iface] = get_net_if_addrs(iface, runner)
     return ret
+
+
+def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4"):
+    """
+    Get guest ip addresses by serial session
+
+    :param session: serial session
+    :param mac_addr: nic mac address of the nic that you want get
+    :param os_type: guest os type, windows or linux
+    :param ip_version: guest ip version, ipv4 or ipv6
+    :return: ip addresses of network interface.
+    """
+    try:
+        if os_type == "linux":
+            nic_ifname = get_linux_ifname(session, mac_addr)
+            nic_address = get_net_if_addrs(nic_ifname, session.cmd)
+            info_cmd = "ifconfig -a; ethtool -S %s" % nic_ifname
+        elif os_type == "windows":
+            nic_address = get_net_if_addrs_win(session, mac_addr)
+            info_cmd = "ipconfig /all"
+        else:
+            raise IPAddrGetError(mac_addr, "Unknown os type")
+
+        if nic_address[ip_version]:
+            return nic_address[ip_version][0]
+    except Exception, err:
+        logging.debug(session.cmd_output(info_cmd))
+        raise IPAddrGetError(mac_addr, err)
+
+
+def renew_guest_ip(session, mac_addr, os_type="linux", ip_version="ipv4"):
+    """
+    Renew guest ip by serial session
+
+    :param session: serial session
+    :param mac_addr: nic mac address of the nic that you want renew
+    :param os_type: guest os type, windows or linux
+    :param ip_version: guest ip version, ipv4 or ipv6
+    """
+    if os_type == "linux":
+        nic_ifname = get_linux_ifname(session, mac_addr)
+        renew_cmd =  "ifconfig %s up; " % nic_ifname
+        renew_cmd += "killall dhclient; dhclient %s" % nic_ifname
+    elif os_type == "windows":
+        nic_connectionid = get_windows_nic_attribute(session,
+                                                     "macaddress", mac_addr,
+                                                     "netconnectionid")
+        renew_cmd = 'ipconfig /renew "%s"' % nic_connectionid
+
+    session.cmd_output_safe(renew_cmd)
 
 
 def set_net_if_ip(if_name, ip_addr, runner=None):
@@ -2153,7 +2231,8 @@ def update_mac_ip_address(vm, params, timeout=None):
         vm.virtnet.set_mac_address(vlan, mac)
 
 
-def get_windows_nic_attribute(session, key, value, target, timeout=240):
+def get_windows_nic_attribute(session, key, value, target, timeout=240,
+                              global_switch="nic"):
     """
     Get the windows nic attribute using wmic. All the support key you can
     using wmic to have a check.
@@ -2164,10 +2243,11 @@ def get_windows_nic_attribute(session, key, value, target, timeout=240):
     :param target: which nic attribute you want to get.
 
     """
-    cmd = 'wmic nic where %s="%s" get %s' % (key, value, target)
+    cmd = 'wmic %s where %s="%s" get %s' % (global_switch, key, value, target)
     o = session.cmd(cmd, timeout=timeout).strip()
     if not o:
-        raise error.TestError("Get guest nic attribute %s failed!" % target)
+        err_msg = "Get guest %s attribute %s failed!" % (global_switch,target)
+        raise error.TestError(err_msg)
     return o.splitlines()[-1]
 
 
