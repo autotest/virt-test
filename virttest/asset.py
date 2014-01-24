@@ -12,7 +12,7 @@ def get_known_backends():
     return os.listdir(data_dir.BASE_BACKEND_DIR)
 
 
-def get_all_test_provider_names():
+def get_test_provider_names(backend=None):
     """
     Get the names of all test providers available in test-providers.d.
 
@@ -22,7 +22,12 @@ def get_all_test_provider_names():
     provider_dir = data_dir.get_test_providers_dir()
     for provider in glob.glob(os.path.join(provider_dir, '*.ini')):
         provider_name = os.path.basename(provider).split('.')[0]
-        provider_name_list.append(provider_name)
+        provider_info = get_test_provider_info(provider_name)
+        if backend is not None:
+            if backend in provider_info['backends']:
+                provider_name_list.append(provider_name)
+        else:
+            provider_name_list.append(provider_name)
     return provider_name_list
 
 
@@ -36,7 +41,7 @@ def get_test_provider_subdirs(backend=None):
     :return: List of directories that contain tests for the given backend.
     """
     subdir_list = []
-    for provider_name in get_all_test_provider_names():
+    for provider_name in get_test_provider_names():
         provider_info = get_test_provider_info(provider_name)
         backends_info = provider_info['backends']
         if backend is not None:
@@ -118,7 +123,7 @@ def download_all_test_providers(update=False):
     """
     Download all available test providers.
     """
-    for provider in get_all_test_provider_names():
+    for provider in get_test_provider_names():
         download_test_provider(provider, update)
 
 
