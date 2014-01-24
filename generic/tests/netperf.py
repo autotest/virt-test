@@ -125,7 +125,7 @@ def run(test, params, env):
         utils_test.service_setup(vm, session, test.virtdir)
     session.close()
 
-    server_ip = vm.get_address()
+    server_ip = vm.wait_for_get_address(0, timeout=5)
     server_ctl = vm.wait_for_login(timeout=login_timeout)
     server_ctl_ip = server_ip
     if (params.get("os_type") == "windows"
@@ -140,7 +140,7 @@ def run(test, params, env):
 
     if len(params.get("nics", "").split()) > 1:
         vm.wait_for_login(nic_index=1, timeout=login_timeout)
-        server_ip = vm.get_address(1)
+        server_ip = vm.wait_for_get_address(1, timeout=5)
 
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
@@ -166,7 +166,7 @@ def run(test, params, env):
         if client in params.get("vms"):
             vm_client = env.get_vm(client)
             tmp = vm_client.wait_for_login(timeout=login_timeout)
-            client_ip = vm_client.get_address()
+            client_ip = vm_client.wait_for_get_address(0, timeout=5)
         elif client != "localhost":
             tmp = remote.wait_for_login(params.get("shell_client_client"),
                                         client_ip,
