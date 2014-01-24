@@ -46,7 +46,8 @@ def run(test, params, env):
             if target_device == "hdc":
                 mount_cmd = "mount /dev/sr0 /media"
             else:
-                session.cmd("mknod /dev/fd0 b 2 0")
+                if not os.path.exists("/dev/fd0"):
+                    session.cmd("mknod /dev/fd0 b 2 0")
                 mount_cmd = "mount /dev/fd0 /media"
             session.cmd(mount_cmd)
             session.cmd("test -f /media/%s" % target_file)
@@ -58,7 +59,8 @@ def run(test, params, env):
                 if session.cmd_status("mount /dev/sr0 /media -o loop") == 32:
                     logging.info("Eject succeeded")
             else:
-                session.cmd("mknod /dev/fd0 b 2 0")
+                if not os.path.exists("/dev/fd0"):
+                    session.cmd("mknod /dev/fd0 b 2 0")
                 if session.cmd_status("mount /dev/fd0 /media -o loop") == 32:
                     logging.info("Eject succeeded")
 
@@ -197,22 +199,21 @@ def run(test, params, env):
 
     status = result.exit_status
 
-    if status_error == "no":
-        if options == "--config" and vm.is_alive():
-            vm.destroy()
-        if vm.is_dead():
-            vm.start()
-        session = vm.wait_for_login()
-        # pdb.set_trace()
-        check_media(session, check_file, action)
-        session.close()
-
-    # Clean the iso dir  and clean the device
-    update_device(vm_name, "", options, start_vm)
-    shutil.rmtree(iso_dir)
-
-    # Recover xml of vm.
-    vmxml_backup.sync()
+    try:
+        if status_error == "no":
+            if options == "--config" and vm.is_alive():
+                vm.destroy()
+            if vm.is_dead():
+                vm.start()
+            session = vm.wait_for_login()
+            check_media(session, check_file, action)
+            session.close()
+    finally:
+        # Clean the iso dir  and clean the device
+        update_device(vm_name, "", options, start_vm)
+        # Recover xml of vm.
+        vmxml_backup.sync()
+        utils.safe_rmdir(iso_dir)
 
     # Check status_error
     # Negative testing
