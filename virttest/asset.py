@@ -9,7 +9,14 @@ import re
 
 
 def get_known_backends():
-    return os.listdir(data_dir.BASE_BACKEND_DIR)
+    """
+    Return virtualization backends supported by virt-test.
+    """
+    # Generic means the test can run in multiple backends, such as libvirt
+    # and qemu.
+    known_backends = ['generic']
+    known_backends += os.listdir(data_dir.BASE_BACKEND_DIR)
+    return known_backends
 
 
 def get_test_provider_names(backend=None):
