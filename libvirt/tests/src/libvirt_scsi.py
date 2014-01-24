@@ -11,6 +11,7 @@ from virttest import virt_vm, qemu_storage
 from virttest.libvirt_xml.vm_xml import VMXML
 from virttest.libvirt_xml.devices.disk import Disk
 from virttest.libvirt_xml.devices.controller import Controller
+from virttest.libvirt_xml.xcepts import LibvirtXMLError
 from virttest import data_dir
 
 
@@ -22,6 +23,7 @@ def run(test, params, env):
     partition_type = ('yes' == params.get("libvirt_scsi_partition_type", "no"))
     partition = params.get("libvirt_scsi_partition",
                            "ENTER.YOUR.AVAILABLE.PARTITION")
+    controller = ('yes' == params.get("libvirt_scsi_controller", "yes"))
     vm_name = params.get("main_vm", "virt-tests-vm1")
     # Init a VM instance and a VMXML instance.
     vm = env.get_vm(vm_name)
@@ -30,17 +32,23 @@ def run(test, params, env):
     backup_xml = vmxml.copy()
     # Add a scsi controller if there is not.
     controller_devices = vmxml.get_devices("controller")
-    scsi_controller_exists = False
+    scsi_controllers = []
     for device in controller_devices:
         if device.type == "scsi":
-            scsi_controller_exists = True
-            break
-    if not scsi_controller_exists:
-        scsi_controller = Controller("controller")
-        scsi_controller.type = "scsi"
-        scsi_controller.index = "0"
-        scsi_controller.model = "virtio-scsi"
-        vmxml.add_device(scsi_controller)
+            scsi_controllers.append(device)
+
+    if controller:
+        if not scsi_controllers:
+            scsi_controller = Controller("controller")
+            scsi_controller.type = "scsi"
+            scsi_controller.index = "0"
+            scsi_controller.model = "virtio-scsi"
+            vmxml.add_device(scsi_controller)
+    else:
+        if scsi_controllers:
+            for scsi_controller in scsi_controllers:
+                vmxml.del_device(scsi_controller)
+
     # Add disk with bus of scsi into vmxml.
     if img_type:
         # Init a QemuImg instance.
@@ -79,10 +87,14 @@ def run(test, params, env):
         partition_disk.source = partition_disk.new_disk_source(
             **{'attrs': {'dev': partition}})
         vmxml.add_device(partition_disk)
-    # sync the vmxml with VM.
-    vmxml.sync()
     # Check the result of scsi disk.
     try:
+        # sync the vmxml with VM.
+        try:
+            vmxml.sync()
+        except LibvirtXMLError, e:
+            raise error.TestFail("Test failed in vmxml.sync(), detail:%s." % e)
+
         try:
             vm.start()
             # Start VM successfully.
