@@ -120,6 +120,7 @@ class VM(virt_vm.BaseVM):
             self.device_id = []
             self.pci_devices = []
             self.uuid = None
+            self.remote_sessions = []
 
         self.spice_port = 8000
         self.name = name
