@@ -1,7 +1,7 @@
 import os
 import logging
 from autotest.client.shared import error
-from virttest import virsh, xml_utils, libvirt_storage, libvirt_xml
+from virttest import virsh, data_dir, xml_utils, libvirt_storage, libvirt_xml
 
 
 def pool_check(pool_name, pool_ins):
@@ -47,6 +47,25 @@ def run(test, params, env):
             raise error.TestFail("Require pool: %s exist", exist_pool_name)
         backup_xml = libvirt_xml.PoolXML.backup_xml(exist_pool_name)
         pool_xml = backup_xml
+
+    # backup pool state
+    pool_ins_state = virsh.pool_state_dict()
+    logging.debug("Backed up pool(s): %s", pool_ins_state)
+
+    if "--file" in option:
+        pool_path = os.path.join(data_dir.get_data_dir(), 'images')
+        dir_xml = """
+<pool type='dir'>
+  <name>%s</name>
+  <target>
+    <path>%s</path>
+  </target>
+</pool>
+""" % (pool_name, pool_path)
+        pool_xml = os.path.join(test.tmpdir, pool_xml)
+        xml_object = open(pool_xml, 'w')
+        xml_object.write(dir_xml)
+        xml_object.close()
 
     # Delete the exist pool
     start_pool = False
@@ -96,8 +115,19 @@ def run(test, params, env):
     finally:
         # Recover env
         if pool_ins.is_pool_active(pool_name):
-            virsh.pool_destroy(pool_name)
+            # Special "default" check - for the positive case we undefine
+            # default and replace it.  For the negative case we don't
+            # undefine the pool, but still attempt to create, but we don't
+            # want to destroy the existing default pool (not cool)
+            # For "other" cases, we want to destroy any pool we created
+            if pool_name == exist_pool_name and not undefine_exist_pool:
+                pass
+            else:
+                virsh.pool_destroy(pool_name)
         if undefine_exist_pool and not pool_ins.pool_exists(exist_pool_name):
             virsh.pool_define(backup_xml)
             if start_pool:
                 pool_ins.start_pool(exist_pool_name)
+            # Recover autostart
+            if pool_ins_state[exist_pool_name]['autostart']:
+                virsh.pool_autostart(exist_pool_name, ignore_status=False)
