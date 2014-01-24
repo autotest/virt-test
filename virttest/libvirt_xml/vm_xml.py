@@ -722,7 +722,7 @@ class VMXML(VMXMLBase):
         """
         Add a device into VMXML.
 
-        :param value: instalce of device in libvirt_xml/devices/
+        :param value: instance of device in libvirt_xml/devices/
         """
         devices = self.get_devices()
         for device in devices:
@@ -730,6 +730,24 @@ class VMXML(VMXMLBase):
                 logging.debug("Device %s is already in VM %s.", value, self)
                 return
         devices.append(value)
+        self.set_devices(devices)
+
+    def del_device(self, value):
+        """
+        Remove a device from VMXML
+
+        :param value: instance of device in libvirt_xml/devices/
+        """
+        devices = self.get_devices()
+        not_found = True
+        for device in devices:
+            if device == value:
+                not_found = False
+                devices.remove(device)
+                break
+        if not_found:
+            logging.debug("Device %s does not exist in VM %s." % self)
+            return
         self.set_devices(devices)
 
     @staticmethod
