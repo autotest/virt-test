@@ -2,6 +2,7 @@ import logging
 import re
 from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
+from virttest import utils_test
 
 
 try:
@@ -60,6 +61,9 @@ def run(test, params, env):
 
     # Get the option for the test case
     option = params.get("virsh_nodememstats_options")
+    if option == "max":
+        cell_dict = utils_test.libvirt.get_all_cells()
+        option = len(cell_dict.keys())
 
     # Run test case for 10 iterations
     # (default can be changed in subtests.cfg file)
@@ -86,6 +90,8 @@ def run(test, params, env):
 
         elif status_error == "no":
             if status == 0:
+                if option:
+                    return
                 # From the beginning of a line, group 1 is one or
                 # more word-characters, followed by zero or more
                 # whitespace characters and a ':', then one or
