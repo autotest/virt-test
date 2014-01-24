@@ -196,7 +196,7 @@ class VirshSession(aexpect.ShellSession):
                 return 1, out
         return 0, out
 
-    def cmd_result(self, cmd, ignore_status=False):
+    def cmd_result(self, cmd, ignore_status=False, debug=False):
         """Mimic utils.run()"""
         exit_status, stdout = self.cmd_status_output(cmd)
         stderr = ''  # no way to retrieve this separately
@@ -204,6 +204,8 @@ class VirshSession(aexpect.ShellSession):
         if not ignore_status and exit_status:
             raise error.CmdError(cmd, result,
                                  "Virsh Command returned non-zero exit status")
+        if debug:
+            logging.debug(result)
         return result
 
 
@@ -482,7 +484,7 @@ def command(cmd, **dargs):
         # Utilize persistent virsh session, not suit for readonly mode
         if readonly:
             logging.debug("Ignore readonly flag for this virsh session")
-        ret = session.cmd_result(cmd, ignore_status)
+        ret = session.cmd_result(cmd, ignore_status, debug)
         # Mark return value with session it came from
         ret.from_session_id = session_id
     else:
