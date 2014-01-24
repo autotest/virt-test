@@ -121,6 +121,8 @@ class VM(virt_vm.BaseVM):
             self.vhost_threads = []
             self.devices = None
             self.logs = {}
+            self.remote_sessions = []
+            self.logsessions = {}
 
         self.name = name
         self.params = params
@@ -138,7 +140,6 @@ class VM(virt_vm.BaseVM):
         # }
         # This structure can used in usb hotplug/unplug test.
         self.usb_dev_dict = {}
-        self.logsessions = {}
         self.driver_type = 'qemu'
         self.params['driver_type_' + self.name] = self.driver_type
         # virtnet init depends on vm_type/driver_type being set w/in params
@@ -288,6 +289,19 @@ class VM(virt_vm.BaseVM):
         """
         return [self.get_serial_console_filename(_) for _ in
                 self.params.objects("isa_serials")]
+
+    def cleanup_serial_console(self):
+        """
+        Close serial console and associated log file
+        """
+        if self.serial_console is not None:
+            self.serial_console.close()
+            self.serial_console = None
+        if hasattr(self, "migration_file"):
+            try:
+                os.unlink(self.migration_file)
+            except OSError:
+                pass
 
     def make_create_command(self, name=None, params=None, root_dir=None):
         """

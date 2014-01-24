@@ -501,14 +501,6 @@ class BaseVM(object):
     def __init__(self, name, params):
         self.name = name
         self.params = params
-        #
-        # Assuming all low-level hypervisors will have a serial (like) console
-        # connection to the guest. libvirt also supports serial (like) consoles
-        # (virDomainOpenConsole). subclasses should set this to an object that
-        # is or behaves like aexpect.ShellSession.
-        #
-        self.serial_console = None
-        self.remote_sessions = []
         # Create instance if not already set
         if not hasattr(self, 'instance'):
             self._generate_unique_id()
@@ -1057,14 +1049,7 @@ class BaseVM(object):
         """
         Close serial console and associated log file
         """
-        if self.serial_console is not None:
-            self.serial_console.close()
-            self.serial_console = None
-        if hasattr(self, "migration_file"):
-            try:
-                os.unlink(self.migration_file)
-            except OSError:
-                pass
+        raise NotImplementedError
 
     @error.context_aware
     def serial_login(self, timeout=LOGIN_TIMEOUT,

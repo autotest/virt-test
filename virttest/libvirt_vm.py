@@ -120,6 +120,7 @@ class VM(virt_vm.BaseVM):
             self.device_id = []
             self.pci_devices = []
             self.uuid = None
+            self.remote_sessions = []
 
         self.spice_port = 8000
         self.name = name
@@ -989,6 +990,19 @@ class VM(virt_vm.BaseVM):
                 session.close()
         logging.debug("Set inittab for %s failed.", device)
         return False
+
+    def cleanup_serial_console(self):
+        """
+        Close serial console and associated log file
+        """
+        if self.serial_console is not None:
+            self.serial_console.close()
+            self.serial_console = None
+        if hasattr(self, "migration_file"):
+            try:
+                os.unlink(self.migration_file)
+            except OSError:
+                pass
 
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None, timeout=5.0,
