@@ -104,7 +104,8 @@ class VirshSession(aexpect.ShellSession):
     def __init__(self, virsh_exec=None, uri=None, a_id=None,
                  prompt=r"virsh\s*[\#\>]\s*", remote_ip=None,
                  remote_user=None, remote_pwd=None,
-                 ssh_remote_auth=False, auto_close=False):
+                 ssh_remote_auth=False, readonly=False,
+                 auto_close=False):
         """
         Initialize virsh session server, or client if id set.
 
@@ -151,6 +152,9 @@ class VirshSession(aexpect.ShellSession):
             if self.uri:
                 self.virsh_exec += " -c '%s'" % self.uri
             ssh_cmd = None  # flags not-remote session
+
+        if readonly:
+            self.virsh_exec += " -r"
 
         # aexpect tries to auto close session because no clients connected yet
         aexpect.ShellSession.__init__(self, self.virsh_exec, a_id,
@@ -354,6 +358,7 @@ class VirshPersistent(Virsh):
         # Accessors may call this method, avoid recursion
         virsh_exec = self.__dict_get__('virsh_exec')  # Must exist, can't be None
         uri = self.__dict_get__('uri')  # Must exist, can be None
+        readonly = self.__dict_get__('readonly')
         try:
             remote_user = self.__dict_get__('remote_user')
         except KeyError:
@@ -367,7 +372,8 @@ class VirshPersistent(Virsh):
         # Always create new session
         new_session = VirshSession(virsh_exec, uri, a_id=None,
                                    remote_user=remote_user,
-                                   remote_pwd=remote_pwd)
+                                   remote_pwd=remote_pwd,
+                                   readonly=readonly)
         session_id = new_session.get_id()
         self.__dict_set__('session_id', session_id)
 
