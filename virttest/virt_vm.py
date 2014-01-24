@@ -923,7 +923,7 @@ class BaseVM(object):
         prompt = self.params.get("shell_prompt", "[\#\$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         client = self.params.get("shell_client")
-        address = self.get_address(nic_index)
+        address = self.wait_for_get_address(nic_index)
         port = self.get_port(int(self.params.get("shell_port")))
         log_filename = ("session-%s-%s.log" %
                         (self.name, utils_misc.generate_random_string(4)))
