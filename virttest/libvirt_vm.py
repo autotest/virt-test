@@ -1639,6 +1639,26 @@ class VM(virt_vm.BaseVM):
                 disk_devices[target] = details
         return disk_devices
 
+    def get_first_disk_devices(self):
+        """
+        Get vm's first disk type block devices.
+        """
+        disk = {}
+        options = "--details"
+        result = virsh.domblklist(self.name, options, ignore_status=True,
+                                  uri=self.connect_uri)
+        blklist = result.stdout.strip().splitlines()
+        if result.exit_status != 0:
+            logging.info("Get vm devices failed.")
+        else:
+            blklist = blklist[2:]
+            linesplit = blklist[0].split(None, 4)
+            disk = {'type': linesplit[0],
+                    'device': linesplit[1],
+                    'target': linesplit[2],
+                    'source': linesplit[3]}
+        return disk
+
     def get_max_mem(self):
         """
         Get vm's maximum memory(kilobytes).

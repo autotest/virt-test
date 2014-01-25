@@ -2346,6 +2346,22 @@ def snapshot_delete(name, snapshot, options='', **dargs):
     return command(cmd, **dargs)
 
 
+def blockcommit(name, path, options="", **dargs):
+    """
+    Start a block commit operation.
+
+    :param name: name of domain
+    :param options: options of blockcommit
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "blockcommit %s %s" % (name, path)
+    if options is not None:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
+
+
 def domblkinfo(name, device, **dargs):
     """
     Get block device size info for a domain.
