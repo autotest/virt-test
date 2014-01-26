@@ -1003,12 +1003,14 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     """
     if sub_type is None:
         raise error.TestError("No sub test is found")
-    virt_dir = os.path.dirname(test.virtdir)
-    subtest_dir_virt = os.path.join(virt_dir, "tests")
+    shared_test_dir = os.path.dirname(test.virtdir)
+    shared_test_dir = os.path.join(shared_test_dir, "generic",
+                                   "tests")
+    subtest_dir = None
+    subtest_dirs = data_dir.SubdirList(shared_test_dir)
+
     subtest_dir_specific = os.path.join(test.bindir, params.get('vm_type'),
                                         "tests")
-    subtest_dir = None
-    subtest_dirs = data_dir.SubdirList(subtest_dir_virt)
     subtest_dirs += data_dir.SubdirList(subtest_dir_specific)
     for d in subtest_dirs:
         module_path = os.path.join(d, "%s.py" % sub_type)
@@ -1020,7 +1022,7 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
                               "on either %s or %s "
                               "directory" % (sub_type,
                                              subtest_dir_specific,
-                                             subtest_dir_virt))
+                                             shared_test_dir))
 
     f, p, d = imp.find_module(sub_type, [subtest_dir])
     test_module = imp.load_module(sub_type, f, p, d)
