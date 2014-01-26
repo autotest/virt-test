@@ -29,8 +29,11 @@ def update_config(verbose=None):
     if verbose:
         logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),
                                           verbose=verbose)
-    cur_file = inspect.getfile(inspect.currentframe())
-    t_type = os.path.basename(os.path.dirname(cur_file))
+    # the file structure are changed, so we comment out
+    # the type select code and directly use qemu.
+    # cur_file = inspect.getfile(inspect.currentframe())
+    # t_type = os.path.basename(os.path.dirname(cur_file))
+    t_type = "qemu"
     test_dir = os.path.join(data_dir.get_root_dir(), t_type)
     shared_dir = os.path.join(data_dir.get_root_dir(), "shared")
     bootstrap.create_config_files(test_dir, shared_dir,
