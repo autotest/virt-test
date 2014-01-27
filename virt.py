@@ -28,7 +28,7 @@ class virt(test.test):
         virtdir = os.path.dirname(sys.modules[__name__].__file__)
         self.virtdir = os.path.join(virtdir, "shared")
         # Place where virt software will be built/linked
-        self.builddir = os.path.join(virtdir, params.get("vm_type"))
+        self.builddir = os.path.join(virtdir, 'backends', params.get("vm_type"))
         self.background_errors = Queue.Queue()
 
     def verify_background_errors(self):

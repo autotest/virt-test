@@ -43,7 +43,7 @@ class Test(object):
         self.params = utils_params.Params(params)
         self.bindir = data_dir.get_root_dir()
         self.virtdir = os.path.join(self.bindir, 'shared')
-        self.builddir = os.path.join(self.bindir, params.get("vm_type"))
+        self.builddir = os.path.join(self.bindir, 'backends', params.get("vm_type"))
 
         self.srcdir = os.path.join(self.builddir, 'src')
         if not os.path.isdir(self.srcdir):
