@@ -806,7 +806,8 @@ class VirtTestApp(object):
                                 download_image=(not self.options.no_downloads),
                                 selinux=self.options.selinux_setup,
                                 restore_image=(not self.options.keep_image),
-                                verbose=self.options.verbose)
+                                verbose=self.options.verbose,
+                                update_providers=self.options.update_providers)
             sys.exit(0)
 
 
