@@ -2,7 +2,7 @@ import logging
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import utils_test, utils_misc
-from tests import guest_suspend
+from generic.tests import guest_suspend
 
 
 @error.context_aware
