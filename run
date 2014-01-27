@@ -200,9 +200,10 @@ class VirtTestRunParser(optparse.OptionParser):
                                                        "Requires -t to be set"))
         general.add_option("--update-providers", action="store_true",
                            default=False,
-                           dest="update_providers", help=("Forces test"
+                           dest="update_providers", help=("Forces test "
                                                           "providers to be "
-                                                          "updated. "))
+                                                          "updated (git repos "
+                                                          "will be pulled)"))
         general.add_option("-v", "--verbose", action="store_true",
                            dest="verbose", help=("Exhibit test "
                                                  "messages in the console "
