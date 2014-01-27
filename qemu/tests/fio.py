@@ -7,7 +7,7 @@ import glob
 import time
 from autotest.client.shared import error
 from virttest import utils_misc
-from virttest import utils_test
+from virttest.utils_test import qemu
 from virttest import data_dir
 from autotest.client import utils
 
@@ -44,15 +44,23 @@ def check_status(session, timeout):
 
 
 @error.context_aware
-def run_fio(test, params, env):
+def run(test, params, env):
     """
     Block performance test with fio
     Step1: run test seanario
     Step2: analyse result
     Step3: Put result in ***.RHS which can be used by regression.py
     """
+    def _pin_vm_threads(vm, node):
+        if node:
+            if not isinstance(node, utils_misc.NumaNode):
+                node = utils_misc.NumaNode(int(node))
+            qemu.pin_vm_threads(vm, node)
+
+        return node
+
     def seup_env(session, vm):
-        fio_dir = data_dir.get_deps_dir()
+        fio_dir = data_dir.get_download_dir()
         fio_file = params.get("fio_file")
         vm.copy_files_to("%s/%s" % (fio_dir, fio_file), "/tmp/")
         session.cmd("cd /tmp/ && tar -xjf /tmp/%s" % fio_file)
@@ -96,6 +104,11 @@ def run_fio(test, params, env):
 
     session = vm.wait_for_login(timeout=login_timeout)
 
+    # pin guest vcpus/memory/vhost threads to last numa node of host by default
+    logging.debug(commands.getoutput("numactl --hardware"))
+    logging.debug(commands.getoutput("numactl --show"))
+    _pin_vm_threads(vm, params.get("numa_node"))
+
     # get parameter from dictionary
     fio_cmd = params.get("fio_cmd")
     cmd_timeout = int(params.get("cmd_timeout", 1200))
@@ -135,7 +148,7 @@ def run_fio(test, params, env):
     # get order_list
     order_line = ""
     for order in params.get("order_list").split():
-            order_line += "%s|" % format_result(order)
+        order_line += "%s|" % format_result(order)
 
     # get result tested by each seanario
     for i in params.get('rw').split():
@@ -174,7 +187,6 @@ def run_fio(test, params, env):
                     results = re.findall(params.get("io_pattern"), tmp_result)
                     tmp_result = utils.system_output("egrep 'lat' " +
                                                      "/tmp/fio_result")
-                    logging.info("tmp result is: %s" % tmp_result)
                     laten = re.findall(params.get("laten_pattern"), tmp_result)
                     bw = float(utils_misc.normalize_data_size(results[0][0]))
                     iops = int(results[0][1])
