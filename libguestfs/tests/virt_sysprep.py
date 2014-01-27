@@ -1,10 +1,9 @@
 import logging
 import os
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh, remote, aexpect, virt_vm, utils_misc
+from virttest import libvirt_vm, virsh, remote, aexpect, virt_vm, utils_test
 from virttest.libvirt_xml import vm_xml
 import virttest.utils_libguestfs as lgf
-from virttest.utils_test import libguestfs
 from autotest.client import utils
 
 
@@ -68,7 +67,7 @@ def run(test, params, env):
         try:
             virsh.detach_disk(vm_name, target, extra="--config",
                               ignore_status=False)
-            dst_image_format = utils_misc.get_image_info(dst_image)['format']
+            dst_image_format = utils_test.get_image_info(dst_image)['format']
             options = "--config --subdriver %s" % dst_image_format
             virsh.attach_disk(vm_name, dst_image, target, extra=options,
                               ignore_status=False)
@@ -148,12 +147,12 @@ def run(test, params, env):
         disk = disks.values()[0]
         image = disk['source']
         target = disks.keys()[0]
-        image_info_dict = utils_misc.get_image_info(image)
+        image_info_dict = utils_test.get_image_info(image)
         if sysprep_type == "sparsify" and image_info_dict['format'] != 'qcow2':
             raise error.TestNAError("This test case needs qcow2 format image.")
     else:
         raise error.TestError("Can not get disk of %s" % vm_name)
-    vt = libguestfs.VirtTools(vm, params)
+    vt = utils_test.libguestfs.VirtTools(vm, params)
     fs_type = vt.get_primary_disk_fs_type()
     if fs_type != file_system:
         raise error.TestNAError("This test case gets wrong disk file system."
