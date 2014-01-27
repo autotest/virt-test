@@ -1,5 +1,6 @@
 import re
 import logging
+import os.path
 from virttest import utils_misc, data_dir
 from autotest.client.shared import utils, error
 
@@ -123,7 +124,8 @@ def run(test, params, env):
 
     # Get all models' info from dump file
     dump_file = params.get("dump_file")
-    dump_path = params.get("dump_path", data_dir.get_deps_dir(), "cpuid")
+    default_dump_path = os.path.join(data_dir.get_deps_dir(), "cpuid")
+    dump_path = params.get("dump_path", default_dump_path)
     cpuinfo_file = utils.unmap_url(dump_path, dump_file, dump_path)
     host_flags = utils_misc.get_cpu_flags()
 
