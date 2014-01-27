@@ -235,7 +235,9 @@ class VirshClosure(object):
         new_dargs = self.dict_like_weakref()
         if new_dargs is None:
             new_dargs = {}
-        dargs.update(new_dargs)
+        for key in new_dargs.keys():
+            if key not in dargs.keys():
+                dargs[key] = new_dargs[key]
         return self.reference_function(*args, **dargs)
 
 
