@@ -6,7 +6,7 @@ import re
 import time
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_test, utils_misc, remote, data_dir
+from virttest import utils_test, utils_misc, utils_net, remote, data_dir
 
 
 def format_result(result, base="12", fbase="2"):
@@ -109,6 +109,13 @@ def run(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
 
     session = vm.wait_for_login(timeout=login_timeout)
+
+    queues = int(params.get("queues", 1))
+    ethname = utils_net.get_linux_ifname(session, vm.get_mac_address(0))
+    if queues > 1:
+        session.cmd_status_output("ethtool -L %s combined %s" %
+                                  (ethname, queues))
+
     config_cmds = params.get("config_cmds")
     if config_cmds:
         for config_cmd in config_cmds.split(","):
