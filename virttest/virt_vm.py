@@ -820,7 +820,8 @@ class BaseVM(object):
             try:
                 scrdump_file = os.path.join("/tmp", "scrdump-img.ppm")
                 ref_img_path = self.params.get("bsod_reference_img", "")
-                bsod_base_dir = os.path.join(data_dir.get_deps_dir(),
+                bsod_base_dir = os.path.join(data_dir.get_root_dir(),
+                                             "shared", "deps",
                                              "bsod_img")
                 ref_img = utils_misc.get_path(bsod_base_dir, ref_img_path)
                 try:
