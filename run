@@ -198,6 +198,11 @@ class VirtTestRunParser(optparse.OptionParser):
                                                        "config file editing "
                                                        "will be lost). "
                                                        "Requires -t to be set"))
+        general.add_option("--update-providers", action="store_true",
+                           default=False,
+                           dest="update_providers", help=("Forces test"
+                                                          "providers to be "
+                                                          "updated. "))
         general.add_option("-v", "--verbose", action="store_true",
                            dest="verbose", help=("Exhibit test "
                                                  "messages in the console "
@@ -386,7 +391,9 @@ def variant_only_file(filename):
     """
     from virttest import data_dir
     result = []
-    fullpath = os.path.realpath(os.path.join(data_dir.get_root_dir(), filename))
+    if not os.path.isabs(filename):
+        fullpath = os.path.realpath(os.path.join(data_dir.get_root_dir(),
+                                                 filename))
     for line in open(fullpath).readlines():
         line = line.strip()
         if line.startswith('#') or len(line) < 3:
@@ -398,7 +405,7 @@ def variant_only_file(filename):
 DEFAULT_MACHINE_TYPE = "i440fx"
 DEFAULT_GUEST_OS = "JeOS.19"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
-LIBVIRT_DEFAULT_SET = variant_only_file('libvirt/cfg/default_tests')
+LIBVIRT_DEFAULT_SET = variant_only_file('backends/libvirt/cfg/default_tests')
 LVSB_DEFAULT_SET = ("lvsb_date")
 OVS_DEFAULT_SET = ("load_module, ovs_basic")
 LIBVIRT_INSTALL = "unattended_install.import.import.default_install.aio_native"
@@ -757,7 +764,7 @@ class VirtTestApp(object):
             _restore_stdout()
             logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),
                                               verbose=True)
-            test_dir = os.path.join(data_dir.get_root_dir(), self.options.type)
+            test_dir = data_dir.get_backend_dir(self.options.type)
             shared_dir = os.path.join(data_dir.get_root_dir(), "shared")
             bootstrap.create_config_files(test_dir, shared_dir,
                                           interactive=False,
@@ -788,7 +795,7 @@ class VirtTestApp(object):
             elif self.options.type == "v2v":
                 default_userspace_paths = ["/usr/bin/virt-v2v"]
 
-            test_dir = os.path.join(data_dir.get_root_dir(), self.options.type)
+            test_dir = data_dir.get_backend_dir(self.options.type)
             bootstrap.bootstrap(test_name=self.options.type, test_dir=test_dir,
                                 base_dir=data_dir.get_data_dir(),
                                 default_userspace_paths=default_userspace_paths,
@@ -841,8 +848,7 @@ class VirtTestApp(object):
             cfg = os.path.abspath(self.options.config)
 
         if not self.options.config:
-            cfg = os.path.join(data_dir.get_root_dir(), self.options.type,
-                               "cfg", "tests.cfg")
+            cfg = data_dir.get_backend_cfg_path(self.options.type, 'tests.cfg')
 
         self.cartesian_parser.parse_file(cfg)
         if self.options.type != 'lvsb':

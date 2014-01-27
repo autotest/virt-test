@@ -10,6 +10,7 @@ import shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import aexpect
+import asset
 import utils_misc
 import utils_params
 import utils_env
@@ -41,7 +42,6 @@ class Test(object):
     def __init__(self, params, options):
         self.params = utils_params.Params(params)
         self.bindir = data_dir.get_root_dir()
-        self.testdir = os.path.join(self.bindir, 'generic', 'tests')
         self.virtdir = os.path.join(self.bindir, 'shared')
         self.builddir = os.path.join(self.bindir, params.get("vm_type"))
 
@@ -125,8 +125,9 @@ class Test(object):
             logging.warning("")
 
         # Open the environment file
-        env_filename = os.path.join(self.bindir, params.get("vm_type"),
-                                    params.get("env", "env"))
+        env_filename = os.path.join(
+                            data_dir.get_backend_dir(params.get("vm_type")),
+                            params.get("env", "env"))
         env = utils_env.Env(env_filename, self.env_version)
 
         test_passed = False
@@ -136,7 +137,6 @@ class Test(object):
             try:
                 try:
                     subtest_dirs = []
-                    tests_dir = self.testdir
 
                     other_subtests_dirs = params.get("other_tests_dirs", "")
                     for d in other_subtests_dirs.split():
@@ -149,24 +149,32 @@ class Test(object):
                                                             bootstrap.test_filter)
 
                     # Verify if we have the correspondent source file for it
-                    subtest_dirs += data_dir.SubdirList(self.testdir,
-                                                        bootstrap.test_filter)
-                    specific_testdir = os.path.join(self.bindir,
-                                                    params.get("vm_type"),
-                                                    "tests")
-                    # Make sure we can load provider_lib in tests
-                    if os.path.dirname(specific_testdir) not in sys.path:
-                        sys.path.insert(0, os.path.dirname(specific_testdir))
-                    subtest_dirs += data_dir.SubdirList(specific_testdir,
-                                                        bootstrap.test_filter)
+                    for generic_subdir in asset.get_test_provider_subdirs('generic'):
+                        subtest_dirs += data_dir.SubdirList(generic_subdir,
+                                                            bootstrap.test_filter)
+
+                    for specific_subdir in asset.get_test_provider_subdirs(params.get("vm_type")):
+                        subtest_dirs += data_dir.SubdirList(specific_subdir,
+                                                            bootstrap.test_filter)
+
                     subtest_dir = None
 
                     # Get the test routine corresponding to the specified
                     # test type
                     logging.debug("Searching for test modules that match "
-                                  "param 'type = %s' on this cartesian dict",
-                                  params.get("type"))
+                                  "'type = %s' and 'provider = %s' "
+                                  "on this cartesian dict",
+                                  params.get("type"), params.get("provider", None))
+
                     t_types = params.get("type").split()
+                    provider = params.get("provider", None)
+                    if provider is not None:
+                        subtest_dirs = [d for d in subtest_dirs if provider in d]
+                    # Make sure we can load provider_lib in tests
+                    for s in subtest_dirs:
+                        if os.path.dirname(s) not in sys.path:
+                            sys.path.insert(0, os.path.dirname(s))
+
                     test_modules = {}
                     for t_type in t_types:
                         for d in subtest_dirs:
@@ -410,9 +418,9 @@ def create_config_files(options):
     test_dir = os.path.dirname(shared_dir)
 
     if (options.type and options.config):
-        test_dir = os.path.join(test_dir, options.type)
+        test_dir = data_dir.get_backend_dir(options.type)
     elif options.type:
-        test_dir = os.path.join(test_dir, options.type)
+        test_dir = data_dir.get_backend_dir(options.type)
     elif options.config:
         parent_config_dir = os.path.dirname(options.config)
         parent_config_dir = os.path.dirname(parent_config_dir)
@@ -512,9 +520,12 @@ def print_test_list(options, cartesian_parser):
 
 def get_guest_name_parser(options):
     cartesian_parser = cartesian_config.Parser()
-    cfgdir = os.path.join(data_dir.get_root_dir(), options.type, "cfg")
-    cartesian_parser.parse_file(os.path.join(cfgdir, "machines.cfg"))
-    cartesian_parser.parse_file(os.path.join(cfgdir, "guest-os.cfg"))
+    machines_cfg_path = data_dir.get_backend_cfg_path(options.type,
+                                                      'machines.cfg')
+    guest_os_cfg_path = data_dir.get_backend_cfg_path(options.type,
+                                                      'guest-os.cfg')
+    cartesian_parser.parse_file(machines_cfg_path)
+    cartesian_parser.parse_file(guest_os_cfg_path)
     if options.arch:
         cartesian_parser.only_filter(options.arch)
     if options.machine_type:
@@ -581,11 +592,8 @@ def bootstrap_tests(options):
 
     :param options: OptParse object with program command line options.
     """
-    test_dir = os.path.dirname(sys.modules[__name__].__file__)
-
     if options.type:
-        test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
-                                                options.type))
+        test_dir = data_dir.get_backend_dir(options.type)
     elif options.config:
         parent_config_dir = os.path.dirname(os.path.dirname(options.config))
         parent_config_dir = os.path.dirname(parent_config_dir)
@@ -607,7 +615,8 @@ def bootstrap_tests(options):
               'download_image': not options.no_downloads,
               'selinux': options.selinux_setup,
               'restore_image': not options.keep_image,
-              'interactive': False}
+              'interactive': False,
+              'update_providers': options.update_providers}
 
     # Tolerance we have without printing a message for the user to wait (3 s)
     tolerance = 3

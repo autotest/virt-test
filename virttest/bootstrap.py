@@ -51,7 +51,13 @@ last_subtest = {'qemu': ['shutdown'],
                 'lvsb': []}
 
 test_filter = ['__init__', 'cfg', 'dropin.py']
-config_filter = ['__init__', ]
+def _get_config_filter():
+    config_filter = ['__init__', ]
+    for provider_subdir in asset.get_test_provider_subdirs():
+        config_filter.append(os.path.join('%s' % provider_subdir, 'cfg'))
+    return config_filter
+
+config_filter = _get_config_filter()
 
 
 def verify_recommended_programs(t_type):
@@ -117,23 +123,41 @@ def write_subtests_files(config_file_list, output_file_object, test_type=None):
         output_file_object.write("    - @type_specific:\n")
         output_file_object.write("        variants subtest:\n")
 
-    for config_path in config_file_list:
+    for provider_name, config_path in config_file_list:
         config_file = open(config_path, 'r')
 
         write_test_type_line = False
+        write_provider_line = False
 
         for line in config_file.readlines():
+            if line.startswith('- ') and provider_name is not None:
+                name, deps = line.split(":")
+                name = name.split('-')[-1].strip()
+                if name[0] == "@":
+                    name = name[1:]
+                line = "- %s.%s:%s" % (provider_name, name, deps)
+
             # special virt_test_type line output
             if test_type is not None:
                 if write_test_type_line:
                     type_line = ("                virt_test_type = %s\n" %
                                  test_type)
                     output_file_object.write(type_line)
+                    provider_line = ("                provider = %s\n" %
+                                     provider_name)
+                    output_file_object.write(provider_line)
                     write_test_type_line = False
                 elif line.startswith('- '):
                     write_test_type_line = True
                 output_file_object.write("            %s" % line)
             else:
+                if write_provider_line:
+                    provider_line = ("        provider = %s\n" %
+                                     provider_name)
+                    output_file_object.write(provider_line)
+                    write_provider_line = False
+                elif line.startswith('- '):
+                    write_provider_line = True
                 # regular line output
                 output_file_object.write("    %s" % line)
 
@@ -193,7 +217,7 @@ def get_directory_structure(rootdir, guest_file):
 def create_guest_os_cfg(t_type):
     root_dir = data_dir.get_root_dir()
     guest_os_cfg_dir = os.path.join(root_dir, 'shared', 'cfg', 'guest-os')
-    guest_os_cfg_path = os.path.join(root_dir, t_type, 'cfg', 'guest-os.cfg')
+    guest_os_cfg_path = data_dir.get_backend_cfg_path(t_type, 'guest-os.cfg')
     guest_os_cfg_file = open(guest_os_cfg_path, 'w')
     get_directory_structure(guest_os_cfg_dir, guest_os_cfg_file)
 
@@ -201,49 +225,71 @@ def create_guest_os_cfg(t_type):
 def create_subtests_cfg(t_type):
     root_dir = data_dir.get_root_dir()
 
-    specific_test = os.path.join(root_dir, t_type, 'tests')
-    specific_test_list = data_dir.SubdirGlobList(specific_test,
-                                                 '*.py',
-                                                 test_filter)
-    shared_test = os.path.join(root_dir, 'generic', 'tests')
-    if t_type == 'lvsb':
-        shared_test_list = []
-    else:
-        shared_test_list = data_dir.SubdirGlobList(shared_test,
-                                                   '*.py',
-                                                   test_filter)
+    specific_test_list = []
+    specific_file_list = []
+    specific_subdirs = asset.get_test_provider_subdirs(t_type)
+    provider_names_specific = asset.get_test_provider_names(t_type)
+    for subdir in specific_subdirs:
+        specific_test_list += data_dir.SubdirGlobList(subdir,
+                                                      '*.py',
+                                                      test_filter)
+        specific_file_list += data_dir.SubdirGlobList(subdir,
+                                                      '*.cfg',
+                                                      config_filter)
+
+    shared_test_list = []
+    shared_file_list = []
+    shared_subdirs = asset.get_test_provider_subdirs('generic')
+    provider_names_shared = asset.get_test_provider_names('generic')
+    if not t_type == 'lvsb':
+        for subdir in shared_subdirs:
+            shared_test_list += data_dir.SubdirGlobList(subdir,
+                                                        '*.py',
+                                                        test_filter)
+            shared_file_list += data_dir.SubdirGlobList(subdir,
+                                                        '*.cfg',
+                                                        config_filter)
+
     all_specific_test_list = []
     for test in specific_test_list:
+        path_components = test.split("/")
+        provider_name = None
+        for component in path_components:
+            if component in provider_names_specific:
+                provider_name = component
         basename = os.path.basename(test)
         if basename != "__init__.py":
-            all_specific_test_list.append(basename.split(".")[0])
+            all_specific_test_list.append("%s.%s" %
+                                          (provider_name,
+                                           basename.split(".")[0]))
     all_shared_test_list = []
     for test in shared_test_list:
+        path_components = test.split("/")
+        provider_name = None
+        for component in path_components:
+            if component in provider_names_shared:
+                provider_name = component
         basename = os.path.basename(test)
         if basename != "__init__.py":
-            all_shared_test_list.append(basename.split(".")[0])
+            all_shared_test_list.append("%s.%s" %
+                                        (provider_name,
+                                         basename.split(".")[0]))
 
     all_specific_test_list.sort()
     all_shared_test_list.sort()
     all_test_list = set(all_specific_test_list + all_shared_test_list)
 
-    specific_test_cfg = os.path.join(root_dir, t_type,
-                                     'tests', 'cfg')
-    shared_test_cfg = os.path.join(root_dir, 'generic', 'tests', 'cfg')
-
-    # lvsb tests can't use VM shared tests
-    if t_type == 'lvsb':
-        shared_file_list = []
-    else:
-        shared_file_list = data_dir.SubdirGlobList(shared_test_cfg,
-                                                   "*.cfg",
-                                                   config_filter)
     first_subtest_file = []
     last_subtest_file = []
     non_dropin_tests = []
     tmp = []
 
     for shared_file in shared_file_list:
+        path_components = shared_file.split("/")
+        provider_name = None
+        for component in path_components:
+            if component in provider_names_shared:
+                provider_name = component
         shared_file_obj = open(shared_file, 'r')
         for line in shared_file_obj.readlines():
             line = line.strip()
@@ -254,27 +300,30 @@ def create_subtests_cfg(t_type):
                 values = td['type'].split(" ")
                 for value in values:
                     if t_type not in non_dropin_tests:
-                        non_dropin_tests.append(value)
+                        non_dropin_tests.append("%s.%s" %
+                                                (provider_name, value))
 
         shared_file_name = os.path.basename(shared_file)
         shared_file_name = shared_file_name.split(".")[0]
         if shared_file_name in first_subtest[t_type]:
-            if shared_file_name not in first_subtest_file:
-                first_subtest_file.append(shared_file)
+            if [provider_name, shared_file] not in first_subtest_file:
+                first_subtest_file.append([provider_name, shared_file])
         elif shared_file_name in last_subtest[t_type]:
-            if shared_file_name not in last_subtest_file:
-                last_subtest_file.append(shared_file)
+            if [provider_name, shared_file] not in last_subtest_file:
+                last_subtest_file.append([provider_name, shared_file])
         else:
-            if shared_file_name not in tmp:
-                tmp.append(shared_file)
+            if [provider_name, shared_file] not in tmp:
+                tmp.append([provider_name, shared_file])
     shared_file_list = tmp
-    shared_file_list.sort()
 
-    specific_file_list = data_dir.SubdirGlobList(specific_test_cfg,
-                                                 "*.cfg",
-                                                 config_filter)
     tmp = []
     for shared_file in specific_file_list:
+        path_components = shared_file.split("/")
+        provider_name = None
+        for component in path_components:
+            if component in provider_names_specific:
+                provider_name = component
+
         shared_file_obj = open(shared_file, 'r')
         for line in shared_file_obj.readlines():
             line = line.strip()
@@ -285,21 +334,21 @@ def create_subtests_cfg(t_type):
                 values = td['type'].split(" ")
                 for value in values:
                     if value not in non_dropin_tests:
-                        non_dropin_tests.append(value)
+                        non_dropin_tests.append("%s.%s" %
+                                                (provider_name, value))
 
         shared_file_name = os.path.basename(shared_file)
         shared_file_name = shared_file_name.split(".")[0]
         if shared_file_name in first_subtest[t_type]:
-            if shared_file_name not in first_subtest_file:
-                first_subtest_file.append(shared_file)
+            if [provider_name, shared_file] not in first_subtest_file:
+                first_subtest_file.append([provider_name, shared_file])
         elif shared_file_name in last_subtest[t_type]:
-            if shared_file_name not in last_subtest_file:
-                last_subtest_file.append(shared_file)
+            if [provider_name, shared_file] not in last_subtest_file:
+                last_subtest_file.append([provider_name, shared_file])
         else:
-            if shared_file_name not in tmp:
-                tmp.append(shared_file)
+            if [provider_name, shared_file] not in tmp:
+                tmp.append([provider_name, shared_file])
     specific_file_list = tmp
-    specific_file_list.sort()
 
     non_dropin_tests.sort()
     non_dropin_tests = set(non_dropin_tests)
@@ -308,16 +357,20 @@ def create_subtests_cfg(t_type):
     tmp_dir = data_dir.get_tmp_dir()
     if not os.path.isdir(tmp_dir):
         os.makedirs(tmp_dir)
+
     for dropin_test in dropin_tests:
+        provider = dropin_test.split(".")[0]
+        d_type = dropin_test.split(".")[-1]
         autogen_cfg_path = os.path.join(tmp_dir,
                                         '%s.cfg' % dropin_test)
         autogen_cfg_file = open(autogen_cfg_path, 'w')
         autogen_cfg_file.write("# Drop-in test - auto generated snippet\n")
         autogen_cfg_file.write("- %s:\n" % dropin_test)
         autogen_cfg_file.write("    virt_test_type = %s\n" % t_type)
-        autogen_cfg_file.write("    type = %s\n" % dropin_test)
+        autogen_cfg_file.write("    type = %s\n" % d_type)
+        autogen_cfg_file.write("    provider = %s\n" % provider)
         autogen_cfg_file.close()
-        dropin_file_list.append(autogen_cfg_path)
+        dropin_file_list.append([None, autogen_cfg_path])
 
     dropin_file_list_2 = []
     dropin_tests = os.listdir(os.path.join(data_dir.get_root_dir(), "dropin"))
@@ -335,12 +388,14 @@ def create_subtests_cfg(t_type):
         dropin_cfg_file.write("            start_vm = no\n")
         dropin_cfg_file.write("            dropin_path = %s\n" % dropin_test)
     dropin_cfg_file.close()
-    dropin_file_list_2.append(dropin_cfg_path)
+    dropin_file_list_2.append([None, dropin_cfg_path])
 
-    subtests_cfg = os.path.join(root_dir, t_type, 'cfg', 'subtests.cfg')
+    subtests_cfg = os.path.join(root_dir, 'backends', t_type, 'cfg',
+                                'subtests.cfg')
     subtests_file = open(subtests_cfg, 'w')
     subtests_file.write(
         "# Do not edit, auto generated file from subtests config\n")
+
     subtests_file.write("variants subtest:\n")
     write_subtests_files(first_subtest_file, subtests_file)
     write_subtests_files(specific_file_list, subtests_file, t_type)
@@ -622,7 +677,7 @@ def verify_selinux(datadir, imagesdir, isosdir, tmpdir,
 def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
               check_modules, online_docs_url, restore_image=False,
               download_image=True, interactive=True, selinux=False,
-              verbose=False):
+              verbose=False, update_providers=False):
     """
     Common virt test assistant module.
 
@@ -638,7 +693,9 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     :param restore_image: Whether to restore the image from the pristine.
     :param interactive: Whether to ask for confirmation.
     :param verbose: Verbose output.
-    :param selinux: Whether setup SELinux contexts for shared/data
+    :param selinux: Whether setup SELinux contexts for shared/data.
+    :param update_providers: Whether to update test providers if they are already
+            downloaded.
 
     :raise error.CmdError: If JeOS image failed to uncompress
     :raise ValueError: If 7za was not found
@@ -648,6 +705,11 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
                                           verbose=verbose)
     logging.info("%s test config helper", test_name)
     step = 0
+
+    logging.info("")
+    step += 1
+    logging.info("%d - Updating all test providers", step)
+    asset.download_all_test_providers(update_providers)
 
     logging.info("")
     step += 1

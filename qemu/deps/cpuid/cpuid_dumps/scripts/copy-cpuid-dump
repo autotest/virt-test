@@ -1,3 +1,0 @@
-#!/bin/bash
-DISK="$1"
-guestfish -r -a "$DISK" --format=qcow2 -i cat /root/cpuid.txt
