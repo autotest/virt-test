@@ -147,7 +147,7 @@ def run(test, params, env):
 
     if len(params.get("nics", "").split()) > 1:
         vm.wait_for_login(nic_index=1, timeout=login_timeout)
-        server_ip = vm.get_address(1)
+        server_ctl_ip = vm.get_address(1)
 
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
