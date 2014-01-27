@@ -41,19 +41,23 @@ def run(test, params, env):
     if "enforce" not in extra_flags:
         raise error.TestError("pls add 'enforce' params to the cmd line")
 
-    msg_res = params.get("msg_restricted", "flag restricted to guest")
-    msg_lack = params.get("msg_lack", "lacks requested flag")
+    msg_unavailable = params.get("msg_unavailable", "").split(":")
     msg_unknow = params.get("msg_unknow", "not found")
     try:
         error.context("boot guest with -cpu %s,%s" % (guest_cpumodel,
-                                                      extra_flags), logging.info)
+                                                      extra_flags),
+                                                      logging.info)
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
-    except Exception, e:
-        if msg_lack in str(e) or msg_res in str(e) or msg_unknow in str(e):
-            logging.info("flags lacked in host, guest force quit")
+    except Exception, err:
+        tmp_flag = False
+        for msg in msg_unavailable:
+            if msg in str(err):
+                tmp_flag = True
+        if tmp_flag or msg_unknow in str(err):
+            logging.info("unavailable host feature, guest force quit")
         else:
-            raise error.TestFail("guest quit with error\n%s" % str(e))
+            raise error.TestFail("guest quit with error\n%s" % str(err))
 
     vm = env.get_vm(params["main_vm"])
     if force_quit:
