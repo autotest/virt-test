@@ -72,7 +72,7 @@ class virt(test.test):
         other_subtests_dirs = params.get("other_tests_dirs", "")
         if other_subtests_dirs:
             env_path = other_subtests_dirs
-        env_filename = os.path.join(self.bindir, env_path,
+        env_filename = os.path.join(self.bindir, "backends", env_path,
                                     params.get("env", "env"))
         env = utils_env.Env(env_filename, self.env_version)
 
