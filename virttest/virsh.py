@@ -339,7 +339,8 @@ class VirshPersistent(Virsh):
                     existing = VirshSession(a_id=session_id)
                     if existing.is_alive():
                         self.counter_decrease()
-                except aexpect.ShellStatusError:
+                except (aexpect.ShellStatusError,
+                        aexpect.ShellProcessTerminatedError):
                     # session was already closed
                     pass  # don't check is_alive or update counter
                 self.__dict_del__("session_id")
