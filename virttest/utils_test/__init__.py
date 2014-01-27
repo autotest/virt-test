@@ -1261,3 +1261,32 @@ def get_image_info(image_file):
     except (KeyError, IndexError, ValueError, error.CmdError), detail:
         raise error.TestError("Fail to get information of %s:\n%s" %
                               (image_file, detail))
+
+
+def ntpdate(service_ip, session=None):
+    """
+    set the date and time via NTP
+    """
+    try:
+        ntpdate_cmd = "ntpdate %s" % service_ip
+        if session:
+            session.cmd(ntpdate_cmd)
+        else:
+            utils.run(ntpdate_cmd)
+    except (error.CmdError, aexpect.ShellError), detail:
+        raise error.TestFail("Failed to set the date and time. %s" % detail)
+
+
+def get_date(session=None):
+    """
+    Get the date time
+    """
+    try:
+        date_cmd = "date +%s"
+        if session:
+            date_info = session.cmd_output(date_cmd).strip()
+        else:
+            date_info = utils.run(date_cmd).stdout.strip()
+        return date_info
+    except (error.CmdError, aexpect.ShellError), detail:
+        raise error.TestFail("Get date failed. %s " % detail)
