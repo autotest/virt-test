@@ -27,7 +27,7 @@ def run(test, params, env):
 
         :param type: type of stress test.
         """
-        from tests import autotest_control
+        from generic.tests import autotest_control
 
         timeout = 0
 

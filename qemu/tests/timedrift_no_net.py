@@ -4,7 +4,7 @@ from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_test
 from virttest import utils_misc
-from tests.guest_suspend import GuestSuspendBaseTest
+from generic.tests.guest_suspend import GuestSuspendBaseTest
 
 
 class GuestSuspendSerialConsole(GuestSuspendBaseTest):

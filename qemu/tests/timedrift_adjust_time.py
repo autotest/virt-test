@@ -6,7 +6,7 @@ from autotest.client.shared import error
 from autotest.client.shared import utils
 from virttest import data_dir
 from virttest import env_process
-from tests.guest_suspend import GuestSuspendBaseTest
+from generic.tests.guest_suspend import GuestSuspendBaseTest
 
 
 class TimedriftTest(object):
