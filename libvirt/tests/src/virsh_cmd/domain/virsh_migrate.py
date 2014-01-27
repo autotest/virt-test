@@ -4,7 +4,7 @@ import re
 import time
 import codecs
 from autotest.client.shared import error
-from virttest import utils_test, virsh, utils_libvirtd, utils_misc
+from virttest import utils_test, virsh, utils_libvirtd
 from virttest.libvirt_xml import vm_xml
 
 
@@ -134,7 +134,7 @@ def run(test, params, env):
             if not s_detach:
                 logging.error("Detach vda failed before test.")
 
-        subdriver = utils_misc.get_image_info(shared_storage)['format']
+        subdriver = utils_test.get_image_info(shared_storage)['format']
         extra_attach = ("--config --driver qemu --subdriver %s --cache none"
                         % subdriver)
         s_attach = virsh.attach_disk(vm_name, shared_storage, "vda",
