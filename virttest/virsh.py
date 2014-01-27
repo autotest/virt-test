@@ -2869,3 +2869,14 @@ def domfstrim(name, minimum=None, mountpoint=None, options="", **dargs):
 
     cmd += " %s" % options
     return command(cmd, **dargs)
+
+
+def reset(name, **dargs):
+    """
+    Reset a domain
+
+    :param name: name of domain
+    :return: CmdResult object
+    """
+    cmd = "reset %s" % name
+    return command(cmd, **dargs)
