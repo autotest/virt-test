@@ -3,7 +3,7 @@ import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_misc, funcatexit, utils_test, data_dir
-from tests import autotest_control
+from generic.tests import autotest_control
 
 try:
     from virttest.staging import utils_memory
