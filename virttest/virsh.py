@@ -1633,6 +1633,50 @@ def pool_list(option="", extra="", **dargs):
     return command("pool-list %s %s" % (option, extra), **dargs)
 
 
+def pool_uuid(name, **dargs):
+    """
+    Convert a pool name to pool UUID
+
+    :param name: Name of the pool
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("pool-uuid %s" % name, **dargs)
+
+
+def pool_name(uuid, **dargs):
+    """
+    Convert a pool UUID to pool name
+
+    :param name: UUID of the pool
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("pool-name %s" % uuid, **dargs)
+
+
+def pool_refresh(name, **dargs):
+    """
+    Refresh a pool
+
+    :param name: Name of the pool
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("pool-refresh %s" % name, **dargs)
+
+
+def pool_delete(name, **dargs):
+    """
+    Destroy the resources used by a given pool object
+
+    :param name: Name of the pool
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("pool-delete %s" % name, **dargs)
+
+
 def pool_define_as(name, pool_type, target, extra="", **dargs):
     """
     Define the pool from the arguments
@@ -1660,7 +1704,7 @@ def pool_define_as(name, pool_type, target, extra="", **dargs):
     elif not pool_type:
         pool_type = types[0]
 
-    logging.info("Define %s type pool %s", pool_type, name)
+    logging.debug("Try to define %s type pool %s", pool_type, name)
     cmd = "pool-define-as --name %s --type %s --target %s %s" \
           % (name, pool_type, target, extra)
     return command(cmd, **dargs)
@@ -1669,6 +1713,7 @@ def pool_define_as(name, pool_type, target, extra="", **dargs):
 def pool_start(name, extra="", **dargs):
     """
     Start the defined pool
+
     :param name: Name of the pool to be started
     :param extra: Free-form string of options
     :param dargs: standardized virsh function API keywords
@@ -1680,6 +1725,7 @@ def pool_start(name, extra="", **dargs):
 def pool_autostart(name, extra="", **dargs):
     """
     Mark for autostart of a pool
+
     :param name: Name of the pool to be mark for autostart
     :param extra: Free-form string of options
     :param dargs: standardized virsh function API keywords

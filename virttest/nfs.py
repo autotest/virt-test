@@ -165,12 +165,25 @@ class Nfs(object):
 
     def is_mounted(self):
         """
-        Check the NFS is mouunted or not.
+        Check the NFS is mounted or not.
 
         :return: If the src is mounted as expect
         :rtype: Boolean
         """
         return utils_misc.is_mounted(self.mount_src, self.mount_dir, "nfs")
+
+    def mount(self):
+        """
+        Mount source into given mount point.
+        """
+        return utils_misc.mount(self.mount_src, self.mount_dir, "nfs",
+                                perm=self.mount_options)
+
+    def umount(self):
+        """
+        Umount the given mount point.
+        """
+        return utils_misc.umount(self.mount_src, self.mount_dir, "nfs")
 
     def setup(self):
         """
@@ -197,9 +210,7 @@ class Nfs(object):
 
         if not os.path.isdir(self.mount_dir):
             os.makedirs(self.mount_dir)
-
-        utils_misc.mount(self.mount_src, self.mount_dir, "nfs",
-                         perm=self.mount_options)
+        self.mount()
 
     def cleanup(self):
         """
@@ -208,6 +219,6 @@ class Nfs(object):
         Umount NFS from the mount point. If there has some change for exported
         file system in host when setup, also clean up that.
         """
-        utils_misc.umount(self.mount_src, self.mount_dir, "nfs")
+        self.umount()
         if self.nfs_setup and self.unexportfs_in_clean:
             self.exportfs.reset_export()
