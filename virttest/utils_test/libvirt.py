@@ -21,9 +21,12 @@ import os
 import logging
 from virttest import virsh, xml_utils, iscsi, nfs, data_dir
 from autotest.client import utils
-from autotest.client import lv_utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
+try:
+    from autotest.client import lv_utils
+except ImportError:
+    from virttest.staging import lv_utils
 
 
 def cpus_parser(cpulist):
