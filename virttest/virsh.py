@@ -1841,7 +1841,7 @@ def vol_key(volume_name, pool_name, extra="", **drags):
                    (volume_name, pool_name, extra), **drags)
 
 
-def vol_info(volume_name, extra="", **drags):
+def vol_info(volume_name, pool_name, extra="", **drags):
     """
     Prints the given volume info
 
@@ -1850,7 +1850,12 @@ def vol_info(volume_name, extra="", **drags):
     :param dargs: standardized virsh function API keywords
     :return: returns the output of the command
     """
-    return command("vol-info --vol %s %s" % (volume_name, extra), **drags)
+    cmd = "vol-info --vol %s" % volume_name
+    if pool_name:
+        cmd += " --pool %s" % pool_name
+    if extra:
+        cmd += " %s" % extra
+    return command(cmd, **drags)
 
 
 def vol_name(volume_key, extra="", **drags):

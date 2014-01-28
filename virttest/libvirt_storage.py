@@ -9,6 +9,7 @@ This exports:
 
 import re
 import logging
+import time
 from autotest.client.shared import error
 import storage
 import virsh
@@ -336,3 +337,104 @@ class StoragePool(object):
             return False
         logging.info("Defined pool '%s'", name)
         return True
+
+
+class PoolVolume(object):
+
+    """Volume Manager for libvirt storage pool."""
+
+    def __init__(self, pool_name, virsh_instance=virsh):
+        self.pool_name = pool_name
+        self.virsh_instance = virsh_instance
+
+    def list_volumes(self):
+        """
+        Return a dict include volumes' name(key) and path(value).
+        """
+        result = self.virsh_instance.vol_list(self.pool_name,
+                                              ignore_status=False)
+        volumes = {}
+        lines = result.stdout.strip().splitlines()
+        if len(lines) > 2:
+            head = lines[0]
+            lines = lines[2:]
+        else:
+            return volumes
+
+        for line in lines:
+            # Path may be not standard unix path
+            try:
+                path = re.findall("\s+/.*", line)[0]
+            except IndexError:
+                # Do not find a path
+                path = ""
+            name = line.split(path)[0]
+            volumes[name] = path.strip()
+        return volumes
+
+    def volume_exists(self, name):
+        try:
+            volumes = self.list_volumes()
+        except error.CmdError:
+            return False
+        return name in volumes
+
+    def volume_info(self, name):
+        """
+        Get volume's information with command vol-info.
+        """
+        info = {}
+        try:
+            result = self.virsh_instance.vol_info(name, self.pool_name,
+                                                  ignore_status=False)
+        except error.CmdError, detail:
+            logging.error("Get volume information failed:%s", detail)
+            return info
+
+        for line in result.stdout.strip().splitlines():
+            attr = line.split(':')[0]
+            value = line.split("%s:" % attr)[-1].strip()
+            info[attr] = value
+        return info
+
+    def create_volume(self, name, capability,
+                      allocation=None, frmt=None):
+        """
+        Create a volume in pool.
+        """
+        if self.volume_exists(name):
+            logging.debug("Volume '%s' already exists.", name)
+            return False
+        try:
+            self.virsh_instance.vol_create_as(name, self.pool_name,
+                                              capability, allocation, frmt,
+                                              ignore_status=False, debug=True)
+        except error.CmdError, detail:
+            logging.error("Create volume failed:%s", detail)
+            return False
+
+        if not self.volume_exists(name):
+            logging.error("Created volume does not exist.")
+            return False
+        return True
+
+    def delete_volume(self, name):
+        """
+        Remove a volume.
+        """
+        if self.volume_exists(name):
+            try:
+                self.virsh_instance.vol_delete(name, self.pool_name,
+                                               ignore_status=False)
+            except error.CmdError, detail:
+                logging.error("Delete volume failed:%s", detail)
+                return False
+            if not self.volume_exists(name):
+                logging.debug("Volume '%s' has been deleted.", name)
+                return True
+            else:
+                logging.debug("Delete volume '%s' failed.", name)
+                return False
+        else:
+            logging.info("Volume '%s' does not exist.", name)
+            return True     # Return True for expected result
