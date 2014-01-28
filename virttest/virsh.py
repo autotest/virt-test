@@ -1413,7 +1413,13 @@ def net_state_dict(only_names=False, virsh_instance=None, **dargs):
         net_list_result = net_list("--all", **dargs)
     # If command failed, exception would be raised here
     netlist = net_list_result.stdout.strip().splitlines()
-    # First two lines contain table header
+    # First two lines contain table header followed by entries
+    # for each pool on the host, such as:
+    #
+    #   Name                 State      Autostart     Persistent
+    #  ----------------------------------------------------------
+    #   default              active     yes           yes
+    #
     # TODO: Double-check first-two lines really are header
     netlist = netlist[2:]
     result = {}
@@ -1421,7 +1427,7 @@ def net_state_dict(only_names=False, virsh_instance=None, **dargs):
         # Split on whitespace, assume 3 columns
         linesplit = line.split(None, 3)
         name = linesplit[0]
-        # Several callers in libvirt_xml only requre defined names
+        # Several callers in libvirt_xml only require defined names
         if only_names:
             result[name] = None
             continue
@@ -1675,6 +1681,51 @@ def pool_delete(name, **dargs):
     :return: CmdResult object
     """
     return command("pool-delete %s" % name, **dargs)
+
+
+def pool_state_dict(only_names=False, **dargs):
+    """
+    Return pool name to state/autostart mapping
+
+    :param only_names: When true, return pool names as keys and None values
+    :param dargs: standardized virsh function API keywords
+    :return: dictionary
+    """
+    # Using multiple virsh commands in different ways
+    dargs['ignore_status'] = False  # force problem detection
+    pool_list_result = pool_list("--all", **dargs)
+    # If command failed, exception would be raised here
+    poollist = pool_list_result.stdout.strip().splitlines()
+    # First two lines contain table header followed by entries
+    # for each pool on the host, such as:
+    #
+    #   Name                 State      Autostart
+    #  -------------------------------------------
+    #   default              active     yes
+    #   iscsi-net-pool       active     yes
+    #
+    # TODO: Double-check first-two lines really are header
+    poollist = poollist[2:]
+    result = {}
+    for line in poollist:
+        # Split on whitespace, assume 3 columns
+        linesplit = line.split(None, 3)
+        name = linesplit[0]
+        # Several callers in libvirt_xml only require defined names
+        #  TODO: Copied from net_state_dict where this is true, but
+        #        as of writing only caller is virsh_pool_create test
+        #        which doesn't use this 'feature'.
+        if only_names:
+            result[name] = None
+            continue
+        # Keep search fast & avoid first-letter capital problems
+        active = not bool(linesplit[1].count("nactive"))
+        autostart = bool(linesplit[2].count("es"))
+
+        # Warning: These key names are used by libvirt_xml and test modules!
+        result[name] = {'active': active,
+                        'autostart': autostart}
+    return result
 
 
 def pool_define_as(name, pool_type, target, extra="", **dargs):
