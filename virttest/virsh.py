@@ -235,7 +235,9 @@ class VirshClosure(object):
         new_dargs = self.dict_like_weakref()
         if new_dargs is None:
             new_dargs = {}
-        dargs.update(new_dargs)
+        for key in new_dargs.keys():
+            if key not in dargs.keys():
+                dargs[key] = new_dargs[key]
         return self.reference_function(*args, **dargs)
 
 
@@ -3038,4 +3040,64 @@ def nwfilter_edit(name, options="", **dargs):
     :return: CmdResult object
     """
     cmd = "nwfilter-edit %s %s" % (name, options)
+    return command(cmd, **dargs)
+
+
+def cd(dir_path, options="", **dargs):
+    """
+    Run cd command in virsh interactive session.
+
+    :param dir_path: dir path string
+    :param options: extra options
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "cd --dir %s %s" % (dir_path, options)
+    return command(cmd, **dargs)
+
+
+def pwd(options="", **dargs):
+    """
+    Run pwd command in virsh session.
+
+    :param options: extra options
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "pwd %s" % options
+    return command(cmd, **dargs)
+
+
+def echo(echo_str, options="", **dargs):
+    """
+    Run echo command in virsh session.
+
+    :param echo_str: the echo string
+    :param options: extra options
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "echo %s %s" % (echo_str, options)
+    return command(cmd, **dargs)
+
+
+def exit(**dargs):
+    """
+    Run exit command in virsh session.
+
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "exit"
+    return command(cmd, **dargs)
+
+
+def quit(**dargs):
+    """
+    Run quit command in virsh session.
+
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "quit"
     return command(cmd, **dargs)
