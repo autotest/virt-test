@@ -168,6 +168,52 @@ def clean_up_snapshots(vm_name, snapshot_list=[]):
             os.system('rm -f %s' % snap_disk_path)
 
 
+def check_blockjob(vm_name, target, check_point="none", value="0"):
+    """
+    Run blookjob command to check block job progress, bandwidth, ect.
+
+    :param vm_name: Domain name
+    :param target: Domian disk target dev
+    :param check_point: Job progrss, bandwidth or none(no job)
+    :param value: Value of progress, bandwidth or 0(no job)
+    :return: Boolean value, true for pass, false for fail
+    """
+    if check_point not in ["progress", "bandwidth", "none"]:
+        logging.error("Check point must be: progress, bandwidth or none")
+        return False
+
+    try:
+        cmd_result = virsh.blockjob(vm_name, target, "--info", ignore_status=True)
+        output = cmd_result.stdout.strip()
+        err = cmd_result.stderr.strip()
+        status = cmd_result.exit_status
+    except:
+        raise error.TestFail("Error occur when running blockjob command.")
+    if status == 0:
+        # libvirt print job progress to stderr
+        if not len(err):
+            logging.debug("No block job find")
+            if check_point == "none":
+                return True
+        else:
+            if check_point == "none":
+                logging.error("Expect no job but find block job:\n%s", err)
+            elif check_point == "progress":
+                progress = value + " %"
+                if re.search(progress, err):
+                    return True
+            elif check_point == "bandwidth":
+                bandwidth = value + " MiB/s"
+                if bandwidth == output.split(':')[1].strip():
+                    logging.debug("Bandwidth is equal to %s", bandwidth)
+                    return True
+                else:
+                    logging.error("Bandwidth is not equal to %s", bandwidth)
+    else:
+        logging.error("Run blockjob command fail")
+    return False
+
+
 def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False):
     """
     Set up or clean up nfs service on localhost.
