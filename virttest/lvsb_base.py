@@ -439,6 +439,8 @@ class TestSandboxes(object):
         self.uri = pop.get('lvsb_uri', 'lxc:///')
         # The command to run inside the sandbox
         self.command = pop.get('lvsb_command')
+        # Dynamically allocate an SELinux label is default
+        self.secure_opt = pop.get('lvsb_secure_options', 'dynamic')
 
     def init_sandboxes(self):
         """
