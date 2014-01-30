@@ -2027,6 +2027,20 @@ def get_host_ip_address(params):
     return host_ip
 
 
+def get_correspond_ip(remote_ip):
+    """
+    Get local ip address which is used to contact remote ip.
+
+    :param remote_ip: Remote ip
+    :return: Local corespond IP.
+    """
+    result = utils.run("ip route get %s" % (remote_ip)).stdout
+    local_ip = re.search("src (.+)", result)
+    if local_ip is not None:
+        local_ip = local_ip.groups()[0]
+    return local_ip
+
+
 def get_linux_ifname(session, mac_address=""):
     """
     Get the interface name through the mac address.
