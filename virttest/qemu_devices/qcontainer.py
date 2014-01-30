@@ -427,7 +427,7 @@ class DevContainer(object):
             if _ is not None and _ is not False:
                 return bus
 
-    def insert(self, devices):
+    def insert(self, devices, strict_mode=None):
         """
         Inserts devices into this VM representation
         :param devices: List of qdevices.QBaseDevice devices
@@ -444,7 +444,7 @@ class DevContainer(object):
         added = []
         for device in devices:
             try:
-                added.extend(self._insert(device))
+                added.extend(self._insert(device, strict_mode))
             except DeviceError, details:
                 cleanup()
                 raise DeviceError("%s\nError occurred while inserting device %s"
@@ -452,7 +452,7 @@ class DevContainer(object):
                                   % (details, device, devices))
         return added
 
-    def _insert(self, device):
+    def _insert(self, device, strict_mode=None):
         """
         Inserts device into this VM representation
         :param device: qdevices.QBaseDevice device
@@ -470,6 +470,12 @@ class DevContainer(object):
             for device in added_devices:
                 self.wash_the_device_out(device)
 
+        if strict_mode is None:
+            _strict_mode = self.strict_mode
+        if strict_mode is True:
+            _strict_mode = True
+        else:
+            _strict_mode = False
         added_devices = []
         if device.parent_bus is not None and not isinstance(device.parent_bus,
                                                             (list, tuple)):
@@ -486,7 +492,7 @@ class DevContainer(object):
                 clean(device, added_devices)
                 raise DeviceInsertError(device, err, self)
             bus_returns = []
-            strict_mode = self.strict_mode
+            strict_mode = _strict_mode
             for bus in buses:   # 2
                 if not bus.match_bus(parent_bus, False):
                     # First available bus in qemu is not of the same type as
@@ -720,8 +726,6 @@ class DevContainer(object):
             :param cmd: If set uses "-M $cmd" to force this machine type
             :return: List of added devices (including default buses)
             """
-            # TODO: Add all supported devices (AHCI, ...) and
-            # verify that PCIE works as pci bus (ranges, etc...)
             logging.warn('Using Q35 machine which is not yet fullytested on '
                          'virt-test. False errors might occur.')
             devices = []
@@ -1182,8 +1186,6 @@ class DevContainer(object):
         # Drive
         # -drive fmt or -drive fmt=none -device ...
         #
-        # TODO: Add qdevices.QRHDrive and PCIDrive for hotplug purposes
-        # TODO: Add special parameter to override the drive method
         if self.has_hmp_cmd('__com.redhat_drive_add') and use_device:
             devices.append(qdevices.QRHDrive(name))
         elif self.has_hmp_cmd('drive_add') and use_device:
