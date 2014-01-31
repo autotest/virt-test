@@ -229,6 +229,11 @@ def create_subtests_cfg(t_type):
     specific_file_list = []
     specific_subdirs = asset.get_test_provider_subdirs(t_type)
     provider_names_specific = asset.get_test_provider_names(t_type)
+
+    provider_info_specific = []
+    for specific_provider in provider_names_specific:
+        provider_info_specific.append(asset.get_test_provider_info(specific_provider))
+
     for subdir in specific_subdirs:
         specific_test_list += data_dir.SubdirGlobList(subdir,
                                                       '*.py',
@@ -241,6 +246,12 @@ def create_subtests_cfg(t_type):
     shared_file_list = []
     shared_subdirs = asset.get_test_provider_subdirs('generic')
     provider_names_shared = asset.get_test_provider_names('generic')
+
+    provider_info_shared = []
+    for shared_provider in provider_names_shared:
+        provider_info_shared.append(asset.get_test_provider_info(shared_provider))
+
+
     if not t_type == 'lvsb':
         for subdir in shared_subdirs:
             shared_test_list += data_dir.SubdirGlobList(subdir,
@@ -252,11 +263,12 @@ def create_subtests_cfg(t_type):
 
     all_specific_test_list = []
     for test in specific_test_list:
-        path_components = test.split("/")
-        provider_name = None
-        for component in path_components:
-            if component in provider_names_specific:
-                provider_name = component
+        for p in provider_info_specific:
+            provider_base_path = p['backends'][t_type]['path']
+            if provider_base_path in test:
+                provider_name = p['name']
+                break
+
         basename = os.path.basename(test)
         if basename != "__init__.py":
             all_specific_test_list.append("%s.%s" %
@@ -264,11 +276,12 @@ def create_subtests_cfg(t_type):
                                            basename.split(".")[0]))
     all_shared_test_list = []
     for test in shared_test_list:
-        path_components = test.split("/")
-        provider_name = None
-        for component in path_components:
-            if component in provider_names_shared:
-                provider_name = component
+        for p in provider_info_shared:
+            provider_base_path = p['backends']['generic']['path']
+            if provider_base_path in test:
+                provider_name = p['name']
+                break
+
         basename = os.path.basename(test)
         if basename != "__init__.py":
             all_shared_test_list.append("%s.%s" %
@@ -285,11 +298,13 @@ def create_subtests_cfg(t_type):
     tmp = []
 
     for shared_file in shared_file_list:
-        path_components = shared_file.split("/")
         provider_name = None
-        for component in path_components:
-            if component in provider_names_shared:
-                provider_name = component
+        for p in provider_info_shared:
+            provider_base_path = p['backends']['generic']['path']
+            if provider_base_path in shared_file:
+                provider_name = p['name']
+                break
+
         shared_file_obj = open(shared_file, 'r')
         for line in shared_file_obj.readlines():
             line = line.strip()
@@ -318,11 +333,12 @@ def create_subtests_cfg(t_type):
 
     tmp = []
     for shared_file in specific_file_list:
-        path_components = shared_file.split("/")
         provider_name = None
-        for component in path_components:
-            if component in provider_names_specific:
-                provider_name = component
+        for p in provider_info_specific:
+            provider_base_path = p['backends'][t_type]['path']
+            if provider_base_path in shared_file:
+                provider_name = p['name']
+                break
 
         shared_file_obj = open(shared_file, 'r')
         for line in shared_file_obj.readlines():
