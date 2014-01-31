@@ -323,43 +323,88 @@ def print_header(sr):
     print_stdout(bcolors.HEADER + sr + bcolors.ENDC)
 
 
-def print_skip():
+def print_skip(open_fd=False):
     """
     Print SKIP to stdout with SKIP (yellow) color.
     """
-    print_stdout(bcolors.SKIP + "SKIP" + bcolors.ENDC)
+    normal_skip_msg = bcolors.SKIP + "SKIP" + bcolors.ENDC
+    fd_skip_msg = (bcolors.SKIP +
+                   "SKIP (%s fd)" % utils_misc.get_virt_test_open_fds() +
+                   bcolors.ENDC)
+    if open_fd:
+        msg = fd_skip_msg
+    else:
+        msg = normal_skip_msg
+
+    print_stdout(msg)
 
 
-def print_error(t_elapsed):
+def print_error(t_elapsed, open_fd=False):
     """
     Print ERROR to stdout with ERROR (red) color.
     """
-    print_stdout(bcolors.ERROR + "ERROR" +
-                 bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    normal_error_msg = (bcolors.ERROR + "ERROR" +
+                        bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    fd_error_msg = (bcolors.ERROR + "ERROR" +
+                    bcolors.ENDC + " (%.2f s) (%s fd)" %
+                    (t_elapsed, utils_misc.get_virt_test_open_fds()))
+    if open_fd:
+        msg = fd_error_msg
+    else:
+        msg = normal_error_msg
+
+    print_stdout(msg)
 
 
-def print_pass(t_elapsed):
+def print_pass(t_elapsed, open_fd=False):
     """
     Print PASS to stdout with PASS (green) color.
     """
-    print_stdout(bcolors.PASS + "PASS" +
-                 bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    normal_pass_msg = (bcolors.PASS + "PASS" +
+                       bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    fd_pass_msg = (bcolors.PASS + "PASS" +
+                   bcolors.ENDC + " (%.2f s) (%s fd)" %
+                   (t_elapsed, utils_misc.get_virt_test_open_fds()))
+    if open_fd:
+        msg = fd_pass_msg
+    else:
+        msg = normal_pass_msg
+
+    print_stdout(msg)
 
 
-def print_fail(t_elapsed):
+def print_fail(t_elapsed, open_fd=False):
     """
     Print FAIL to stdout with FAIL (red) color.
     """
-    print_stdout(bcolors.FAIL + "FAIL" +
-                 bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    normal_fail_msg = (bcolors.FAIL + "FAIL" +
+                       bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    fd_fail_msg =  (bcolors.FAIL + "FAIL" +
+                    bcolors.ENDC + " (%.2f s) (%s fd)" %
+                    (t_elapsed, utils_misc.get_virt_test_open_fds()))
+    if open_fd:
+        msg = fd_fail_msg
+    else:
+        msg = normal_fail_msg
+
+    print_stdout(msg)
 
 
-def print_warn(t_elapsed):
+def print_warn(t_elapsed, open_fd=False):
     """
     Print WARN to stdout with WARN (yellow) color.
     """
-    print_stdout(bcolors.WARN + "WARN" +
-                 bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    normal_warn_msg = (bcolors.WARN + "WARN" +
+                       bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    fd_warn_msg = (bcolors.WARN + "WARN" +
+                   bcolors.ENDC + " (%.2f s) (%s fd)" %
+                   (t_elapsed, utils_misc.get_virt_test_open_fds()))
+    if open_fd:
+        msg = fd_warn_msg
+    else:
+        msg = normal_warn_msg
+
+    print_stdout(msg)
 
 
 def reset_logging():
