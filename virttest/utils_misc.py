@@ -206,6 +206,14 @@ def kill_process_tree(pid, sig=signal.SIGKILL):
     safe_kill(pid, signal.SIGCONT)
 
 
+def get_open_fds(pid):
+    return len(os.listdir('/proc/%s/fd' % pid))
+
+
+def get_virt_test_open_fds():
+    return get_open_fds(os.getpid())
+
+
 def process_or_children_is_defunct(ppid):
     """Verify if any processes from PPID is defunct.
 

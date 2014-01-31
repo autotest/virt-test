@@ -184,6 +184,27 @@ class VirtTestRunParser(optparse.OptionParser):
         else:
             nettype_default = 'user'
 
+        debug = optparse.OptionGroup(self, 'Debug Options')
+        debug.add_option("-v", "--verbose", action="store_true",
+                         dest="verbose", help=("Exhibit test "
+                                               "messages in the console "
+                                               "(used for debugging)"))
+        debug.add_option("--console-level", action="store",
+                         dest="console_level",
+                         default="debug",
+                         help=("Log level of test messages in the console. Only valid "
+                               "with --verbose. "
+                               "Supported levels: " +
+                               ", ".join(SUPPORTED_LOG_LEVELS) +
+                               ". Default: %default"))
+        debug.add_option("--show-open-fd", action="store_true",
+                         dest="show_open_fd", help=("Show how many "
+                                                    "open fds at the end of "
+                                                    "each test "
+                                                    "(used for debugging)"))
+
+        self.add_option_group(debug)
+
         general = optparse.OptionGroup(self, 'General Options')
         general.add_option("-b", "--bootstrap", action="store_true",
                            dest="bootstrap", help=("Perform test suite setup "
@@ -204,18 +225,6 @@ class VirtTestRunParser(optparse.OptionParser):
                                                           "providers to be "
                                                           "updated (git repos "
                                                           "will be pulled)"))
-        general.add_option("-v", "--verbose", action="store_true",
-                           dest="verbose", help=("Exhibit test "
-                                                 "messages in the console "
-                                                 "(used for debugging)"))
-        general.add_option("--console-level", action="store",
-                           dest="console_level",
-                           default="debug",
-                           help=("Log level of test messages in the console. Only valid "
-                                 "with --verbose. "
-                                 "Supported levels: " +
-                                 ", ".join(SUPPORTED_LOG_LEVELS) +
-                                 ". Default: %default"))
         general.add_option("-t", "--type", action="store", dest="type",
                            help="Choose test type (%s)" %
                            ", ".join(SUPPORTED_TEST_TYPES))
