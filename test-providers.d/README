@@ -8,6 +8,7 @@ following structure:
 
 # Test provider URI (default is a git repository, fallback to standard dir)
 uri: git://git-provider.com/repo.git
+#uri: file:///path/to/tests/
 #uri: /path-to-my-git-dir/repo.git
 #uri: http://bla.com/repo.git
 #uri: /path-to-my-git-dir/repo/

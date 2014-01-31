@@ -148,14 +148,23 @@ class Test(object):
                         subtest_dirs += data_dir.SubdirList(subtestdir,
                                                             bootstrap.test_filter)
 
-                    # Verify if we have the correspondent source file for it
-                    for generic_subdir in asset.get_test_provider_subdirs('generic'):
-                        subtest_dirs += data_dir.SubdirList(generic_subdir,
-                                                            bootstrap.test_filter)
+                    provider = params.get("provider", None)
 
-                    for specific_subdir in asset.get_test_provider_subdirs(params.get("vm_type")):
-                        subtest_dirs += data_dir.SubdirList(specific_subdir,
-                                                            bootstrap.test_filter)
+                    if provider is None:
+                        # Verify if we have the correspondent source file for it
+                        for generic_subdir in asset.get_test_provider_subdirs('generic'):
+                            subtest_dirs += data_dir.SubdirList(generic_subdir,
+                                                                bootstrap.test_filter)
+
+                        for specific_subdir in asset.get_test_provider_subdirs(params.get("vm_type")):
+                            subtest_dirs += data_dir.SubdirList(specific_subdir,
+                                                                bootstrap.test_filter)
+                    else:
+                        provider_info = asset.get_test_provider_info(provider)
+                        for key in provider_info['backends']:
+                            subtest_dirs += data_dir.SubdirList(
+                                        provider_info['backends'][key]['path'],
+                                        bootstrap.test_filter)
 
                     subtest_dir = None
 
@@ -167,9 +176,6 @@ class Test(object):
                                   params.get("type"), params.get("provider", None))
 
                     t_types = params.get("type").split()
-                    provider = params.get("provider", None)
-                    if provider is not None:
-                        subtest_dirs = [d for d in subtest_dirs if provider in d]
                     # Make sure we can load provider_lib in tests
                     for s in subtest_dirs:
                         if os.path.dirname(s) not in sys.path:

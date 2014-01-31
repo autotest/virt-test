@@ -85,8 +85,8 @@ def get_test_provider_info(provider):
     for backend in get_known_backends():
         subdir = provider_cfg.get(backend, 'subdir')
         if subdir is not None:
-            if provider_info['uri'].startswith('file:/'):
-                src = os.path.join(provider_info['uri'].lstrip('file:/'),
+            if provider_info['uri'].startswith('file://'):
+                src = os.path.join(provider_info['uri'][7:],
                                    subdir)
             else:
                 src = os.path.join(data_dir.get_test_provider_dir(provider),
@@ -107,7 +107,7 @@ def download_test_provider(provider, update=False):
     """
     provider_info = get_test_provider_info(provider)
     uri = provider_info.get('uri')
-    if not uri.startswith('file:/'):
+    if not uri.startswith('file://'):
         uri = provider_info.get('uri')
         branch = provider_info.get('branch')
         ref = provider_info.get('ref')
