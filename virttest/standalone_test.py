@@ -698,9 +698,9 @@ def bootstrap_tests(options):
     print_stdout(bcolors.HEADER + "SETUP:" + bcolors.ENDC, end=False)
 
     if not failed:
-        print_pass(t_elapsed)
+        print_pass(t_elapsed, open_fd=options.show_open_fd)
     else:
-        print_fail(t_elapsed)
+        print_fail(t_elapsed, open_fd=options.show_open_fd)
         print_stdout("Setup error: %s" % reason)
         sys.exit(-1)
 
@@ -924,7 +924,7 @@ def run_tests(parser, options):
                              reason.__class__.__name__, reason)
                 logging.info("")
                 t.stop_file_logging()
-                print_error(t_elapsed)
+                print_error(t_elapsed, open_fd=options.show_open_fd)
                 status_dct[dct.get("name")] = False
                 continue
             except error.TestNAError, reason:
@@ -933,7 +933,7 @@ def run_tests(parser, options):
                              reason.__class__.__name__, reason)
                 logging.info("")
                 t.stop_file_logging()
-                print_skip()
+                print_skip(open_fd=options.show_open_fd)
                 status_dct[dct.get("name")] = False
                 continue
             except error.TestWarn, reason:
@@ -942,7 +942,7 @@ def run_tests(parser, options):
                              reason)
                 logging.info("")
                 t.stop_file_logging()
-                print_warn(t_elapsed)
+                print_warn(t_elapsed, open_fd=options.show_open_fd)
                 status_dct[dct.get("name")] = True
                 continue
             except Exception, reason:
@@ -962,16 +962,16 @@ def run_tests(parser, options):
                 t.stop_file_logging()
                 current_status = False
         else:
-            print_skip()
+            print_skip(open_fd=options.show_open_fd)
             status_dct[dct.get("name")] = False
             continue
 
         if not current_status:
             failed = True
-            print_fail(t_elapsed)
+            print_fail(t_elapsed, open_fd=options.show_open_fd)
 
         else:
-            print_pass(t_elapsed)
+            print_pass(t_elapsed, open_fd=options.show_open_fd)
 
         status_dct[dct.get("name")] = current_status
 
