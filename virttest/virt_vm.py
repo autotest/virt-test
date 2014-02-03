@@ -829,29 +829,21 @@ class BaseVM(object):
             match = re.search(panic_re, data, re.DOTALL | re.MULTILINE | re.I)
             if match is not None:
                 raise VMDeadKernelCrashError(match.group(0))
+
+    def verify_bsod(self, scrdump_file):
         #For windows guest
-        if (self.params.get("check_guest_bsod", "no") == 'yes' and
+        if (os.path.exists(scrdump_file) and
+                self.params.get("check_guest_bsod", "no") == 'yes' and
                 ppm_utils.Image is not None):
-            try:
-                scrdump_file = os.path.join("/tmp", "scrdump-img.ppm")
-                ref_img_path = self.params.get("bsod_reference_img", "")
-                bsod_base_dir = os.path.join(data_dir.get_root_dir(),
-                                             "shared", "deps",
-                                             "bsod_img")
-                ref_img = utils_misc.get_path(bsod_base_dir, ref_img_path)
-                try:
-                    self.screendump(filename=scrdump_file, debug=False)
-                except Exception, err:
-                    logging.warn("Cannot catch guest screendump, %s" % err)
-                    pass
-                if (os.path.exists(scrdump_file) and
-                        ppm_utils.have_similar_img(scrdump_file, ref_img)):
-                    err_msg = "Windows Guest appears to have suffered a BSOD,"
-                    err_msg += " please check test video."
-                    raise VMDeadKernelCrashError(err_msg)
-            finally:
-                if os.path.exists(scrdump_file):
-                    os.unlink(scrdump_file)
+            ref_img_path = self.params.get("bsod_reference_img", "")
+            bsod_base_dir = os.path.join(data_dir.get_root_dir(),
+                                         "shared", "deps",
+                                         "bsod_img")
+            ref_img = utils_misc.get_path(bsod_base_dir, ref_img_path)
+            if ppm_utils.have_similar_img(scrdump_file, ref_img):
+                err_msg = "Windows Guest appears to have suffered a BSOD,"
+                err_msg += " please check %s against %s." % (scrdump_file, ref_img)
+                raise VMDeadKernelCrashError(err_msg)
 
     def verify_illegal_instruction(self):
         """
