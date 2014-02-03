@@ -702,12 +702,14 @@ class VirtTestApp(object):
             logging.info("Config provided, ignoring --tests option")
 
     def _process_restart_vm(self):
-        if not self.options.keep_guest_running:
-            self.cartesian_parser.assign("kill_vm", "yes")
+        if not self.options.config:
+            if not self.options.keep_guest_running:
+                self.cartesian_parser.assign("kill_vm", "yes")
 
     def _process_restore_image_between_tests(self):
-        if not self.options.keep_image_between_tests:
-            self.cartesian_parser.assign("restore_image", "yes")
+        if not self.options.config:
+            if not self.options.keep_image_between_tests:
+                self.cartesian_parser.assign("restore_image", "yes")
 
     def _process_mem(self):
         self.cartesian_parser.assign("mem", self.options.mem)
@@ -805,6 +807,13 @@ class VirtTestApp(object):
             elif self.options.type == "v2v":
                 default_userspace_paths = ["/usr/bin/virt-v2v"]
 
+            if not self.options.config:
+                download_image = not self.options.no_downloads
+                keep_image = not self.options.keep_image
+            else:
+                download_image = False
+                keep_image = False
+
             test_dir = data_dir.get_backend_dir(self.options.type)
             bootstrap.bootstrap(test_name=self.options.type, test_dir=test_dir,
                                 base_dir=data_dir.get_data_dir(),
@@ -812,9 +821,9 @@ class VirtTestApp(object):
                                 check_modules=check_modules,
                                 online_docs_url=online_docs_url,
                                 interactive=interactive,
-                                download_image=(not self.options.no_downloads),
+                                download_image=download_image,
                                 selinux=self.options.selinux_setup,
-                                restore_image=(not self.options.keep_image),
+                                restore_image=keep_image,
                                 verbose=self.options.verbose,
                                 update_providers=self.options.update_providers)
             sys.exit(0)
