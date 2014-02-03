@@ -657,6 +657,11 @@ def bootstrap_tests(options):
         check_modules = None
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
 
+    if not options.config:
+        restore_image = not options.keep_image
+    else:
+        restore_image = False
+
     kwargs = {'test_name': options.type,
               'test_dir': test_dir,
               'base_dir': data_dir.get_data_dir(),
@@ -665,7 +670,7 @@ def bootstrap_tests(options):
               'online_docs_url': online_docs_url,
               'download_image': not options.no_downloads,
               'selinux': options.selinux_setup,
-              'restore_image': not options.keep_image,
+              'restore_image': restore_image,
               'interactive': False,
               'update_providers': options.update_providers}
 
@@ -828,11 +833,12 @@ def run_tests(parser, options):
 
     d = parser.get_dicts().next()
 
-    if not options.keep_image_between_tests:
-        logging.debug("Creating first backup of guest image")
-        qemu_img = storage.QemuImg(d, data_dir.get_data_dir(), "image")
-        qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
-        logging.debug("")
+    if not options.config:
+        if not options.keep_image_between_tests:
+            logging.debug("Creating first backup of guest image")
+            qemu_img = storage.QemuImg(d, data_dir.get_data_dir(), "image")
+            qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
+            logging.debug("")
 
     for line in get_cartesian_parser_details(parser).splitlines():
         logging.info(line)
