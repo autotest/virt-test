@@ -804,7 +804,8 @@ def run_tests(parser, options):
     """
     test_start_time = time.strftime('%Y-%m-%d-%H.%M.%S')
     logdir = options.logdir or os.path.join(data_dir.get_root_dir(), 'logs')
-    debugdir = os.path.join(logdir, 'run-%s' % test_start_time)
+    debugbase = 'run-%s' % test_start_time
+    debugdir = os.path.join(logdir, debugbase)
     latestdir = os.path.join(logdir, "latest")
     if not os.path.isdir(debugdir):
         os.makedirs(debugdir)
@@ -812,7 +813,7 @@ def run_tests(parser, options):
         os.unlink(latestdir)
     except OSError, detail:
         pass
-    os.symlink(debugdir, latestdir)
+    os.symlink(debugbase, latestdir)
 
     debuglog = os.path.join(debugdir, "debug.log")
     loglevel = options.log_level
