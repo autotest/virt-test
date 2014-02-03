@@ -54,7 +54,10 @@ class Test(object):
             os.makedirs(self.tmpdir)
 
         self.iteration = 0
-        self.tag = params.get("_short_name_map_file")["subtests.cfg"]
+        if options.config:
+            self.tag = params.get("shortname")
+        else:
+            self.tag = params.get("_short_name_map_file")["subtests.cfg"]
         self.debugdir = None
         self.outputdir = None
         self.resultsdir = None
