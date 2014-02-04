@@ -2500,6 +2500,22 @@ def blockcommit(name, path, options="", **dargs):
     return command(cmd, **dargs)
 
 
+def blockpull(name, path, options="", **dargs):
+    """
+    Start a block pull operation.
+
+    :param name: name of domain
+    :param options: options of blockpull
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "blockpull %s %s" % (name, path)
+    if options is not None:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
+
+
 def domblkinfo(name, device, **dargs):
     """
     Get block device size info for a domain.
