@@ -2585,6 +2585,20 @@ def numatune(name, mode=None, nodeset=None, options=None, **dargs):
 
     return command(cmd, **dargs)
 
+def nodedev_reset(name, options="", **dargs):
+    """
+    Trigger a device reset for device node.
+
+    :param name: device node name to be reset.
+    :param options: additional options passed to virsh command
+    :param dargs: standardized virsh function API keywords
+    :return: cmdresult object.
+    """
+    cmd = ("nodedev-reset --device %s %s" % (name, options))
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
+
 
 def ttyconsole(name, **dargs):
     """
