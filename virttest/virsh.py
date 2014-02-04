@@ -2721,6 +2721,20 @@ def nodedev_reattach(name, options="", **dargs):
 
     return CmdResult
 
+def nodedev_reset(name, options="", **dargs):
+    """
+    Trigger a device reset for device node.
+
+    :param name: device node name to be reset.
+    :param options: additional options passed to virsh command
+    :param dargs: standardized virsh function API keywords
+    :return: cmdresult object.
+    """
+    cmd = ("nodedev-reset --device %s %s" % (name, options))
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
+
 
 def vcpucount(name, options="", **dargs):
     """
