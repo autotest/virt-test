@@ -732,7 +732,8 @@ class BaseVM(object):
         self.virtnet.free_mac_address(nic_index_or_name)
 
     @error.context_aware
-    def wait_for_get_address(self, nic_index_or_name, timeout=30, internal_timeout=1):
+    def wait_for_get_address(self, nic_index_or_name, timeout=30,
+                             internal_timeout=1, ip_version='ipv4'):
         """
         Wait for a nic to acquire an IP address, then return it.
         """
@@ -743,7 +744,29 @@ class BaseVM(object):
             except (VMIPAddressMissingError, VMAddressVerificationError):
                 return False
         if not utils_misc.wait_for(_get_address, timeout, internal_timeout):
-            raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
+            try:
+                s_session = None
+                s_session = self.wait_for_serial_login()
+                nic_mac = self.get_mac_address(nic_index_or_name)
+                os_type = self.params.get("os_type")
+                try:
+                    utils_net.renew_guest_ip(s_session, nic_mac, os_type)
+                    return self.get_address(nic_index_or_name)
+                except (VMIPAddressMissingError, VMAddressVerificationError):
+                    try:
+                        nic_address = utils_net.get_guest_ip_addr(s_session,
+                                                                  nic_mac,
+                                                                  os_type,
+                                                                  ip_version)
+                        if nic_address:
+                            self.address_cache[nic_mac.lower()] = nic_address
+                            return nic_address
+                    except Exception, err:
+                        logging.debug("Can not get guest address, '%s'" % err)
+                        raise VMIPAddressMissingError(nic_mac)
+            finally:
+                if s_session:
+                    s_session.close()
         return self.get_address(nic_index_or_name)
 
     # Adding/setup networking devices methods split between 'add_*' for
@@ -900,7 +923,7 @@ class BaseVM(object):
         prompt = self.params.get("shell_prompt", "[\#\$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         client = self.params.get("shell_client")
-        address = self.get_address(nic_index)
+        address = self.wait_for_get_address(nic_index)
         port = self.get_port(int(self.params.get("shell_port")))
         log_filename = ("session-%s-%s.log" %
                         (self.name, utils_misc.generate_random_string(4)))
