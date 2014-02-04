@@ -1809,6 +1809,18 @@ def pool_autostart(name, extra="", **dargs):
     return command("pool-autostart %s %s" % (name, extra), **dargs)
 
 
+def pool_edit(name, **dargs):
+    """
+    Edit XML configuration for a storage pool.
+
+    :param name: pool name or uuid
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "pool-edit %s" % name
+    return command(cmd, **dargs)
+
+
 def pool_undefine(name, extra="", **dargs):
     """
     Undefine the given pool
