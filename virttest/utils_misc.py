@@ -22,7 +22,7 @@ import getpass
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
-import data_dir
+import data_dir, cartesian_config
 try:
     from staging import utils_koji
 except ImportError:
@@ -488,8 +488,8 @@ def run_tests(parser, job):
     :return: True, if all tests ran passed, False if any of them failed.
     """
     last_index = -1
-    for i, d in enumerate(parser.get_dicts()):
-        logging.info("Test %4d:  %s" % (i + 1, d["shortname"]))
+    for count, dic in enumerate(parser.get_dicts()):
+        logging.info("Test %4d:  %s" % (count + 1, dic["shortname"]))
         last_index += 1
 
     status_dict = {}
@@ -505,6 +505,7 @@ def run_tests(parser, job):
     setup_flag = 1
     cleanup_flag = 2
     for param_dict in parser.get_dicts():
+        cartesian_config.postfix_parse(param_dict)
         if param_dict.get("host_setup_flag", None) is not None:
             flag = int(param_dict["host_setup_flag"])
             if index == 0:

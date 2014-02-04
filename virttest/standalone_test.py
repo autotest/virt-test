@@ -848,10 +848,10 @@ def run_tests(parser, options):
         logging.info(line)
 
     logging.info("Defined test set:")
-    for i, d in enumerate(parser.get_dicts()):
+    for count, dic in enumerate(parser.get_dicts()):
         shortname = d.get("_name_map_file")["subtests.cfg"]
 
-        logging.info("Test %4d:  %s", i + 1, shortname)
+        logging.info("Test %4d:  %s", count + 1, shortname)
         last_index += 1
 
     if last_index == -1:
@@ -881,6 +881,7 @@ def run_tests(parser, options):
     job_start_time = time.time()
 
     for dct in parser.get_dicts():
+        cartesian_config.postfix_parse(dct)
         shortname = d.get("_short_name_map_file")["subtests.cfg"]
 
         if index == 0:
