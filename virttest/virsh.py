@@ -272,7 +272,7 @@ class VirshPersistent(Virsh):
     Execute libvirt operations using persistent virsh session.
     """
 
-    __slots__ = ('session_id', )
+    __slots__ = ('session_id', 'remote_pwd', 'remote_user')
 
     # B/c the auto_close of VirshSession is False, we
     # need to manager the ref-count of it manully.
