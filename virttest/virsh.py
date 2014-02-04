@@ -799,6 +799,19 @@ def screenshot(name, filename, **dargs):
     return filename
 
 
+def screenshot_test(name, filename="", options="", **dargs):
+    """
+    Capture a screenshot of VM's console and store it in file on host
+
+    :param name: VM name or id
+    :param filename: name of host file
+    :param options: command options
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("screenshot %s %s %s" % (name, filename, options), **dargs)
+
+
 def domblkstat(name, device, option, **dargs):
     """
     Store state of VM into named file.
