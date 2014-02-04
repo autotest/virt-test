@@ -509,8 +509,9 @@ class VirtTestApp(object):
 
     def _process_monitor(self):
         if self.options.monitor == 'qmp':
-            self.cartesian_parser.assign("monitors", "qmp1")
-            self.cartesian_parser.assign("monitor_type_qmp1", "qmp")
+            self.cartesian_parser.only_filter("qmp")
+        else:
+            self.cartesian_parser.only_filter("human")
 
     def _process_smp(self):
         if not self.options.config:
