@@ -168,6 +168,38 @@ def clean_up_snapshots(vm_name, snapshot_list=[]):
             os.system('rm -f %s' % snap_disk_path)
 
 
+def get_all_cells():
+    """
+    Use virsh freecell --all to get all cells on host
+    # virsh freecell --all
+        0:     124200 KiB
+        1:    1059868 KiB
+    --------------------
+    Total:    1184068 KiB
+
+    return: cell_dict, {"0":"124200 KiB",
+                        "1":"1059868 KiB",
+                        "Total":"1184068 KiB"}
+    """
+    fc_result = virsh.freecell("--all", ignore_status=True)
+    if fc_result.exit_status:
+        if fc_result.stderr.count("NUMA not supported"):
+            raise error.TestNAError(fc_result.stderr.strip())
+        else:
+            raise error.TestFail(fc_result.stderr.strip())
+    output = fc_result.stdout.strip()
+    cell_list = output.splitlines()
+    # remove "------------" line
+    del cell_list[-2]
+    cell_dict = {}
+    for cell_line in cell_list:
+        cell_info = cell_line.split(":")
+        cell_num = cell_info[0].strip()
+        cell_mem = cell_info[-1].strip()
+        cell_dict[cell_num] = cell_mem
+    return cell_dict
+
+
 def check_blockjob(vm_name, target, check_point="none", value="0"):
     """
     Run blookjob command to check block job progress, bandwidth, ect.
