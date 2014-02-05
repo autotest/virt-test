@@ -1,5 +1,5 @@
 """
-Library to perform pre/post test setup for KVM autotest.
+Library to perform pre/post test setup for virt test.
 """
 import os
 import logging
