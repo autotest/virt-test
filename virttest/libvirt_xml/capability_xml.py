@@ -3,7 +3,7 @@ Module simplifying manipulation of XML described at
 http://libvirt.org/formatcaps.html
 """
 
-from virttest import virsh, xml_utils
+from virttest import xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
 
 

@@ -4,6 +4,7 @@ Module to hide underlying filter protocol xml handler class implementation
 
 import os
 import virttest.utils_test
+from virttest.libvirt_xml import base
 
 # Avoid accidental names like __init__, librarian, and/or other support modules
 FILTER_TYPES = ['mac', 'vlan', 'stp', 'arp', 'rarp', 'ip', 'ipv6',
@@ -20,6 +21,5 @@ def get(name):
     :return: named filter protocol xml element's handler class
     """
     mod_path = os.path.abspath(os.path.dirname(__file__))
-    handler_cl = virttest.utils_test.load_python_module(mod_path, name,
-                                                        FILTER_TYPES)
+    handler_cl = base.load_xml_module(mod_path, name, FILTER_TYPES)
     return handler_cl

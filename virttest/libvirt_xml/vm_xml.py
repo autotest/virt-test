@@ -5,7 +5,7 @@ http://libvirt.org/formatdomain.html
 
 import logging
 from autotest.client.shared import error
-from virttest import virsh, xml_utils
+from virttest import xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
 from virttest.libvirt_xml.devices import librarian
 
@@ -315,7 +315,7 @@ class VMXML(VMXMLBase):
         self.xml = u"<domain type='%s'></domain>" % hypervisor_type
 
     @staticmethod  # static method (no self) needed b/c calls VMXML.__new__
-    def new_from_dumpxml(vm_name, options="", virsh_instance=virsh):
+    def new_from_dumpxml(vm_name, options="", virsh_instance=base.virsh):
         """
         Return new VMXML instance from virsh dumpxml command
 
@@ -330,7 +330,7 @@ class VMXML(VMXMLBase):
         return vmxml
 
     @staticmethod
-    def new_from_inactive_dumpxml(vm_name, options="", virsh_instance=virsh):
+    def new_from_inactive_dumpxml(vm_name, options="", virsh_instance=base.virsh):
         """
         Return new VMXML instance of inactive domain from virsh dumpxml command
 
@@ -825,7 +825,7 @@ class VMCPUXML(VMXML):
     # Must copy these here or there will be descriptor problems
     __slots__ = ('model', 'vendor', 'feature_list',)
 
-    def __init__(self, virsh_instance=virsh, vm_name='', mode='host-model'):
+    def __init__(self, virsh_instance=base.virsh, vm_name='', mode='host-model'):
         """
         Create new VMCPU XML instance
         """
