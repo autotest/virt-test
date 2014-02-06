@@ -4,7 +4,7 @@ http://libvirt.org/formatnetwork.html
 """
 
 import logging
-from virttest import virsh, xml_utils
+from virttest import xml_utils
 from virttest.libvirt_xml import base, xcepts, accessors
 
 
@@ -392,7 +392,7 @@ class NetworkXML(NetworkXMLBase):
         networks = new_netxml.virsh.net_state_dict(**params).keys()
         for net_name in networks:
             new_copy = new_netxml.copy()
-            new_copy.xml = virsh.net_dumpxml(net_name).stdout.strip()
+            new_copy.xml = virsh_instance.net_dumpxml(net_name).stdout.strip()
             result[net_name] = new_copy
         return result
 
