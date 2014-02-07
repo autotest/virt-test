@@ -384,9 +384,8 @@ def create_subtests_cfg(t_type):
         autogen_cfg_file.write("- %s:\n" % dropin_test)
         autogen_cfg_file.write("    virt_test_type = %s\n" % t_type)
         autogen_cfg_file.write("    type = %s\n" % d_type)
-        autogen_cfg_file.write("    provider = %s\n" % provider)
         autogen_cfg_file.close()
-        dropin_file_list.append([None, autogen_cfg_path])
+        dropin_file_list.append([provider, autogen_cfg_path])
 
     dropin_file_list_2 = []
     dropin_tests = os.listdir(os.path.join(data_dir.get_root_dir(), "dropin"))
@@ -404,7 +403,7 @@ def create_subtests_cfg(t_type):
         dropin_cfg_file.write("            start_vm = no\n")
         dropin_cfg_file.write("            dropin_path = %s\n" % dropin_test)
     dropin_cfg_file.close()
-    dropin_file_list_2.append([None, dropin_cfg_path])
+    dropin_file_list_2.append(['io-github-autotest-qemu', dropin_cfg_path])
 
     subtests_cfg = os.path.join(root_dir, 'backends', t_type, 'cfg',
                                 'subtests.cfg')

@@ -135,6 +135,7 @@ class Test(object):
 
         test_passed = False
         t_types = None
+        t_type = None
 
         try:
             try:
