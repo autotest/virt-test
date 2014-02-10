@@ -9,6 +9,7 @@ import string
 import random
 import socket
 import os
+import stat
 import signal
 import re
 import logging
@@ -2053,3 +2054,221 @@ def get_test_entrypoint_func(name, module):
 
     else:
         raise ValueError("Missing test entry point")
+
+
+class KSMError(Exception):
+
+    """
+    Base exception for KSM setup
+    """
+    pass
+
+
+class KSMNotSupportedError(KSMError):
+
+    """
+    Thrown when host does not support KSM.
+    """
+    pass
+
+
+class KSMTunedError(KSMError):
+
+    """
+    Thrown when KSMTuned Error happen.
+    """
+    pass
+
+
+class KSMTunedNotSupportedError(KSMTunedError):
+
+    """
+    Thrown when host does not support KSMTune.
+    """
+    pass
+
+
+class KSMController(object):
+
+    """KSM Manager"""
+
+    def __init__(self):
+        """
+        Preparations for ksm.
+        """
+        _KSM_PATH = "/sys/kernel/mm/ksm/"
+        self.ksm_path = _KSM_PATH
+        self.ksm_params = {}
+
+        # Default control way is files on host
+        # But it will be ksmctl command on older ksm version
+        self.interface = "sysfs"
+        if os.path.isdir(self.ksm_path):
+            _KSM_PARAMS = os.listdir(_KSM_PATH)
+            for param in _KSM_PARAMS:
+                self.ksm_params[param] = _KSM_PATH + param
+            self.interface = "sysfs"
+            if not os.path.isfile(self.ksm_params["run"]):
+                raise KSMNotSupportedError
+        else:
+            try:
+                os_dep.command("ksmctl")
+            except ValueError:
+                raise KSMNotSupportedError
+            _KSM_PARAMS = ["run", "pages_to_scan", "sleep_millisecs"]
+            # No _KSM_PATH needed here
+            for param in _KSM_PARAMS:
+                self.ksm_params[param] = None
+            self.interface = "ksmctl"
+
+    def is_module_loaded(self):
+        """Check whether ksm module has been loaded."""
+        if utils.system("lsmod |grep ksm", ignore_status=True):
+            return False
+        return True
+
+    def load_ksm_module(self):
+        """Try to load ksm module."""
+        utils.system("modprobe ksm")
+
+    def unload_ksm_module(self):
+        """Try to unload ksm module."""
+        utils.system("modprobe -r ksm")
+
+    def get_ksmtuned_pid(self):
+        """
+        Return ksmtuned process id(0 means not running).
+        """
+        try:
+            os_dep.command("ksmtuned")
+        except ValueError:
+            raise KSMTunedNotSupportedError
+
+        process_id = utils.system_output("ps -C ksmtuned -o pid=",
+                                         ignore_status=True)
+        if process_id:
+            return int(re.findall("\d+", process_id)[0])
+        return 0
+
+    def start_ksmtuned(self):
+        """Start ksmtuned service"""
+        if self.get_ksmtuned_pid() == 0:
+            utils.system("ksmtuned")
+
+    def stop_ksmtuned(self):
+        """Stop ksmtuned service"""
+        pid = self.get_ksmtuned_pid()
+        if pid:
+            utils.system("kill -1 %s" % pid)
+
+    def restart_ksmtuned(self):
+        """Restart ksmtuned service"""
+        self.stop_ksmtuned()
+        self.start_ksmtuned()
+
+    def start_ksm(self, pages_to_scan=None, sleep_ms=None):
+        """
+        Start ksm function.
+        """
+        if not self.is_ksm_running():
+            feature_args = {'run': 1}
+            if self.interface == "ksmctl":
+                if pages_to_scan is None:
+                    pages_to_scan = 5000
+                if sleep_ms is None:
+                    sleep_ms = 50
+                feature_args["pages_to_scan"] = pages_to_scan
+                feature_args["sleep_millisecs"] = sleep_ms
+            self.set_ksm_feature(feature_args)
+
+    def stop_ksm(self):
+        """
+        Stop ksm function.
+        """
+        if self.is_ksm_running():
+            return self.set_ksm_feature({"run": 0})
+
+    def restart_ksm(self, pages_to_scan=None, sleep_ms=None):
+        """Restart ksm service"""
+        self.stop_ksm()
+        self.start_ksm(pages_to_scan, sleep_ms)
+
+    def is_ksm_running(self):
+        """
+        Verify whether ksm is running.
+        """
+        if self.interface == "sysfs":
+            running = utils.system_output("cat %s" % self.ksm_params["run"])
+        else:
+            output = utils.system_output("ksmctl info")
+            try:
+                running = re.findall("\d+", output)[0]
+            except IndexError:
+                raise KSMError
+        if running != '0':
+            return True
+        return False
+
+    def get_writable_features(self):
+        """Get writable features for setting"""
+        writable_features = []
+        if self.interface == "sysfs":
+            # Get writable parameters
+            for key, value in self.ksm_params.items():
+                if stat.S_IMODE(os.stat(value).st_mode) & stat.S_IWRITE:
+                    writable_features.append(key)
+        else:
+            for key in self.ksm_params.keys():
+                writable_features.append(key)
+        return writable_features
+
+    def set_ksm_feature(self, feature_args):
+        """
+        Set ksm features.
+
+        :param feature_args: a dict include features and their's value.
+        """
+        for key in feature_args.keys():
+            if key not in self.get_writable_features():
+                logging.error("Do not support setting of '%s'.", key)
+                raise KSMError
+        if self.interface == "sysfs":
+            # Get writable parameters
+            for key, value in feature_args.items():
+                utils.system("echo %s > %s" % (value, self.ksm_params[key]))
+        else:
+            if "run" in feature_args.keys() and feature_args["run"] == 0:
+                utils.system("ksmctl stop")
+            else:
+                # For ksmctl both pages_to_scan and sleep_ms should have value
+                # So start it anyway if run is 1
+                # Default is original value if feature is not in change list.
+                if "pages_to_scan" not in feature_args.keys():
+                    pts = self.get_ksm_feature("pages_to_scan")
+                else:
+                    pts = feature_args["pages_to_scan"]
+                if "sleep_millisecs" not in feature_args.keys():
+                    ms = self.get_ksm_feature("sleep_millisecs")
+                else:
+                    ms = feature_args["sleep_millisecs"]
+                utils.system("ksmctl start %s %s" % (pts, ms))
+
+    def get_ksm_feature(self, feature):
+        """
+        Get ksm feature's value.
+        """
+        if feature in self.ksm_params.keys():
+            feature = self.ksm_params[feature]
+
+        if self.interface == "sysfs":
+            return utils.system_output("cat %s" % feature).strip()
+        else:
+            output = utils.system_output("ksmctl info")
+            _KSM_PARAMS = ["run", "pages_to_scan", "sleep_millisecs"]
+            ksminfos = re.findall("\d+", output)
+            if len(ksminfos) != 3:
+                raise KSMError
+            try:
+                return ksminfos[_KSM_PARAMS.index(feature)]
+            except ValueError:
+                raise KSMError
