@@ -32,6 +32,11 @@ import urllib
 import shutil
 import unittest
 import tempfile
+
+autotest_dir = os.environ.get('AUTOTEST_PATH')
+if autotest_dir is not None:
+    sys.path.insert(0, autotest_dir)
+
 try:
     import autotest.common as common
 except ImportError:
