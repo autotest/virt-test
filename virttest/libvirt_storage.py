@@ -297,12 +297,7 @@ class StoragePool(object):
         if not self.is_pool_active(name):
             logging.info("pool '%s' is already inactive.", name)
             return True
-        try:
-            cmd_result = self.virsh_instance.pool_destroy(name)
-            return (not cmd_result.exit_status)
-        except error.CmdError:
-            logging.error("Destroy pool '%s' failed.", name)
-            return False
+        return self.virsh_instance.pool_destroy(name)
 
     def define_dir_pool(self, name, target_path):
         """
