@@ -508,11 +508,10 @@ class VirtTestApp(object):
             self.cartesian_parser.assign("nettype", "none")
 
     def _process_monitor(self):
-        if not self.options.config:
-            if self.options.monitor == 'qmp':
-                self.cartesian_parser.only_filter("qmp")
-            else:
-                self.cartesian_parser.only_filter("hmp")
+        if self.options.monitor == 'qmp':
+            self.cartesian_parser.only_filter("qmp")
+        else:
+            self.cartesian_parser.only_filter("hmp")
 
     def _process_smp(self):
         if not self.options.config:
