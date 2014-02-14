@@ -968,16 +968,23 @@ def ping(dest=None, count=None, interval=None, interface=None,
     :param output_func: Function used to log the result of ping.
     :param session: Local executon hint or session to execute the ping command.
     """
+    command = "ping"
+    if ":" in dest:
+        command = "ping6"
     if dest is not None:
-        command = "ping %s " % dest
+        command += " %s " % dest
     else:
-        command = "ping localhost "
+        command += " localhost "
     if count is not None:
         command += " -c %s" % count
     if interval is not None:
         command += " -i %s" % interval
     if interface is not None:
         command += " -I %s" % interface
+    else:
+        if dest.upper().startswith("FE80"):
+            err_msg = "Using ipv6 linklocal must assigne interface"
+            raise error.TestNAError(err_msg)
     if packetsize is not None:
         command += " -s %s" % packetsize
     if ttl is not None:
