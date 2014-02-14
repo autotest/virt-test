@@ -736,6 +736,8 @@ class BaseVM(object):
             except (VMIPAddressMissingError, VMAddressVerificationError):
                 return False
         if not utils_misc.wait_for(_get_address, timeout, internal_timeout):
+            if self.is_dead():
+                raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
             try:
                 s_session = None
                 s_session = self.wait_for_serial_login()
