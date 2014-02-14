@@ -127,6 +127,7 @@ class VM(virt_vm.BaseVM):
         self.name = name
         self.params = params
         self.root_dir = root_dir
+        self.ip_version = self.params.get("ip_version", "ipv4")
         self.address_cache = address_cache
         self.index_in_use = {}
         # This usb_dev_dict member stores usb controller and device info,
