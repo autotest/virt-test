@@ -49,7 +49,6 @@ import reindent
 import run_pep8
 
 UTILS_DIRNAME = os.path.dirname(sys.modules[__name__].__file__)
-TOP_LEVEL_DIRNAME = os.path.abspath(os.path.dirname(UTILS_DIRNAME))
 
 # Hostname of patchwork server to use
 PWHOST = "patchwork.virt.bos.redhat.com"
@@ -68,12 +67,12 @@ def license_project_name(path):
     try:
         license_file = file(os.path.join(path, 'LICENSE'), 'r')
         first_word = license_file.readline().strip().split()[0].lower()
-        return first_word
+        return first_word, path
     except IOError:
         # Recurse search parent of path's directory
         return license_project_name(os.path.dirname(path))
 
-PROJECT_NAME = license_project_name(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_NAME, TOP_LEVEL_DIRNAME = license_project_name(os.getcwd())
 
 
 EXTENSION_BLACKLIST = {
@@ -141,9 +140,9 @@ class VCS(object):
             self.backend = None
 
     def guess_vcs_name(self):
-        if os.path.isdir(".svn"):
+        if os.path.isdir(os.path.join(TOP_LEVEL_DIRNAME, ".svn")):
             return "SVN"
-        elif os.path.exists(".git"):
+        elif os.path.exists(os.path.join(TOP_LEVEL_DIRNAME, ".git")):
             return "git"
         else:
             logging.error("Could not figure version control system. Are you "
