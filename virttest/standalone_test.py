@@ -88,6 +88,7 @@ class Test(object):
     def stop_file_logging(self):
         logger = logging.getLogger()
         logger.removeHandler(self.file_handler)
+        self.file_handler.close()
 
     def verify_background_errors(self):
         """
