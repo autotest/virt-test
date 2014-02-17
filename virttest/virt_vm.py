@@ -967,6 +967,56 @@ class BaseVM(object):
         """
         return self.login(nic_index, timeout, username, password)
 
+    @error.context_aware
+    def commander(self, nic_index=0, timeout=LOGIN_TIMEOUT,
+                  username=None, password=None, commander_path=None):
+        """
+        Log into the guest via SSH/Telnet/Netcat.
+        If timeout expires while waiting for output from the guest (e.g. a
+        password prompt or a shell prompt) -- fail.
+
+        :param nic_index: The index of the NIC to connect to.
+        :param timeout: Time (seconds) before giving up logging into the
+                guest.
+        :param commaner_path: Path where will be commader placed.
+        :return: A ShellSession object.
+        """
+        if commander_path is None:
+            commander_path = "/tmp"
+        error.context("logging into '%s'" % self.name)
+        if not username:
+            username = self.params.get("username", "")
+        if not password:
+            password = self.params.get("password", "")
+        prompt = "^\s*#"
+        linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
+        client = self.params.get("shell_client")
+        address = self.get_address(nic_index)
+        port = self.get_port(int(self.params.get("shell_port")))
+        log_filename = None
+
+        import remote_commander as rc
+        path = os.path.dirname(rc.__file__)
+
+        for f in ["remote_runner.py", "remote_interface.py", "messenger.py"]:
+        # copy remote commnader to vm
+            f_path = os.path.join(path, f)
+            self.copy_files_to(f_path, commander_path)
+
+        # start remote commander
+        cmd = remote.remote_commander(client, address, port, username,
+                                      password, prompt, linesep, log_filename,
+                                      timeout, commander_path)
+        self.remote_sessions.append(cmd)
+        return cmd
+
+    def remote_commander(self, nic_index=0, timeout=LOGIN_TIMEOUT,
+                         username=None, password=None):
+        """
+        Alias for commander() for backward compatibility.
+        """
+        return self.commander(nic_index, timeout, username, password)
+
     def wait_for_login(self, nic_index=0, timeout=LOGIN_WAIT_TIMEOUT,
                        internal_timeout=LOGIN_TIMEOUT,
                        serial=False, restart_network=False,
