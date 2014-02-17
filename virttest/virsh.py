@@ -3240,3 +3240,35 @@ def create(name, options="", **dargs):
     """
     cmd = "create %s %s" % (name, options)
     return command(cmd, **dargs)
+
+
+def save_image_dumpxml(state_file, options="", to_file="", **dargs):
+    """
+    Dump xml from saved state file
+
+    :param state_file: saved state file to read
+    :param options: extra options
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "save-image-dumpxml %s %s" % (state_file, options)
+    result = command(cmd, **dargs)
+    if to_file:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    return result
+
+
+def save_image_define(state_file, xmlfile, options="", **dargs):
+    """
+    Redefine the XML for a domain's saved state file
+
+    :param state_file: saved state file to modify
+    :param xmlfile: filename containing updated XML for the target
+    :param options: extra options
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "save-image-define %s %s %s" % (state_file, xmlfile, options)
+    return command(cmd, **dargs)
