@@ -3240,3 +3240,14 @@ def create(name, options="", **dargs):
     """
     cmd = "create %s %s" % (name, options)
     return command(cmd, **dargs)
+
+
+def sysinfo(options="", **dargs):
+    """
+    Return the hypervisor sysinfo xml.
+
+    :param options: extra options
+    :return: CmdResult object
+    """
+    cmd = "sysinfo %s" % options
+    return command(cmd, **dargs)
