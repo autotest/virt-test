@@ -61,9 +61,35 @@ def _wait(filename):
     _unlock(fd)
 
 
+def _makeraw(shell_fd):
+    attr = termios.tcgetattr(shell_fd)
+    attr[0] &= ~(termios.IGNBRK | termios.BRKINT | termios.PARMRK |
+                 termios.ISTRIP | termios.INLCR | termios.IGNCR |
+                 termios.ICRNL | termios.IXON)
+    attr[1] &= ~termios.OPOST
+    attr[2] &= ~(termios.CSIZE | termios.PARENB)
+    attr[2] |= termios.CS8
+    attr[3] &= ~(termios.ECHO | termios.ECHONL | termios.ICANON |
+                 termios.ISIG | termios.IEXTEN)
+    termios.tcsetattr(shell_fd, termios.TCSANOW, attr)
+
+
+def _makestandard(shell_fd, echo):
+    attr = termios.tcgetattr(shell_fd)
+    attr[0] &= ~termios.INLCR
+    attr[0] &= ~termios.ICRNL
+    attr[0] &= ~termios.IGNCR
+    attr[1] &= ~termios.OPOST
+    if echo:
+        attr[3] |= termios.ECHO
+    else:
+        attr[3] &= ~termios.ECHO
+    termios.tcsetattr(shell_fd, termios.TCSANOW, attr)
+
+
 def _get_filenames(base_dir, a_id):
     return [os.path.join(base_dir, a_id, s) for s in
-            "shell-pid", "status", "output", "inpipe",
+            "shell-pid", "status", "output", "inpipe", "ctrlpipe",
             "lock-server-running", "lock-client-starting",
             "server-log"]
 
@@ -85,6 +111,7 @@ if __name__ == "__main__":
      status_filename,
      output_filename,
      inpipe_filename,
+     ctrlpipe_filename,
      lock_server_running_filename,
      lock_client_starting_filename,
      log_filename) = _get_filenames(BASE_DIR, a_id)
@@ -108,7 +135,6 @@ if __name__ == "__main__":
     os.putenv("TERM", "dumb")
 
     server_log.info('Forking child process for command')
-
     (shell_pid, shell_fd) = pty.fork()
     if shell_pid == 0:
         # Child process: run the command in a subshell
@@ -137,22 +163,16 @@ if __name__ == "__main__":
         lock_server_running = _lock(lock_server_running_filename)
 
         # Set terminal echo on/off and disable pre- and post-processing
-        attr = termios.tcgetattr(shell_fd)
-        attr[0] &= ~termios.INLCR
-        attr[0] &= ~termios.ICRNL
-        attr[0] &= ~termios.IGNCR
-        attr[1] &= ~termios.OPOST
-        if echo:
-            attr[3] |= termios.ECHO
-        else:
-            attr[3] &= ~termios.ECHO
-        termios.tcsetattr(shell_fd, termios.TCSANOW, attr)
+        _makestandard(shell_fd, echo)
 
         server_log.info('Opening output file %s' % output_filename)
         output_file = open(output_filename, "w")
         server_log.info('Opening input pipe %s' % inpipe_filename)
         os.mkfifo(inpipe_filename)
         inpipe_fd = os.open(inpipe_filename, os.O_RDWR)
+        server_log.info('Opening control pipe %s' % ctrlpipe_filename)
+        os.mkfifo(ctrlpipe_filename)
+        ctrlpipe_fd = os.open(ctrlpipe_filename, os.O_RDWR)
         # Open output pipes (readers)
         reader_fds = []
         for filename in reader_filenames:
@@ -181,12 +201,20 @@ if __name__ == "__main__":
             # Make a list of reader pipes whose buffers are not empty
             fds = [fd for (i, fd) in enumerate(reader_fds) if buffers[i]]
             # Wait until there's something to do
-            r, w, x = select.select([shell_fd, inpipe_fd], fds, [], 0.5)
+            r, w, x = select.select([shell_fd, inpipe_fd, ctrlpipe_fd],
+                                    fds, [], 0.5)
             # If a reader pipe is ready for writing --
             for (i, fd) in enumerate(reader_fds):
                 if fd in w:
                     bytes_written = os.write(fd, buffers[i])
                     buffers[i] = buffers[i][bytes_written:]
+            if ctrlpipe_fd in r:
+                cmd_len = int(os.read(ctrlpipe_fd, 10))
+                data = os.read(ctrlpipe_fd, cmd_len)
+                if data == "raw":
+                    _makeraw(shell_fd)
+                elif data == "standard":
+                    _makestandard(shell_fd, echo)
             # If there's data to read from the child process --
             if shell_fd in r:
                 try:
@@ -505,10 +533,13 @@ class Spawn(object):
          self.status_filename,
          self.output_filename,
          self.inpipe_filename,
+         self.ctrlpipe_filename,
          self.lock_server_running_filename,
          self.lock_client_starting_filename,
          self.server_log_filename) = _get_filenames(BASE_DIR,
                                                     self.a_id)
+
+        self.command = command
 
         # Remember some attributes
         self.auto_close = auto_close
@@ -749,6 +780,21 @@ class Spawn(object):
         :param cont: String to send to the child process.
         """
         self.send(cont + self.linesep)
+
+    def send_ctrl(self, control_str=""):
+        """
+        Send a control string to the aexpect process.
+
+        :param control_str: Control string to send to the child process
+                            container.
+        """
+        try:
+            fd = os.open(self.ctrlpipe_filename, os.O_RDWR)
+            os.write(fd, "%10d%s" % (len(control_str), control_str))
+            os.close(fd)
+        except Exception:
+            pass
+
 
 
 _thread_kill_requested = False
