@@ -123,6 +123,7 @@ def download_test_provider(provider, update=False):
             except error.CmdError:
                 pass
             utils.run('git pull origin %s' % branch)
+        os.chdir(download_dst)
         utils.system('git log -1')
 
 
