@@ -254,8 +254,8 @@ class PoolXML(PoolXMLBase):
         backup = poolxml.copy()
         if not pool_ins.delete_pool(name):
             del poolxml
-            raise xcepts.LibvirtXMLError("Error occur while deleting pool: %s",
-                                         name)
+            raise xcepts.LibvirtXMLError("Error occur while deleting pool: %s"
+                                         % name)
         # Alter the XML
         poolxml.name = new_name
         if uuid is None:

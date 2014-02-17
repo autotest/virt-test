@@ -373,7 +373,8 @@ class VMXML(VMXMLBase):
             backup = None
 
         if not self.undefine(options):
-            raise xcepts.LibvirtXMLError("Failed to undefine %s.", self.vm_name)
+            raise xcepts.LibvirtXMLError("Failed to undefine %s."
+                                         % self.vm_name)
         if not self.define():
             if backup:
                 backup.define()
