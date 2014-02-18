@@ -20,6 +20,7 @@ import re
 import os
 import logging
 from virttest import virsh, xml_utils, iscsi, nfs, data_dir, aexpect
+from virttest import utils_misc, utils_selinux
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
@@ -295,9 +296,13 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True):
                     "iscsi_thread_id": "virt"}
     _iscsi = iscsi.Iscsi(iscsi_params)
     if is_setup:
-        utils.run("setenforce 0")
+        sv_status = None
+        if utils_misc.selinux_enforcing():
+            sv_status = utils_selinux.get_status()
+            utils_selinux.set_status("Permissive")
         _iscsi.export_target()
-        utils.run("setenforce 1")
+        if sv_status is not None:
+            utils_selinux.set_status(sv_status)
         if is_login:
             _iscsi.login()
             iscsi_device = _iscsi.get_device_name()
