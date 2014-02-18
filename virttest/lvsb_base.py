@@ -200,8 +200,9 @@ class SandboxBase(object):
 
         :param extra: String of extra command-line to use but not store
         """
-        logging.debug("Launching %s", self.make_sandbox_command_line())
-        self._session.new_session(self.make_sandbox_command_line(extra))
+        sandbox_cmdline = self.make_sandbox_command_line(extra)
+        logging.debug("Launching %s", sandbox_cmdline)
+        self._session.new_session(sandbox_cmdline)
 
     def stop(self):
         """Destroy but don't finalize asynchronous background sandbox process"""
@@ -332,7 +333,7 @@ class SandboxCommandBase(SandboxBase):
             else:  # option is not None
                 # --flag
                 if argument is None:
-                    result_list.append(argument)
+                    result_list.append(option)
                 else:  # argument is not None
                     # --option argument or -o argument
                     result_list.append("%s %s" % (option, argument))
@@ -439,8 +440,33 @@ class TestSandboxes(object):
         self.uri = pop.get('lvsb_uri', 'lxc:///')
         # The command to run inside the sandbox
         self.command = pop.get('lvsb_command')
-        # Dynamically allocate an SELinux label is default
-        self.secure_opt = pop.get('lvsb_secure_options', 'dynamic')
+        # Allows iterating for the options
+        self.opts_count = int(pop.get('lvsb_opts_count', '1'))
+        # FIXME: should automatically generate this
+        self.lvsb_option_mapper = {'optarg':{'connect': '-c', 'name': '-n', \
+                                   'mount': '-m', 'include': '-i', \
+                                   'includefile': '-I', 'network': '-N', \
+                                   'security': '-s'}, \
+                                   'flag':{'help': '-h', 'version': '-V',  \
+                                   'debug': '-d', 'privileged': '-p', \
+                                   'shell': '-l'}}
+        # The list to save options
+        self.opts = []
+        self.flag = []
+        for k in self.lvsb_option_mapper.keys():
+            # k may be 'optarg' or 'flag'
+            for key, value in self.lvsb_option_mapper[k].items():
+                base_name = 'lvsb_%s_options' % key
+                for key_gen, option in params.object_counts('lvsb_opts_count',
+                    base_name):
+                    # k is 'optarg'
+                    if option and value:
+                        self.opts.append((value, option))
+                    # k is 'flag'
+                    if params.has_key(key_gen) and not option:
+                        self.flag.append(value)
+
+        logging.debug("All of options(%s) and flags(%s)", self.opts, self.flag)
 
     def init_sandboxes(self):
         """
