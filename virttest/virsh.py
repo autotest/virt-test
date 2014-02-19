@@ -1219,6 +1219,21 @@ def migrate_setmaxdowntime(domain, downtime, extra=None, **dargs):
     return command(cmd, **dargs)
 
 
+def migrate_compcache(domain, size=None, **dargs):
+    """
+    Get/set compression cache size for migration.
+
+    :param domain: name/uuid/id of guest
+    :param size: compression cache size to be set.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = 'migrate-compcache %s' % domain
+    if size is not None:
+        cmd += ' --size %s' % size
+    return command(cmd, **dargs)
+
+
 def _adu_device(action, domainarg=None, filearg=None,
                 domain_opt=None, file_opt=None,
                 flagstr=None, **dargs):
