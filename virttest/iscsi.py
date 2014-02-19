@@ -197,9 +197,9 @@ class Iscsi(object):
                 device_name = re.findall(pattern, output, re.S)[0]
                 device_name = "/dev/%s" % device_name
             else:
-                logging.debug("Can not find taget after login")
+                logging.debug("Can not find target '%s' after login", self.target)
         else:
-            logging.debug("Session is not login yet.")
+            logging.debug("Session is not logged in yet.")
         return device_name
 
     def get_target_id(self):
