@@ -88,6 +88,36 @@ class SystemXML(CAPXML):
         return self.make_sysfs_sub_path()
 
 
+class NetXML(CAPXML):
+
+    """
+    class for capability whose type is net.
+    """
+    __slots__ = ('interface', 'address')
+
+    def __init__(self, virsh_instance=base.virsh):
+        accessors.XMLElementText('interface', self, parent_xpath='/',
+                                 tag_name='interface')
+        accessors.XMLElementText('address', self, parent_xpath='/',
+                                 tag_name='address')
+
+
+class StorageXML(CAPXML):
+
+    """
+    class for capability whose type is storage.
+    """
+    __slots__ = ('block', 'bus', 'driver_type')
+
+    def __init__(self, virsh_instance=base.virsh):
+        accessors.XMLElementText('block', self, parent_xpath='/',
+                                 tag_name='block')
+        accessors.XMLElementText('bus', self, parent_xpath='/',
+                                 tag_name='bus')
+        accessors.XMLElementText('driver_type', self, parent_xpath='/',
+                                 tag_name='driver_type')
+
+
 class PCIXML(CAPXML):
 
     """
@@ -163,6 +193,14 @@ class PCIXML(CAPXML):
             key2value_dict[key] = self[key]
 
         return key2value_dict
+
+    def get_address_dict(self):
+        """
+        Return a dict contain the address.
+        """
+        address = {'domain': self.domain, 'bus': self.bus,
+                   'slot': self.slot, 'function': self.function}
+        return address
 
 
 class NodedevXMLBase(base.LibvirtXMLBase):
