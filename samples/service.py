@@ -72,4 +72,3 @@ def run(test, params, env):
     if not service.status() is original_status:
         raise error.TestFail("Fail to restore original status of the %s "
                              "service" % params["test_service"])
-

@@ -661,7 +661,7 @@ class Factory(object):
 
     After all, there is an unified interface to create both of them,
     create_service(service_name=None).
-    
+
     If we pass a service_name to it, it will return a SpecificServiceManager,
     otherwise, it will return GenericServiceManager.
     """
@@ -835,7 +835,7 @@ class Factory(object):
     def create_service(service_name=None, run=utils.run):
         """
         # Unified interface for generic and specific service manager.
-        
+
         :return: _SpecificServiceManager if service_name is not None,
                 _GenericServiceManager if service_name is None.
         """

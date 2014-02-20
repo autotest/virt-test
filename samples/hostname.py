@@ -19,4 +19,3 @@ def run(test, params, env):
     """
     result = utils.run("hostname")
     logging.info("Output of 'hostname' cmd is '%s'", result.stdout)
-
