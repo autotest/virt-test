@@ -9,6 +9,7 @@ Before this test please set your hostname to something meaningful.
 import logging
 from autotest.client import utils
 
+
 def run(test, params, env):
     """
     Logs the host name and exits

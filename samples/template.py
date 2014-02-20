@@ -3,6 +3,7 @@
 # ./run -t $type --tests="template" to execute it.
 import logging
 
+
 def run(test, params, env):
     """
     Docstring describing template.

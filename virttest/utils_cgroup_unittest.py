@@ -40,7 +40,7 @@ controllers_1 = [
     "freezer",
     "net_cls",
     "blkio",
-    ]
+]
 mount_points_1 = [
     "/cgroup/cpuset",
     "/cgroup/cpu",
@@ -50,7 +50,7 @@ mount_points_1 = [
     "/cgroup/freezer",
     "/cgroup/net_cls",
     "/cgroup/blkio",
-    ]
+]
 
 # Mount file content, Controllers and mount points from RHEL-7
 mount_2 = """rootfs / rootfs rw 0 0
@@ -98,7 +98,7 @@ controllers_2 = [
     "blkio",
     "perf_event",
     "hugetlb",
-    ]
+]
 mount_points_2 = [
     "/sys/fs/cgroup/systemd",
     "/sys/fs/cgroup/cpuset",
@@ -111,7 +111,7 @@ mount_points_2 = [
     "/sys/fs/cgroup/blkio",
     "/sys/fs/cgroup/perf_event",
     "/sys/fs/cgroup/hugetlb",
-    ]
+]
 
 mount_cases = [
     {"mount_txt": mount_1,
@@ -122,7 +122,7 @@ mount_cases = [
      "controllers": controllers_2,
      "mount_points": mount_points_2,
      },
-    ]
+]
 
 
 class CgroupTest(unittest.TestCase):
@@ -146,10 +146,10 @@ class CgroupTest(unittest.TestCase):
                         controller, mount_file_path)
                     self.assertEqual(case["mount_points"][idx], res)
                 self.assertRaises(
-                        error.TestError,
-                        utils_cgroup.get_cgroup_mountpoint,
-                        "non_exit_ctlr",
-                        mount_file_path)
+                    error.TestError,
+                    utils_cgroup.get_cgroup_mountpoint,
+                    "non_exit_ctlr",
+                    mount_file_path)
             finally:
                 os.remove(mount_file_path)
 

@@ -426,9 +426,9 @@ class KSMConfig(object):
         self.default_status = []
         self.default_status.append(self.ksmctler.get_ksm_feature("run"))
         self.default_status.append(self.ksmctler.get_ksm_feature(
-                                                        "pages_to_scan"))
+            "pages_to_scan"))
         self.default_status.append(self.ksmctler.get_ksm_feature(
-                                                        "sleep_millisecs"))
+            "sleep_millisecs"))
         self.default_status.append(int(self.ksmtuned_process))
         self.default_status.append(self.ksm_module_loaded)
 

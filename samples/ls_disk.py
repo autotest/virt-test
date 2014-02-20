@@ -14,6 +14,7 @@ bigger differences.
 """
 import logging
 
+
 def run(test, params, env):
     """
     Logs guest's disk partitions

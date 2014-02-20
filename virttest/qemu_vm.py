@@ -614,7 +614,7 @@ class VM(virt_vm.BaseVM):
                         cmd += ",ifname='%s'" % ifname
                 elif tapfds:
                     if ((int(queues)) > 1
-                         and ',fds=' in devices.get_help_text()):
+                       and ',fds=' in devices.get_help_text()):
                         cmd += ",fds=%s" % tapfds
                     else:
                         cmd += ",fd=%s" % tapfds
@@ -1727,7 +1727,7 @@ class VM(virt_vm.BaseVM):
         if nic.nettype == 'macvtap':
             macvtap_mode = self.params.get("macvtap_mode", "vepa")
             nic.tapfds = utils_net.create_and_open_macvtap(nic.ifname,
-                    macvtap_mode, nic.queues, nic.netdst, nic.mac)
+                                                           macvtap_mode, nic.queues, nic.netdst, nic.mac)
         else:
             nic.tapfds = utils_net.open_tap("/dev/net/tun", nic.ifname,
                                             queues=nic.queues, vnet_hdr=True)
@@ -1912,11 +1912,11 @@ class VM(virt_vm.BaseVM):
                     if pa_type == "vf":
                         self.pci_assignable.add_device(device_type=pa_type,
                                                        mac=mac,
-                                            name=nic_params.get("device_name"))
+                                                       name=nic_params.get("device_name"))
                     # Physical NIC (PF) assignable devices
                     elif pa_type == "pf":
                         self.pci_assignable.add_device(device_type=pa_type,
-                                            name=nic_params.get("device_name"))
+                                                       name=nic_params.get("device_name"))
                     else:
                         raise virt_vm.VMBadPATypeError(pa_type)
                 else:
@@ -1948,7 +1948,7 @@ class VM(virt_vm.BaseVM):
                     if ((nic_params.get("vhost") in ['on',
                                                      'force',
                                                      'vhost=on']) and
-                        (nic_params.get("enable_vhostfd", "yes") == "yes")):
+                            (nic_params.get("enable_vhostfd", "yes") == "yes")):
                         vhostfds = []
                         for i in xrange(int(nic.queues)):
                             vhostfds.append(str(os.open("/dev/vhost-net",
@@ -2396,7 +2396,7 @@ class VM(virt_vm.BaseVM):
                     logging.warn(e)
                     if self.is_dead():
                         logging.warn("VM %s down during try to kill it "
-                                      "by monitor", self.name)
+                                     "by monitor", self.name)
                         return
                 else:
                     # Wait for the VM to be really dead
@@ -2741,7 +2741,7 @@ class VM(virt_vm.BaseVM):
                 err_msg = "Can't get the fd that qemu process opened!"
                 raise virt_vm.VMAddNetDevError(err_msg)
             qemu_tapfds = [fd for fd in new_fds if os.readlink(
-                              os.path.join(qemu_fds, fd)) == tun_tap_dev]
+                           os.path.join(qemu_fds, fd)) == tun_tap_dev]
             if not qemu_tapfds or len(qemu_tapfds) != int(nic.queues):
                 err_msg = "Can't get the tap fd in qemu process!"
                 raise virt_vm.VMAddNetDevError(err_msg)

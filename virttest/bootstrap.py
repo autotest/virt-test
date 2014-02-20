@@ -51,6 +51,8 @@ last_subtest = {'qemu': ['shutdown'],
                 'lvsb': []}
 
 test_filter = ['__init__', 'cfg', 'dropin.py']
+
+
 def _get_config_filter():
     config_filter = ['__init__', ]
     for provider_subdir in asset.get_test_provider_subdirs():
@@ -250,7 +252,6 @@ def create_subtests_cfg(t_type):
     provider_info_shared = []
     for shared_provider in provider_names_shared:
         provider_info_shared.append(asset.get_test_provider_info(shared_provider))
-
 
     if not t_type == 'lvsb':
         for subdir in shared_subdirs:

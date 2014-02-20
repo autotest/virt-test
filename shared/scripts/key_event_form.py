@@ -1,6 +1,7 @@
 import gtk
 import logging
 
+
 class TestForm(gtk.Window):
 
     def __init__(self):
@@ -24,7 +25,6 @@ class TestForm(gtk.Window):
         # Clean the text file:
         input_file = open("/tmp/autotest-rv_input", "w")
         input_file.close()
-
 
     def on_key_press_event(self, widget, event):
         # Store caught keycodes into text file

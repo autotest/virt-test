@@ -524,7 +524,6 @@ class FileChecker(object):
 
         return success
 
-
     def _check_unittest(self):
         """
         Verifies if the file in question has a unittest suite, if so, run the

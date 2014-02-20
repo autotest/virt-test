@@ -927,8 +927,8 @@ def get_net_if_addrs_win(session, mac_addr):
     ip_address = get_windows_nic_attribute(session, "macaddress",
                                            mac_addr, "IPAddress",
                                            global_switch="nicconfig")
-    return  {"ipv4": re.findall('(\d+.\d+.\d+.\d+)"', ip_address),
-             "ipv6": re.findall('(fe80.*?)"', ip_address)}
+    return {"ipv4": re.findall('(\d+.\d+.\d+.\d+)"', ip_address),
+            "ipv6": re.findall('(fe80.*?)"', ip_address)}
 
 
 def get_net_if_and_addrs(runner=None):
@@ -981,7 +981,7 @@ def renew_guest_ip(session, mac_addr, os_type="linux", ip_version="ipv4"):
     """
     if os_type == "linux":
         nic_ifname = get_linux_ifname(session, mac_addr)
-        renew_cmd =  "ifconfig %s up; " % nic_ifname
+        renew_cmd = "ifconfig %s up; " % nic_ifname
         renew_cmd += "killall dhclient; dhclient %s" % nic_ifname
     elif os_type == "windows":
         nic_connectionid = get_windows_nic_attribute(session,
@@ -2246,7 +2246,7 @@ def get_windows_nic_attribute(session, key, value, target, timeout=240,
     cmd = 'wmic %s where %s="%s" get %s' % (global_switch, key, value, target)
     o = session.cmd(cmd, timeout=timeout).strip()
     if not o:
-        err_msg = "Get guest %s attribute %s failed!" % (global_switch,target)
+        err_msg = "Get guest %s attribute %s failed!" % (global_switch, target)
         raise error.TestError(err_msg)
     return o.splitlines()[-1]
 

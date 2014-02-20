@@ -286,13 +286,14 @@ def image_average_hash(image, img_wd=8, img_ht=8):
         image = Image.open(image)
     image = image.resize((img_wd, img_ht), Image.ANTIALIAS).convert('L')
     avg = reduce(lambda x, y: x + y, image.getdata()) / (img_wd * img_ht)
+
     def _hta(i):
         if i < avg:
             return 0
         else:
             return 1
     return reduce(lambda x, (y, z): x | (z << y),
-            enumerate(map(_hta, image.getdata())), 0)
+                  enumerate(map(_hta, image.getdata())), 0)
 
 
 def cal_hamming_distance(h1, h2):

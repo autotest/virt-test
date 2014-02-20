@@ -771,6 +771,7 @@ class QBusUnitBus(QDenseBus):
 class QAHCIBus(QBusUnitBus):
 
     """ AHCI bus (ich9-ahci, ahci) """
+
     def __init__(self, busid, aobject=None):
         """ 6xbus, 2xunit """
         super(QAHCIBus, self).__init__(busid, 'IDE', [6, 1], aobject, 'ahci')

@@ -3,7 +3,8 @@ This module contains backported functions that are not present in Python 2.4
 but are standard in more recent versions.
 """
 
-import re, sys
+import re
+import sys
 
 # Import backported modules
 import simplejson
@@ -15,6 +16,8 @@ if not hasattr(itertools, 'product'):
 
 # pylint: disable=I0011,W0622
 # noinspection PyShadowingBuiltins
+
+
 def _next(*args):
     """
     Retrieve the next item from the iterator by calling its next() method.

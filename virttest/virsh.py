@@ -1842,6 +1842,7 @@ def pool_build(name, options="", **dargs):
     """
     return command("pool-build %s %s" % (name, options), **dargs)
 
+
 def find_storage_pool_sources_as(source_type, options="", **dargs):
     """
     Find potential storage pool sources
@@ -1852,7 +1853,7 @@ def find_storage_pool_sources_as(source_type, options="", **dargs):
     :return: returns the output of the command
     """
     return command("find-storage-pool-sources-as %s %s"
-        % (source_type, options), **dargs)
+                   % (source_type, options), **dargs)
 
 
 def pool_dumpxml(name, extra="", to_file="", **dargs):
@@ -2628,6 +2629,7 @@ def numatune(name, mode=None, nodeset=None, options=None, **dargs):
         cmd += " --nodeset %s" % nodeset
 
     return command(cmd, **dargs)
+
 
 def nodedev_reset(name, options="", **dargs):
     """

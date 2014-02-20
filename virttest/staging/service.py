@@ -625,6 +625,7 @@ class _SystemdServiceManager(_GenericServiceManager):
 
 
 class Factory(object):
+
     """
     Class to create different kinds of ServiceManager.
     The all interfaces to create manager are staticmethod,
@@ -667,6 +668,7 @@ class Factory(object):
     """
 
     class FactoryHelper(object):
+
         """
         Internal class to help create service manager.
 
@@ -751,7 +753,8 @@ class Factory(object):
             """
             result_parser = self._result_parsers[self.init_name]
             # remove list method
-            command_list = [c for c in COMMANDS if c not in ["list", "set_target"]]
+            command_list = [
+                c for c in COMMANDS if c not in ["list", "set_target"]]
             return _ServiceResultParser(result_parser, command_list)
 
         def get_specific_service_command_generator(self):
@@ -769,7 +772,8 @@ class Factory(object):
             """
             command_generator = self._command_generators[self.init_name]
             # remove list method
-            command_list = [c for c in COMMANDS if c not in ["list", "set_target"]]
+            command_list = [
+                c for c in COMMANDS if c not in ["list", "set_target"]]
             return _ServiceCommandGenerator(command_generator, command_list)
 
     @staticmethod
@@ -831,6 +835,7 @@ class Factory(object):
                                        command_generator,
                                        result_parser,
                                        run)
+
     @staticmethod
     def create_service(service_name=None, run=utils.run):
         """
