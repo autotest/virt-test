@@ -24,7 +24,7 @@ class Vlan(base.TypedDeviceBase):
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
         super(Vlan, self).__init__(protocol_tag='vlan', type_name=type_name,
-                                  virsh_instance=virsh_instance)
+                                   virsh_instance=virsh_instance)
 
     def new_attr(self, **dargs):
         """

@@ -158,7 +158,7 @@ class NwfilterXMLBase(base.LibvirtXMLBase):
         accessors.XMLElementText('uuid', self, parent_xpath='/',
                                  tag_name='uuid')
         accessors.XMLElementText('filterref', self, parent_xpath='/',
-                               tag_name='filterref')
+                                 tag_name='filterref')
         accessors.XMLAttribute('filterref_name', self, parent_xpath='/',
                                tag_name='filterref', attribute='filter')
 
@@ -193,8 +193,8 @@ class NwfilterXMLBase(base.LibvirtXMLBase):
         """
         index = self.get_rule_index(rule_protocol)
         if rule_index not in index:
-           raise xcepts.LibvirtXMLError("rule index %s is not valid" %
-                                        rule_index)
+            raise xcepts.LibvirtXMLError("rule index %s is not valid" %
+                                         rule_index)
         source_root = self.xmltreefile.findall('rule')
         rulexml = NwfilterXMLRules(virsh_instance=self.__dict_get__('virsh'))
         rulexml.xmltreefile = self.xmltreefile.backup_copy()
@@ -355,13 +355,13 @@ class NwfilterXML(NwfilterXMLBase):
                     if protocol_node[0].tag == protocol:
                         protocol_class = librarian.get(protocol)
                         new_one = protocol_class.new_from_element(
-                                      protocol_node[0])
+                            protocol_node[0])
                         protocols.device_tag = protocol
                         protocols.append(new_one)
                 else:
                     protocol_class = librarian.get(protocol_node[0].tag)
                     new_one = protocol_class.new_from_element(
-                                  protocol_node[0])
+                        protocol_node[0])
                     protocols.device_tag = protocol_node[0].tag
                     protocols.append(new_one)
 

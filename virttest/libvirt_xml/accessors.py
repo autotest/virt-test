@@ -11,6 +11,7 @@ from virttest.libvirt_xml import xcepts, base
 # The backports module will take care of picking the builtin if available
 from virttest.staging.backports import bin
 
+
 def type_check(name, thing, expected):
     """
     Check that thing is expected subclass or instance, raise ValueError if not
@@ -461,7 +462,7 @@ class XMLElementBool(AccessorGeneratorBase):
         __slots__ = add_to_slots('parent_xpath', 'tag_name')
 
         def __call__(self, value):
-            if bool(value) == True:
+            if bool(value) is True:
                 self.element_by_parent(self.parent_xpath, self.tag_name,
                                        create=True)
             else:
