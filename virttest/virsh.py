@@ -3251,3 +3251,36 @@ def sysinfo(options="", **dargs):
     """
     cmd = "sysinfo %s" % options
     return command(cmd, **dargs)
+
+
+def reset(name, **dargs):
+    """
+    Reset a domain
+
+    :param name: name of domain
+    :return: CmdResult object
+    """
+    cmd = "reset %s" % name
+    return command(cmd, **dargs)
+
+
+def domdisplay(name, options="", **dargs):
+    """
+    Get domain display connection URI
+
+    :param name: name of domain
+    :param options: options of domdisplay
+    :return: CmdResult object
+    """
+    cmd = "domdisplay %s %s" % (name, options)
+    return command(cmd, **dargs)
+
+
+def domblkerror(name, **dargs):
+    """
+    Show errors on block devices
+
+    :param name: name of domain
+    :return: CmdResult object
+    """
+    return command("domblkerror %s" % name, **dargs)
