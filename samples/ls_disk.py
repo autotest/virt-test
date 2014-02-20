@@ -35,4 +35,3 @@ def run(test, params, env):
     # Following command unifies the response no matter which monitor is used
     output = monitor.info_block(debug=False)
     logging.info("info block:\n%s", output)
-

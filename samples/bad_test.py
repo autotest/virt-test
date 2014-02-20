@@ -16,4 +16,3 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     utils.run("missing_command")
-
