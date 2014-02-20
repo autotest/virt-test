@@ -916,6 +916,7 @@ def _take_screendumps(test, params, env):
             counter[vm] += 1
             screendump_filename = os.path.join(screendump_dir, "%04d.jpg" %
                                                counter[vm])
+            vm.verify_bsod(screendump_filename)
             image_hash = utils.hash_file(temp_filename)
             if image_hash in cache:
                 time_inactive = time.time() - inactivity[vm]

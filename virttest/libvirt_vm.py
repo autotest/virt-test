@@ -1062,7 +1062,9 @@ class VM(virt_vm.BaseVM):
                 if not os.path.exists(iso):
                     raise virt_vm.VMImageMissingError(iso)
                 compare = False
-                if cdrom_params.get("md5sum_1m"):
+                if cdrom_params.get("skip_hash"):
+                    logging.debug("Skipping hash comparison")
+                elif cdrom_params.get("md5sum_1m"):
                     logging.debug("Comparing expected MD5 sum with MD5 sum of "
                                   "first MB of ISO file...")
                     actual_hash = utils.hash_file(iso, 1048576, method="md5")
