@@ -69,9 +69,12 @@
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 			<DriverPaths>
 				<PathAndCredentials wcm:keyValue="1" wcm:action="add">
-					<Path>KVM_TEST_STORAGE_DRIVER_PATH</Path>
+					<Path>KVM_TEST_SCSI_DRIVER_PATH</Path>
 				</PathAndCredentials>
 				<PathAndCredentials wcm:keyValue="2" wcm:action="add">
+					<Path>KVM_TEST_STORAGE_DRIVER_PATH</Path>
+				</PathAndCredentials>
+				<PathAndCredentials wcm:keyValue="3" wcm:action="add">
 					<Path>KVM_TEST_NETWORK_DRIVER_PATH</Path>
 				</PathAndCredentials>
 			</DriverPaths>

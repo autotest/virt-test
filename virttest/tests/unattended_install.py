@@ -145,7 +145,7 @@ class UnattendedInstallConfig(object):
             setattr(self, a, params.get(a, ''))
 
         # Will setup the virtio attributes
-        v_attributes = ['virtio_floppy', 'virtio_storage_path',
+        v_attributes = ['virtio_floppy', 'virtio_scsi_path', 'virtio_storage_path',
                         'virtio_network_path', 'virtio_oemsetup_id',
                         'virtio_network_installer_path',
                         'virtio_balloon_installer_path',
@@ -441,7 +441,7 @@ class UnattendedInstallConfig(object):
             paths = doc.getElementsByTagName("Path")
             if self.virtio_scsi_cdrom == 'yes':
                 self.virtio_network_path = self.virtio_storage_path
-            values = [self.virtio_storage_path, self.virtio_network_path]
+            values = [self.virtio_scsi_path, self.virtio_storage_path, self.virtio_network_path]
             for path, value in zip(paths, values):
                 path_text = path.childNodes[0]
                 assert path_text.nodeType == doc.TEXT_NODE
