@@ -828,7 +828,6 @@ class VirtTestApp(object):
                                 update_providers=self.options.update_providers)
             sys.exit(0)
 
-
         if self.options.type:
             if self.options.type not in SUPPORTED_TEST_TYPES:
                 _restore_stdout()

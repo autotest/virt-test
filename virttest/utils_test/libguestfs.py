@@ -24,6 +24,7 @@ class VTAttachError(VTError):
 
 
 class VTMountError(VTError):
+
     def __init__(self, cmd, output):
         VTError.__init__(self, cmd, output)
         self.cmd = cmd

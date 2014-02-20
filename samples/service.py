@@ -37,7 +37,7 @@ def run(test, params, env):
         # what exactly was tested.
         error.context("Using guest.", logging.info)
         vm = env.get_vm(params["main_vm"])
-        session =  vm.wait_for_login()
+        session = vm.wait_for_login()
         # RemoteRunner is object, which simulates the utils.run() behavior
         # on remote consoles
         runner = remote.RemoteRunner(session=session).run

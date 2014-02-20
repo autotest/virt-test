@@ -130,8 +130,8 @@ class Test(object):
 
         # Open the environment file
         env_filename = os.path.join(
-                            data_dir.get_backend_dir(params.get("vm_type")),
-                            params.get("env", "env"))
+            data_dir.get_backend_dir(params.get("vm_type")),
+            params.get("env", "env"))
         env = utils_env.Env(env_filename, self.env_version)
 
         test_passed = False
@@ -168,8 +168,8 @@ class Test(object):
                         provider_info = asset.get_test_provider_info(provider)
                         for key in provider_info['backends']:
                             subtest_dirs += data_dir.SubdirList(
-                                        provider_info['backends'][key]['path'],
-                                        bootstrap.test_filter)
+                                provider_info['backends'][key]['path'],
+                                bootstrap.test_filter)
 
                     subtest_dir = None
 
@@ -390,9 +390,9 @@ def print_fail(t_elapsed, open_fd=False):
     """
     normal_fail_msg = (bcolors.FAIL + "FAIL" +
                        bcolors.ENDC + " (%.2f s)" % t_elapsed)
-    fd_fail_msg =  (bcolors.FAIL + "FAIL" +
-                    bcolors.ENDC + " (%.2f s) (%s fd)" %
-                    (t_elapsed, utils_misc.get_virt_test_open_fds()))
+    fd_fail_msg = (bcolors.FAIL + "FAIL" +
+                   bcolors.ENDC + " (%.2f s) (%s fd)" %
+                  (t_elapsed, utils_misc.get_virt_test_open_fds()))
     if open_fd:
         msg = fd_fail_msg
     else:

@@ -237,6 +237,7 @@ def process_or_children_is_defunct(ppid):
 
 # The following are utility functions related to ports.
 
+
 def is_port_free(port, address):
     """
     Return True if the given port is available for use.

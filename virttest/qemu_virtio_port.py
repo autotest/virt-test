@@ -218,7 +218,7 @@ class GuestWorker(object):
                                           % guest_script_src).strip()
         script_size_guest = self.session.cmd_output(cmd_guest_size).strip()
         if (script_size != script_size_guest
-            or self.session.cmd_status(cmd_already_compiled_chck)):
+                or self.session.cmd_status(cmd_already_compiled_chck)):
             if self.os_linux:
                 # Disable serial-getty@hvc0.service on systemd-like hosts
                 self.session.cmd_status('systemctl mask '

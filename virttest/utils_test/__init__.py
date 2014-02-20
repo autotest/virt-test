@@ -791,8 +791,8 @@ def run_autotest(vm, session, control_path, timeout,
     server_process = None
     if server_control_path:
         command = ("%s %s --verbose -t %s" % (autotest_local_path,
-                                    server_control_path,
-                                    os.path.basename(server_control_path)))
+                                              server_control_path,
+                                              os.path.basename(server_control_path)))
         server_process = aexpect.run_bg(command)
 
     try:
@@ -835,8 +835,8 @@ def run_autotest(vm, session, control_path, timeout,
 
                 # Remove the result dir produced by server_process.
                 server_result = os.path.join(autotest_path,
-                                        "results",
-                                        os.path.basename(server_control_path))
+                                             "results",
+                                             os.path.basename(server_control_path))
                 if os.path.isdir(server_result):
                     utils.safe_rmdir()
                 # Remove the control file for server.

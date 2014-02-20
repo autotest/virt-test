@@ -21,16 +21,21 @@ TEST_PROVIDERS_DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'test-providers.d',
 TMP_DIR = os.path.join(ROOT_DIR, 'tmp')
 BACKING_DATA_DIR = None
 
+
 class MissingDepsDirError(Exception):
     pass
 
+
 class UnknownBackendError(Exception):
+
     def __init__(self, backend):
         self.backend = backend
+
     def __str__(self):
         return ("Virt Backend %s is not currently supported by virt-test. "
                 "Check for typos and the list of supported backends" %
                 self.backend)
+
 
 class SubdirList(list):
 

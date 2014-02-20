@@ -6,6 +6,7 @@ Simple bad test.
 """
 from autotest.client import utils
 
+
 def run(test, params, env):
     """
     Executes missing_command which, in case it's not present, should raise
