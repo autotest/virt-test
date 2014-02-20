@@ -213,6 +213,24 @@ class BRIpError(NetError):
                 " impossible to start dnsmasq for this bridge." %
                (self.brname))
 
+class VMIPV6NeighNotFoundError(NetError):
+
+    def __init__(self, ipv6_address):
+        NetError.__init__(self, ipv6_address)
+        self.ipv6_address = ipv6_address
+
+    def __str__(self):
+        return "No ipv6 neighbours with address %s" % self.ipv6_address
+
+
+class VMIPV6AdressError(NetError):
+
+    def __init__(self, error_info):
+        NetError.__init__(self, error_info)
+        self.error_info = error_info
+
+    def __str__(self):
+        return "%s, check your test env support ipv6" % self.error_info
 
 class HwAddrSetError(NetError):
 
@@ -942,7 +960,8 @@ def get_net_if_and_addrs(runner=None):
     return ret
 
 
-def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4"):
+def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4",
+                      linklocal=False):
     """
     Get guest ip addresses by serial session
 
@@ -952,6 +971,8 @@ def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4"):
     :param ip_version: guest ip version, ipv4 or ipv6
     :return: ip addresses of network interface.
     """
+    if ip_version == "ipv6" and linklocal:
+        return ipv6_from_mac_addr(mac_addr)
     try:
         if os_type == "linux":
             nic_ifname = get_linux_ifname(session, mac_addr)
@@ -963,8 +984,13 @@ def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4"):
         else:
             raise IPAddrGetError(mac_addr, "Unknown os type")
 
-        if nic_address[ip_version]:
-            return nic_address[ip_version][0]
+        if ip_version == "ipv4":
+            return nic_address["ipv4"]
+        else:
+            global_address = [ x for x in nic_address["ipv6"]
+                               if not x.lower().startswith("fe80")]
+            if global_address:
+                return global_address[0]
     except Exception, err:
         logging.debug(session.cmd_output(info_cmd))
         raise IPAddrGetError(mac_addr, err)
@@ -982,7 +1008,11 @@ def renew_guest_ip(session, mac_addr, os_type="linux", ip_version="ipv4"):
     if os_type == "linux":
         nic_ifname = get_linux_ifname(session, mac_addr)
         renew_cmd =  "ifconfig %s up; " % nic_ifname
-        renew_cmd += "killall dhclient; dhclient %s" % nic_ifname
+        renew_cmd += "pidof dhclient && killall dhclient; "
+        if ip_version == "ipv6":
+            renew_cmd += "dhclient -6 %s &" % nic_ifname
+        else:
+            renew_cmd += "dhclient %s &" % nic_ifname
     elif os_type == "windows":
         nic_connectionid = get_windows_nic_attribute(session,
                                                      "macaddress", mac_addr,
@@ -1040,7 +1070,75 @@ def ipv6_from_mac_addr(mac_addr):
     """
     mp = mac_addr.split(":")
     mp[0] = ("%x") % (int(mp[0], 16) ^ 0x2)
-    return "fe80::%s%s:%sff:fe%s:%s%s" % tuple(mp)
+    mac_address = "fe80::%s%s:%sff:fe%s:%s%s" % tuple(mp)
+    return ":".join(map(lambda x:x.lstrip("0"), mac_address.split(":")))
+
+
+def refresh_neigh_table(interface_name=None, neigh_address="ff02::1"):
+    """
+    Refresh host neighbours table, if interface_name is assigned only refresh
+    neighbours of this interface, else refresh the all the neighbours.
+    """
+    refresh_cmd = "ping6 -c 2 -I %s %s > /dev/null" % (interface_name,
+                                                       neigh_address)
+    if isinstance(interface_name, list):
+        interfaces = interface_name
+    elif isinstance(interface_name, str):
+        interfaces = interface_name.split()
+    else:
+        interfaces = filter(lambda x : "-" not in x, get_net_if())
+        interfaces.remove("lo")
+    for interface in interfaces:
+        utils.system(refresh_cmd, ignore_status=True)
+
+
+def get_neighbours_info(neigh_address="", interface_name=None):
+    """
+    Get the neighbours infomation
+    """
+    refresh_neigh_table(interface_name, neigh_address)
+    cmd = "ip -6 neigh show nud reachable"
+    if neigh_address:
+        cmd += " %s" % neigh_address
+    output = utils.system_output(cmd)
+    if not output:
+        raise VMIPV6NeighNotFoundError(neigh_address)
+    all_neigh = {}
+    neigh_info = {}
+    for line in output.splitlines():
+        neigh_address = line.split()[0]
+        neigh_info["address"] = neigh_address
+        neigh_info["attach_if"] = line.split()[2]
+        neigh_mac = line.split()[4]
+        neigh_info["mac"] = neigh_mac
+        all_neigh[neigh_mac] = neigh_info
+        all_neigh[neigh_address] = neigh_info
+    return all_neigh
+
+
+def neigh_reachable(neigh_address, attach_if=None):
+    """
+    Check the neighbour is reachable
+    """
+    try:
+        get_neighbours_info(neigh_address, attach_if)
+    except VMIPV6NeighNotFoundError:
+        return False
+    return True
+
+
+def get_neigh_attch_interface(neigh_address):
+    """
+    Get the interface wihch can reach the neigh_address
+    """
+    return  get_neighbours_info(neigh_address)[neigh_address]["attach_if"]
+
+
+def get_neigh_mac(neigh_address):
+    """
+    Get neighbour mac by his address
+    """
+    return  get_neighbours_info(neigh_address)[neigh_address]["mac"]
 
 
 def check_add_dnsmasq_to_br(br_name, tmpdir):
