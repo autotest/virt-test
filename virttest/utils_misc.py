@@ -1384,7 +1384,7 @@ class NumaNode(object):
             error.context("Pinning process %s to the CPU(%s)" % (process, cpu))
 
         for i in self.cpus:
-            if (cpu != None and cpu == i) or (cpu == None and not self.dict[i]):
+            if (cpu is not None and cpu == i) or (cpu is None and not self.dict[i]):
                 self.dict[i].append(process)
                 cmd = "taskset -p %s %s" % (hex(2 ** int(i)), process)
                 logging.debug("NumaNode (%s): " % i + cmd)
