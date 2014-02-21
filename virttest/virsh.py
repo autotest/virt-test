@@ -2532,6 +2532,19 @@ def blockpull(name, path, options="", **dargs):
     return command(cmd, **dargs)
 
 
+def blockresize(name, path, size, **dargs):
+    """
+    Resize block device of domain.
+
+    :param name: name of domain
+    :param path: path of block device
+    :size: new size of the block device
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("blockresize %s %s %s" % (name, path, size), **dargs)
+
+
 def domblkinfo(name, device, **dargs):
     """
     Get block device size info for a domain.
