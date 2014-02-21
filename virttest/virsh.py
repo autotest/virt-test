@@ -3301,3 +3301,15 @@ def domblkerror(name, **dargs):
     :return: CmdResult object
     """
     return command("domblkerror %s" % name, **dargs)
+
+
+def domcontrol(name, options="", **dargs):
+    """
+    Return domain control interface state.
+
+    :param name: name of domain
+    :param options: extra options
+    :return: CmdResult object
+    """
+    cmd = "domcontrol %s %s" % (name, options)
+    return command(cmd, **dargs)
