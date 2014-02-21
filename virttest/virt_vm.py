@@ -9,6 +9,7 @@ import utils_misc
 import utils_net
 import remote
 import aexpect
+import traceback
 import ppm_utils
 import data_dir
 
@@ -564,6 +565,7 @@ class BaseVM(object):
             need_restart = (self.make_create_command() !=
                             self.make_create_command(name, params, basedir))
         except Exception:
+            logging.error(traceback.format_exc())
             need_restart = True
         if need_restart:
             logging.debug(
