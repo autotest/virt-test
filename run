@@ -262,9 +262,9 @@ class VirtTestRunParser(optparse.OptionParser):
             "--machine-type", action="store", dest="machine_type",
             default=None,
             help=("Machine type under test. "
-                          "If -c is provided, this will be ignored. "
-                          "Default: all for the chosen guests, %s if "
-                          "--guest-os not given." % DEFAULT_MACHINE_TYPE))
+                  "If -c is provided, this will be ignored. "
+                  "Default: all for the chosen guests, %s if "
+                  "--guest-os not given." % DEFAULT_MACHINE_TYPE))
         general.add_option("--tests", action="store", dest="tests",
                            default="",
                            help=('List of space separated tests to be '
