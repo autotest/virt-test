@@ -1871,6 +1871,19 @@ def find_storage_pool_sources_as(source_type, options="", **dargs):
                    % (source_type, options), **dargs)
 
 
+def find_storage_pool_sources(source_type, srcSpec, **dargs):
+    """
+    Find potential storage pool sources
+
+    :param source_type: type of storage pool sources to find
+    :param srcSpec: file of source xml to qurey for pools
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("find-storage-pool-sources %s %s"
+                   % (source_type, srcSpec), **dargs)
+
+
 def pool_dumpxml(name, extra="", to_file="", **dargs):
     """
     Return the pool information as an XML dump.
