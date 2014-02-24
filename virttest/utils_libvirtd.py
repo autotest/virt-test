@@ -69,6 +69,9 @@ def service_libvirtd_control(action, remote_ip=None,
         logging.warning("Libvirtd service is not available in host, "
                         "utils_libvirtd module will not function normally")
     service_cmd = ('service %s %s' % (libvirtd, action))
+    # On failure, display last 20 lines of systemd journal output to see
+    # if that will help determine why things failed
+    journal_cmd = ('journalctl -xn 20 _SYSTEMD_UNIT=libvirtd.service')
 
     actions = ['start', 'stop', 'restart', 'condrestart', 'reload',
                'force-reload', 'try-restart']
@@ -89,10 +92,18 @@ def service_libvirtd_control(action, remote_ip=None,
             else:
                 utils.run(service_cmd)
         except (error.CmdError, aexpect.ShellError), detail:
+            if not session:
+                ret = utils.run(journal_cmd, ignore_status=True)
+                logging.debug("libvirtd journalctl action=%s stdout=%s",
+                              action, ret.stdout.strip())
             raise LibvirtdActionError(action, detail)
         if action is not 'stop':
             if not libvirtd_wait_for_start(session=session):
-                raise LibvirtdActionError(action, "Libvirtd doesn't started.")
+                if not session:
+                    ret = utils.run(journal_cmd, ignore_status=True)
+                    logging.debug("libvirtd journalctl action=%s stdout=%s",
+                                  action, ret.stdout.strip())
+                raise LibvirtdActionError(action, "libvirtd did not start.")
 
     elif action == "status":
         if session:
@@ -107,6 +118,10 @@ def service_libvirtd_control(action, remote_ip=None,
         if re.search("running", output):
             return True
         else:
+            # If it's not running, maybe we can get a hint as to why
+            ret = utils.run(journal_cmd, ignore_status=True)
+            logging.debug("libvirtd journalctl action=status stdout=%s",
+                           ret.stdout.strip())
             return False
     else:
         raise LibvirtdActionUnknownError(action)
