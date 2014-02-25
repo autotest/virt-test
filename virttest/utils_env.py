@@ -84,6 +84,29 @@ def _update_address_cache(env, line):
             env["address_cache"]["time_%s" % mac_address] = time.time()
             del env["address_cache"]["last_seen_mac"]
 
+    # ipv6 address cache:
+    mac_ipv6_reg = r"client-ID.*?([0-9a-fA-F]{12})\).*IA_ADDR (.*) pltime"
+    if re.search("dhcp6 (request|renew|confirm)", line, re.IGNORECASE):
+        matches = re.search(mac_ipv6_reg, line, re.I)
+        if matches:
+            ipinfo = matches.groups()
+            mac_address = ":".join(re.findall("..", ipinfo[0])).lower()
+            request_ip = ipinfo[1].lower()
+            logging.debug("(address cache) DHCPV6 lease OK: %s --> %s",
+                          mac_address, request_ip)
+            env["address_cache"]["%s_6" % mac_address] = request_ip
+
+    if re.search("dhcp6 (reply|advertise)", line, re.IGNORECASE):
+        ipv6_mac_reg = "IA_ADDR (.*) pltime.*client-ID.*?([0-9a-fA-F]{12})\)"
+        matches = re.search(ipv6_mac_reg, line, re.I)
+        if matches:
+            ipinfo = matches.groups()
+            mac_address = ":".join(re.findall("..", ipinfo[1])).lower()
+            allocate_ip = ipinfo[0].lower()
+            logging.debug("(address cache) DHCPV6 lease OK: %s --> %s",
+                          mac_address, allocate_ip)
+            env["address_cache"]["%s_6" % mac_address] = allocate_ip
+
 
 def _tcpdump_handler(env, filename, line):
     """
@@ -300,7 +323,8 @@ class Env(UserDict.IterableUserDict):
         username = self._params.get('ovirt_node_user')
         password = self._params.get('ovirt_node_password')
 
-        cmd = "%s -npvvvi any 'port 68'" % utils_misc.find_command("tcpdump")
+        cmd_template = "%s -npvvvi any 'port 68 or port 546'"
+        cmd = cmd_template % utils_misc.find_command("tcpdump")
         if self._params.get("remote_preprocess") == "yes":
             login_cmd = ("ssh -o UserKnownHostsFile=/dev/null -o "
                          "PreferredAuthentications=password -p %s %s@%s" %
