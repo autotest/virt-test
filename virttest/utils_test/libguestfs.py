@@ -36,6 +36,7 @@ class VTMountError(VTError):
 
 
 class VTXMLParseError(VTError):
+
     def __init__(self, cmd, output):
         super(VTXMLParseError, self).__init__(cmd, output)
         self.cmd = cmd
