@@ -15,6 +15,7 @@ from utils import DeviceError
 from virttest import qemu_monitor
 from virttest import utils_misc
 import qbuses
+import traceback
 
 try:
     # pylint: disable=E0611
@@ -81,6 +82,7 @@ class QBaseDevice(object):
         else:
             for bus in child_bus:
                 self.add_child_bus(bus)
+        self.dynamic_params = []
         self.params = OrderedDict()    # various device params (id, name, ...)
         if params:
             for key, value in params.iteritems():
@@ -104,13 +106,21 @@ class QBaseDevice(object):
         self.child_bus.remove(bus)
         bus.set_device(None)
 
-    def set_param(self, option, value, option_type=None):
+    def set_param(self, option, value, option_type=None, dynamic=False):
         """
         Set device param using qemu notation ("on", "off" instead of bool...)
         :param option: which option's value to set
         :param value: new value
         :param option_type: type of the option (bool)
+        :param dynamic: if true value is changed to DYN for not_dynamic compare
         """
+        if dynamic:
+            if option not in self.dynamic_params:
+                self.dynamic_params.append(option)
+        else:
+            if option in self.dynamic_params:
+                self.dynamic_params.remove(option)
+
         if option_type is bool or isinstance(value, bool):
             if value in ['yes', 'on', True]:
                 self.params[option] = "on"
@@ -123,6 +133,8 @@ class QBaseDevice(object):
                 self.params[option] = value
         elif value is None and option in self.params:
             del(self.params[option])
+            if option in self.dynamic_params:
+                self.dynamic_params.remove(option)
 
     def get_param(self, option, default=None):
         """ :return: object param """
@@ -152,11 +164,11 @@ class QBaseDevice(object):
         """ :return: Short string representation of this object. """
         return self.str_short()
 
-    def __eq__(self, dev2):
+    def __eq__(self, dev2, dynamic=True):
         """ :return: True when devs are similar, False when different. """
+        check_attrs = ['cmdline_nd', 'hotplug_hmp_nd', 'hotplug_qmp_nd']
         try:
-            for check_attr in ('cmdline', 'hotplug_hmp',
-                               'hotplug_qmp'):
+            for check_attr in check_attrs:
                 try:
                     _ = getattr(self, check_attr)()
                 except (DeviceError, NotImplementedError, AttributeError):
@@ -168,6 +180,7 @@ class QBaseDevice(object):
                     if _ != getattr(dev2, check_attr)():
                         return False
         except Exception:
+            logging.error(traceback.format_exc())
             return False
         return True
 
@@ -226,6 +239,13 @@ class QBaseDevice(object):
     def cmdline(self):
         """ :return: cmdline command to define this device """
         raise NotImplementedError
+
+    def cmdline_nd(self):
+        """
+        :return: cmdline command to define this device
+                 without dynamic parameters
+        """
+        self.cmdline()
 
     # pylint: disable=E0202
     def hotplug(self, monitor):
@@ -306,7 +326,7 @@ class QStringDevice(QBaseDevice):
     """
 
     def __init__(self, dev_type="dummy", params=None, aobject=None,
-                 parent_bus=None, child_bus=None, cmdline=""):
+                 parent_bus=None, child_bus=None, cmdline="", cmdline_nd=None):
         """
         :param dev_type: type of this component
         :param params: component's parameters
@@ -318,12 +338,27 @@ class QStringDevice(QBaseDevice):
         super(QStringDevice, self).__init__(dev_type, params, aobject,
                                             parent_bus, child_bus)
         self._cmdline = cmdline
+        self._cmdline_nd = cmdline_nd
+        if cmdline_nd is None:
+            self._cmdline_nd = cmdline
 
     def cmdline(self):
         """ :return: cmdline command to define this device """
         try:
             if self._cmdline:
                 return self._cmdline % self.params
+        except KeyError, details:
+            raise KeyError("Param %s required for cmdline is not present in %s"
+                           % (details, self.str_long()))
+
+    def cmdline_nd(self):
+        """
+        :return: cmdline command to define this device
+                 without dynamic parameters
+        """
+        try:
+            if self._cmdline_nd:
+                return self._cmdline_nd % self.params
         except KeyError, details:
             raise KeyError("Param %s required for cmdline is not present in %s"
                            % (details, self.str_long()))
@@ -360,6 +395,30 @@ class QCustomDevice(QBaseDevice):
         for key, value in params.iteritems():
             if value != "NO_EQUAL_STRING":
                 out += "%s=%s," % (key, value)
+            else:
+                out += "%s," % key
+        if out[-1] == ',':
+            out = out[:-1]
+        return out
+
+    def cmdline_nd(self):
+        """
+        :return: cmdline command to define this device
+                     without dynamic parameters
+        """
+        if self.__backend and self.params.get(self.__backend):
+            out = "-%s %s," % (self.type, self.params.get(self.__backend))
+            params = self.params.copy()
+            del params[self.__backend]
+        else:
+            out = "-%s " % self.type
+            params = self.params
+        for key, value in params.iteritems():
+            if value != "NO_EQUAL_STRING":
+                if key in self.dynamic_params:
+                    out += "%s=DYN," % (key,)
+                else:
+                    out += "%s=%s," % (key, value)
             else:
                 out += "%s," % key
         if out[-1] == ',':
@@ -598,6 +657,30 @@ class QDevice(QCustomDevice):
     def hotplug_qmp(self):
         """ :return: the hotplug monitor command """
         return "device_add", self.params
+
+    def hotplug_hmp_nd(self):
+        """ :return: the hotplug monitor command without dynamic parameters"""
+        if self.params.get('driver'):
+            params = self.params.copy()
+            out = "device_add %s" % params.pop('driver')
+            for key in self.dynamic_params:
+                params[key] = "DYN"
+            params = _convert_args(params)
+            if params:
+                out += ",%s" % params
+        else:
+            params = self.params.copy()
+            for key in self.dynamic_params:
+                params[key] = "DYN"
+            out = "device_add %s" % _convert_args(params)
+        return out
+
+    def hotplug_qmp_nd(self):
+        """ :return: the hotplug monitor command without dynamic parameters"""
+        params = self.params.copy()
+        for key in self.dynamic_params:
+            params[key] = "DYN"
+        return "device_add", params
 
     def get_children(self):
         """ Device bus should be removed too """

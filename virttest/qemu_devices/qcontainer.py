@@ -139,6 +139,23 @@ class DevContainer(object):
                 out.append(device)
         return out
 
+    def get_by_params(self, filt):
+        """
+        Return list of matching devices
+        :param filt: filter {'param': 'value', ...}
+        :type filt: dict
+        """
+        out = []
+        for device in self.__devices:
+            for key, value in filt.iteritems():
+                if not key in device.params:
+                    break
+                if device.params[key] != value:
+                    break
+            else:
+                out.append(device)
+        return out
+
     def __delitem__(self, item):
         """
         Delete specified item from devices list
@@ -656,14 +673,17 @@ class DevContainer(object):
                 return i
             i += 1
 
-    def cmdline(self):
+    def cmdline(self, dynamic=True):
         """
         Creates cmdline arguments for creating all defined devices
         :return: cmdline of all devices (without qemu-cmd itself)
         """
         out = ""
         for device in self.__devices:
-            _out = device.cmdline()
+            if dynamic:
+                _out = device.cmdline()
+            else:
+                _out = device.cmdline_nd()
             if _out:
                 out += " %s" % _out
         if out:
