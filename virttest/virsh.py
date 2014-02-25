@@ -2079,6 +2079,41 @@ def vol_pool(volume_name, extra="", **dargs):
     return command("vol-pool %s %s" % (volume_name, extra), **dargs)
 
 
+def vol_clone(volume_name, new_name, pool_name="", extra="", **dargs):
+    """
+    Clone an existing volume.
+
+    :param volume_name: Name of the original volume
+    :param new_name: Clone name
+    :param pool_name: Name of the pool
+    :param extra: Free-form string options
+    :param dargs: Standardized virsh function API keywords
+    :return: Returns the output of the command
+    """
+    cmd = "vol-clone --vol %s --newname %s %s" % (volume_name, new_name, extra)
+    if pool_name:
+        cmd += " --pool %s" % pool_name
+    return command(cmd, **dargs)
+
+
+def vol_wipe(volume_name, pool_name="", alg="", **dargs):
+    """
+    Ensure data previously on a volume is not accessible to future reads.
+
+    :param volume_name: Name of the volume
+    :param pool_name: Name of the pool
+    :param alg: Perform selected wiping algorithm
+    :param dargs: Standardized virsh function API keywords
+    :return: Returns the output of the command
+    """
+    cmd = "vol-wipe --vol %s" % volume_name
+    if pool_name:
+        cmd += " --pool %s" % pool_name
+    if alg:
+        cmd += " --algorithm %s" % alg
+    return command(cmd, **dargs)
+
+
 def capabilities(option='', **dargs):
     """
     Return output from virsh capabilities command
