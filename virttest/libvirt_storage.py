@@ -377,7 +377,7 @@ class StoragePool(object):
         try:
             extra = "--source-host %s --source-path %s" % (source_host,
                                                            target_path)
-            self.virsh_instance.pool_define_ad(name, "netfs", target_path,
+            self.virsh_instance.pool_define_as(name, "netfs", target_path,
                                                extra, ignore_status=False)
         except error.CmdError:
             logging.error("Define netfs pool '%s' failed.", name)
