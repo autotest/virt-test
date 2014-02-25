@@ -461,7 +461,7 @@ class KSMConfig(object):
                                        "pages_to_scan": default_status[1],
                                        "sleep_millisecs": default_status[2]})
 
-        if not default_ksm_loaded:
+        if self.ksm_module and not default_ksm_loaded:
             self.ksmctler.unload_ksm_module()
 
 
