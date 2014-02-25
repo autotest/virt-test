@@ -1643,8 +1643,7 @@ def get_qemu_binary(params):
     Get the path to the qemu binary currently in use.
     """
     # Update LD_LIBRARY_PATH for built libraries (libspice-server)
-    qemu_binary_path = get_path(os.path.join(data_dir.get_root_dir(),
-                                             params.get("vm_type")),
+    qemu_binary_path = get_path(data_dir.get_root_dir(),
                                 params.get("qemu_binary", "qemu"))
 
     library_path = os.path.join(
@@ -1655,7 +1654,11 @@ def get_qemu_binary(params):
             library_path, qemu_binary_path)
     else:
         qemu_binary = qemu_binary_path
-
+    if not os.path.exists(qemu_binary):
+        try:
+            qemu_binary = find_command('qemu-kvm')
+        except ValueError:
+            qemu_binary = find_command('kvm')
     return qemu_binary
 
 
@@ -1663,18 +1666,22 @@ def get_qemu_img_binary(params):
     """
     Get the path to the qemu-img binary currently in use.
     """
-    return get_path(os.path.join(data_dir.get_root_dir(),
-                                 params.get("vm_type")),
-                    params.get("qemu_img_binary", "qemu"))
+    qemu_img_binary = get_path(data_dir.get_root_dir(),
+                               params.get("qemu_img_binary", "qemu-img"))
+    if not os.path.exists(qemu_img_binary):
+        qemu_img_binary = find_command('qemu-img')
+    return qemu_img_binary
 
 
 def get_qemu_io_binary(params):
     """
     Get the path to the qemu-img binary currently in use.
     """
-    return get_path(os.path.join(data_dir.get_root_dir(),
-                                 params.get("vm_type")),
-                    params.get("qemu_io_binary", "qemu"))
+    qemu_io_binary = get_path(data_dir.get_root_dir(),
+                              params.get("qemu_io_binary", "qemu-io"))
+    if not os.path.exists(qemu_io_binary):
+        qemu_io_binary = find_command('qemu-io')
+    return qemu_io_binary
 
 
 def get_qemu_best_cpu_model(params):
