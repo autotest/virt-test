@@ -243,17 +243,35 @@ class Iscsi(object):
             cmd = "tgtadm --mode target --op new --tid %s" % self.emulated_id
             cmd += " --lld iscsi --targetname %s" % self.target
             utils.system(cmd)
-            cmd = "tgtadm --mode logicalunit --op new "
-            cmd += "--tid %s --lld iscsi --lun 1 " % self.emulated_id
-            cmd += "--backing-store %s" % self.emulated_image
-            utils.system(cmd)
             cmd = "tgtadm --lld iscsi --op bind --mode target "
             cmd += "--tid %s -I ALL" % self.emulated_id
             utils.system(cmd)
-            self.export_flag = True
         else:
-            self.emulated_id = re.findall("Target\s+(\d+):\s+%s$" %
-                                          self.target, output)
+            target_strs = re.findall("Target\s+(\d+):\s+%s$" %
+                                     self.target, output, re.M)
+            self.emulated_id = target_strs[0].split(':')[0].split()[-1]
+
+        cmd = "tgtadm --lld iscsi --mode target --op show"
+        try:
+            output = utils.system_output(cmd)
+        except error.CmdError:   # In case service stopped
+            utils.system("service tgtd restart")
+            output = utils.system_output(cmd)
+
+        # Create a LUN with emulated image
+        if re.findall(self.emulated_image, output, re.M):
+            # Exist already
+            logging.debug("Exported image already exists.")
+            self.export_flag = True
+            return
+        else:
+            luns = len(re.findall("\s+LUN:\s(\d+)", output, re.M))
+            cmd = "tgtadm --mode logicalunit --op new "
+            cmd += "--tid %s --lld iscsi " % self.emulated_id
+            cmd += "--lun %s " % luns
+            cmd += "--backing-store %s" % self.emulated_image
+            utils.system(cmd)
+            self.export_flag = True
 
     def delete_target(self):
         """
