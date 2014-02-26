@@ -816,6 +816,19 @@ class VMXML(VMXMLBase):
         vmxml.devices = devices
         vmxml.define()
 
+    def add_hostdev(self, source_address, mode='subsystem',
+                    type='pci',
+                    managed='yes'):
+        """
+        Add a hostdev device to guest.
+        """
+        dev = self.get_device_class('hostdev')()
+        dev.mode = mode
+        dev.type = type
+        dev.managed = managed
+        dev.source_address = source_address
+        self.add_device(dev)
+
 
 class VMCPUXML(VMXML):
 
