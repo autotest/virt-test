@@ -997,7 +997,7 @@ def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4",
             raise IPAddrGetError(mac_addr, "Unknown os type")
 
         if ip_version == "ipv4":
-            return nic_address["ipv4"]
+            return nic_address["ipv4"][-1]
         else:
             global_address = [x for x in nic_address["ipv6"]
                               if not x.lower().startswith("fe80")]
