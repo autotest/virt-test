@@ -443,13 +443,13 @@ class TestSandboxes(object):
         # Allows iterating for the options
         self.opts_count = int(pop.get('lvsb_opts_count', '1'))
         # FIXME: should automatically generate this
-        self.lvsb_option_mapper = {'optarg':{'connect': '-c', 'name': '-n', \
-                                   'mount': '-m', 'include': '-i', \
-                                   'includefile': '-I', 'network': '-N', \
-                                   'security': '-s'}, \
-                                   'flag':{'help': '-h', 'version': '-V',  \
-                                   'debug': '-d', 'privileged': '-p', \
-                                   'shell': '-l'}}
+        self.lvsb_option_mapper = {'optarg': {'connect': '-c', 'name': '-n',
+                                   'mount': '-m', 'include': '-i',
+                                   'includefile': '-I', 'network': '-N',
+                                   'security': '-s'},
+                                   'flag': {'help': '-h', 'version': '-V',
+                                            'debug': '-d', 'privileged': '-p',
+                                            'shell': '-l'}}
         # The list to save options
         self.opts = []
         self.flag = []
@@ -458,7 +458,7 @@ class TestSandboxes(object):
             for key, value in self.lvsb_option_mapper[k].items():
                 base_name = 'lvsb_%s_options' % key
                 for key_gen, option in params.object_counts('lvsb_opts_count',
-                    base_name):
+                                                            base_name):
                     # k is 'optarg'
                     if option and value:
                         self.opts.append((value, option))
