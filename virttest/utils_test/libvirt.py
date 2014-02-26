@@ -247,13 +247,15 @@ def check_blockjob(vm_name, target, check_point="none", value="0"):
     return False
 
 
-def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False):
+def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
+                         export_options="rw,no_root_squash"):
     """
     Set up or clean up nfs service on localhost.
 
     :param is_setup: Boolean value, true for setup, false for cleanup
     :param mount_dir: NFS mount point
     :param is_mount: Boolean value, true for mount, false for umount
+    :param export_options: options for nfs dir
     :return: export nfs path or nothing
     """
     tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
@@ -278,21 +280,23 @@ def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False):
         return ""
 
 
-def setup_or_cleanup_iscsi(is_setup, is_login=True):
+def setup_or_cleanup_iscsi(is_setup, is_login=True,
+                           emulated_image="emulated_iscsi", image_size="1G"):
     """
     Set up(and login iscsi target) or clean up iscsi service on localhost.
 
     :param is_setup: Boolean value, true for setup, false for cleanup
     :param is_login: Boolean value, true for login, false for not login
+    :param emulated_image: name of iscsi device
+    :param image_size: emulated image's size
     :return: iscsi device name or iscsi target
     """
-    emulated_image = "emulated_iscsi"
     tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
     emulated_path = os.path.join(tmpdir, emulated_image)
     emulated_target = "iqn.2001-01.com.virttest:%s.target" % emulated_image
     iscsi_params = {"emulated_image": emulated_path,
                     "target": emulated_target,
-                    "image_size": "1G",
+                    "image_size": image_size,
                     "iscsi_thread_id": "virt"}
     _iscsi = iscsi.Iscsi(iscsi_params)
     if is_setup:
