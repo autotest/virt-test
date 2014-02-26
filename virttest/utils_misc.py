@@ -707,7 +707,7 @@ class VirtLoggingConfig(logging_config.LoggingConfig):
                                                          verbose=verbose)
 
 
-def umount(src, mount_point, fstype, verbose=True, fstype_mtab=None):
+def umount(src, mount_point, fstype, verbose=False, fstype_mtab=None):
     """
     Umount the src mounted in mount_point.
 
@@ -723,7 +723,7 @@ def umount(src, mount_point, fstype, verbose=True, fstype_mtab=None):
     if is_mounted(src, mount_point, fstype, None, verbose, fstype_mtab):
         umount_cmd = "umount %s" % mount_point
         try:
-            utils.system(umount_cmd, verbose)
+            utils.system(umount_cmd, verbose=verbose)
             return True
         except error.CmdError:
             return False
@@ -732,7 +732,7 @@ def umount(src, mount_point, fstype, verbose=True, fstype_mtab=None):
         return True
 
 
-def mount(src, mount_point, fstype, perm=None, verbose=True, fstype_mtab=None):
+def mount(src, mount_point, fstype, perm=None, verbose=False, fstype_mtab=None):
     """
     Mount the src into mount_point of the host.
 
@@ -748,23 +748,19 @@ def mount(src, mount_point, fstype, perm=None, verbose=True, fstype_mtab=None):
     if fstype_mtab is None:
         fstype_mtab = fstype
 
-    umount(src, mount_point, fstype, verbose, fstype_mtab)
-
     if is_mounted(src, mount_point, fstype, perm, verbose, fstype_mtab):
         logging.debug("%s is already mounted in %s with %s",
                       src, mount_point, perm)
         return True
-
     mount_cmd = "mount -t %s %s %s -o %s" % (fstype, src, mount_point, perm)
     try:
         utils.system(mount_cmd, verbose=verbose)
     except error.CmdError:
         return False
-
     return is_mounted(src, mount_point, fstype, perm, verbose, fstype_mtab)
 
 
-def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
+def is_mounted(src, mount_point, fstype, perm=None, verbose=False,
                fstype_mtab=None):
     """
     Check mount status from /etc/mtab
@@ -777,6 +773,8 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
     :type fstype: string
     :param perm: mount permission
     :type perm: string
+    :param verbose: if display mtab content
+    :type verbose: Boolean
     :param fstype_mtab: file system type in mtab could be different
     :type fstype_mtab: str
     :return: if the src is mounted as expect
@@ -787,6 +785,10 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
     if fstype_mtab is None:
         fstype_mtab = fstype
 
+    # Version 4 nfs displays 'nfs4' in mtab
+    if fstype == "nfs":
+        fstype_mtab = "nfs\d?"
+
     mount_point = os.path.realpath(mount_point)
     if fstype not in ['nfs', 'smbfs', 'glusterfs']:
         if src:
@@ -795,13 +797,14 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
             # Allow no passed src(None or "")
             src = ""
     mount_string = "%s %s %s %s" % (src, mount_point, fstype_mtab, perm)
-    if mount_string.strip() in file("/etc/mtab").read():
-        logging.debug("%s is successfully mounted", src)
+    logging.debug("Searching '%s' in mtab...", mount_string)
+    if verbose:
+        logging.debug("/etc/mtab contents:\n%s", file("/etc/mtab").read())
+    if re.findall(mount_string.strip(), file("/etc/mtab").read()):
+        logging.debug("%s is mounted.", src)
         return True
     else:
-        if verbose:
-            logging.error("Can't find mounted NFS share - /etc/mtab"
-                          " contents \n%s", file("/etc/mtab").read())
+        logging.debug("%s is not mounted.", src)
         return False
 
 
