@@ -192,14 +192,14 @@ class Iscsi(object):
         device_name = ""
         if self.logged_in():
             output = utils.system_output(cmd)
-            pattern = r"Target:\s+%s\n.*?disk\s+(\w+)\s+" % self.target
-            if re.findall(pattern, output, re.S):
-                device_name = re.findall(pattern, output, re.S)[0]
-                device_name = "/dev/%s" % device_name
-            else:
-                logging.debug("Can not find target '%s' after login", self.target)
+            pattern = r"Target:\s+%s.*?disk\s(\w+)\s+\S+\srunning" % self.target
+            device_name = re.findall(pattern, output, re.S)
+            try:
+                device_name = "/dev/%s" % device_name[0]
+            except IndexError:
+                logging.error("Can not find target '%s' after login.", self.target)
         else:
-            logging.debug("Session is not logged in yet.")
+            logging.error("Session is not logged in yet.")
         return device_name
 
     def get_target_id(self):
