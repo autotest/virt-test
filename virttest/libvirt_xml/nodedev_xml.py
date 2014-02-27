@@ -128,13 +128,13 @@ class PCIXML(CAPXML):
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementInt('domain', self, parent_xpath='/',
-                                tag_name='domain', radix=16)
+                                tag_name='domain')
         accessors.XMLElementInt('bus', self, parent_xpath='/',
-                                tag_name='bus', radix=16)
+                                tag_name='bus')
         accessors.XMLElementInt('slot', self, parent_xpath='/',
-                                tag_name='slot', radix=16)
+                                tag_name='slot')
         accessors.XMLElementInt('function', self, parent_xpath='/',
-                                tag_name='function', radix=16)
+                                tag_name='function')
         accessors.XMLAttribute('product_id', self, parent_xpath='/',
                                tag_name='product', attribute='id')
         accessors.XMLAttribute('vendor_id', self, parent_xpath='/',
