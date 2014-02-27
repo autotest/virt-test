@@ -442,3 +442,31 @@ def verify_virsh_console(session, user, passwd, timeout=10, debug=False):
         return False
 
     return True
+
+
+def pci_label_from_address(address_dict, radix=10):
+    """
+    Generate a pci label from a dict of address.
+
+    :param address_dict: A dict contains domain, bus, slot and function.
+    :param radix: The radix of your data in address_dict.
+
+    Example:
+        address_dict: {'domain': '0x0000', 'bus': '0x08',
+                       'slot': '0x10', 'function': '0x0'}
+        radix = 16
+
+    return-value:
+        pci_0000_08_10_0
+    """
+    if not set(['domain', 'bus', 'slot', 'function']).issubset(
+               address_dict.keys()):
+        raise error.TestError("Param %s does not contain keys of "
+                              "['domain', 'bus', 'slot', 'function']." %
+                              str(address_dict))
+    domain = int(address_dict['domain'], radix)
+    bus = int(address_dict['bus'], radix)
+    slot = int(address_dict['slot'], radix)
+    function = int(address_dict['function'], radix)
+    pci_label = ("pci_%04x_%02x_%02x_%01x" % (domain, bus, slot, function))
+    return pci_label
