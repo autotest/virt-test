@@ -115,8 +115,7 @@ def preprocess_vm(test, params, env, name):
                                     basedir=test.bindir):
                     vm.devices = None
                     start_vm = True
-                    old_vm.destroy(gracefully=gracefully_kill,
-                                   free_mac_addresses=False)
+                    old_vm.destroy(gracefully=gracefully_kill)
                     update_virtnet = True
 
     if start_vm:
@@ -146,8 +145,7 @@ def preprocess_vm(test, params, env, name):
     else:       # VM is alive and we don't care
         if params.get("kill_vm_before_test") == "yes":
             # Destroy the VM if kill_vm_before_test = "yes".
-            old_vm.destroy(gracefully=gracefully_kill,
-                           free_mac_addresses=False)
+            old_vm.destroy(gracefully=gracefully_kill)
         else:
             # VM is alive and we just need to open the serial console
             vm.create_serial_console()
@@ -642,7 +640,7 @@ def preprocess(test, params, env):
         for vm_name in params.get("vms").split():
             vm = env.get_vm(vm_name)
             if vm:
-                vm.destroy(free_mac_addresses=False)
+                vm.destroy()
                 env.unregister_vm(vm_name)
 
             vm_params = params.object_params(vm_name)
