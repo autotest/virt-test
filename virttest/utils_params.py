@@ -1,4 +1,6 @@
 import UserDict
+from threading import Lock
+
 from autotest.client.shared import error
 
 
@@ -11,6 +13,7 @@ class Params(UserDict.IterableUserDict):
     """
     A dict-like object passed to every test.
     """
+    lock = Lock()
 
     def __getitem__(self, key):
         """ overrides the error messages of missing params[$key] """
@@ -44,11 +47,13 @@ class Params(UserDict.IterableUserDict):
                 objects() method).
         """
         suffix = "_" + obj_name
+        self.lock.acquire()
         new_dict = self.copy()
-        for key in self:
+        self.lock.release()
+        for key in new_dict.keys():
             if key.endswith(suffix):
                 new_key = key.split(suffix)[0]
-                new_dict[new_key] = self[key]
+                new_dict[new_key] = new_dict[key]
         return new_dict
 
     def object_counts(self, count_key, base_name):
