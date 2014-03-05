@@ -110,6 +110,26 @@ class Sample(object):
                         f.append(l.strip())
                 self.files_dict.append(f)
                 fd.close()
+
+            sysinfodir = os.path.join(os.path.dirname(files[0]), "../../sysinfo/")
+            sysinfodir = os.path.realpath(sysinfodir)
+            cpuinfo = commands.getoutput("cat %s/cpuinfo" % sysinfodir)
+            lscpu = commands.getoutput("cat %s/lscpu" % sysinfodir)
+            meminfo = commands.getoutput("cat %s/meminfo" % sysinfodir)
+            lspci = commands.getoutput("cat %s/lspci_-vvnn" % sysinfodir)
+            partitions = commands.getoutput("cat %s/partitions" % sysinfodir)
+            fdisk = commands.getoutput("cat %s/fdisk_-l" % sysinfodir)
+
+            cpunum = len(re.findall("processor\s+: \d", cpuinfo))
+            cpumodel = re.findall("Model name:\s+(.*)", lscpu)
+            socketnum = int(re.findall("Socket\(s\):\s+(\d+)", lscpu)[0])
+            corenum = int(re.findall("Core\(s\) per socket:\s+(\d+)", lscpu)[0]) * socketnum
+            threadnum = int(re.findall("Thread\(s\) per core:\s+(\d+)", lscpu)[0]) * corenum
+            numanodenum = int(re.findall("NUMA node\(s\):\s+(\d+)", lscpu)[0])
+            memnum = float(re.findall("MemTotal:\s+(\d+)", meminfo)[0]) / 1024 / 1024
+            nicnum = len(re.findall("\d+:\d+\.0 Ethernet", lspci))
+            disknum = re.findall("sd\w+\S", partitions)
+            fdiskinfo = re.findall("Disk\s+(/dev/sd.*\s+GiB),", fdisk)
         elif sample_type == 'database':
             jobid = arg
             self.kvmver = get_test_keyval(jobid, "kvm-userspace-ver")
@@ -145,7 +165,16 @@ class Sample(object):
             print "`nrepeat' should be larger than 1!"
             sys.exit(1)
 
-        self.desc = """ - Every Avg line represents the average value based on *%d* repetitions of the same test,
+        self.desc = """<hr>Machine Info:
+o CPUs(%s * %s), Cores(%s), Threads(%s), Sockets(%s),
+o NumaNodes(%s), Memory(%.1fG), NICs(%s)
+o Disks(%s | %s)
+
+Please check sysinfo directory in autotest result to get more details.
+(eg: http://autotest-server.com/results/5057-autotest/host1/sysinfo/)
+<hr>""" % (cpunum, cpumodel, corenum, threadnum, socketnum, numanodenum, memnum, nicnum, fdiskinfo, disknum)
+
+        self.desc += """ - Every Avg line represents the average value based on *%d* repetitions of the same test,
    and the following SD line represents the Standard Deviation between the *%d* repetitions.
  - The Standard deviation is displayed as a percentage of the average.
  - The significance of the differences between the two averages is calculated using unpaired T-test that
