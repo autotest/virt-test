@@ -626,6 +626,25 @@ def nodecpumap(extra="", **dargs):
     return CmdResult
 
 
+def nodesuspend(target, duration, extra='', **dargs):
+    """
+    Suspend the host node for a given time duration.
+
+    :param target: Suspend target mem/disk/hybrid.
+                   mem(Suspend-to-RAM)
+                   disk(Suspend-to-Disk)
+                   hybrid(Hybrid-Suspend)
+    :param duration: Suspend duration in seconds, at least 60.
+    :param extra: extra argument string to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nodesuspend %s %s" % (target, duration)
+    if extra:
+        cmd += " %s" % extra
+    return command(cmd, **dargs)
+
+
 def canonical_uri(option='', **dargs):
     """
     Return the hypervisor canonical URI.
