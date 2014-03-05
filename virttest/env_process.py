@@ -233,10 +233,18 @@ def postprocess_vm(test, params, env, name):
             glob.glob("%s/*" % screendump_dir)):
         try:
             video = video_maker.GstPythonVideoMaker()
-            if (video.has_element('vp8enc') and video.has_element('webmmux')):
+            video_format = params.get("encode_video_format", "automatic")
+            if video_format == 'automatic':
+                if (video.has_element('vp8enc') and video.has_element('webmmux')):
+                    video_file = os.path.join(test.debugdir, "%s-%s.webm" %
+                                              (vm.name, test.iteration))
+                else:
+                    video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
+                                              (vm.name, test.iteration))
+            elif video_format == 'webm':
                 video_file = os.path.join(test.debugdir, "%s-%s.webm" %
                                           (vm.name, test.iteration))
-            else:
+            else: # Fallback to ogg
                 video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
                                           (vm.name, test.iteration))
             logging.debug("Encoding video file %s", video_file)
