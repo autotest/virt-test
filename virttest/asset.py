@@ -205,13 +205,13 @@ def uncompress_asset(asset_info, force=False):
             if match:
                 if match.group(1) == 'gz':
                     uncompress_cmd = ('gzip -cd %s > %s' %
-                                      (destination_uncompressed, destination))
+                                      (destination, destination_uncompressed))
                 elif match.group(1) == 'xz':
                     uncompress_cmd = ('xz -cd %s > %s' %
-                                      (destination_uncompressed, destination))
+                                      (destination, destination_uncompressed))
                 elif match.group(1) == 'bz2':
                     uncompress_cmd = ('bzip2 -cd %s > %s' %
-                                      (destination_uncompressed, destination))
+                                      (destination, destination_uncompressed))
                 elif match.group(1) == '7z':
                     uncompress_cmd = '7za -y e %s' % destination
         else:
