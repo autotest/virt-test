@@ -885,12 +885,13 @@ def _take_screendumps(test, params, env):
 
     while True:
         for vm in env.get_all_vms():
-            if vm not in counter.keys():
-                counter[vm] = 0
-            if vm not in inactivity.keys():
-                inactivity[vm] = time.time()
+            if vm.instance not in counter.keys():
+                counter[vm.instance] = 0
+            if vm.instance not in inactivity.keys():
+                inactivity[vm.instance] = time.time()
             if not vm.is_alive():
                 continue
+            vm_pid = vm.get_pid()
             try:
                 vm.screendump(filename=temp_filename, debug=False)
             except qemu_monitor.MonitorError, e:
@@ -907,18 +908,19 @@ def _take_screendumps(test, params, env):
                 os.unlink(temp_filename)
                 continue
             screendump_dir = os.path.join(test.debugdir,
-                                          "screendumps_%s" % vm.name)
+                                          "screendumps_%s_%s" % (vm.name,
+                                                                 vm_pid))
             try:
                 os.makedirs(screendump_dir)
             except OSError:
                 pass
-            counter[vm] += 1
+            counter[vm.instance] += 1
             screendump_filename = os.path.join(screendump_dir, "%04d.jpg" %
-                                               counter[vm])
+                                               counter[vm.instance])
             vm.verify_bsod(screendump_filename)
             image_hash = utils.hash_file(temp_filename)
             if image_hash in cache:
-                time_inactive = time.time() - inactivity[vm]
+                time_inactive = time.time() - inactivity[vm.instance]
                 if time_inactive > inactivity_treshold:
                     msg = (
                         "%s screen is inactive for more than %d s (%d min)" %
@@ -930,7 +932,7 @@ def _take_screendumps(test, params, env):
                         except virt_vm.VMScreenInactiveError:
                             logging.error(msg)
                             # Let's reset the counter
-                            inactivity[vm] = time.time()
+                            inactivity[vm.instance] = time.time()
                             test.background_errors.put(sys.exc_info())
                     elif inactivity_watcher == 'log':
                         logging.debug(msg)
@@ -939,7 +941,7 @@ def _take_screendumps(test, params, env):
                 except OSError:
                     pass
             else:
-                inactivity[vm] = time.time()
+                inactivity[vm.instance] = time.time()
                 try:
                     try:
                         image = PIL.Image.open(temp_filename)
@@ -951,7 +953,7 @@ def _take_screendumps(test, params, env):
                                         "screendump: %s", vm.name, error_detail)
                         # Decrement the counter as we in fact failed to
                         # produce a converted screendump
-                        counter[vm] -= 1
+                        counter[vm.instance] -= 1
                 except NameError:
                     pass
             os.unlink(temp_filename)
