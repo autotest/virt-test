@@ -715,14 +715,23 @@ class UnattendedInstallConfig(object):
             else:
                 # Windows unattended install
                 dest_fname = "autounattend.xml"
-                boot_disk = utils_disk.FloppyDisk(self.floppy,
-                                                  self.qemu_img_binary,
-                                                  self.tmpdir, self.vfd_size)
+                if self.params.get('unattended_delivery_method') == 'cdrom':
+                    boot_disk = utils_disk.CdromDisk(self.cdrom_unattended,
+                                                     self.tmpdir)
+                    if self.install_virtio == "yes":
+                        boot_disk.setup_virtio_win2008(self.virtio_floppy,
+                                                       self.cdrom_virtio)
+                    self.cdrom_virtio = None
+                else:
+                    boot_disk = utils_disk.FloppyDisk(self.floppy,
+                                                      self.qemu_img_binary,
+                                                      self.tmpdir,
+                                                      self.vfd_size)
+                    if self.install_virtio == "yes":
+                        boot_disk.setup_virtio_win2008(self.virtio_floppy)
                 answer_path = boot_disk.get_answer_file_path(dest_fname)
                 self.answer_windows_xml(answer_path)
 
-                if self.install_virtio == "yes":
-                    boot_disk.setup_virtio_win2008(self.virtio_floppy)
                 boot_disk.copy_to(self.finish_program)
 
         else:
