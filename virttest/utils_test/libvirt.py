@@ -249,7 +249,8 @@ def check_blockjob(vm_name, target, check_point="none", value="0"):
 
 
 def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
-                         export_options="rw,no_root_squash"):
+                         export_options="rw,no_root_squash",
+                         mount_src="nfs-export"):
     """
     Set up or clean up nfs service on localhost.
 
@@ -260,7 +261,8 @@ def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
     :return: export nfs path or nothing
     """
     tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
-    mount_src = os.path.join(tmpdir, 'nfs-export')
+    if not os.path.isabs(mount_src):
+        mount_src = os.path.join(tmpdir, mount_src)
     if not mount_dir:
         mount_dir = os.path.join(tmpdir, 'nfs-mount')
 
@@ -551,6 +553,10 @@ class PoolVolumeTest(object):
             extra = "--source-name %s" % vg_name
             utils.run(cmd_pv)
             utils.run(cmd_vg)
+            # Create a small volume for verification
+            # And VG path will not exist if no any volume in.(bug?)
+            cmd_lv = "lvcreate --name default_lv --size 1M %s" % vg_name
+            utils.run(cmd_lv)
         elif pool_type == "netfs":
             nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
             nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
@@ -559,8 +565,9 @@ class PoolVolumeTest(object):
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
                 os.mkdir(pool_target)
-            setup_or_cleanup_nfs(is_setup=True, mount_dir=nfs_path,
-                                 export_options="rw,async,no_root_squash")
+            setup_or_cleanup_nfs(is_setup=True,
+                                 export_options="rw,async,no_root_squash",
+                                 mount_src=nfs_path)
             source_host = self.params.get("source_host", "localhost")
             extra = "--source-host %s --source-path %s" % (source_host,
                                                            nfs_path)
