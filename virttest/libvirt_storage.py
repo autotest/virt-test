@@ -461,7 +461,8 @@ class PoolVolume(object):
             return False
 
         if not self.volume_exists(name):
-            logging.error("Created volume does not exist.")
+            logging.error("Created volume does not exist:%s",
+                          self.list_volumes())
             return False
         return True
 
