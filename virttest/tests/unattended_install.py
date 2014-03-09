@@ -850,6 +850,9 @@ class UnattendedInstallConfig(object):
                 self.kernel_params = re.sub('repo\=[\:\w\d\/]*',
                                             'repo=%s' % self.url,
                                             self.kernel_params)
+            elif 'autoyast=' in self.kernel_params:
+                # SUSE
+                self.kernel_params = (self.kernel_params + " ip=dhcp install=" + self.url)
 
         elif self.vm_type == 'libvirt':
             logging.info("Not downloading vmlinuz/initrd.img from %s, "
@@ -880,6 +883,11 @@ class UnattendedInstallConfig(object):
             utils.run(initrd_fetch_cmd, verbose=DEBUG)
         finally:
             utils_disk.cleanup(self.nfs_mount)
+
+        if 'autoyast=' in self.kernel_params:
+            # SUSE
+            self.kernel_params = (self.kernel_params + " ip=dhcp "
+                                  "install=nfs://" + self.nfs_server + ":" + self.nfs_dir)
 
     def setup_import(self):
         self.unattended_file = None
