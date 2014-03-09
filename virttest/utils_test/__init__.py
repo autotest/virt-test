@@ -39,6 +39,17 @@ import libvirt
 import qemu
 import libguestfs
 
+import sys
+import inspect
+
+current_file = inspect.getfile(inspect.currentframe())
+current_path = os.path.abspath(os.path.dirname(current_file))
+parent_path = current_path[0:current_path.rfind('/')]
+sys.path.append(parent_path)
+
+import asset
+import bootstrap
+
 try:
     from virttest.staging import utils_cgroup
 except ImportError:
@@ -1024,6 +1035,24 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     subtest_dir_specific = os.path.join(test.bindir, params.get('vm_type'),
                                         "tests")
     subtest_dirs += data_dir.SubdirList(subtest_dir_specific)
+    provider = params.get("provider", None)
+
+    if provider is None:
+        # Verify if we have the correspondent source file for it
+        for generic_subdir in asset.get_test_provider_subdirs('generic'):
+            subtest_dirs += data_dir.SubdirList(generic_subdir,
+                                                bootstrap.test_filter)
+
+        for specific_subdir in asset.get_test_provider_subdirs(params.get("vm_type")):
+            subtest_dirs += data_dir.SubdirList(specific_subdir,
+                                                bootstrap.test_filter)
+    else:
+        provider_info = asset.get_test_provider_info(provider)
+        for key in provider_info['backends']:
+            subtest_dirs += data_dir.SubdirList(
+                provider_info['backends'][key]['path'],
+                bootstrap.test_filter)
+
     for d in subtest_dirs:
         module_path = os.path.join(d, "%s.py" % sub_type)
         if os.path.isfile(module_path):
