@@ -2798,16 +2798,25 @@ def domif_getlink(name, interface, options=None, **dargs):
     return command(cmd, **dargs)
 
 
-def nodedev_list(options="", **dargs):
+def nodedev_list(tree=False, cap="", options="", **dargs):
     """
     List the node devices.
 
+    :param tree: list devices in a tree
+    :param cap: capability names, separated by comma
+    :param options: extra command options.
+    :param dargs: standardized virsh function API keywords
     :return: CmdResult object.
     """
-    cmd = "nodedev-list %s" % (options)
-    CmdResult = command(cmd, **dargs)
+    cmd = "nodedev-list"
+    if tree:
+        cmd += " --tree"
+    if cap:
+        cmd += " --cap %s" % cap
+    if options:
+        cmd += " %s" % options
 
-    return CmdResult
+    return command(cmd, **dargs)
 
 
 def nodedev_detach(name, options="", **dargs):
