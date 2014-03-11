@@ -818,8 +818,12 @@ def run_autotest(vm, session, control_path, timeout,
                                  "migration")
                     vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
             else:
-                session.cmd_output("./autotest-local --args=\"%s\" --verbose"
-                                   " control" % (control_args),
+                if params.get("guest_autotest_verbosity", "yes") == "yes":
+                    verbose = " --verbose"
+                else:
+                    verbose = ""
+                session.cmd_output("./autotest-local --args=\"%s\"%s"
+                                   " control" % (control_args, verbose),
                                    timeout=timeout,
                                    print_func=logging.info)
         finally:
