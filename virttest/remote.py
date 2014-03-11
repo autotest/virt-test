@@ -216,6 +216,7 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
         host = "%s%%%s" % (host, interface)
     if client == "ssh":
         cmd = ("ssh -o UserKnownHostsFile=/dev/null "
+               "-o StrictHostKeyChecking=no "
                "-o PreferredAuthentications=password -p %s %s@%s" %
                (port, username, host))
     elif client == "telnet":
@@ -408,6 +409,7 @@ def scp_to_remote(host, port, username, password, local_path, remote_path,
         host = "%s%%%s" % (host, interface)
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null "
+               "-o StrictHostKeyChecking=no "
                "-o PreferredAuthentications=password -r %s "
                "-P %s %s %s@\[%s\]:%s" %
                (limit, port, local_path, username, host, remote_path))
@@ -443,6 +445,7 @@ def scp_from_remote(host, port, username, password, remote_path, local_path,
         host = "%s%%%s" % (host, interface)
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null "
+               "-o StrictHostKeyChecking=no "
                "-o PreferredAuthentications=password -r %s "
                "-P %s %s@\[%s\]:%s %s" %
                (limit, port, username, host, remote_path, local_path))
@@ -485,6 +488,7 @@ def scp_between_remotes(src, dst, port, s_passwd, d_passwd, s_name, d_name,
         dst = "%s%%%s" % (dst, dst_inter)
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null -o "
+               "-o StrictHostKeyChecking=no "
                "PreferredAuthentications=password -r %s -P %s"
                " %s@\[%s\]:%s %s@\[%s\]:%s" %
                (limit, port, s_name, src, s_path, d_name, dst, d_path))
