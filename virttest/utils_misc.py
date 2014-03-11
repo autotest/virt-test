@@ -1656,7 +1656,7 @@ def get_qemu_binary(params):
 
     if not os.path.isfile(qemu_binary_path):
         logging.debug('Could not find params qemu in %s, searching the '
-                      'host PATH for one to use')
+                      'host PATH for one to use', qemu_binary_path)
         try:
             qemu_binary = find_command('qemu-kvm')
             logging.debug('Found %s', qemu_binary)

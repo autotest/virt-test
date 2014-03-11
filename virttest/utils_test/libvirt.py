@@ -303,7 +303,7 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
         sv_status = None
         if utils_misc.selinux_enforcing():
             sv_status = utils_selinux.get_status()
-            utils_selinux.set_status("Permissive")
+            utils_selinux.set_status("permissive")
         _iscsi.export_target()
         if sv_status is not None:
             utils_selinux.set_status(sv_status)
