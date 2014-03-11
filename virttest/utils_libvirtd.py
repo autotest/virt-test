@@ -48,8 +48,6 @@ try:
     LIBVIRTD = "libvirtd"
 except ValueError:
     LIBVIRTD = None
-    logging.warning("Libvirtd service is not available in host, "
-                    "utils_libvirtd module will not function normally")
 
 
 def service_libvirtd_control(action, remote_ip=None,
@@ -67,6 +65,9 @@ def service_libvirtd_control(action, remote_ip=None,
     @ raise LibvirtdActionUnknownError: Action is not supported.
     @ raise LibvirtdActionError: Take the action on libvirtd Failed.
     """
+    if LIBVIRTD is None:
+        logging.warning("Libvirtd service is not available in host, "
+                        "utils_libvirtd module will not function normally")
     service_cmd = ('service %s %s' % (libvirtd, action))
 
     actions = ['start', 'stop', 'restart', 'condrestart', 'reload',
