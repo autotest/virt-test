@@ -227,25 +227,6 @@ def postprocess_vm(test, params, env, name):
         except Exception:
             pass
 
-    # Encode an HTML 5 compatible video from the screenshots produced
-    screendump_dir = os.path.join(test.debugdir, "screendumps_%s" % vm.name)
-    if (params.get("encode_video_files", "yes") == "yes" and
-            glob.glob("%s/*" % screendump_dir)):
-        try:
-            video = video_maker.GstPythonVideoMaker()
-            if (video.has_element('vp8enc') and video.has_element('webmmux')):
-                video_file = os.path.join(test.debugdir, "%s-%s.webm" %
-                                          (vm.name, test.iteration))
-            else:
-                video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
-                                          (vm.name, test.iteration))
-            logging.debug("Encoding video file %s", video_file)
-            video.start(screendump_dir, video_file)
-
-        except Exception, detail:
-            logging.info(
-                "Video creation failed for vm %s: %s", vm.name, detail)
-
     if params.get("kill_vm") == "yes":
         kill_vm_timeout = float(params.get("kill_vm_timeout", 0))
         if kill_vm_timeout:
@@ -690,6 +671,28 @@ def postprocess(test, params, env):
         _screendump_thread_termination_event.set()
         _screendump_thread.join(10)
         _screendump_thread = None
+
+    # Encode an HTML 5 compatible video from the screenshots produced
+
+    dirs = re.findall("(screendump\S*_[0-9]+)", str(os.listdir(test.debugdir)))
+    for dir in dirs:
+        screendump_dir = os.path.join(test.debugdir, dir)
+        if (params.get("encode_video_files", "yes") == "yes" and
+               glob.glob("%s/*" % screendump_dir)):
+            try:
+                video = video_maker.GstPythonVideoMaker()
+                if (video.has_element('vp8enc') and video.has_element('webmmux')):
+                    video_file = os.path.join(test.debugdir, "%s-%s.webm" %
+                                             (screendump_dir, test.iteration))
+                else:
+                    video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
+                                          (screendump_dir, test.iteration))
+                logging.debug("Encoding video file %s", video_file)
+                video.start(screendump_dir, video_file)
+
+            except Exception, detail:
+                logging.info(
+                    "Video creation failed for %s: %s", screendump_dir, detail)
 
     # Warn about corrupt PPM files
     for f in glob.glob(os.path.join(test.debugdir, "*.ppm")):
