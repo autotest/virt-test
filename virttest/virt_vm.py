@@ -1111,7 +1111,8 @@ class BaseVM(object):
         status_test_command = self.params.get("status_test_command", "")
 
         # Some times need recreate the serial_console.
-        if not os.path.exists(self.serial_console.inpipe_filename):
+        if not (self.serial_console and 
+                os.path.exists(self.serial_console.inpipe_filename)):
             self.create_serial_console()
 
         self.serial_console.set_linesep(linesep)
