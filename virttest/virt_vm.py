@@ -650,7 +650,7 @@ class BaseVM(object):
 
             if not arp_ip and os.geteuid() != 0:
                 # For non-root, tcpdump won't work for finding IP address,
-                #try arp
+                # try arp
                 ip_map = utils_net.parse_arp()
                 arp_ip = ip_map.get(nic.mac.lower())
                 if arp_ip:
@@ -767,8 +767,8 @@ class BaseVM(object):
                 raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
             try:
                 s_session = None
-                #for windows guest make sure your guest supports
-                #login by serial_console
+                # for windows guest make sure your guest supports
+                # login by serial_console
                 s_session = self.wait_for_serial_login()
                 nic_mac = self.get_mac_address(nic_index_or_name)
                 os_type = self.params.get("os_type")
@@ -866,7 +866,7 @@ class BaseVM(object):
                 raise VMDeadKernelCrashError(match.group(0))
 
     def verify_bsod(self, scrdump_file):
-        #For windows guest
+        # For windows guest
         if (os.path.exists(scrdump_file) and
                 self.params.get("check_guest_bsod", "no") == 'yes' and
                 ppm_utils.Image is not None):
@@ -1111,7 +1111,7 @@ class BaseVM(object):
         status_test_command = self.params.get("status_test_command", "")
 
         # Some times need recreate the serial_console.
-        if not (self.serial_console and 
+        if not (self.serial_console and
                 os.path.exists(self.serial_console.inpipe_filename)):
             self.create_serial_console()
 
