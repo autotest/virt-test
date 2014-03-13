@@ -993,6 +993,7 @@ class VMClockXML(VMXML):
 
     # Sub-element of clock
     class Timer(VMXML):
+
         """Timer element of clock"""
 
         __slots__ = ('name', 'present')
