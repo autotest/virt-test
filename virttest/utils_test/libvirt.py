@@ -447,14 +447,18 @@ def verify_virsh_console(session, user, passwd, timeout=10, debug=False):
     return True
 
 
-def mk_part(disk, size="100M"):
+def mk_part(disk, size="100M", session=None):
     """
     Create a partition for disk
     """
-    cmd = "parted -s %s mklabel msdos" % disk
-    utils.run(cmd)
-    cmd = "parted -s %s mkpart primary ext4 0 %s" % (disk, size)
-    utils.run(cmd)
+    mklabel_cmd = "parted -s %s mklabel msdos" % disk
+    mkpart_cmd = "parted -s %s mkpart primary ext4 0 %s" % (disk, size)
+    if session:
+        session.cmd(mklabel_cmd)
+        session.cmd(mkpart_cmd)
+    else:
+        utils.run(mklabel_cmd)
+        utils.run(mkpart_cmd)
 
 
 def check_actived_pool(pool_name):
