@@ -1244,10 +1244,12 @@ class NumaInfo(object):
         :rtype: list
         """
         cmd = utils.run("numactl --hardware")
-        node_distances = cmd.stdout.split("node distances:")[-1].strip()
-        node_distance = node_distances.splitlines()[node_id + 1]
-        if "%s:" % node_id not in node_distance:
-            logging.warn("Get wrong unexpect information from numctl")
+        try:
+            node_distances = cmd.stdout.split("node distances:")[-1].strip()
+            node_distance = re.findall("%s:" % node_id, node_distances)[0]
+            node_distance = node_distance.split(":")[-1]
+        except Exception:
+            logging.warn("Get unexpect information from numctl")
             numa_sys_path = self.numa_sys_path
             distance_path = get_path(numa_sys_path,
                                      "node%s/distance" % node_id)
@@ -1258,8 +1260,6 @@ class NumaInfo(object):
             node_distance_file = open(distance_path, 'r')
             node_distance = node_distance_file.read()
             node_distance_file.close()
-        else:
-            node_distance = node_distance.split(":")[-1]
 
         return node_distance.strip().split()
 
@@ -1290,10 +1290,11 @@ class NumaNode(object):
     """
 
     def __init__(self, i=-1):
-        self.num = get_node_count()
         if i < 0:
-            self.cpus = self.get_node_cpus(int(self.num) + i).split()
-            self.node_id = self.num + i
+            host_numa_info = NumaInfo()
+            available_nodes = host_numa_info.nodes.keys()
+            self.cpus = self.get_node_cpus(available_nodes[-1]).split()
+            self.node_id = available_nodes[-1]
         else:
             self.cpus = self.get_node_cpus(i - 1).split()
             self.node_id = i - 1
