@@ -942,3 +942,105 @@ class VMCPUXML(VMXML):
         xmltreefile = self.__dict_get__('xml')
         cpu_node = xmltreefile.find('/cpu')
         xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
+
+
+class VMClockXML(VMXML):
+
+    """
+    Higher-level manipulations related to VM's XML(Clock)
+    """
+
+    # Must copy these here or there will be descriptor problems
+    __slots__ = ('offset', 'timezone', 'adjustment', 'timers')
+
+    def __init__(self, virsh_instance=base.virsh, offset="utc"):
+        """
+        Create new VMClock XML instance
+        """
+        # The set action is for test.
+        accessors.XMLAttribute(property_name="offset",
+                               libvirtxml=self,
+                               forbidden=[],
+                               parent_xpath='/',
+                               tag_name='clock',
+                               attribute='offset')
+        accessors.XMLAttribute(property_name="timezone",
+                               libvirtxml=self,
+                               forbidden=[],
+                               parent_xpath='/',
+                               tag_name='clock',
+                               attribute='timezone')
+        accessors.XMLAttribute(property_name="adjustment",
+                               libvirtxml=self,
+                               forbidden=[],
+                               parent_xpath='/',
+                               tag_name='clock',
+                               attribute='adjustment')
+        accessors.XMLElementList(property_name="timers",
+                                 libvirtxml=self,
+                                 forbidden=[],
+                                 parent_xpath="/clock",
+                                 marshal_from=self.marshal_from_timer,
+                                 marshal_to=self.marshal_to_timer)
+        super(VMClockXML, self).__init__(virsh_instance=virsh_instance)
+        # Set default offset for clock
+        self.offset = offset
+
+    def from_dumpxml(self, vm_name, virsh_instance=base.virsh):
+        """Helper to load xml from domain."""
+        self.xml = VMXML.new_from_dumpxml(vm_name,
+                                          virsh_instance=virsh_instance).xml
+
+    # Sub-element of clock
+    class Timer(VMXML):
+        """Timer element of clock"""
+
+        __slots__ = ('name', 'present')
+
+        def __init__(self, virsh_instance=base.virsh, timer_name="tsc"):
+            """
+            Create new Timer XML instance
+            """
+            # The set action is for test.
+            accessors.XMLAttribute(property_name="name",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock',
+                                   tag_name='timer',
+                                   attribute='name')
+            accessors.XMLAttribute(property_name="present",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock',
+                                   tag_name='timer',
+                                   attribute='present')
+            super(VMClockXML.Timer, self).__init__(virsh_instance=virsh_instance)
+            # name is mandatory for timer
+            self.name = timer_name
+
+        def update(self, attr_dict):
+            for attr, value in attr_dict.items():
+                setattr(self, attr, value)
+
+    @staticmethod
+    def marshal_from_timer(item, index, libvirtxml):
+        """Convert a Timer instance into tag + attributes"""
+        del index
+        del libvirtxml
+        timer = item.xmltreefile.find("clock/timer")
+        try:
+            return (timer.tag, dict(timer.items()))
+        except AttributeError:  # Didn't find timer
+            raise xcepts.LibvirtXMLError("Expected a list of timer "
+                                         "instances, not a %s" % str(item))
+
+    @staticmethod
+    def marshal_to_timer(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes to a Timer instance"""
+        del index
+        if tag == 'timer':
+            newone = VMClockXML.Timer(virsh_instance=libvirtxml.virsh)
+            newone.update(attr_dict)
+            return newone
+        else:
+            return None
