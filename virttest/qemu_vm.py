@@ -1349,7 +1349,7 @@ class VM(virt_vm.BaseVM):
                     if "vectors" in nic:
                         vectors = nic.vectors
                     else:
-                        vectors = 2 * int(queues) + 1
+                        vectors = 2 * int(queues) + 2
                 else:
                     vectors = None
 
@@ -2791,7 +2791,7 @@ class VM(virt_vm.BaseVM):
         nic.set_if_none('nic_model', params['nic_model'])
         nic.set_if_none('queues', params.get('queues', '1'))
         if params.get("enable_msix_vectors") == "yes":
-            nic.set_if_none('vectors', 2 * int(nic.queues) + 1)
+            nic.set_if_none('vectors', 2 * int(nic.queues) + 2)
         return nic
 
     @error.context_aware
