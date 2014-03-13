@@ -460,7 +460,7 @@ def pci_label_from_address(address_dict, radix=10):
         pci_0000_08_10_0
     """
     if not set(['domain', 'bus', 'slot', 'function']).issubset(
-               address_dict.keys()):
+            address_dict.keys()):
         raise error.TestError("Param %s does not contain keys of "
                               "['domain', 'bus', 'slot', 'function']." %
                               str(address_dict))
