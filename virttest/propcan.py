@@ -257,20 +257,6 @@ class PropCanBase(dict, PropCanInternal):
         """
         return self.__class__(dict(self))
 
-    def update(self, other, excpt=AttributeError):
-        """
-        Update properties in __all_slots__ with another dict.
-        """
-        _tmp_dict = dict()
-
-        try:
-            _tmp_dict.update(other)
-        except TypeError, detail:
-            raise excpt(detail)
-
-        for item in _tmp_dict.keys():
-            self[item] = other[item]
-
 
 class PropCan(PropCanBase):
 
