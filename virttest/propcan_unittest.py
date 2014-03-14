@@ -184,6 +184,25 @@ class TestPropCanBase(unittest.TestCase):
         self.assertTrue(testcan.foo == testdict.foo)
         self.assertTrue(testcan.bar == testdict.bar)
 
+    def test_update(self):
+        class FooBar(propcan.PropCanBase):
+            __slots__ = ('foo', 'bar')
+
+        testdict = FooBar()
+        other = {'foo': 1, 'bar': 2}
+        testdict.update(other)
+        self.assertEqual(testdict, other)
+
+        other = 'string'
+        self.assertRaises(ValueError, testdict.update, other)
+
+        other = {'foo': 1, 'bar': 2, 'v3': 3}
+        self.assertRaises(KeyError, testdict.update, other)
+
+        kwargs = {'foo': "foo", 'bar': "bar"}
+        testdict.update(**kwargs)
+        self.assertEqual(testdict, kwargs)
+
 
 class TestPropCan(unittest.TestCase):
 
