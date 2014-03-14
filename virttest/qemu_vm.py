@@ -3069,7 +3069,7 @@ class VM(virt_vm.BaseVM):
                 clean=True, save_path="/tmp", dest_host="localhost",
                 remote_port=None, not_wait_for_migration=False,
                 fd_src=None, fd_dst=None, migration_exec_cmd_src=None,
-                migration_exec_cmd_dst=None):
+                migration_exec_cmd_dst=None, env=None):
         """
         Migrate the VM.
 
@@ -3087,7 +3087,7 @@ class VM(virt_vm.BaseVM):
                 differ.
         :param clean: If True, delete the saved state files (relevant only if
                 stable_check is also True).
-        @save_path: The path for state files.
+        :param save_path: The path for state files.
         :param dest_host: Destination host (defaults to 'localhost').
         :param remote_port: Port to use for remote migration.
         :param not_wait_for_migration: If True migration start but not wait till
@@ -3102,6 +3102,7 @@ class VM(virt_vm.BaseVM):
         :param migration_exec_cmd_dst: Command to embed in '-incoming "exec: "'
                 (e.g. 'gzip -c -d filename') if migration_mode is 'exec'
                 default to listening on a random TCP port
+        :param env: Dictionary with test environment
         """
         if protocol not in self.MIGRATION_PROTOS:
             raise virt_vm.VMMigrateProtoUnknownError(protocol)
@@ -3121,6 +3122,8 @@ class VM(virt_vm.BaseVM):
             os.close(fd_src)
 
         clone = self.clone()
+        if env:
+            env.register_vm("%s_clone" % clone.name, clone)
         if (local and not (migration_exec_cmd_src
                            and "gzip" in migration_exec_cmd_src)):
             error.context("creating destination VM")
@@ -3278,6 +3281,8 @@ class VM(virt_vm.BaseVM):
                 if self.is_alive():
                     self.monitor.cmd("cont")
                 clone.destroy(gracefully=False)
+                if env:
+                    env.unregister_vm("%s_clone" % self.name)
 
     @error.context_aware
     def reboot(self, session=None, method="shell", nic_index=0,

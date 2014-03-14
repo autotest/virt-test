@@ -227,25 +227,6 @@ def postprocess_vm(test, params, env, name):
         except Exception:
             pass
 
-    # Encode an HTML 5 compatible video from the screenshots produced
-    screendump_dir = os.path.join(test.debugdir, "screendumps_%s" % vm.name)
-    if (params.get("encode_video_files", "yes") == "yes" and
-            glob.glob("%s/*" % screendump_dir)):
-        try:
-            video = video_maker.GstPythonVideoMaker()
-            if (video.has_element('vp8enc') and video.has_element('webmmux')):
-                video_file = os.path.join(test.debugdir, "%s-%s.webm" %
-                                          (vm.name, test.iteration))
-            else:
-                video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
-                                          (vm.name, test.iteration))
-            logging.debug("Encoding video file %s", video_file)
-            video.start(screendump_dir, video_file)
-
-        except Exception, detail:
-            logging.info(
-                "Video creation failed for vm %s: %s", vm.name, detail)
-
     if params.get("kill_vm") == "yes":
         kill_vm_timeout = float(params.get("kill_vm_timeout", 0))
         if kill_vm_timeout:
@@ -691,6 +672,28 @@ def postprocess(test, params, env):
         _screendump_thread.join(10)
         _screendump_thread = None
 
+    # Encode an HTML 5 compatible video from the screenshots produced
+
+    dirs = re.findall("(screendump\S*_[0-9]+)", str(os.listdir(test.debugdir)))
+    for dir in dirs:
+        screendump_dir = os.path.join(test.debugdir, dir)
+        if (params.get("encode_video_files", "yes") == "yes" and
+               glob.glob("%s/*" % screendump_dir)):
+            try:
+                video = video_maker.GstPythonVideoMaker()
+                if (video.has_element('vp8enc') and video.has_element('webmmux')):
+                    video_file = os.path.join(test.debugdir, "%s-%s.webm" %
+                                             (screendump_dir, test.iteration))
+                else:
+                    video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
+                                          (screendump_dir, test.iteration))
+                logging.debug("Encoding video file %s", video_file)
+                video.start(screendump_dir, video_file)
+
+            except Exception, detail:
+                logging.info(
+                    "Video creation failed for %s: %s", screendump_dir, detail)
+
     # Warn about corrupt PPM files
     for f in glob.glob(os.path.join(test.debugdir, "*.ppm")):
         if not ppm_utils.image_verify_ppm_file(f):
@@ -885,12 +888,13 @@ def _take_screendumps(test, params, env):
 
     while True:
         for vm in env.get_all_vms():
-            if vm not in counter.keys():
-                counter[vm] = 0
-            if vm not in inactivity.keys():
-                inactivity[vm] = time.time()
+            if vm.instance not in counter.keys():
+                counter[vm.instance] = 0
+            if vm.instance not in inactivity.keys():
+                inactivity[vm.instance] = time.time()
             if not vm.is_alive():
                 continue
+            vm_pid = vm.get_pid()
             try:
                 vm.screendump(filename=temp_filename, debug=False)
             except qemu_monitor.MonitorError, e:
@@ -907,18 +911,19 @@ def _take_screendumps(test, params, env):
                 os.unlink(temp_filename)
                 continue
             screendump_dir = os.path.join(test.debugdir,
-                                          "screendumps_%s" % vm.name)
+                                          "screendumps_%s_%s" % (vm.name,
+                                                                 vm_pid))
             try:
                 os.makedirs(screendump_dir)
             except OSError:
                 pass
-            counter[vm] += 1
+            counter[vm.instance] += 1
             screendump_filename = os.path.join(screendump_dir, "%04d.jpg" %
-                                               counter[vm])
+                                               counter[vm.instance])
             vm.verify_bsod(screendump_filename)
             image_hash = utils.hash_file(temp_filename)
             if image_hash in cache:
-                time_inactive = time.time() - inactivity[vm]
+                time_inactive = time.time() - inactivity[vm.instance]
                 if time_inactive > inactivity_treshold:
                     msg = (
                         "%s screen is inactive for more than %d s (%d min)" %
@@ -930,7 +935,7 @@ def _take_screendumps(test, params, env):
                         except virt_vm.VMScreenInactiveError:
                             logging.error(msg)
                             # Let's reset the counter
-                            inactivity[vm] = time.time()
+                            inactivity[vm.instance] = time.time()
                             test.background_errors.put(sys.exc_info())
                     elif inactivity_watcher == 'log':
                         logging.debug(msg)
@@ -939,7 +944,7 @@ def _take_screendumps(test, params, env):
                 except OSError:
                     pass
             else:
-                inactivity[vm] = time.time()
+                inactivity[vm.instance] = time.time()
                 try:
                     try:
                         image = PIL.Image.open(temp_filename)
@@ -951,7 +956,7 @@ def _take_screendumps(test, params, env):
                                         "screendump: %s", vm.name, error_detail)
                         # Decrement the counter as we in fact failed to
                         # produce a converted screendump
-                        counter[vm] -= 1
+                        counter[vm.instance] -= 1
                 except NameError:
                     pass
             os.unlink(temp_filename)
