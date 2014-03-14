@@ -2150,6 +2150,25 @@ def vol_wipe(volume_name, pool_name="", alg="", **dargs):
     return command(cmd, **dargs)
 
 
+def vol_resize(volume_name, capacity, pool_name="", extra="", **dargs):
+    """
+    Resizes a storage volume.
+
+    :param volume_name: Name of the volume
+    :param capacity: New capacity for the volume (default bytes)
+    :param pool_name: Name of the pool
+    :param extra: Free-form string options
+    :param dargs: Standardized virsh function API keywords
+    :return: Returns the output of the command
+    """
+    cmd = "vol-resize --vol %s --capacity %s " % (volume_name, capacity)
+    if pool_name:
+        cmd += " --pool %s " % pool_name
+    if extra:
+        cmd += extra
+    return command(cmd, **dargs)
+
+
 def capabilities(option='', **dargs):
     """
     Return output from virsh capabilities command
