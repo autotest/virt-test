@@ -147,41 +147,41 @@ class TestNumaNode(unittest.TestCase):
 
     def test_pin_cpu(self):
         self.assertEqual(self.numa_node.pin_cpu("1230"), "0")
-        self.assertEqual(self.numa_node.dict["0"], "1230")
+        self.assertEqual(self.numa_node.dict["0"], ["1230"])
 
         self.assertEqual(self.numa_node.pin_cpu("1231"), "1")
-        self.assertEqual(self.numa_node.dict["1"], "1231")
+        self.assertEqual(self.numa_node.dict["1"], ["1231"])
 
         self.assertEqual(self.numa_node.pin_cpu("1232"), "2")
-        self.assertEqual(self.numa_node.dict["2"], "1232")
+        self.assertEqual(self.numa_node.dict["2"], ["1232"])
 
         self.assertEqual(self.numa_node.pin_cpu("1233"), "3")
-        self.assertEqual(self.numa_node.dict["3"], "1233")
+        self.assertEqual(self.numa_node.dict["3"], ["1233"])
 
         self.assertEqual(self.numa_node.pin_cpu("1234"), "4")
-        self.assertEqual(self.numa_node.dict["4"], "1234")
+        self.assertEqual(self.numa_node.dict["4"], ["1234"])
 
         self.assertEqual(self.numa_node.pin_cpu("1235"), "5")
-        self.assertEqual(self.numa_node.dict["5"], "1235")
+        self.assertEqual(self.numa_node.dict["5"], ["1235"])
 
         self.assertEqual(self.numa_node.pin_cpu("1236"), "6")
-        self.assertEqual(self.numa_node.dict["6"], "1236")
+        self.assertEqual(self.numa_node.dict["6"], ["1236"])
 
         self.assertEqual(self.numa_node.pin_cpu("1237"), "7")
-        self.assertEqual(self.numa_node.dict["7"], "1237")
+        self.assertEqual(self.numa_node.dict["7"], ["1237"])
 
         self.assertTrue("free" not in self.numa_node.dict.values())
 
     def test_free_cpu(self):
         self.assertEqual(self.numa_node.pin_cpu("1230"), "0")
-        self.assertEqual(self.numa_node.dict["0"], "1230")
+        self.assertEqual(self.numa_node.dict["0"], ["1230"])
 
         self.assertEqual(self.numa_node.pin_cpu("1231"), "1")
-        self.assertEqual(self.numa_node.dict["1"], "1231")
+        self.assertEqual(self.numa_node.dict["1"], ["1231"])
 
         self.numa_node.free_cpu("0")
-        self.assertEqual(self.numa_node.dict["0"], "free")
-        self.assertEqual(self.numa_node.dict["1"], "1231")
+        self.assertEqual(self.numa_node.dict["0"], [])
+        self.assertEqual(self.numa_node.dict["1"], ["1231"])
 
     def test_bitlist_to_string(self):
         string = 'foo'
