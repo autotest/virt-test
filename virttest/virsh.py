@@ -1453,7 +1453,7 @@ def net_state_dict(only_names=False, virsh_instance=None, **dargs):
     # If command failed, exception would be raised here
     netlist = net_list_result.stdout.strip().splitlines()
     # First two lines contain table header followed by entries
-    # for each pool on the host, such as:
+    # for each network on the host, such as:
     #
     #   Name                 State      Autostart     Persistent
     #  ----------------------------------------------------------
