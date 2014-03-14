@@ -678,7 +678,7 @@ def postprocess(test, params, env):
     for dir in dirs:
         screendump_dir = os.path.join(test.debugdir, dir)
         if (params.get("encode_video_files", "yes") == "yes" and
-               glob.glob("%s/*" % screendump_dir)):
+           glob.glob("%s/*" % screendump_dir)):
             try:
                 video = video_maker.GstPythonVideoMaker()
                 if (video.has_element('vp8enc') and video.has_element('webmmux')):
@@ -686,7 +686,7 @@ def postprocess(test, params, env):
                                              (screendump_dir, test.iteration))
                 else:
                     video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
-                                          (screendump_dir, test.iteration))
+                                             (screendump_dir, test.iteration))
                 logging.debug("Encoding video file %s", video_file)
                 video.start(screendump_dir, video_file)
 
