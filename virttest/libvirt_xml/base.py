@@ -225,7 +225,7 @@ def load_xml_module(path, name, type_list):
         raise xcepts.LibvirtXMLError(errmsg + ': %s' % str(detail))
     except ImportError, detail:
         raise xcepts.LibvirtXMLError("Can't find module %s in %s: %s"
-                                     % (name, pathname, str(detail)))
+                                     % (name, path, str(detail)))
     except AttributeError, detail:
         raise xcepts.LibvirtXMLError("Can't find class %s in %s module in "
                                      "%s: %s"
