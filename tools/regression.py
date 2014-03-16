@@ -413,8 +413,8 @@ def display(lists, rates, allpvalues, f, ignore_col, o_sum="Augment Rate",
                 else:
                     tee("<TH colspan=3 >%s</TH>" % lists[n][i], f)
         for n in range(len(rates)):
-            if lists[0][i] != rates[n][i] and not re.findall("[a-zA-Z]",
-                                                             rates[n][i]):
+            if lists[0][i] != rates[n][i] and (not re.findall("[a-zA-Z]",
+                                     rates[n][i]) or "nan" in rates[n][i]):
                 tee_line(prefix2[n] + str_ignore(rates[n][i], True), f)
     if prefix3 and len(allpvalues[-1]) > 0:
         tee_line(prefix3 + str_ignore(allpvalues[category - 1][0]), f)
