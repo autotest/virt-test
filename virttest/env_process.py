@@ -232,10 +232,6 @@ def postprocess_vm(test, params, env, name):
         if kill_vm_timeout:
             utils_misc.wait_for(vm.is_dead, kill_vm_timeout, 0, 1)
         vm.destroy(gracefully=params.get("kill_vm_gracefully") == "yes")
-    else:
-        # Close the serial console session, as it'll help
-        # keeping the number of filedescriptors used by virt-test honest.
-        vm.cleanup_serial_console()
 
 
 def process_command(test, params, env, command, command_timeout,
@@ -771,6 +767,10 @@ def postprocess(test, params, env):
                     m.close()
                 except Exception:
                     pass
+        # Close the serial console session, as it'll help
+        # keeping the number of filedescriptors used by virt-test honest.
+        vm.cleanup_serial_console()
+
 
     if params.get("setup_hugepages") == "yes":
         try:
