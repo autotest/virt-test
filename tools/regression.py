@@ -283,8 +283,6 @@ Please check sysinfo directory in autotest result to get more details.
         o_sum = 0
         for i in data:
             o_sum += float(i)
-        if is_int(str(data[0])):
-            return "%d" % (o_sum / len(data))
         return "%.2f" % (o_sum / len(data))
 
     def _get_list_self(self, data):
