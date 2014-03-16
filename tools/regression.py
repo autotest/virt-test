@@ -362,6 +362,11 @@ def display(lists, rates, allpvalues, f, ignore_col, o_sum="Augment Rate",
         out += "<TR ALIGN=CENTER>"
         content = content.split("|")
         for i in range(len(content)):
+            if not is_int(content[i]) and is_float(content[i]):
+                if float(content[i]) > 100:
+                    content[i] = "%.2f" % float(content[i])
+                else:
+                    content[i] = "%.4f" % float(content[i])
             if n and i >= 2 and i < ignore_col + 2:
                 out += "<TD ROWSPAN=%d WIDTH=1%% >%s</TD>" % (n, content[i])
             else:
@@ -505,6 +510,13 @@ def analyze(test, sample_type, arg1, arg2, configfile):
 def is_int(n):
     try:
         int(n)
+        return True
+    except ValueError:
+        return False
+
+def is_float(n):
+    try:
+        float(n)
         return True
     except ValueError:
         return False
