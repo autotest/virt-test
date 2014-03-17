@@ -543,8 +543,9 @@ class PoolVolumeTest(object):
             if pool_type == "logical":
                 cmd = "pvs |grep vg_logical|awk '{print $1}'"
                 pv = utils.system_output(cmd)
-                utils.run("vgremove -f vg_logical")
-                utils.run("pvremove %s" % pv)
+                # Cleanup logical volume anyway
+                utils.run("vgremove -f vg_logical", ignore_status=True)
+                utils.run("pvremove %s" % pv, ignore_status=True)
             # These types used iscsi device
             if pool_type in ["logical", "iscsi", "fs", "disk", "scsi"]:
                 setup_or_cleanup_iscsi(is_setup=False,
@@ -555,12 +556,23 @@ class PoolVolumeTest(object):
                     shutil.rmtree(pool_target)
 
     def pre_pool(self, pool_name, pool_type, pool_target, emulated_image,
-                 image_size="100M"):
+                 image_size="100M", pre_disk_vol=[]):
         """
         Preapare the specific type pool
         Note:
         1. For scsi type pool, it only could be created from xml file
         2. Other type pools can be created by pool_creat_as function
+        3. Disk pool will not allow to create volume with virsh commands
+           So we can prepare it before pool created
+
+        :param pool_name: created pool name
+        :param pool_type: dir, disk, logical, fs, netfs or else
+        :param pool_target: target of storage pool
+        :param emulated_image: use an image file to simulate a scsi disk
+                               it could be used for disk, logical pool
+        :param image_size: the size for emulated image
+        :param pre_disk_vol: a list include partition size to be created
+                             no more than 4 partition because msdos label
         """
         extra = ""
         if pool_type == "dir":
@@ -572,7 +584,10 @@ class PoolVolumeTest(object):
             device_name = setup_or_cleanup_iscsi(is_setup=True,
                                                  emulated_image=emulated_image,
                                                  image_size=image_size)
-            mk_part(device_name)
+            # If pre_vol is None, disk pool will have no volume
+            if type(pre_disk_vol) == list and len(pre_disk_vol):
+                for vol in pre_disk_vol:
+                    mk_part(device_name, vol)
             extra = " --source-dev %s" % device_name
         elif pool_type == "fs":
             device_name = setup_or_cleanup_iscsi(is_setup=True,
