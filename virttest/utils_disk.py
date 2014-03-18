@@ -18,6 +18,92 @@ from autotest.client.shared import error
 DEBUG = False
 
 
+def copytree(src, dst, overwrite=True, ignore=''):
+    """
+    Copy dirs from source to target;
+    """
+    ignore = glob.glob(os.path.join(src, ignore))
+    for root, dirs, files in os.walk(src):
+        dst_dir = root.replace(src, dst)
+        if not os.path.exists(dst_dir):
+            os.makedirs(dst_dir)
+        for _ in files:
+            if _ in ignore:
+                continue
+            src_file = os.path.join(root, _)
+            dst_file = os.path.join(dst_dir, _)
+            if os.path.exists(dst_file):
+                if overwrite:
+                    os.remove(dst_file)
+                else:
+                    continue
+            shutil.copy(src_file, dst_dir)
+
+
+def is_mount(dst, src, fstype=None, verbose=False):
+    """
+    Check is src mounted with fstype under dst;
+    """
+    if os.path.ismount(dst):
+        mtab = open('/proc/mounts', 'r').read()
+        fstype = (fstype and [fstype] or [''])[0]
+        rex = '\s?'.join(['.*', dst, fstype, '.*'])
+        line = re.search(r'%s' % rex, mtab, re.M)
+        if line is not None:
+            line = line.group()
+            dev = re.split(r'\s?', line)[0]
+            # check if src is a loop device
+            if re.match(r'/dev/loop\d+$', dev):
+                cmd = 'losetup %s -O BACK-FILE' % dev
+                dev = utils.system_output(cmd).splitlines()[-1]
+            if os.path.samefile(src, dev):
+                return line
+    return False
+
+
+def mount(dst, src, fstype=None, options=None, verbose=False):
+    """
+    Mount src under dst if it's really mounted, then remout with options.
+    """
+    options = (options and [options] or [''])[0]
+    line = is_mount(dst, src, fstype, verbose=verbose)
+    if line:
+        logging.info("%s is really mounted" % dst)
+        # Check src not mounted with all options, then remouted it
+        if not [_ for _ in options.split(',')
+                if _ not in line.split()[4]]:
+            return None
+        if 'remount' not in options:
+            options = 'remount,%s' % options
+
+    cmd = ['mount']
+    if fstype:
+        cmd.extend(['-t', fstype])
+    if options:
+        cmd.extend(['-o', options])
+    cmd.extend([src, dst])
+    cmd = ' '.join(cmd)
+    utils.run(cmd, verbose=verbose)
+    return None
+
+
+def umount(dst, src, fstype=None, verbose=False):
+    """
+    Umount src from dst, if src really mounted under dst;
+    """
+    if is_mount(dst, src, fstype=fstype, verbose=verbose):
+        dev = (os.path.ismount(dst) and [dst] or [src])[0]
+        cmd = 'fuser -k %s' % dev
+        utils.run(cmd, ignore_status=True, verbose=verbose)
+        cmd = ['umount']
+        if fstype:
+            cmd.extend(['-t', fstype])
+        cmd.append(dev)
+        cmd = ' '.join(cmd)
+        utils.run(cmd, verbose=verbose)
+    return None
+
+
 @error.context_aware
 def cleanup(folder):
     """
@@ -27,9 +113,7 @@ def cleanup(folder):
     :param folder: Directory to be cleaned up.
     """
     error.context("cleaning up unattended install directory %s" % folder)
-    if os.path.ismount(folder):
-        utils.run('fuser -k %s' % folder, ignore_status=True, verbose=DEBUG)
-        utils.run('umount %s' % folder, verbose=DEBUG)
+    umount(folder, '')
     if os.path.isdir(folder):
         shutil.rmtree(folder)
 
@@ -44,12 +128,7 @@ def clean_old_image(image):
     """
     error.context("cleaning up old leftover image %s" % image)
     if os.path.exists(image):
-        mtab = open('/etc/mtab', 'r')
-        mtab_contents = mtab.read()
-        mtab.close()
-        if image in mtab_contents:
-            utils.run('fuser -k %s' % image, ignore_status=True, verbose=DEBUG)
-            utils.run('umount %s' % image, verbose=DEBUG)
+        umount('', image)
         os.remove(image)
 
 
@@ -202,10 +281,49 @@ class CdromDisk(Disk):
 
     def __init__(self, path, tmpdir):
         self.mount = tempfile.mkdtemp(prefix='cdrom_virttest_', dir=tmpdir)
+        self.tmpdir = tmpdir
         self.path = path
         clean_old_image(path)
         if not os.path.isdir(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
+
+    def _copy_virtio_drivers(self, virtio_floppy, cdrom_virtio):
+        """
+        Copy the virtio drivers from floppy and cdrom to install cdrom.
+
+        1) Mount the floppy and cdrom containing the virtio drivers
+        2) Copy its contents to the root of the install cdrom
+        """
+        pwd = os.getcwd()
+        mnt_pnt = tempfile.mkdtemp(prefix='cdrom_virtio_', dir=self.tmpdir)
+        mount(mnt_pnt, cdrom_virtio, options='loop,ro', verbose=DEBUG)
+        try:
+            copytree(mnt_pnt, self.mount, ignore='*.vfd')
+            cmd = 'mcopy -s -o -n -i %s ::/* %s' % (virtio_floppy, self.mount)
+            utils.run(cmd, verbose=DEBUG)
+        finally:
+            os.chdir(pwd)
+            umount(mnt_pnt, cdrom_virtio, verbose=DEBUG)
+            os.rmdir(mnt_pnt)
+
+    def setup_virtio_win2008(self, virtio_floppy, cdrom_virtio):
+        """
+        Setup the install cdrom with the virtio storage drivers, win2008 style.
+
+        Win2008, Vista and 7 require people to point out the path to the drivers
+        on the unattended file, so we just need to copy the drivers to the
+        extra cdrom disk. Important to note that it's possible to specify
+        drivers from a CDROM, so the floppy driver copy is optional.
+        Process:
+
+        1) Copy the virtio drivers on the virtio floppy to the install cdrom,
+           if there is one available
+        """
+        if os.path.isfile(virtio_floppy):
+            self._copy_virtio_drivers(virtio_floppy, cdrom_virtio)
+        else:
+            logging.debug(
+                "No virtio floppy present, not needed for this OS anyway")
 
     @error.context_aware
     def close(self):
