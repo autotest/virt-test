@@ -1024,30 +1024,23 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     """
     if sub_type is None:
         raise error.TestError("No sub test is found")
-    shared_test_dir = os.path.dirname(test.virtdir)
-    shared_test_dir = os.path.join(shared_test_dir, "generic",
-                                   "tests")
+    shared_test_dir = os.path.dirname(data_dir.TEST_PROVIDERS_DOWNLOAD_DIR)
+    subtest_dirs = [_ for _ in data_dir.SubdirList(shared_test_dir)
+                    if _.endswith("tests")]
     subtest_dir = None
-    subtest_dirs = data_dir.SubdirList(shared_test_dir)
-
-    subtest_dir_specific = os.path.join(test.bindir, params.get('vm_type'),
-                                        "tests")
-    subtest_dirs += data_dir.SubdirList(subtest_dir_specific)
-    for d in subtest_dirs:
-        module_path = os.path.join(d, "%s.py" % sub_type)
+    for _dir in subtest_dirs:
+        module_path = os.path.join(_dir, "%s.py" % sub_type)
         if os.path.isfile(module_path):
-            subtest_dir = d
+            subtest_dir = _dir
+            logging.debug("Running virt subtest '%s'", module_path)
             break
     if subtest_dir is None:
-        raise error.TestError("Could not find test file %s.py "
-                              "on either %s or %s "
-                              "directory" % (sub_type,
-                                             subtest_dir_specific,
-                                             shared_test_dir))
+        raise error.TestError("Could not find test file %s.py in %s directory"
+                              % (sub_type, subtest_dirs))
 
-    f, p, d = imp.find_module(sub_type, [subtest_dir])
-    test_module = imp.load_module(sub_type, f, p, d)
-    f.close()
+    fle, file_name, flags = imp.find_module(sub_type, [subtest_dir])
+    test_module = imp.load_module(sub_type, fle, file_name, flags)
+    fle.close()
     # Run the test function
     run_func = utils_misc.get_test_entrypoint_func(sub_type, test_module)
     if tag is not None:
