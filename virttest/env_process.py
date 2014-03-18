@@ -661,6 +661,8 @@ def postprocess(test, params, env):
     try:
         process(test, params, env, postprocess_image, postprocess_vm,
                 vm_first=True)
+    except error.TestWarn, details:
+        logging.warn(details)
     except Exception, details:
         err += "\nPostprocess: %s" % str(details).replace('\\n', '\n  ')
         logging.error(details)
