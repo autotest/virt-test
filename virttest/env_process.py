@@ -771,7 +771,6 @@ def postprocess(test, params, env):
         # keeping the number of filedescriptors used by virt-test honest.
         vm.cleanup_serial_console()
 
-
     if params.get("setup_hugepages") == "yes":
         try:
             h = test_setup.HugePageConfig(params)
