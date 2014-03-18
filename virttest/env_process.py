@@ -39,6 +39,9 @@ except ImportError:
 _screendump_thread = None
 _screendump_thread_termination_event = None
 
+_vm_register_thread = None
+_vm_register_thread_termination_event = None
+
 
 def preprocess_image(test, params, image_name):
     """
@@ -638,6 +641,15 @@ def preprocess(test, params, env):
                                               args=(test, params, env))
         _screendump_thread.start()
 
+    # Start the register query thread
+    if params.get("store_vm_register") == "yes":
+        global _vm_register_thread, _vm_register_thread_termination_event
+        _vm_register_thread_termination_event = threading.Event()
+        _vm_register_thread = threading.Thread(target=_store_vm_register,
+                                               name='VmRegister',
+                                               args=(test, params, env))
+        _vm_register_thread.start()
+
     return params
 
 
@@ -722,6 +734,13 @@ def postprocess(test, params, env):
         for f in (glob.glob(os.path.join(test.debugdir, '*.ogg')) +
                   glob.glob(os.path.join(test.debugdir, '*.webm'))):
             os.unlink(f)
+
+    # Terminate the register query thread
+    global _vm_register_thread, _vm_register_thread_termination_event
+    if _vm_register_thread is not None:
+        _vm_register_thread_termination_event.set()
+        _vm_register_thread.join()
+        _vm_register_thread = None
 
     # Kill all unresponsive VMs
     if params.get("kill_unresponsive_vms") == "yes":
@@ -965,6 +984,74 @@ def _take_screendumps(test, params, env):
                 _screendump_thread_termination_event = None
                 break
             _screendump_thread_termination_event.wait(delay)
+        else:
+            # Exit event was deleted, exit this thread
+            break
+
+
+def store_vm_register(vm, log_filename, append=False):
+    """
+    Store the register information of vm into a log file
+
+    :param vm: VM object
+    :type vm: vm object
+    :param log_filename: log file name
+    :type log_filename: string
+    :param append: Add the log to the end of the log file or not
+    :type append: bool
+    :return: Store the vm register information to log file or not
+    :rtype: bool
+    """
+    try:
+        output = vm.monitor.info('registers', debug=False)
+        timestamp = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+    except qemu_monitor.MonitorError, e:
+        logging.warn(e)
+        return False
+
+    log_filename = "%s_%s" % (log_filename, timestamp)
+    if append:
+        vr_log = open(log_filename, 'r+')
+        vr_log.seek(0, 2)
+        output += "\n"
+    else:
+        vr_log = open(log_filename, 'w')
+    vr_log.write(output)
+    vr_log.close()
+    return True
+
+
+def _store_vm_register(test, params, env):
+    global _vm_register_thread_termination_event
+    delay = float(params.get("vm_register_delay", 5))
+    counter = {}
+    while True:
+        for vm in env.get_all_vms():
+            if not vm.is_alive():
+                logging.warn("%s is not alive. Can not query the "
+                             "register status" % vm.name)
+                continue
+            vm_pid = vm.get_pid()
+            vr_dir = utils_misc.get_path(test.debugdir,
+                                         "vm_register_%s_%s" % (vm.name,
+                                                                vm_pid))
+            try:
+                os.makedirs(vr_dir)
+            except OSError:
+                pass
+
+            if vm not in counter:
+                counter[vm] = 1
+            vr_filename = utils_misc.get_path(vr_dir, "%04d" % counter[vm])
+            stored_log = store_vm_register(vm, vr_filename)
+            if stored_log:
+                counter[vm] += 1
+
+        if _vm_register_thread_termination_event is not None:
+            if _vm_register_thread_termination_event.isSet():
+                _vm_register_thread_termination_event = None
+                break
+            _vm_register_thread_termination_event.wait(delay)
         else:
             # Exit event was deleted, exit this thread
             break
