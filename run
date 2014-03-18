@@ -413,7 +413,7 @@ def variant_only_file(filename):
 
 
 DEFAULT_MACHINE_TYPE = "i440fx"
-DEFAULT_GUEST_OS = "JeOS.19"
+DEFAULT_GUEST_OS = "JeOS.20"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
 LIBVIRT_DEFAULT_SET = variant_only_file('backends/libvirt/cfg/default_tests')
 LVSB_DEFAULT_SET = ("lvsb_date")
