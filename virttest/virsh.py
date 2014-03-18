@@ -586,16 +586,20 @@ def vcpuinfo(name, **dargs):
     return command("vcpuinfo %s" % name, **dargs)
 
 
-def freecell(extra="", **dargs):
+def freecell(cellno=None, options="", **dargs):
     """
     Prints the available amount of memory on the machine or within a NUMA cell.
 
-    :param extra: extra argument string to pass to command
+    :param cellno: number of cell to show.
+    :param options: extra argument string to pass to command
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
-    cmd_freecell = "freecell %s" % extra
-    return command(cmd_freecell, **dargs)
+    cmd = "freecell "
+    if cellno:
+        cmd = "%s --cellno %s " % (cmd, cellno)
+    cmd = "%s %s" % (cmd, options)
+    return command(cmd, **dargs)
 
 
 def nodeinfo(extra="", **dargs):
