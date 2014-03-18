@@ -16,7 +16,7 @@ class UtilsLibvirtdTest(unittest.TestCase):
         self.assertTrue(service_libvirtd_control('status') in (True, False))
 
     def test_libvirtd_error(self):
-        action_list = ["restart", "start", "stop", "status"]
+        action_list = ["restart", "start", "stop"]
 
         for action in action_list:
             self.assertRaises(utils_libvirtd.LibvirtdActionError,
