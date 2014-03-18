@@ -1986,6 +1986,12 @@ class VM(virt_vm.BaseVM):
             if self.redirs != old_redirs:
                 self.devices = None
 
+            # Update the network related parameters as well to conform to
+            # expected behavior on VM creation
+            getattr(self, 'virtnet').__init__(self.params,
+                                              self.name,
+                                              self.instance)
+
             # Generate basic parameter values for all NICs and create TAP fd
             for nic in self.virtnet:
                 nic_params = params.object_params(nic.nic_name)

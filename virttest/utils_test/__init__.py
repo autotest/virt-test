@@ -577,17 +577,21 @@ def run_autotest(vm, session, control_path, timeout,
             session.cmd("mv %s %s" %
                         (autotest_dirname, os.path.basename(dest_dir)))
 
+    def get_last_guest_results_index():
+        res_index = 0
+        for subpath in os.listdir(outputdir):
+            if re.search("guest_autotest_results\d+", subpath):
+                res_index = max(res_index, int(re.search("guest_autotest_results(\d+)", subpath).group(1)))
+        return res_index
+
     def get_results(base_results_dir):
         """
         Copy autotest results present on the guest back to the host.
         """
         logging.debug("Trying to copy autotest results from guest")
-        guest_results_dir = os.path.join(outputdir, "guest_autotest_results")
-        try:
-            os.mkdir(guest_results_dir)
-        except OSError, detail:
-            if detail.errno != errno.EEXIST:
-                raise
+        res_index = get_last_guest_results_index()
+        guest_results_dir = os.path.join(outputdir, "guest_autotest_results%s" % (res_index+1))
+        os.mkdir(guest_results_dir)
         # result info tarball to host result dir
         session = vm.wait_for_login(timeout=360)
         results_dir = "%s/results/default" % base_results_dir
@@ -616,7 +620,8 @@ def run_autotest(vm, session, control_path, timeout,
         NOTE: This function depends on the results copied to host by
               get_results() function, so call get_results() first.
         """
-        base_dir = os.path.join(outputdir, "guest_autotest_results")
+        res_index = get_last_guest_results_index()
+        base_dir = os.path.join(outputdir, "guest_autotest_results%s" % res_index)
         status_paths = glob.glob(os.path.join(base_dir, "*/status"))
         # for control files that do not use job.run_test()
         status_no_job = os.path.join(base_dir, "status")
@@ -818,8 +823,12 @@ def run_autotest(vm, session, control_path, timeout,
                                  "migration")
                     vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
             else:
-                session.cmd_output("./autotest-local --args=\"%s\" --verbose"
-                                   " control" % (control_args),
+                if params.get("guest_autotest_verbosity", "yes") == "yes":
+                    verbose = " --verbose"
+                else:
+                    verbose = ""
+                session.cmd_output("./autotest-local --args=\"%s\"%s"
+                                   " control" % (control_args, verbose),
                                    timeout=timeout,
                                    print_func=logging.info)
         finally:
