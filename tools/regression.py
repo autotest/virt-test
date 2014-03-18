@@ -74,11 +74,11 @@ class Sample(object):
                     sample_type = line[0:2]
                     tmp = []
                 if "e+" in line[-1]:
-                    tmp.append("%.0f" % float(line[-1]))
+                    tmp.append("%f" % float(line[-1]))
                 elif 'e-' in line[-1]:
-                    tmp.append("%.2f" % float(line[-1]))
+                    tmp.append("%f" % float(line[-1]))
                 elif not (re.findall("[a-zA-Z]", line[-1]) or is_int(line[-1])):
-                    tmp.append("%.2f" % float(line[-1]))
+                    tmp.append("%f" % float(line[-1]))
                 else:
                     tmp.append(line[-1])
 
@@ -237,7 +237,7 @@ Please check sysinfo directory in autotest result to get more details.
                     flag = "+"
                     if float(avg1) > float(avg2):
                         flag = "-"
-                    tmp.append(flag + "%.3f" % (1 - p))
+                    tmp.append(flag + "%f" % (1 - p))
                 tmp = "|".join(tmp)
             ret.append(tmp)
         return ret
@@ -247,17 +247,17 @@ Please check sysinfo directory in autotest result to get more details.
         result = "0.0"
         if len(data) == 2 and float(data[0]) != 0:
             result = float(data[1]) / float(data[0]) * 100
-            if result < 1:
+            if result < 100:
                 result = "%.2f%%" % result
             else:
-                result = "%.0f%%" % result
+                result = "%.4f%%" % result
         return result
 
     def _get_augment_rate(self, data):
         """ (num2 - num1) / num1 * 100 """
         result = "+0.0"
         if len(data) == 2 and float(data[0]) != 0:
-            result = "%+.3f%%" % ((float(data[1]) - float(data[0]))
+            result = "%+f%%" % ((float(data[1]) - float(data[0]))
                                   / float(data[0]) * 100)
         return result
 
@@ -268,7 +268,7 @@ Please check sysinfo directory in autotest result to get more details.
         sumSquareX = x1^2 + ... + xn^2
         SD = sqrt([sumSquareX - (n * (avgX ^ 2))] / (n - 1))
         """
-        o_sum = sqsum = 0
+        o_sum = sqsum = 0.0
         n = len(data)
         for i in data:
             o_sum += float(i)
@@ -276,16 +276,14 @@ Please check sysinfo directory in autotest result to get more details.
         avg = o_sum / n
         if avg == 0 or n == 1 or sqsum - (n * avg ** 2) <= 0:
             return "0.0"
-        return "%.3f" % (((sqsum - (n * avg ** 2)) / (n - 1)) ** 0.5)
+        return "%f" % (((sqsum - (n * avg ** 2)) / (n - 1)) ** 0.5)
 
     def _get_list_avg(self, data):
         """ Compute the average of list entries """
-        o_sum = 0
+        o_sum = 0.0
         for i in data:
             o_sum += float(i)
-        if is_int(str(data[0])):
-            return "%d" % (o_sum / len(data))
-        return "%.2f" % (o_sum / len(data))
+        return "%f" % (o_sum / len(data))
 
     def _get_list_self(self, data):
         """ Use this to convert sample dicts """
@@ -312,7 +310,7 @@ Please check sysinfo directory in autotest result to get more details.
         if avg_update:
             for i in avg_update.split('|'):
                 l = i.split(',')
-                ret[int(l[0])] = "%.2f" % (float(ret[int(l[1])]) /
+                ret[int(l[0])] = "%f" % (float(ret[int(l[1])]) /
                                            float(ret[int(l[2])]))
         if merge:
             return "|".join(ret)
@@ -364,6 +362,11 @@ def display(lists, rates, allpvalues, f, ignore_col, o_sum="Augment Rate",
         out += "<TR ALIGN=CENTER>"
         content = content.split("|")
         for i in range(len(content)):
+            if not is_int(content[i]) and is_float(content[i]):
+                if float(content[i]) > 100:
+                    content[i] = "%.2f" % float(content[i])
+                else:
+                    content[i] = "%.4f" % float(content[i])
             if n and i >= 2 and i < ignore_col + 2:
                 out += "<TD ROWSPAN=%d WIDTH=1%% >%s</TD>" % (n, content[i])
             else:
@@ -507,6 +510,13 @@ def analyze(test, sample_type, arg1, arg2, configfile):
 def is_int(n):
     try:
         int(n)
+        return True
+    except ValueError:
+        return False
+
+def is_float(n):
+    try:
+        float(n)
         return True
     except ValueError:
         return False
