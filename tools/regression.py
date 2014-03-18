@@ -258,7 +258,7 @@ Please check sysinfo directory in autotest result to get more details.
         result = "+0.0"
         if len(data) == 2 and float(data[0]) != 0:
             result = "%+f%%" % ((float(data[1]) - float(data[0]))
-                                  / float(data[0]) * 100)
+                                / float(data[0]) * 100)
         return result
 
     def _get_list_sd(self, data):
@@ -311,7 +311,7 @@ Please check sysinfo directory in autotest result to get more details.
             for i in avg_update.split('|'):
                 l = i.split(',')
                 ret[int(l[0])] = "%f" % (float(ret[int(l[1])]) /
-                                           float(ret[int(l[2])]))
+                                         float(ret[int(l[2])]))
         if merge:
             return "|".join(ret)
         return ret
@@ -417,7 +417,7 @@ def display(lists, rates, allpvalues, f, ignore_col, o_sum="Augment Rate",
                     tee("<TH colspan=3 >%s</TH>" % lists[n][i], f)
         for n in range(len(rates)):
             if lists[0][i] != rates[n][i] and (not re.findall("[a-zA-Z]",
-                                     rates[n][i]) or "nan" in rates[n][i]):
+                                                              rates[n][i]) or "nan" in rates[n][i]):
                 tee_line(prefix2[n] + str_ignore(rates[n][i], True), f)
     if prefix3 and len(allpvalues[-1]) > 0:
         tee_line(prefix3 + str_ignore(allpvalues[category - 1][0]), f)
@@ -513,6 +513,7 @@ def is_int(n):
         return True
     except ValueError:
         return False
+
 
 def is_float(n):
     try:
