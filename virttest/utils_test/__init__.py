@@ -32,7 +32,8 @@ import time
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
-from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net, storage
+from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net
+from virttest import storage, asset, bootstrap
 import virttest
 
 import libvirt
@@ -1023,27 +1024,37 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     :param tag:    Tag for get the sub_test params
     """
     if sub_type is None:
-        raise error.TestError("No sub test is found")
-    shared_test_dir = os.path.dirname(test.virtdir)
-    shared_test_dir = os.path.join(shared_test_dir, "generic",
-                                   "tests")
-    subtest_dir = None
-    subtest_dirs = data_dir.SubdirList(shared_test_dir)
+        raise error.TestError("Unspecified sub test type. Please specify a"
+                              "sub test type")
 
-    subtest_dir_specific = os.path.join(test.bindir, params.get('vm_type'),
-                                        "tests")
-    subtest_dirs += data_dir.SubdirList(subtest_dir_specific)
+    provider = params.get("provider", None)
+    subtest_dirs = []
+
+    if provider is None:
+        # Verify if we have the correspondent source file for it
+        for generic_subdir in asset.get_test_provider_subdirs('generic'):
+            subtest_dirs += data_dir.SubdirList(generic_subdir,
+                                                bootstrap.test_filter)
+
+        for specific_subdir in asset.get_test_provider_subdirs(params.get("vm_type")):
+            subtest_dirs += data_dir.SubdirList(specific_subdir,
+                                                bootstrap.test_filter)
+    else:
+        provider_info = asset.get_test_provider_info(provider)
+        for key in provider_info['backends']:
+            subtest_dirs += data_dir.SubdirList(
+                provider_info['backends'][key]['path'],
+                bootstrap.test_filter)
+
     for d in subtest_dirs:
         module_path = os.path.join(d, "%s.py" % sub_type)
         if os.path.isfile(module_path):
             subtest_dir = d
             break
+
     if subtest_dir is None:
         raise error.TestError("Could not find test file %s.py "
-                              "on either %s or %s "
-                              "directory" % (sub_type,
-                                             subtest_dir_specific,
-                                             shared_test_dir))
+                              "on directories %s" % (sub_type, subtest_dirs))
 
     f, p, d = imp.find_module(sub_type, [subtest_dir])
     test_module = imp.load_module(sub_type, f, p, d)
