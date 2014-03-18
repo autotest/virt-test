@@ -30,6 +30,8 @@ tar
 bzip2
 pciutils
 usbutils
+bind-utils
+net-tools
 -yum-utils
 -cryptsetup
 -dump
@@ -169,7 +171,6 @@ usbutils
 %end
 
 %post
-echo "OS install is completed" > /dev/ttyS0
 grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
 echo 0 > /selinux/enforce
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
@@ -197,9 +198,12 @@ systemctl mask sys-devices-virtual-tty-tty9.device
 systemctl mask sys-devices-virtual-tty-tty10.device
 systemctl mask sys-devices-virtual-tty-tty11.device
 systemctl mask sys-devices-virtual-tty-tty12.device
-yum install -y hdparm ntpdate
+yum install -y hdparm ntpdate qemu-guest-agent
 yum clean all
 mkdir -p /var/log/journal
+dd if=/dev/zero of=/fill-up-file bs=1M
+rm -f /fill-up-file
 echo 'Post set up finished' > /dev/ttyS0
 echo Post set up finished > /dev/hvc0
+echo "OS install is completed" > /dev/ttyS0
 %end
