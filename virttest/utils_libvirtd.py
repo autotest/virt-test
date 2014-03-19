@@ -97,17 +97,13 @@ def service_libvirtd_control(action, remote_ip=None,
     elif action == "status":
         if session:
             try:
-                status, output = session.cmd_status_output(service_cmd)
+                output = session.cmd_output(service_cmd)
             except aexpect.ShellError, detail:
                 raise LibvirtdActionError(action, detail)
-            if status:
-                raise LibvirtdActionError(action, output)
         else:
             cmd_result = utils.run(service_cmd, ignore_status=True)
-            if cmd_result.exit_status:
-                raise LibvirtdActionError(action, cmd_result.stderr)
             output = cmd_result.stdout
-
+        logging.debug("Checking libvirtd status:\n%s", output)
         if re.search("running", output):
             return True
         else:
@@ -159,11 +155,7 @@ def libvirtd_is_running():
     """
     Check if libvirt service is running.
     """
-    try:
-        return service_libvirtd_control('status')
-    except LibvirtdActionError, detail:
-        logging.debug("Failed to get status of libvirtd:\n%s", detail)
-        return False
+    return service_libvirtd_control('status')
 
 
 def libvirtd_wait_for_start(timeout=60, session=None):
