@@ -1941,6 +1941,19 @@ def pool_define(xml_path, **dargs):
     return command(cmd, **dargs)
 
 
+def vol_create(pool_name, xml_file, extra="", **dargs):
+    """
+    To create the volumes from xml file.
+
+    :param pool_name: Name of the pool to be used
+    :param xml_file: file containing an XML vol description
+    :param extra: string of extra options
+    :return: CmdResult object
+    """
+    cmd = "vol-create --pool %s --file %s %s" % (pool_name, xml_file, extra)
+    return command(cmd, **dargs)
+
+
 def vol_create_as(volume_name, pool_name, capacity,
                   allocation, frmt, extra="", **dargs):
     """
