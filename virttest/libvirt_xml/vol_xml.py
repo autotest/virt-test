@@ -1,6 +1,6 @@
 """
 Module simplifying manipulation of XML described at
-http://libvirt.org/
+http://libvirt.org/formatstorage.html#StorageVol
 """
 
 from virttest.libvirt_xml import base, accessors
@@ -13,15 +13,21 @@ class VolXMLBase(base.LibvirtXMLBase):
 
     Properties:
         name: string, operates on XML name tag
-        uuid: string, operates on uuid tag
-        type: string, operates on type tag
+        key: string, operates on key tag
         capacity: integer, operates on capacity attribute of capacity tag
         allocation: integer, operates on allocation attribute of allocation
-        available: integer, operates on available attribute of available
-        source: nothing
+        format: string, operates on type attribute of format tag
+        path: string, operates on path attribute of path tag
+        owner, integer, operates on owner attribute of owner tag
+        group, integer, operates on group attribute of group tag
+        mode: string, operates on mode attribute of mode tag
+        label: string, operates on label attribute of label tag
+        compat: string, operates on compat attribute of label tag
+        lazy_refcounts: bool, True/False
     """
 
-    __slots__ = ('name', 'key', 'capacity', 'allocation', 'format', 'path')
+    __slots__ = ('name', 'key', 'capacity', 'allocation', 'format', 'path',
+                 'owner', 'group', 'mode', 'label', 'compat', 'lazy_refcounts')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -40,6 +46,23 @@ class VolXMLBase(base.LibvirtXMLBase):
                                tag_name='format', attribute='type')
         accessors.XMLElementText('path', self, parent_xpath='/target',
                                  tag_name='path')
+        accessors.XMLElementInt('owner', self,
+                                parent_xpath='/target/permissions',
+                                tag_name='owner')
+        accessors.XMLElementInt('group', self,
+                                parent_xpath='/target/permissions',
+                                tag_name='group')
+        accessors.XMLElementText('mode', self,
+                                 parent_xpath='/target/permissions',
+                                 tag_name='mode')
+        accessors.XMLElementText('label', self,
+                                 parent_xpath='/target/permissions',
+                                 tag_name='label')
+        accessors.XMLElementText('compat', self, parent_xpath='/target',
+                                 tag_name='compat')
+        accessors.XMLElementBool('lazy_refcounts', self,
+                                 parent_xpath='/target/features',
+                                 tag_name='lazy_refcounts')
         super(VolXMLBase, self).__init__(virsh_instance=virsh_instance)
 
 
@@ -75,10 +98,10 @@ class VolXML(VolXMLBase):
     @staticmethod
     def get_vol_details_by_name(vol_name, pool_name, virsh_instance=base.virsh):
         """
-        Return Vol's uuid by Vol's name.
+        Return volume xml dictionary by Vol's uuid or name.
 
         :param vol_name: Vol's name
-        :return: Vol's uuid
+        :return: volume xml dictionary
         """
         volume_xml = {}
         vol_xml = VolXML.new_from_vol_dumpxml(vol_name, pool_name,
@@ -89,3 +112,16 @@ class VolXML(VolXMLBase):
         volume_xml['capacity'] = vol_xml.capacity
         volume_xml['allocation'] = vol_xml.allocation
         return volume_xml
+
+    @staticmethod
+    def new_vol(**dargs):
+        """
+        Return a new VolXML instance and set properties from dargs
+
+        :param dargs: param dictionary
+        :return: new VolXML instance
+        """
+        new_one = VolXML(virsh_instance=base.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
