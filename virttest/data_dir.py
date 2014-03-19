@@ -202,7 +202,7 @@ def get_deps_dir(target=None):
         path = os.path.dirname(path)
     raise MissingDepsDirError("Could not find specified deps dir after "
                               "looking %s parent directories" %
-                               nesting_limit)
+                              nesting_limit)
 
 
 def get_tmp_dir():
