@@ -677,9 +677,9 @@ def version(option='', **dargs):
 
     :param option: additional option string to pass
     :param dargs: standardized virsh function API keywords
-    :return: standard output from command
+    :return: CmdResult object
     """
-    return command("version %s" % option, **dargs).stdout.strip()
+    return command("version %s" % option, **dargs)
 
 
 def maxvcpus(option='', **dargs):
