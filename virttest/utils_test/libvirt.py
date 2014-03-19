@@ -20,6 +20,7 @@ import re
 import os
 import time
 import logging
+import shutil
 from virttest import virsh
 from virttest import xml_utils
 from virttest import iscsi
@@ -28,6 +29,7 @@ from virttest import data_dir
 from virttest import aexpect
 from virttest import utils_misc
 from virttest import utils_selinux
+from virttest import libvirt_storage
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
@@ -255,7 +257,8 @@ def check_blockjob(vm_name, target, check_point="none", value="0"):
 
 
 def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
-                         export_options="rw,no_root_squash"):
+                         export_options="rw,no_root_squash",
+                         mount_src="nfs-export"):
     """
     Set up or clean up nfs service on localhost.
 
@@ -266,7 +269,8 @@ def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
     :return: export nfs path or nothing
     """
     tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
-    mount_src = os.path.join(tmpdir, 'nfs-export')
+    if not os.path.isabs(mount_src):
+        mount_src = os.path.join(tmpdir, mount_src)
     if not mount_dir:
         mount_dir = os.path.join(tmpdir, 'nfs-mount')
 
@@ -482,3 +486,205 @@ def pci_label_from_address(address_dict, radix=10):
     function = int(address_dict['function'], radix)
     pci_label = ("pci_%04x_%02x_%02x_%01x" % (domain, bus, slot, function))
     return pci_label
+
+
+def mk_part(disk, size="100M"):
+    """
+    Create a partition for disk
+    """
+    cmd = "parted -s %s mklabel msdos" % disk
+    utils.run(cmd)
+    cmd = "parted -s %s mkpart primary ext4 0 %s" % (disk, size)
+    utils.run(cmd)
+
+
+def check_actived_pool(pool_name):
+    """
+    Check if pool_name exist in active pool list
+    """
+    sp = libvirt_storage.StoragePool()
+    if not sp.pool_exists(pool_name):
+        raise error.TestFail("Can't find pool %s" % pool_name)
+    if not sp.is_pool_active(pool_name):
+        raise error.TestFail("Pool %s is not active." % pool_name)
+    logging.debug("Find active pool %s", pool_name)
+    return True
+
+
+class PoolVolumeTest(object):
+
+    """Test class for storage pool or volume"""
+
+    def __init__(self, test, params):
+        self.tmpdir = test.tmpdir
+        self.params = params
+
+    def cleanup_pool(self, pool_name, pool_type, pool_target, emulated_image):
+        """
+        Delete vols, destroy the created pool and restore the env
+        """
+        sp = libvirt_storage.StoragePool()
+        pv = libvirt_storage.PoolVolume(pool_name)
+        if pool_type in ["dir", "netfs"]:
+            vols = pv.list_volumes()
+            for vol in vols:
+                # Ignore failed deletion here for deleting pool
+                pv.delete_volume(vol)
+        try:
+            if not sp.delete_pool(pool_name):
+                raise error.TestFail("Delete pool %s failed" % pool_name)
+        finally:
+            if pool_type == "netfs":
+                nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
+                nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
+                setup_or_cleanup_nfs(is_setup=False, mount_dir=nfs_path)
+                if os.path.exists(nfs_path):
+                    shutil.rmtree(nfs_path)
+            if pool_type == "logical":
+                cmd = "pvs |grep vg_logical|awk '{print $1}'"
+                pv = utils.system_output(cmd)
+                # Cleanup logical volume anyway
+                utils.run("vgremove -f vg_logical", ignore_status=True)
+                utils.run("pvremove %s" % pv, ignore_status=True)
+            # These types used iscsi device
+            if pool_type in ["logical", "iscsi", "fs", "disk", "scsi"]:
+                setup_or_cleanup_iscsi(is_setup=False,
+                                       emulated_image=emulated_image)
+            if pool_type == "dir":
+                pool_target = os.path.join(self.tmpdir, pool_target)
+                if os.path.exists(pool_target):
+                    shutil.rmtree(pool_target)
+
+    def pre_pool(self, pool_name, pool_type, pool_target, emulated_image,
+                 image_size="100M", pre_disk_vol=[]):
+        """
+        Preapare the specific type pool
+        Note:
+        1. For scsi type pool, it only could be created from xml file
+        2. Other type pools can be created by pool_creat_as function
+        3. Disk pool will not allow to create volume with virsh commands
+           So we can prepare it before pool created
+
+        :param pool_name: created pool name
+        :param pool_type: dir, disk, logical, fs, netfs or else
+        :param pool_target: target of storage pool
+        :param emulated_image: use an image file to simulate a scsi disk
+                               it could be used for disk, logical pool
+        :param image_size: the size for emulated image
+        :param pre_disk_vol: a list include partition size to be created
+                             no more than 4 partition because msdos label
+        """
+        extra = ""
+        if pool_type == "dir":
+            logging.info("Pool path:%s", self.tmpdir)
+            pool_target = os.path.join(self.tmpdir, pool_target)
+            if not os.path.exists(pool_target):
+                os.mkdir(pool_target)
+        elif pool_type == "disk":
+            device_name = setup_or_cleanup_iscsi(is_setup=True,
+                                                 emulated_image=emulated_image,
+                                                 image_size=image_size)
+            # If pre_vol is None, disk pool will have no volume
+            if type(pre_disk_vol) == list and len(pre_disk_vol):
+                for vol in pre_disk_vol:
+                    mk_part(device_name, vol)
+            extra = " --source-dev %s" % device_name
+        elif pool_type == "fs":
+            device_name = setup_or_cleanup_iscsi(is_setup=True,
+                                                 emulated_image=emulated_image,
+                                                 image_size=image_size)
+            cmd = "mkfs.ext4 -F %s" % device_name
+            pool_target = os.path.join(self.tmpdir, pool_target)
+            if not os.path.exists(pool_target):
+                os.mkdir(pool_target)
+            extra = " --source-dev %s" % device_name
+            utils.run(cmd)
+        elif pool_type == "logical":
+            logical_device = setup_or_cleanup_iscsi(is_setup=True,
+                                                emulated_image=emulated_image,
+                                                    image_size=image_size)
+            cmd_pv = "pvcreate %s" % logical_device
+            vg_name = "vg_%s" % pool_type
+            cmd_vg = "vgcreate %s %s" % (vg_name, logical_device)
+            extra = "--source-name %s" % vg_name
+            utils.run(cmd_pv)
+            utils.run(cmd_vg)
+            # Create a small volume for verification
+            # And VG path will not exist if no any volume in.(bug?)
+            cmd_lv = "lvcreate --name default_lv --size 1M %s" % vg_name
+            utils.run(cmd_lv)
+        elif pool_type == "netfs":
+            nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
+            nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
+            if not os.path.exists(nfs_path):
+                os.mkdir(nfs_path)
+            pool_target = os.path.join(self.tmpdir, pool_target)
+            if not os.path.exists(pool_target):
+                os.mkdir(pool_target)
+            setup_or_cleanup_nfs(is_setup=True,
+                                 export_options="rw,async,no_root_squash",
+                                 mount_src=nfs_path)
+            source_host = self.params.get("source_host", "localhost")
+            extra = "--source-host %s --source-path %s" % (source_host,
+                                                           nfs_path)
+        elif pool_type == "iscsi":
+            logical_device = setup_or_cleanup_iscsi(is_setup=True,
+                                            emulated_image=emulated_image,
+                                                    image_size=image_size)
+            iscsi_session = iscsi.iscsi_get_sessions()
+            iscsi_device = ()
+            for iscsi_node in iscsi_session:
+                if iscsi_node[1].count(emulated_image):
+                    iscsi_device = iscsi_node
+                    break
+            if iscsi_device == ():
+                raise error.TestFail("No iscsi device.")
+            if "::" in iscsi_device[0]:
+                iscsi_device = ('localhost', iscsi_device[1])
+            extra = " --source-host %s  --source-dev %s" % iscsi_device
+        elif pool_type == "scsi":
+            scsi_xml_file = self.params.get("scsi_xml_file")
+            if not os.path.exists(scsi_xml_file):
+                scsi_xml_file = os.path.join(self.tmpdir, scsi_xml_file)
+                logical_device = setup_or_cleanup_iscsi(is_setup=True,
+                                               emulated_image=emulated_image,
+                                                        image_size=image_size)
+                cmd = ("iscsiadm -m session -P 3 |grep -B3 %s| grep Host|awk "
+                       "'{print $3}'" % logical_device.split('/')[2])
+                scsi_host = utils.system_output(cmd)
+                scsi_xml = """
+<pool type='scsi'>
+  <name>%s</name>
+   <source>
+    <adapter type='scsi_host' name='host%s'/>
+  </source>
+  <target>
+    <path>/dev/disk/by-path</path>
+  </target>
+</pool>
+""" % (pool_name, scsi_host)
+                logging.debug("Prepare the scsi pool xml: %s", scsi_xml)
+                xml_object = open(scsi_xml_file, 'w')
+                xml_object.write(scsi_xml)
+                xml_object.close()
+
+        # Create pool
+        if pool_type == "scsi":
+            re_v = virsh.pool_create(scsi_xml_file)
+        else:
+            re_v = virsh.pool_create_as(pool_name, pool_type,
+                                        pool_target, extra)
+        if not re_v:
+            raise error.TestFail("Create pool failed.")
+        # Check the created pool
+        check_actived_pool(pool_name)
+
+    def pre_vol(self, vol_name, vol_format, vol_size, pool_name):
+        """
+        Preapare the specific type volume in pool
+        """
+        pv = libvirt_storage.PoolVolume(pool_name)
+        if not pv.create_volume(vol_name, vol_size, vol_size, vol_format):
+            raise error.TestFail("Prepare volume failed.")
+        if not pv.volume_exists(vol_name):
+            raise error.TestFail("Can't find volume: %s", vol_name)
