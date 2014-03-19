@@ -690,20 +690,11 @@ class VM(virt_vm.BaseVM):
 
         def add_pcidevice(devices, host, params, device_driver="pci-assign",
                           pci_bus='pci.0'):
-            if device_driver == "pci-assign":
-                if (devices.has_device("pci-assign") or
-                   devices.has_device("kvm-pci-assign")):
-                    dev = QDevice(device_driver, parent_bus=pci_bus)
-                else:
-                    dev = qdevices.QCustomDevice('pcidevice',
-                                                 parent_bus=pci_bus)
+            if devices.has_device(device_driver):
+                dev = QDevice(device_driver, parent_bus=pci_bus)
             else:
-                if devices.has_device(device_driver):
-                    dev = QDevice(device_driver, parent_bus=pci_bus)
-                else:
-                    dev = qdevices.QCustomDevice('pcidevice',
-                                                 parent_bus=pci_bus)
-            help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
+                dev = qdevices.QCustomDevice('pcidevice', parent_bus=pci_bus)
+            help_cmd = "%s -device %s,\\? 2>&1" % (qemu_binary, device_driver)
             pcidevice_help = utils.system_output(help_cmd)
             dev.set_param('host', host)
             dev.set_param('id', 'id_%s' % host.replace(":", "."))
@@ -711,14 +702,14 @@ class VM(virt_vm.BaseVM):
             for param in params.get("pci-assign_params", "").split():
                 value = params.get(param)
                 if value:
-                    if bool(re.search(param, pcidevice_help, re.M)):
+                    if param in pcidevice_help:
                         dev.set_param(param, value)
                     else:
                         fail_param.append(param)
             if fail_param:
                 msg = ("parameter %s is not support in device pci-assign."
                        " It only support following parameter:\n %s" %
-                       (param, pcidevice_help))
+                       (", ".join(fail_param), pcidevice_help))
                 logging.warn(msg)
             devices.insert(dev)
 
