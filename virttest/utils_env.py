@@ -327,6 +327,7 @@ class Env(UserDict.IterableUserDict):
         cmd = cmd_template % utils_misc.find_command("tcpdump")
         if self._params.get("remote_preprocess") == "yes":
             login_cmd = ("ssh -o UserKnownHostsFile=/dev/null -o "
+                         "-o StrictHostKeyChecking=no "
                          "PreferredAuthentications=password -p %s %s@%s" %
                          (port, username, address))
 
