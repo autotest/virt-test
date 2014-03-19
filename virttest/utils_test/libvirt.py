@@ -13,14 +13,21 @@ More specifically:
       For example, a function should not be used where it may display
       misleading or inaccurate info or debug messages.
 
-:copyright: 2013 Red Hat Inc.
+:copyright: 2014 Red Hat Inc.
 """
 
 import re
 import os
+import time
 import logging
-from virttest import virsh, xml_utils, iscsi, nfs, data_dir, aexpect
-from virttest import utils_misc, utils_selinux
+from virttest import virsh
+from virttest import xml_utils
+from virttest import iscsi
+from virttest import nfs
+from virttest import data_dir
+from virttest import aexpect
+from virttest import utils_misc
+from virttest import utils_selinux
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
@@ -96,7 +103,7 @@ def cpus_string_to_affinity_list(cpus_string, num_cpus):
     between_pattern = r"\d+-\d+"
     exclude_pattern = r"\^\d+"
     sub_pattern = r"(%s)|(%s)|(%s)" % (exclude_pattern,
-                  single_pattern, between_pattern)
+                                       single_pattern, between_pattern)
     pattern = r"^((%s),)*(%s)$" % (sub_pattern, sub_pattern)
     if not re.match(pattern, cpus_string):
         logging.debug("Cpus_string=%s is not a supported format for cpu_list."
@@ -263,10 +270,8 @@ def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
     if not mount_dir:
         mount_dir = os.path.join(tmpdir, 'nfs-mount')
 
-    nfs_params = {"nfs_mount_dir": mount_dir,
-                  "nfs_mount_options": "rw",
-                  "nfs_mount_src": mount_src,
-                  "setup_local_nfs": "yes",
+    nfs_params = {"nfs_mount_dir": mount_dir, "nfs_mount_options": "rw",
+                  "nfs_mount_src": mount_src, "setup_local_nfs": "yes",
                   "export_options": "rw,no_root_squash"}
     _nfs = nfs.Nfs(nfs_params)
     if is_setup:
@@ -291,13 +296,17 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
     :param image_size: emulated image's size
     :return: iscsi device name or iscsi target
     """
+    try:
+        utils_misc.find_command("tgtadm")
+        utils_misc.find_command("iscsiadm")
+    except ValueError:
+        raise error.TestNAError("Missing command 'tgtadm' and/or 'iscsiadm'.")
+
     tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
     emulated_path = os.path.join(tmpdir, emulated_image)
     emulated_target = "iqn.2001-01.com.virttest:%s.target" % emulated_image
-    iscsi_params = {"emulated_image": emulated_path,
-                    "target": emulated_target,
-                    "image_size": image_size,
-                    "iscsi_thread_id": "virt"}
+    iscsi_params = {"emulated_image": emulated_path, "target": emulated_target,
+                    "image_size": image_size, "iscsi_thread_id": "virt"}
     _iscsi = iscsi.Iscsi(iscsi_params)
     if is_setup:
         sv_status = None
@@ -309,11 +318,14 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
             utils_selinux.set_status(sv_status)
         if is_login:
             _iscsi.login()
-            iscsi_device = _iscsi.get_device_name()
-            logging.debug("iscsi device: %s", iscsi_device)
+            # The device doesn't necessarily appear instantaneously, so give
+            # about 5 seconds for it to appear before giving up
+            iscsi_device = utils_misc.wait_for(_iscsi.get_device_name, 5, 0, 1,
+                                               "Searching iscsi device name.")
             if iscsi_device:
+                logging.debug("iscsi device: %s", iscsi_device)
                 return iscsi_device
-            else:
+            if not iscsi_device:
                 logging.error("Not find iscsi device.")
         else:
             return emulated_target
