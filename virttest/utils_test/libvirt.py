@@ -601,7 +601,7 @@ class PoolVolumeTest(object):
             utils.run(cmd)
         elif pool_type == "logical":
             logical_device = setup_or_cleanup_iscsi(is_setup=True,
-                                                emulated_image=emulated_image,
+                                                    emulated_image=emulated_image,
                                                     image_size=image_size)
             cmd_pv = "pvcreate %s" % logical_device
             vg_name = "vg_%s" % pool_type
@@ -629,7 +629,7 @@ class PoolVolumeTest(object):
                                                            nfs_path)
         elif pool_type == "iscsi":
             logical_device = setup_or_cleanup_iscsi(is_setup=True,
-                                            emulated_image=emulated_image,
+                                                    emulated_image=emulated_image,
                                                     image_size=image_size)
             iscsi_session = iscsi.iscsi_get_sessions()
             iscsi_device = ()
@@ -647,7 +647,7 @@ class PoolVolumeTest(object):
             if not os.path.exists(scsi_xml_file):
                 scsi_xml_file = os.path.join(self.tmpdir, scsi_xml_file)
                 logical_device = setup_or_cleanup_iscsi(is_setup=True,
-                                               emulated_image=emulated_image,
+                                                        emulated_image=emulated_image,
                                                         image_size=image_size)
                 cmd = ("iscsiadm -m session -P 3 |grep -B3 %s| grep Host|awk "
                        "'{print $3}'" % logical_device.split('/')[2])
