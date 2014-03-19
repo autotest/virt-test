@@ -278,6 +278,11 @@ def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
                   "nfs_mount_src": mount_src, "setup_local_nfs": "yes",
                   "export_options": "rw,no_root_squash"}
     _nfs = nfs.Nfs(nfs_params)
+    # Set selinux to permissive that the file in nfs
+    # can be used freely
+    if utils_misc.selinux_enforcing():
+        sv_status = utils_selinux.get_status()
+        utils_selinux.set_status("permissive")
     if is_setup:
         _nfs.setup()
         if not is_mount:
@@ -488,14 +493,18 @@ def pci_label_from_address(address_dict, radix=10):
     return pci_label
 
 
-def mk_part(disk, size="100M"):
+def mk_part(disk, size="100M", session=None):
     """
     Create a partition for disk
     """
-    cmd = "parted -s %s mklabel msdos" % disk
-    utils.run(cmd)
-    cmd = "parted -s %s mkpart primary ext4 0 %s" % (disk, size)
-    utils.run(cmd)
+    mklabel_cmd = "parted -s %s mklabel msdos" % disk
+    mkpart_cmd = "parted -s %s mkpart primary ext4 0 %s" % (disk, size)
+    if session:
+        session.cmd(mklabel_cmd)
+        session.cmd(mkpart_cmd)
+    else:
+        utils.run(mklabel_cmd)
+        utils.run(mkpart_cmd)
 
 
 def check_actived_pool(pool_name):
