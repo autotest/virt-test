@@ -1086,9 +1086,8 @@ class VM(virt_vm.BaseVM):
             if int(utils_misc.get_node_count()) <= int(params.get("smp", 1)):
                 logging.info("Skip pinning, no enough nodes")
             elif numa_node < 0:
-                p = utils_misc.NumaNode(numa_node)
-                n = int(utils_misc.get_node_count()) + numa_node
-                cmd += "numactl -m %s " % n
+                n = utils_misc.NumaNode(numa_node)
+                cmd += "numactl -m %s " % n.node_id
             else:
                 n = numa_node - 1
                 cmd += "numactl -m %s " % n
