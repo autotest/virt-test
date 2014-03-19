@@ -217,7 +217,7 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
     if client == "ssh":
         cmd = ("ssh -o UserKnownHostsFile=/dev/null "
                "-o StrictHostKeyChecking=no "
-               "-o PreferredAuthentications=password -p %s %s@%s" %
+               "-o PreferredAuthentications=password -vvv -p %s %s@%s" %
                (port, username, host))
     elif client == "telnet":
         cmd = "telnet -l %s %s %s" % (username, host, port)
