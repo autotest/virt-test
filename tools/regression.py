@@ -257,8 +257,11 @@ Please check sysinfo directory in autotest result to get more details.
         """ (num2 - num1) / num1 * 100 """
         result = "+0.0"
         if len(data) == 2 and float(data[0]) != 0:
-            result = "%+f%%" % ((float(data[1]) - float(data[0]))
-                                / float(data[0]) * 100)
+            result = (float(data[1]) - float(data[0])) / float(data[0]) * 100
+            if result > 100:
+                result = "%+.2f%%" % result
+            else:
+                result = "%+.4f%%" % result
         return result
 
     def _get_list_sd(self, data):
