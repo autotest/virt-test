@@ -376,7 +376,7 @@ def display(lists, rates, allpvalues, f, ignore_col, o_sum="Augment Rate",
                 else:
                     content[i] = "%.4f" % float(content[i])
             if n and i >= 2 and i < ignore_col + 2:
-                out += "<TD ROWSPAN=%d WIDTH=1%% >%s</TD>" % (n, content[i])
+                out += "<TD ROWSPAN=%d WIDTH=1%% >%.0f</TD>" % (n, float(content[i]))
             else:
                 out += "<TD WIDTH=1%% >%s</TD>" % content[i]
         out += "</TR>"
