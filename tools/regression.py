@@ -120,6 +120,11 @@ class Sample(object):
             partitions = commands.getoutput("cat %s/partitions" % sysinfodir)
             fdisk = commands.getoutput("cat %s/fdisk_-l" % sysinfodir)
 
+            status_path = os.path.join(os.path.dirname(files[0]), "../status")
+            status_file = open(status_path, 'r')
+            content = status_file.readlines()
+            self.testdata = re.findall("localtime=(.*)\t", content[-1])[-1]
+
             cpunum = len(re.findall("processor\s+: \d", cpuinfo))
             cpumodel = re.findall("Model name:\s+(.*)", lscpu)
             socketnum = int(re.findall("Socket\(s\):\s+(\d+)", lscpu)[0])
@@ -491,10 +496,10 @@ def analyze(test, sample_type, arg1, arg2, configfile):
 
     desc = desc % s1.len
 
-    tee("<pre>####1. Description of setup#1\n" + s1.version + "</pre>",
-        test + ".html")
-    tee("<pre>####2. Description of setup#2\n" + s2.version + "</pre>",
-        test + ".html")
+    tee("<pre>####1. Description of setup#1\n" + s1.version + "\n test data:  "
+         + s1.testdata + "</pre>", test + ".html")
+    tee("<pre>####2. Description of setup#2\n" + s2.version + "\n test data:  "
+         + s2.testdata + "</pre>", test + ".html")
     tee("<pre>" + '\n'.join(desc.split('\\n')) + "</pre>", test + ".html")
     tee("<pre>" + s1.desc + "</pre>", test + ".html")
 
