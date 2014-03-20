@@ -247,7 +247,7 @@ Please check sysinfo directory in autotest result to get more details.
         result = "0.0"
         if len(data) == 2 and float(data[0]) != 0:
             result = float(data[1]) / float(data[0]) * 100
-            if result < 100:
+            if result > 100:
                 result = "%.2f%%" % result
             else:
                 result = "%.4f%%" % result
