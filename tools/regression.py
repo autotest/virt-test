@@ -366,7 +366,12 @@ def display(lists, rates, allpvalues, f, ignore_col, o_sum="Augment Rate",
         content = content.split("|")
         for i in range(len(content)):
             if not is_int(content[i]) and is_float(content[i]):
-                if float(content[i]) > 100:
+                if "+" in content[i] or "-" in content[i]:
+                    if float(content[i]) > 100:
+                        content[i] = "%+.2f" % float(content[i])
+                    else:
+                        content[i] = "%+.4f" % float(content[i])
+                elif float(content[i]) > 100:
                     content[i] = "%.2f" % float(content[i])
                 else:
                     content[i] = "%.4f" % float(content[i])
