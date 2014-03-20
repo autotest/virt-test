@@ -28,6 +28,7 @@ import signal
 import tempfile
 import threading
 import time
+import subprocess
 
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
@@ -1325,3 +1326,179 @@ def get_date(session=None):
         return date_info
     except (error.CmdError, aexpect.ShellError), detail:
         raise error.TestFail("Get date failed. %s " % detail)
+
+
+##########Stress functions################
+class StressError(Exception):
+    pass
+
+
+class VMStress(object):
+
+    """
+    Run Stress tool in vms, such as stress, unixbench, iozone and etc.
+    """
+
+    def __init__(self, vm, stress_type):
+        """
+        Set parameters for stress type
+        """
+
+        def _parameters_filter(stress_type):
+            """Set parameters according stress_type"""
+            _control_files = {'unixbench': "unixbench5.control",
+                              'stress': "stress.control"}
+            _check_cmds = {'unixbench': "pidof -s ./Run",
+                           'stress': "pidof -s stress"}
+            _stop_cmds = {'unixbench': "killall ./Run",
+                          'stress': "killall stress"}
+            try:
+                control_file = _control_files[stress_type]
+                self.control_path = os.path.join(data_dir.get_root_dir(),
+                                                 "shared/control",
+                                                 control_file)
+                self.check_cmd = _check_cmds[stress_type]
+                self.stop_cmd = _stop_cmds[stress_type]
+            except KeyError:
+                self.control_path = ""
+                self.check_cmd = ""
+                self.stop_cmd = ""
+
+        self.vm = vm
+        self.params = vm.params
+        self.timeout = 60
+        self.stress_type = stress_type
+        if stress_type not in ["stress", "unixbench"]:
+            raise StressError("Stress %s is not supported now." % stress_type)
+
+        _parameters_filter(stress_type)
+        self.stress_arg = self.params.get("stress_args", "")
+
+    def get_session(self):
+        try:
+            session = self.vm.wait_for_login()
+            return session
+        except aexpect.ShellError, detail:
+            raise StressError("Login %s failed:\n%s", self.vm.name, detail)
+
+    @error.context_aware
+    def load_stress_tool(self):
+        """
+        load stress tool in guest
+        """
+        session = self.get_session()
+        command = run_autotest(self.vm, session, self.control_path,
+                               None, None,
+                               self.params, copy_only=True)
+        session.cmd("%s &" % command)
+        logging.info("Command: %s", command)
+        running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
+        if not running:
+            raise StressError("Stress tool %s isn't running"
+                              % self.stress_type)
+
+    @error.context_aware
+    def unload_stress(self):
+        """
+        stop stress tool manually
+        """
+        def _unload_stress():
+            session = self.get_session()
+            session.sendline(self.stop_cmd)
+            if not self.app_running():
+                return True
+            return False
+
+        error.context("stop stress app in guest", logging.info)
+        utils_misc.wait_for(_unload_stress, first=2.0,
+                            text="wait stress app quit", step=1.0, timeout=60)
+
+    def app_running(self):
+        """
+        check whether app really run in background
+        """
+        session = self.get_session()
+        status = session.cmd_status(self.check_cmd, timeout=60)
+        return status == 0
+
+
+class HostStress(object):
+
+    """
+    Run Stress tool on host, such as stress, unixbench, iozone and etc.
+    """
+
+    def __init__(self, params, stress_type):
+        """
+        Set parameters for stress type
+        """
+
+        def _parameters_filter(stress_type):
+            """Set parameters according stress_type"""
+            _control_files = {'unixbench': "unixbench5.control",
+                              'stress': "stress.control"}
+            _check_cmds = {'unixbench': "pidof -s ./Run",
+                           'stress': "pidof -s stress"}
+            _stop_cmds = {'unixbench': "killall ./Run",
+                          'stress': "killall stress"}
+            try:
+                control_file = _control_files[stress_type]
+                self.control_path = os.path.join(data_dir.get_root_dir(),
+                                                 "shared/control",
+                                                 control_file)
+                self.check_cmd = _check_cmds[stress_type]
+                self.stop_cmd = _stop_cmds[stress_type]
+            except KeyError:
+                self.control_path = ""
+                self.check_cmd = ""
+                self.stop_cmd = ""
+
+        self.params = params
+        self.timeout = 60
+        self.stress_type = stress_type
+        self.host_stress_process = None
+        if stress_type not in ["stress", "unixbench"]:
+            raise StressError("Stress %s is not supported now." % stress_type)
+
+        _parameters_filter(stress_type)
+        self.stress_arg = self.params.get("stress_args", "")
+
+    @error.context_aware
+    def load_stress_tool(self):
+        """
+        load stress tool on host.
+        """
+        # Run stress tool on host.
+        from autotest.client import common
+        autotest_client_dir = os.path.dirname(common.__file__)
+        autotest_local_path = os.path.join(autotest_client_dir, "autotest")
+        args = [autotest_local_path, self.control_path, '--verbose']
+        self.host_stress_process = subprocess.Popen(args)
+
+        running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
+        if not running:
+            raise StressError("Stress tool %s isn't running"
+                              % self.stress_type)
+
+    @error.context_aware
+    def unload_stress(self):
+        """
+        stop stress tool manually
+        """
+        def _unload_stress():
+            if self.host_stress_process is not None:
+                utils_misc.kill_process_tree(self.host_stress_process.pid)
+            if not self.app_running():
+                return True
+            return False
+
+        error.context("stop stress app on host", logging.info)
+        utils_misc.wait_for(_unload_stress, first=2.0,
+                            text="wait stress app quit", step=1.0, timeout=60)
+
+    def app_running(self):
+        """
+        check whether app really run in background
+        """
+        result = utils.run(self.check_cmd, timeout=60, ignore_status=True)
+        return result.exit_status == 0
