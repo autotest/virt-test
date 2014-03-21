@@ -504,9 +504,11 @@ class GuestfishTools(lgf.GuestfishPersistent):
         libvirt_domain = params.get("libvirt_domain")
         inspector = bool(params.get("gf_inspector", False))
         mount_options = params.get("mount_options")
+        run_mode = params.get("gf_run_mode", "interactive")
         super(GuestfishTools, self).__init__(disk_img, ro_mode,
                                              libvirt_domain, inspector,
-                                             mount_options=mount_options)
+                                             mount_options=mount_options,
+                                             run_mode=run_mode)
 
     def get_root(self):
         """

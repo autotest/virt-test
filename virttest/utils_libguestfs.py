@@ -5,6 +5,7 @@ libguestfs tools test utility functions.
 import logging
 import signal
 import os
+import re
 
 from autotest.client import os_dep, utils
 from autotest.client.shared import error
@@ -164,7 +165,7 @@ class Guestfish(LibguestfsBase):
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
-                 uri=None, mount_options=None):
+                 uri=None, mount_options=None, run_mode=None):
         """
         Initialize guestfish command with options.
 
@@ -180,19 +181,24 @@ class Guestfish(LibguestfsBase):
         if lgf_cmd_check(guestfs_exec) is None:
             raise LibguestfsCmdError
 
-        if uri:
-            guestfs_exec += " -c '%s'" % uri
+        if run_mode not in ['remote', 'interactive']:
+            raise AssertionError("run_mode should be remote or interactive")
 
-        if disk_img:
-            guestfs_exec += " -a '%s'" % disk_img
-        if libvirt_domain:
-            guestfs_exec += " -d '%s'" % libvirt_domain
-        if ro_mode:
-            guestfs_exec += " --ro"
-        if inspector:
-            guestfs_exec += " -i"
-        if mount_options is not None:
-            guestfs_exec += " --mount %s" % mount_options
+        if run_mode == "remote":
+            guestfs_exec += " --listen"
+        else:
+            if uri:
+                guestfs_exec += " -c '%s'" % uri
+            if disk_img:
+                guestfs_exec += " -a '%s'" % disk_img
+            if libvirt_domain:
+                guestfs_exec += " -d '%s'" % libvirt_domain
+            if ro_mode:
+                guestfs_exec += " --ro"
+            if inspector:
+                guestfs_exec += " -i"
+            if mount_options is not None:
+                guestfs_exec += " --mount %s" % mount_options
 
         super(Guestfish, self).__init__(guestfs_exec)
 
@@ -273,23 +279,91 @@ class GuestfishSession(aexpect.ShellSession):
         return result
 
 
+class GuestfishRemote():
+    """
+    Remoet control of guestfish.
+    """
+
+    # Check output against list of known error-status strings
+    ERROR_REGEX_LIST = ['libguestfs: error:\s*']
+
+    def __init__(self, guestfs_exec=None, a_id=None):
+        """
+        Initialize guestfish session server, or client if id set.
+
+        :param guestfs_cmd: path to guestfish executable
+        :param a_id: guestfish remote id
+        """
+        if a_id is None:
+            try:
+                ret = utils.run(guestfs_exec, ignore_status=False,
+                                verbose=True, timeout=60)
+            except error.CmdError, detail:
+                raise LibguestfsCmdError(detail)
+            self.a_id = re.search("\d+", ret.stdout.strip()).group()
+        else:
+            self.a_id = a_id
+
+    def get_id(self):
+        return self.a_id
+
+    def cmd_status_output(self, cmd, ignore_status=None, verbose=None, timeout=60):
+        """
+        Send a guestfish command and return its exit status and output.
+
+        :param cmd: guestfish command to send(must not contain newline characters)
+        :param timeout: The duration (in seconds) to wait for the prompt to return
+        :return: A tuple (status, output) where status is the exit status
+                 and output is the output of cmd
+        :raise LibguestfsCmdError: Raised if commands execute failed
+        """
+        guestfs_exec = "guestfish --remote=%s " % self.a_id
+        cmd = guestfs_exec + cmd
+        try:
+            ret = utils.run(cmd, ignore_status=ignore_status,
+                            verbose=verbose, timeout=timeout)
+        except error.CmdError, detail:
+            raise LibguestfsCmdError(detail)
+
+        for line in self.ERROR_REGEX_LIST:
+            if re.search(line, ret.stdout.strip()):
+                raise LibguestfsCmdError(detail)
+
+        logging.debug("command: %s", cmd)
+        logging.debug("stdout: %s", ret.stdout.strip())
+
+        return 0, ret.stdout.strip()
+
+    def cmd_result(self, cmd, ignore_status=False):
+        """Mimic utils.run()"""
+        exit_status, stdout = self.cmd_status_output(cmd)
+        stderr = '' # no way to retrieve this separately
+        result = utils.CmdResult(cmd, stdout, stderr, exit_status)
+        if not ignore_status and exit_status:
+            raise error.CmdError(cmd, result,
+                                 "Guestfish Command returned non-zero exit status")
+        return result
+
+
 class GuestfishPersistent(Guestfish):
 
     """
     Execute operations using persistent guestfish session.
     """
 
-    __slots__ = ['session_id']
+    __slots__ = ['session_id', 'run_mode']
 
     # Help detect leftover sessions
     SESSION_COUNTER = 0
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
-                 uri=None, mount_options=None):
+                 uri=None, mount_options=None, run_mode=None):
         super(GuestfishPersistent, self).__init__(disk_img, ro_mode,
                                                   libvirt_domain, inspector,
-                                                  uri, mount_options)
+                                                  uri, mount_options, run_mode)
+        self.__dict_set__('run_mode', run_mode)
+
         if self.get('session_id') is None:
             # set_uri does not call when INITIALIZED = False
             # and no session_id passed to super __init__
@@ -297,20 +371,29 @@ class GuestfishPersistent(Guestfish):
 
         # Check whether guestfish session is prepared.
         guestfs_session = self.open_session()
-        if guestfs_session.cmd_status('is-ready', timeout=60) != 0:
-            logging.debug("Persistent guestfish session is not responding.")
-            raise aexpect.ShellStatusError(self.lgf_exec, 'is-ready')
+        if run_mode != "remote":
+            status, output = guestfs_session.cmd_status_output('is-ready', timeout=60)
+            if status != 0:
+                # 'is-ready' is removed from guestfish in libguestfs 1.22,
+                # fix it to fit different version
+                if not re.search("is-ready: unknown command", output):
+                    logging.debug("Persistent guestfish session is not responding.")
+                    raise aexpect.ShellStatusError(self.lgf_exec, 'is-ready')
 
     def close_session(self):
         """
         If a persistent session exists, close it down.
         """
         try:
+            run_mode = self.get('run_mode')
             existing = self.open_session()
             # except clause exits function
             # Try to end session with inner command 'quit'
             try:
-                existing.cmd("quit")
+                if run_mode == "remote":
+                    existing.cmd_result("quit")
+                else:
+                    existing.cmd("quit")
                 # It should jump to exception followed normally
             except aexpect.ShellProcessTerminatedError:
                 self.__class__.SESSION_COUNTER -= 1
@@ -318,15 +401,16 @@ class GuestfishPersistent(Guestfish):
                 return  # guestfish session was closed normally
             # Close with 'quit' did not respond
             # So close with aexpect functions
-            if existing.is_alive():
-                # try nicely first
-                existing.close()
+            if run_mode != "remote":
                 if existing.is_alive():
-                    # Be mean, incase it's hung
-                    existing.close(sig=signal.SIGTERM)
-                # Keep count:
-                self.__class__.SESSION_COUNTER -= 1
-                self.__dict_del__('session_id')
+                    # try nicely first
+                    existing.close()
+                    if existing.is_alive():
+                        # Be mean, incase it's hung
+                        existing.close(sig=signal.SIGTERM)
+                    # Keep count:
+                    self.__class__.SESSION_COUNTER -= 1
+                    self.__dict_del__('session_id')
         except LibguestfsCmdError:
             # Allow other exceptions to be raised
             pass  # session was closed already
@@ -340,7 +424,11 @@ class GuestfishPersistent(Guestfish):
         guestfs_exec = self.__dict_get__('lgf_exec')
         self.close_session()
         # Always create new session
-        new_session = GuestfishSession(guestfs_exec)
+        run_mode = self.get('run_mode')
+        if run_mode == "remote":
+            new_session = GuestfishRemote(guestfs_exec)
+        else:
+            new_session = GuestfishSession(guestfs_exec)
         # Keep count
         self.__class__.SESSION_COUNTER += 1
         session_id = new_session.get_id()
@@ -352,9 +440,13 @@ class GuestfishPersistent(Guestfish):
         """
         try:
             session_id = self.__dict_get__('session_id')
+            run_mode = self.get('run_mode')
             if session_id:
                 try:
-                    return GuestfishSession(a_id=session_id)
+                    if run_mode == "remote":
+                        return GuestfishRemote(a_id=session_id)
+                    else:
+                        return GuestfishSession(a_id=session_id)
                 except aexpect.ShellStatusError:
                     # session was already closed
                     self.__dict_del__('session_id')
