@@ -752,15 +752,16 @@ def driver(**dargs):
     return scheme.split('+', 2)[0]
 
 
-def domstate(name, **dargs):
+def domstate(name, extra="", **dargs):
     """
     Return the state about a running domain.
 
     :param name: VM name
+    :param extra: command options
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
-    return command("domstate %s" % name, **dargs)
+    return command("domstate %s %s" % (name, extra), **dargs)
 
 
 def domid(name_or_uuid, **dargs):
