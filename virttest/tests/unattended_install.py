@@ -155,6 +155,7 @@ class UnattendedInstallConfig(object):
             setattr(self, va, params.get(va, ''))
 
         self.tmpdir = test.tmpdir
+        self.qemu_img_binary = utils_misc.get_qemu_img_binary(params)
 
         if getattr(self, 'unattended_file'):
             self.unattended_file = os.path.join(test.virtdir,
@@ -163,13 +164,6 @@ class UnattendedInstallConfig(object):
         if getattr(self, 'finish_program'):
             self.finish_program = os.path.join(test.virtdir,
                                                self.finish_program)
-
-        if getattr(self, 'qemu_img_binary'):
-            if not os.path.isfile(getattr(self, 'qemu_img_binary')):
-                qemu_img_base_dir = os.path.join(data_dir.get_root_dir(),
-                                                 self.params.get("vm_type"))
-                self.qemu_img_binary = os.path.join(qemu_img_base_dir,
-                                                    self.qemu_img_binary)
 
         if getattr(self, 'cdrom_cd1'):
             self.cdrom_cd1 = os.path.join(root_dir, self.cdrom_cd1)
