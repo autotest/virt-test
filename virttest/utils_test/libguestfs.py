@@ -45,6 +45,47 @@ class VTXMLParseError(VTError):
     def __str__(self):
         return ("Parse XML with '%s' failed:%s" % (self.cmd, self.output))
 
+def preprocess_image(params):
+    """
+    Create a disk which used by guestfish
+
+    Disk format only cover raw and qcow2
+
+    params: Get params from cfg file
+    """
+    image_format = params.get("image_format", "raw")
+    partition_type = params.get("partition_type", "lvm")
+    img_dir = params.get("img_dir", "/tmp")
+
+    cmd = params.get("create_img_binary", "qemu-img")
+    size = params.get("image_size", "6G")
+
+    image_name = params.get("image_name", "gs_common")
+    image_filename = os.path.join(img_dir, '.'.join([image_name, image_format]))
+
+    if not image_format in [ "raw", "qcow2"]:
+        raise AssertionError("Only raw and qcow2 format is support by libguestfs now")
+
+    create_img_cmd = "%s create -f %s %s %s" % (cmd, image_format, image_filename, size)
+
+    logging.debug("Running img-create command:\n%s" % create_img_cmd)
+
+    try:
+        ret = utils.run(create_img_cmd, ignore_status=True, verbose=False, timeout=120)
+    except error.CmdError, detail:
+        error.CmdError(detail, "Create disk image failed")
+
+    logging.debug("status: %s", ret.exit_status)
+    logging.debug("stdout: %s", ret.stdout.strip())
+    logging.debug("stderr: %s", ret.stderr.strip())
+
+    if not os.path.exists(image_filename):
+        logging.error("Image could not be created for some reason; "
+                      "img-create command:\n%s" % create_img_cmd)
+        return None
+
+    logging.info("Image created in %s" % image_filename)
+    return image_filename
 
 def primary_disk_virtio(vm):
     """
@@ -596,6 +637,68 @@ class GuestfishTools(lgf.GuestfishPersistent):
         for partition in partitions.values():
             if str(partition.get("num")) == str(part_num):
                 return partition.get("size")
+
+    def create_fs(self):
+        """
+        Create filesystem of disk
+
+        Choose lvm or physical partition and create fs on it
+        """
+        image_path = self.params.get("image_path")
+        self.add_drive(image_path)
+        self.run()
+
+        partition_type = self.params.get("partition_type")
+        fs_type = self.params.get("fs_type", "ext3")
+        image_size = self.params.get("image_size", "6G")
+        with_blocksize = self.params.get("with_blocksize")
+        blocksize = self.params.get("blocksize")
+        tarball_path = self.params.get("tarball_path")
+
+        if partition_type not in ['lvm', 'physical']:
+            return (False, "partition_type is incorrect, support [physical,lvm]")
+
+        if partition_type == "lvm":
+            logging.info("create lvm partition...")
+            pv_name = self.params.get("pv_name", "/dev/sda")
+            vg_name = self.params.get("vg_name", "vol_test")
+            lv_name = self.params.get("lv_name", "vol_file")
+            mount_point = "/dev/%s/%s" % (vg_name, lv_name)
+            lv_size = int(image_size.replace('G', '')) * 1000
+
+            self.pvcreate(pv_name)
+            self.vgcreate(vg_name, pv_name)
+            self.lvcreate(lv_name, vg_name, lv_size)
+
+        elif partition_type == "physical":
+            logging.info("create physical partition...")
+            pv_name = self.params.get("pv_name", "/dev/sda")
+            mount_point = pv_name + "1"
+
+            self.part_disk(pv_name, "mbr")
+            self.part_list(pv_name)
+
+        if with_blocksize == "yes" and fs_type != "btrfs":
+            if blocksize:
+                self.mkfs_opts(fs_type, mount_point, "blocksize:%s" % (blocksize))
+                self.vfs_type(mount_point)
+            else:
+                logging.error("with_blocksize is set but blocksize not given")
+                self.umount_all()
+                self.sync()
+                return (False, "with_blocksize is set but blocksize not given")
+        else:
+            self.mkfs(fs_type, mount_point)
+            self.vfs_type(mount_point)
+
+        if tarball_path:
+            self.mount_options("noatime", mount_point, '/')
+            self.tar_in(tarball_path, '/')
+            self.ll('/')
+
+        self.umount_all()
+        self.sync()
+        return (True, "create_fs successfully")
 
     def create_msdos_part(self, device, start="1", end="-1"):
         """
