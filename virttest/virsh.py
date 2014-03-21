@@ -3438,3 +3438,29 @@ def save_image_define(state_file, xmlfile, options="", **dargs):
     """
     cmd = "save-image-define %s %s %s" % (state_file, xmlfile, options)
     return command(cmd, **dargs)
+
+
+def vol_download(name, dfile, options="", **dargs):
+    """
+    Download volume contents to a file
+
+    :param name: name of volume
+    :param dfile: file path that will download to
+    :param options: pool name, offset and length
+    :return: CmdResult object
+    """
+    cmd = "vol-download %s %s %s" % (name, dfile, options)
+    return command(cmd, **dargs)
+
+
+def vol_upload(name, dfile, options="", **dargs):
+    """
+    Upload file contents to a volume
+
+    :param name: name of volume
+    :param dfile: file path that will upload from
+    :param options: pool name, offset and length
+    :return: CmdResult object
+    """
+    cmd = "vol-upload %s %s %s" % (name, dfile, options)
+    return command(cmd, **dargs)
