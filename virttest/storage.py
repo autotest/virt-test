@@ -34,8 +34,9 @@ def preprocess_images(bindir, params, env):
 
 
 def preprocess_image_backend(bindir, params, env):
+    enable_gluster = params.get("enable_gluster")
     gluster_image = params.get("gluster_brick")
-    if gluster_image:
+    if enable_gluster and gluster_image:
         return gluster.create_gluster_vol(params)
 
     return True
@@ -102,8 +103,8 @@ def get_image_filename(params, root_dir):
            image_format -- the format of the image (qcow2, raw etc)
     :raise VMDeviceError: When no matching disk found (in indirect method).
     """
-    gluster_image = params.get("gluster_brick")
-    if gluster_image:
+    enable_gluster = params.get("enable_gluster", "no") == "yes"
+    if enable_gluster:
         image_name = params.get("image_name", "image")
         image_format = params.get("image_format", "qcow2")
         return gluster.get_image_filename(params, image_name, image_format)

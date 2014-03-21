@@ -211,18 +211,23 @@ def create_gluster_uri(params, stripped=False):
 
     error.context("Host name lookup failed")
     hostname = socket.gethostname()
-    if not hostname or hostname == "(none)":
+    gluster_server = params.get("gluster_server")
+    gluster_port = params.get("gluster_port", "0")
+    if not gluster_server:
+        gluster_server = hostname
+    if not gluster_server or gluster_server == "(none)":
         if_up = utils_net.get_net_if(state="UP")
         ip_addr = utils_net.get_net_if_addrs(if_up[0])["ipv4"][0]
-        hostname = ip_addr
+        gluster_server = ip_addr
 
     # Start the gluster dameon, if not started
     # Building gluster uri
     gluster_uri = None
     if stripped:
-        gluster_uri = "%s:/%s" % (hostname, vol_name)
+        gluster_uri = "%s:/%s" % (gluster_server, vol_name)
     else:
-        gluster_uri = "gluster://%s:0/%s/" % (hostname, vol_name)
+        gluster_uri = "gluster://%s:%s/%s/" % (gluster_server, gluster_port,
+                                               vol_name)
     return gluster_uri
 
 
