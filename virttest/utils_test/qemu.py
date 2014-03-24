@@ -87,12 +87,12 @@ def pin_vm_threads(vm, node):
     @param vm: VM object
     @param node: NumaNode object
     """
-    if len(vm.vcpu_threads) + len(vm.vhost_threads) < node.num:
+    if len(vm.vcpu_threads) + len(vm.vhost_threads) < len(node.cpus):
         for i in vm.vcpu_threads:
             logging.info("pin vcpu thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
         for i in vm.vhost_threads:
             logging.info("pin vhost thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
-    elif len(vm.vcpu_threads) <= node.num:
+    elif len(vm.vcpu_threads) <= len(node.cpus):
         for i in range(len(vm.vcpu_threads)):
             cpu = node.pin_cpu(vm.vcpu_threads[i])
             logging.info("pin vcpu thread(%s) to cpu(%s)" %
