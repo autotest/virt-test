@@ -1293,16 +1293,23 @@ class NumaNode(object):
     """
 
     def __init__(self, i=-1):
+        self.extra_cpus = []
         if i < 0:
             host_numa_info = NumaInfo()
             available_nodes = host_numa_info.nodes.keys()
             self.cpus = self.get_node_cpus(available_nodes[-1]).split()
+            if len(available_nodes) > 1:
+                self.extra_cpus = self.get_node_cpus(
+                                  available_nodes[-2]).split()
             self.node_id = available_nodes[-1]
         else:
             self.cpus = self.get_node_cpus(i - 1).split()
+            self.extra_cpus = self.get_node_cpus(i).split()
             self.node_id = i - 1
         self.dict = {}
         for i in self.cpus:
+            self.dict[i] = []
+        for i in self.extra_cpus:
             self.dict[i] = []
 
     def get_node_cpus(self, i):
@@ -1374,7 +1381,7 @@ class NumaNode(object):
                     self.free_cpu(i, j)
 
     @error.context_aware
-    def pin_cpu(self, process, cpu=None):
+    def pin_cpu(self, process, cpu=None, extra=False):
         """
         Pin one process to a single cpu.
 
@@ -1387,7 +1394,11 @@ class NumaNode(object):
         else:
             error.context("Pinning process %s to the available CPU" % (process))
 
-        for i in self.cpus:
+        cpus = self.cpus
+        if extra:
+            cpus = self.extra_cpus
+
+        for i in cpus:
             if (cpu is not None and cpu == i) or (cpu is None and not self.dict[i]):
                 self.dict[i].append(process)
                 cmd = "taskset -p %s %s" % (hex(2 ** int(i)), process)
