@@ -92,14 +92,14 @@ def pin_vm_threads(vm, node):
             logging.info("pin vcpu thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
         for i in vm.vhost_threads:
             logging.info("pin vhost thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
-    elif len(vm.vcpu_threads) <= len(node.cpus):
-        for i in range(len(vm.vcpu_threads)):
-            cpu = node.pin_cpu(vm.vcpu_threads[i])
+    elif (len(vm.vcpu_threads) <= len(node.cpus) and
+          len(vm.vhost_threads) <= len(node.cpus)):
+        for i in vm.vcpu_threads:
             logging.info("pin vcpu thread(%s) to cpu(%s)" %
-                         (vm.vcpu_threads[i], cpu))
-            logging.info("pin vhost thread(%s) to cpu(%s)" %
-                         (vm.vhost_threads[i],
-                          node.pin_cpu(vm.vhost_threads[i], cpu)))
+                         (i, node.pin_cpu(i)))
+        for i in vm.vhost_threads:
+            logging.info("pin vhost thread(%s) to extra cpu(%s)" %
+                         (i, node.pin_cpu(i, extra=True)))
     else:
         logging.info("Skip pinning, no enough nodes")
 
