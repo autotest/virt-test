@@ -1151,15 +1151,15 @@ def get_pid_cpu(pid):
 # Utility functions for numa node pinning
 
 
-def get_node_count():
+def get_node_cpus(i=0):
     """
-    Get the number of nodes of current host.
+    Get cpu ids of one node
 
-    :return: the number of nodes
-    :rtype: string
+    :return: the cpu lists
+    :rtype: list
     """
     cmd = utils.run("numactl --hardware")
-    return int(re.findall("available: (\d+) nodes", cmd.stdout)[0])
+    return re.findall("node %s cpus: (.*)" % i, cmd.stdout)[0].split()
 
 
 def cpu_str_to_list(origin_str):
