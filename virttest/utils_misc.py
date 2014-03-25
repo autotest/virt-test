@@ -1383,9 +1383,9 @@ class NumaNode(object):
         """
         self._flush_pin()
         if cpu:
-            error.context("Pinning process %s to the available CPU" % (process))
-        else:
             error.context("Pinning process %s to the CPU(%s)" % (process, cpu))
+        else:
+            error.context("Pinning process %s to the available CPU" % (process))
 
         for i in self.cpus:
             if (cpu is not None and cpu == i) or (cpu is None and not self.dict[i]):
