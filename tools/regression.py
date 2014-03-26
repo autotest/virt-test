@@ -120,6 +120,11 @@ class Sample(object):
             partitions = commands.getoutput("cat %s/partitions" % sysinfodir)
             fdisk = commands.getoutput("cat %s/fdisk_-l" % sysinfodir)
 
+            status_path = os.path.join(os.path.dirname(files[0]), "../status")
+            status_file = open(status_path, 'r')
+            content = status_file.readlines()
+            self.testdata = re.findall("localtime=(.*)\t", content[-1])[-1]
+
             cpunum = len(re.findall("processor\s+: \d", cpuinfo))
             cpumodel = re.findall("Model name:\s+(.*)", lscpu)
             socketnum = int(re.findall("Socket\(s\):\s+(\d+)", lscpu)[0])
@@ -247,7 +252,7 @@ Please check sysinfo directory in autotest result to get more details.
         result = "0.0"
         if len(data) == 2 and float(data[0]) != 0:
             result = float(data[1]) / float(data[0]) * 100
-            if result < 100:
+            if result > 100:
                 result = "%.2f%%" % result
             else:
                 result = "%.4f%%" % result
@@ -257,8 +262,11 @@ Please check sysinfo directory in autotest result to get more details.
         """ (num2 - num1) / num1 * 100 """
         result = "+0.0"
         if len(data) == 2 and float(data[0]) != 0:
-            result = "%+f%%" % ((float(data[1]) - float(data[0]))
-                                / float(data[0]) * 100)
+            result = (float(data[1]) - float(data[0])) / float(data[0]) * 100
+            if result > 100:
+                result = "%+.2f%%" % result
+            else:
+                result = "%+.4f%%" % result
         return result
 
     def _get_list_sd(self, data):
@@ -363,12 +371,17 @@ def display(lists, rates, allpvalues, f, ignore_col, o_sum="Augment Rate",
         content = content.split("|")
         for i in range(len(content)):
             if not is_int(content[i]) and is_float(content[i]):
-                if float(content[i]) > 100:
+                if "+" in content[i] or "-" in content[i]:
+                    if float(content[i]) > 100:
+                        content[i] = "%+.2f" % float(content[i])
+                    else:
+                        content[i] = "%+.4f" % float(content[i])
+                elif float(content[i]) > 100:
                     content[i] = "%.2f" % float(content[i])
                 else:
                     content[i] = "%.4f" % float(content[i])
             if n and i >= 2 and i < ignore_col + 2:
-                out += "<TD ROWSPAN=%d WIDTH=1%% >%s</TD>" % (n, content[i])
+                out += "<TD ROWSPAN=%d WIDTH=1%% >%.0f</TD>" % (n, float(content[i]))
             else:
                 out += "<TD WIDTH=1%% >%s</TD>" % content[i]
         out += "</TR>"
@@ -483,10 +496,10 @@ def analyze(test, sample_type, arg1, arg2, configfile):
 
     desc = desc % s1.len
 
-    tee("<pre>####1. Description of setup#1\n" + s1.version + "</pre>",
-        test + ".html")
-    tee("<pre>####2. Description of setup#2\n" + s2.version + "</pre>",
-        test + ".html")
+    tee("<pre>####1. Description of setup#1\n" + s1.version + "\n test data:  "
+         + s1.testdata + "</pre>", test + ".html")
+    tee("<pre>####2. Description of setup#2\n" + s2.version + "\n test data:  "
+         + s2.testdata + "</pre>", test + ".html")
     tee("<pre>" + '\n'.join(desc.split('\\n')) + "</pre>", test + ".html")
     tee("<pre>" + s1.desc + "</pre>", test + ".html")
 
