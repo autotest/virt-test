@@ -2,7 +2,7 @@ import logging
 import os
 import glob
 import shutil
-from autotest.client.shared import logging_manager, error
+from autotest.client.shared import logging_manager, error, distro
 from autotest.client import utils
 import utils_misc
 import data_dir
@@ -51,6 +51,17 @@ last_subtest = {'qemu': ['shutdown'],
                 'lvsb': []}
 
 test_filter = ['__init__', 'cfg', 'dropin.py']
+
+
+def get_jeos_info():
+    """
+    Gets the correct asset and variant information depending on host OS.
+    """
+    detected = distro.detect()
+    if detected.name == 'fedora' and int(detected.version) >= 20:
+        return {'asset': 'jeos-20-64', 'variant': 'JeOS.20'}
+    else:
+        return {'asset': 'jeos-19-64', 'variant': 'JeOS.19'}
 
 
 def _get_config_filter():
@@ -784,7 +795,9 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
         step += 2
         logging.info("%s - Verifying (and possibly downloading) guest image",
                      step)
-        asset.download_asset('jeos-20-64', interactive=interactive,
+        jeos_info = get_jeos_info()
+        jeos_asset = jeos_info['asset']
+        asset.download_asset(jeos_asset, interactive=interactive,
                              restore_image=restore_image)
 
     if check_modules:
