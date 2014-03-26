@@ -165,6 +165,7 @@ class QemuAgent(Monitor):
             if get_supported_cmds:
                 self._get_supported_cmds()
 
+        # pylint: disable=E0712
         except VAgentError, e:
             self._close_sock()
             if suppress_exceptions:
@@ -591,6 +592,7 @@ class QemuAgent(Monitor):
             if check_status:
                 try:
                     self.verify_fsfreeze_status(self.FSFREEZE_STATUS_FROZEN)
+                # pylint: disable=E0712
                 except VAgentFreezeStatusError:
                     # When the status is incorrect, reset fsfreeze status to
                     # 'thawed'.
@@ -619,6 +621,7 @@ class QemuAgent(Monitor):
             if check_status:
                 try:
                     self.verify_fsfreeze_status(self.FSFREEZE_STATUS_THAWED)
+                # pylint: disable=E0712
                 except VAgentFreezeStatusError:
                     # When the status is incorrect, reset fsfreeze status to
                     # 'thawed'.
