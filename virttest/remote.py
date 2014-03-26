@@ -216,7 +216,6 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
         host = "%s%%%s" % (host, interface)
     if client == "ssh":
         cmd = ("ssh -o UserKnownHostsFile=/dev/null "
-               "-E /dev/null "
                "-o StrictHostKeyChecking=no "
                "-o PreferredAuthentications=password -vvv -p %s %s@%s" %
                (port, username, host))
