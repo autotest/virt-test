@@ -1300,7 +1300,7 @@ class NumaNode(object):
             self.cpus = self.get_node_cpus(available_nodes[-1]).split()
             if len(available_nodes) > 1:
                 self.extra_cpus = self.get_node_cpus(
-                                  available_nodes[-2]).split()
+                    available_nodes[-2]).split()
             self.node_id = available_nodes[-1]
         else:
             self.cpus = self.get_node_cpus(i - 1).split()
