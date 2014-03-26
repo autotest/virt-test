@@ -688,12 +688,12 @@ class PoolVolumeTest(object):
         # Check the created pool
         check_actived_pool(pool_name)
 
-    def pre_vol(self, vol_name, vol_format, vol_size, pool_name):
+    def pre_vol(self, vol_name, vol_format, capacity, allocation, pool_name):
         """
         Preapare the specific type volume in pool
         """
         pv = libvirt_storage.PoolVolume(pool_name)
-        if not pv.create_volume(vol_name, vol_size, vol_size, vol_format):
+        if not pv.create_volume(vol_name, capacity, allocation, vol_format):
             raise error.TestFail("Prepare volume failed.")
         if not pv.volume_exists(vol_name):
             raise error.TestFail("Can't find volume: %s", vol_name)
