@@ -173,6 +173,9 @@ class VirtTestRunParser(optparse.OptionParser):
     def __init__(self):
         optparse.OptionParser.__init__(self, usage='Usage: %prog [options]')
         from virttest import data_dir
+        from virttest import bootstrap
+        jeos_info = bootstrap.get_jeos_info()
+        self.default_guest_os = jeos_info['variant']
 
         try:
             qemu_bin_path = _find_default_qemu_paths()[0]
@@ -252,7 +255,7 @@ class VirtTestRunParser(optparse.OptionParser):
                            default=None,
                            help=("Select the guest OS to be used. "
                                  "If -c is provided, this will be ignored. "
-                                 "Default: %s" % DEFAULT_GUEST_OS))
+                                 "Default: %s" % self.default_guest_os))
         general.add_option("--arch", action="store", dest="arch",
                            default=None,
                            help=("Architecture under test. "
@@ -413,7 +416,6 @@ def variant_only_file(filename):
 
 
 DEFAULT_MACHINE_TYPE = "i440fx"
-DEFAULT_GUEST_OS = "JeOS.20"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
 LIBVIRT_DEFAULT_SET = variant_only_file('backends/libvirt/cfg/default_tests')
 LVSB_DEFAULT_SET = ("lvsb_date")
@@ -649,7 +651,7 @@ class VirtTestApp(object):
                       self.options.guest_os)
                 sys.exit(1)
             self.cartesian_parser.only_filter(
-                self.options.guest_os or DEFAULT_GUEST_OS)
+                self.options.guest_os or self.option_parser.default_guest_os)
         else:
             logging.info("Config provided, ignoring --guest-os option")
 
@@ -917,7 +919,8 @@ class VirtTestApp(object):
                       "names correctly, and double "
                       "check that tests show "
                       "in --list-tests for guest '%s'" %
-                      (self.options.guest_os or DEFAULT_GUEST_OS))
+                      (self.options.guest_os or
+                       self.option_parser.default_guest_os))
                 sys.exit(1)
 
             if self.options.config:
