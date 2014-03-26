@@ -1023,9 +1023,9 @@ def renew_guest_ip(session, mac_addr, os_type="linux", ip_version="ipv4"):
         renew_cmd = "ifconfig %s up; " % nic_ifname
         renew_cmd += "pidof dhclient && killall dhclient; "
         if ip_version == "ipv6":
-            renew_cmd += "dhclient -v -6 %s" % nic_ifname
+            renew_cmd += "dhclient -6 %s &" % nic_ifname
         else:
-            renew_cmd += "dhclient -v %s" % nic_ifname
+            renew_cmd += "dhclient %s &" % nic_ifname
     elif os_type == "windows":
         nic_connectionid = get_windows_nic_attribute(session,
                                                      "macaddress", mac_addr,
@@ -2294,7 +2294,7 @@ def restart_guest_network(session, nic_name=None):
 
     if if_list:
         session.sendline("killall dhclient && "
-                         "dhclient -v %s" % ' '.join(if_list))
+                         "dhclient %s &" % ' '.join(if_list))
 
 
 def update_mac_ip_address(vm, params, timeout=None):
