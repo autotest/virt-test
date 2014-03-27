@@ -1502,3 +1502,78 @@ class HostStress(object):
         """
         result = utils.run(self.check_cmd, timeout=60, ignore_status=True)
         return result.exit_status == 0
+
+
+def load_stress(stress_type, vms, params):
+    """
+    Load stress for tests.
+
+    :param stress_type: The stress type you need
+    :param params: Useful parameters for stress
+    :param vms: Used when it's stress in vms
+    """
+    fail_info = []
+    # Add stress tool in vms
+    if stress_type == "stress_in_vms":
+        for vm in vms:
+            try:
+                vstress = VMStress(vm, "stress")
+                vstress.load_stress_tool()
+            except StressError, detail:
+                fail_info.append("Launch stress in %s failed:%s" % (vm.name,
+                                                                    detail))
+    # Add stress for host
+    elif stress_type == "stress_on_host":
+        try:
+            hstress = HostStress(params, "stress")
+            hstress.load_stress_tool()
+        except StressError, detail:
+            fail_info.append("Launch stress on host failed:%s" % str(detail))
+    # Booting vm for following test
+    elif stress_type == "load_vm_booting":
+        load_vms = params.get("load_vms", [])
+        if len(load_vms):
+            load_vm = load_vms[0]
+            try:
+                if load_vm.is_alive():
+                    load_vm.destroy()
+                load_vm.start()
+            except virt_vm.VMStartError:
+                fail_info.append("Start load vm %s failed." % load_vm.name)
+        else:
+            fail_info.append("No load vm provided.")
+    # Booting vms for following test
+    elif stress_type == "load_vms_booting":
+        load_vms = params.get("load_vms", [])
+        for load_vm in load_vms:
+            if load_vm.is_alive():
+                load_vm.destroy()
+        # Booting load_vms at same time
+        for load_vm in load_vms:
+            try:
+                load_vm.start()
+            except virt_vm.VMStartError:
+                fail_info.append("Start load vm %s failed." % vm.name)
+                break
+    # Booting test vms for following test
+    elif stress_type == "vms_booting":
+        for vm in vms:
+            if vm.is_alive():
+                vm.destroy()
+        try:
+            for vm in vms:
+                vm.start()
+        except virt_vm.VMStartError:
+            fail_info.append("Start vms failed.")
+    return fail_info
+
+
+def unload_stress(stress_type, vms):
+    """
+    Unload stress loaded by load_stress(...).
+    """
+    if stress_type == "stress_in_vms":
+        for vm in vms:
+            VMStress(vm, "stress").unload_stress()
+    elif stress_type == "stress_on_host":
+        HostStress(None, "stress").unload_stress()
