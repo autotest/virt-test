@@ -2,7 +2,7 @@ import logging
 import os
 import glob
 import shutil
-from autotest.client.shared import logging_manager, error, distro
+from autotest.client.shared import logging_manager, error
 from autotest.client import utils
 import utils_misc
 import data_dir
@@ -57,11 +57,13 @@ def get_jeos_info():
     """
     Gets the correct asset and variant information depending on host OS.
     """
-    detected = distro.detect()
-    if detected.name == 'fedora' and int(detected.version) >= 20:
-        return {'asset': 'jeos-20-64', 'variant': 'JeOS.20'}
-    else:
-        return {'asset': 'jeos-19-64', 'variant': 'JeOS.19'}
+    jeos_info = {'asset': 'jeos-19-64', 'variant': 'JeOS.19'}
+    os_vendor = utils.get_os_vendor()
+    if os_vendor.lower() == 'fedora':
+        issue_contents = utils.read_file('/etc/issue')
+        if '20' in issue_contents:
+            jeos_info = {'asset': 'jeos-20-64', 'variant': 'JeOS.20'}
+    return jeos_info
 
 
 def _get_config_filter():
