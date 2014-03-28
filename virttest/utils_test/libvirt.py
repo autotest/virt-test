@@ -336,6 +336,11 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
                 return iscsi_device
             if not iscsi_device:
                 logging.error("Not find iscsi device.")
+            # Cleanup and return "" - caller needs to handle that
+            # _iscsi.export_target() will have set the emulated_id and
+            # export_flag already on success...
+            _iscsi.cleanup()
+            utils.run("rm -f %s" % emulated_path)
         else:
             return emulated_target
     else:
