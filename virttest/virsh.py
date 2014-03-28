@@ -3451,3 +3451,14 @@ def save_image_define(state_file, xmlfile, options="", **dargs):
     """
     cmd = "save-image-define %s %s %s" % (state_file, xmlfile, options)
     return command(cmd, **dargs)
+
+
+def inject_nmi(name, options="", **dargs):
+    """
+    Inject NMI to the guest
+
+    :param name: domain name
+    :param options: extra options
+    """
+    cmd = "inject-nmi %s %s" % (name, options)
+    return command(cmd, **dargs)
