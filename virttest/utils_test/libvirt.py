@@ -18,9 +18,9 @@ More specifically:
 
 import re
 import os
-import time
 import logging
 import shutil
+import threading
 from virttest import virsh
 from virttest import xml_utils
 from virttest import iscsi
@@ -702,3 +702,108 @@ class PoolVolumeTest(object):
             raise error.TestFail("Prepare volume failed.")
         if not pv.volume_exists(vol_name):
             raise error.TestFail("Can't find volume: %s", vol_name)
+
+
+##########Migration Relative functions##############
+class MigrationTest(object):
+
+    """Class for migration tests"""
+
+    def __init__(self):
+        # To get result in thread, using member parameters
+        # Result of virsh migrate command
+        # True means command executed successfully
+        self.RET_MIGRATION = True
+        # A lock for threads
+        self.RET_LOCK = threading.RLock()
+
+    def thread_func_migration(self, vm, desturi):
+        """
+        Thread for virsh migrate command.
+
+        :param vm: A libvirt vm instance(local or remote).
+        :param desturi: remote host uri.
+        """
+        # Migrate the domain.
+        try:
+            vm.migrate(desturi, ignore_status=False, debug=True)
+        except error.CmdError, detail:
+            logging.error("Migration to %s failed:\n%s", desturi, detail)
+            self.RET_LOCK.acquire()
+            self.RET_MIGRATION = False
+            self.RET_LOCK.release()
+
+    def do_migration(self, vms, srcuri, desturi, migration_type,
+                     thread_timeout=60):
+        """
+        Migrate vms.
+
+        :param vms: migrated vms.
+        :param srcuri: local uri, used when migrate vm from remote to local
+        :param descuri: remote uri, used when migrate vm from local to remote
+        :param migration_type: do orderly for simultaneous migration
+        """
+        if migration_type == "orderly":
+            for vm in vms:
+                migration_thread = threading.Thread(target=self.thread_func_migration,
+                                                    args=(vm, desturi))
+                migration_thread.start()
+                migration_thread.join(thread_timeout)
+                if migration_thread.isAlive():
+                    logging.error("Migrate %s timeout.", migration_thread)
+                    self.RET_LOCK.acquire()
+                    self.RET_MIGRATION = False
+                    self.RET_LOCK.release()
+        elif migration_type == "cross":
+            # Migrate a vm to remote first,
+            # then migrate another to remote with the first vm back
+            vm_remote = vms.pop()
+            for vm in vms:
+                thread1 = threading.Thread(target=self.thread_func_migration,
+                                           args=(vm_remote, srcuri))
+                thread2 = threading.Thread(target=self.thread_func_migration,
+                                           args=(vm, desturi))
+                thread1.start()
+                thread2.start()
+                thread1.join(thread_timeout)
+                thread2.join(thread_timeout)
+                vm_remote = vm
+                if thread1.isAlive() or thread1.isAlive():
+                    logging.error("Cross migrate timeout.")
+                    self.RET_LOCK.acquire()
+                    self.RET_MIGRATION = False
+                    self.RET_LOCK.release()
+        elif migration_type == "simultaneous":
+            migration_threads = []
+            for vm in vms:
+                migration_threads.append(threading.Thread(
+                                         target=self.thread_func_migration,
+                                         args=(vm, desturi)))
+            # let all migration going first
+            for thread in migration_threads:
+                thread.start()
+
+            # listen threads until they end
+            for thread in migration_threads:
+                thread.join(thread_timeout)
+                if thread.isAlive():
+                    logging.error("Migrate %s timeout.", thread)
+                    self.RET_LOCK.acquire()
+                    self.RET_MIGRATION = False
+                    self.RET_LOCK.release()
+
+        if not self.RET_MIGRATION:
+            raise error.TestFail()
+
+    def cleanup_dest_vm(self, vm, srcuri, desturi):
+        """
+        Cleanup migrated vm on remote host.
+        """
+        vm.connect_uri = desturi
+        if vm.exists():
+            if vm.is_persistent():
+                vm.undefine()
+            if vm.is_alive():
+                vm.destroy()
+        # Set connect uri back to local uri
+        vm.connect_uri = srcuri
