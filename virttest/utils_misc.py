@@ -1698,7 +1698,7 @@ def get_qemu_img_binary(params):
                                     params.get("qemu_img_binary", "qemu-img"))
     if not os.path.isfile(qemu_img_binary_path):
         logging.debug('Could not find params qemu-img in %s, searching the '
-                      'host PATH for one to use')
+                      'host PATH for one to use', qemu_img_binary_path)
         qemu_img_binary = find_command('qemu-img')
         logging.debug('Found %s', qemu_img_binary)
     else:
@@ -1715,7 +1715,7 @@ def get_qemu_io_binary(params):
                                    params.get("qemu_io_binary", "qemu-io"))
     if not os.path.isfile(qemu_io_binary_path):
         logging.debug('Could not find params qemu-io in %s, searching the '
-                      'host PATH for one to use')
+                      'host PATH for one to use', qemu_io_binary_path)
         qemu_io_binary = find_command('qemu-io')
         logging.debug('Found %s', qemu_io_binary)
     else:
