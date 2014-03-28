@@ -22,10 +22,10 @@ def iscsi_get_sessions():
     cmd = "iscsiadm --mode session"
 
     output = utils.system_output(cmd, ignore_status=True)
-    pattern = r"(\d+\.\d+\.\d+\.\d+|\W:{2}\d\W):\d+,\d+\s+([\w\.\-:\d]+)"
     sessions = []
     if "No active sessions" not in output:
-        sessions = re.findall(pattern, output)
+        for session in output.splitlines():
+            sessions.append(session.split()[3])
     return sessions
 
 
@@ -143,10 +143,8 @@ class Iscsi(object):
         """
         sessions = iscsi_get_sessions()
         login = False
-        for i in sessions:
-            if i[1] == self.target:
-                login = True
-                break
+        if self.target in sessions:
+            login = True
         return login
 
     def portal_visible(self):
