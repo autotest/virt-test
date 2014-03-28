@@ -534,7 +534,7 @@ class PoolVolumeTest(object):
         """
         sp = libvirt_storage.StoragePool()
         pv = libvirt_storage.PoolVolume(pool_name)
-        if pool_type in ["dir", "netfs"]:
+        if pool_type in ["dir", "netfs", "logical", "disk"]:
             vols = pv.list_volumes()
             for vol in vols:
                 # Ignore failed deletion here for deleting pool
