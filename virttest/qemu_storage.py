@@ -120,7 +120,7 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " %s" % self.size
 
-        if (params.get("image_backend", "filesystem") != "filesystem"):
+        if (params.get("image_backend", "filesystem") == "filesystem"):
             image_dirname = os.path.dirname(self.image_filename)
             if image_dirname and not os.path.isdir(image_dirname):
                 e_msg = ("Parent directory of the image file %s does "
