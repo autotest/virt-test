@@ -489,9 +489,9 @@ def scp_between_remotes(src, dst, port, s_passwd, d_passwd, s_name, d_name,
                            "the interface the neighbour attache")
         dst = "%s%%%s" % (dst, dst_inter)
 
-    command = ("scp -v -o UserKnownHostsFile=/dev/null -o "
+    command = ("scp -v -o UserKnownHostsFile=/dev/null "
                "-o StrictHostKeyChecking=no "
-               "PreferredAuthentications=password -r %s -P %s"
+               "-o PreferredAuthentications=password -r %s -P %s"
                " %s@\[%s\]:%s %s@\[%s\]:%s" %
                (limit, port, s_name, src, s_path, d_name, dst, d_path))
     password_list = []
