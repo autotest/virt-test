@@ -415,7 +415,7 @@ class PoolVolume(object):
             except IndexError:
                 # Do not find a path
                 path = ""
-            name = line.split(path)[0]
+            name = line.split(path)[0].lstrip()
             volumes[name] = path.strip()
         return volumes
 
