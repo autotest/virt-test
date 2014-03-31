@@ -20,7 +20,12 @@ DEBUG = False
 
 def copytree(src, dst, overwrite=True, ignore=''):
     """
-    Copy dirs from source to target;
+    Copy dirs from source to target.
+
+    :param src: source directory
+    :param dst: destination directory
+    :param overwrite: overwrite file if exist or not
+    :param ignore: files want to ignore
     """
     ignore = glob.glob(os.path.join(src, ignore))
     for root, dirs, files in os.walk(src):
@@ -40,42 +45,37 @@ def copytree(src, dst, overwrite=True, ignore=''):
             shutil.copy(src_file, dst_dir)
 
 
-def is_mount(dst, src, fstype=None, verbose=False):
+def is_mount(src, dst):
     """
-    Check is src mounted with fstype under dst;
+    Check is src or dst mounted.
+
+    :param src: source device or directory, if None will skip to check
+    :param dst: mountpoint, if None will skip to check
+
+    :return: if mounted mountpoint or device, else return False
     """
-    if os.path.ismount(dst):
-        mtab = open('/proc/mounts', 'r').read()
-        fstype = (fstype and [fstype] or [''])[0]
-        rex = '\s?'.join(['.*', dst, fstype, '.*'])
-        line = re.search(r'%s' % rex, mtab, re.M)
-        if line is not None:
-            line = line.group()
-            dev = re.split(r'\s?', line)[0]
-            # check if src is a loop device
-            if re.match(r'/dev/loop\d+$', dev):
-                cmd = 'losetup %s -O BACK-FILE' % dev
-                dev = utils.system_output(cmd).splitlines()[-1]
-            if os.path.samefile(src, dev):
-                return line
+    if dst and os.path.ismount(dst):
+        return dst
+    if src and (src in str(open('/proc/mounts', 'r')) or
+                src in utils.system_output('losetup -a')):
+        return src
     return False
 
 
-def mount(dst, src, fstype=None, options=None, verbose=False):
+def mount(src, dst, fstype=None, options=None, verbose=False):
     """
     Mount src under dst if it's really mounted, then remout with options.
+
+    :param src: source device or directory, if None will skip to check
+    :param dst: mountpoint, if None will skip to check
+    :param fstype: filesystem type need to mount
+
+    :return: if mounted return True else return False
     """
     options = (options and [options] or [''])[0]
-    line = is_mount(dst, src, fstype, verbose=verbose)
-    if line:
-        logging.info("%s is really mounted" % dst)
-        # Check src not mounted with all options, then remouted it
-        if not [_ for _ in options.split(',')
-                if _ not in line.split()[4]]:
-            return None
+    if is_mount(src, dst):
         if 'remount' not in options:
             options = 'remount,%s' % options
-
     cmd = ['mount']
     if fstype:
         cmd.extend(['-t', fstype])
@@ -83,25 +83,25 @@ def mount(dst, src, fstype=None, options=None, verbose=False):
         cmd.extend(['-o', options])
     cmd.extend([src, dst])
     cmd = ' '.join(cmd)
-    utils.run(cmd, verbose=verbose)
-    return None
+    return utils.system(cmd, verbose=verbose) == 0
 
 
-def umount(dst, src, fstype=None, verbose=False):
+def umount(src, dst, verbose=False):
     """
-    Umount src from dst, if src really mounted under dst;
+    Umount src from dst, if src really mounted under dst.
+
+    :param src: source device or directory, if None will skip to check
+    :param dst: mountpoint, if None will skip to check
+
+    :return: if unmounted return True else return False
     """
-    if is_mount(dst, src, fstype=fstype, verbose=verbose):
-        dev = (os.path.ismount(dst) and [dst] or [src])[0]
-        cmd = 'fuser -k %s' % dev
-        utils.run(cmd, ignore_status=True, verbose=verbose)
-        cmd = ['umount']
-        if fstype:
-            cmd.extend(['-t', fstype])
-        cmd.append(dev)
-        cmd = ' '.join(cmd)
-        utils.run(cmd, verbose=verbose)
-    return None
+    mounted = is_mount(src, dst)
+    if mounted:
+        fuser_cmd = "fuser -km %s" % mounted
+        utils.system(fuser_cmd, ignore_status=True, verbose=True)
+        umount_cmd = "umount %s" % mounted
+        return utils.system(umount_cmd, ignore_status=True, verbose=True) == 0
+    return True
 
 
 @error.context_aware
@@ -113,7 +113,7 @@ def cleanup(folder):
     :param folder: Directory to be cleaned up.
     """
     error.context("cleaning up unattended install directory %s" % folder)
-    umount(folder, '')
+    umount(None, folder)
     if os.path.isdir(folder):
         shutil.rmtree(folder)
 
@@ -128,7 +128,7 @@ def clean_old_image(image):
     """
     error.context("cleaning up old leftover image %s" % image)
     if os.path.exists(image):
-        umount('', image)
+        umount(image, None)
         os.remove(image)
 
 
@@ -296,14 +296,14 @@ class CdromDisk(Disk):
         """
         pwd = os.getcwd()
         mnt_pnt = tempfile.mkdtemp(prefix='cdrom_virtio_', dir=self.tmpdir)
-        mount(mnt_pnt, cdrom_virtio, options='loop,ro', verbose=DEBUG)
+        mount(cdrom_virtio, mnt_pnt, options='loop,ro', verbose=DEBUG)
         try:
             copytree(mnt_pnt, self.mount, ignore='*.vfd')
             cmd = 'mcopy -s -o -n -i %s ::/* %s' % (virtio_floppy, self.mount)
             utils.run(cmd, verbose=DEBUG)
         finally:
             os.chdir(pwd)
-            umount(mnt_pnt, cdrom_virtio, verbose=DEBUG)
+            umount(None, mnt_pnt, verbose=DEBUG)
             os.rmdir(mnt_pnt)
 
     def setup_virtio_win2008(self, virtio_floppy, cdrom_virtio):
