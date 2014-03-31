@@ -191,7 +191,7 @@ def get_all_cells():
                         "1":"1059868 KiB",
                         "Total":"1184068 KiB"}
     """
-    fc_result = virsh.freecell("--all", ignore_status=True)
+    fc_result = virsh.freecell(options="--all", ignore_status=True)
     if fc_result.exit_status:
         if fc_result.stderr.count("NUMA not supported"):
             raise error.TestNAError(fc_result.stderr.strip())
