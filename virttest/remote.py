@@ -126,6 +126,8 @@ def handle_prompts(session, username, password, prompt, timeout=10,
         try:
             match, text = session.read_until_last_line_matches(
                 [r"[Aa]re you sure", r"[Pp]assword:\s*",
+                 r"\(or press Control-D to continue\):\s*$",  # Prompt of rescue mode for Red Hat.
+                 r"[Gg]ive.*[Ll]ogin:\s*$",  # Prompt of rescue mode for SUSE.
                  r"(?<![Ll]ast).*[Ll]ogin:\s*$",  # Don't match "Last Login:"
                  r"[Cc]onnection.*closed", r"[Cc]onnection.*refused",
                  r"[Pp]lease wait", r"[Ww]arning", r"[Ee]nter.*username",
@@ -136,7 +138,7 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                     logging.debug("Got 'Are you sure...', sending 'yes'")
                 session.sendline("yes")
                 continue
-            elif match == 1 or match == 8:  # "password:"
+            elif match in [1, 2, 3, 10]: # "password:"
                 if password_prompt_count == 0:
                     if debug:
                         logging.debug("Got password prompt, sending '%s'",
@@ -147,7 +149,7 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                 else:
                     raise LoginAuthenticationError("Got password prompt twice",
                                                    text)
-            elif match == 2 or match == 7:  # "login:"
+            elif match == 4 or match == 9:  # "login:"
                 if login_prompt_count == 0 and password_prompt_count == 0:
                     if debug:
                         logging.debug("Got username prompt; sending '%s'",
@@ -161,20 +163,20 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                     else:
                         msg = "Got username prompt after password prompt"
                     raise LoginAuthenticationError(msg, text)
-            elif match == 3:  # "Connection closed"
+            elif match == 5:  # "Connection closed"
                 raise LoginError("Client said 'connection closed'", text)
-            elif match == 4:  # "Connection refused"
+            elif match == 6:  # "Connection refused"
                 raise LoginError("Client said 'connection refused'", text)
-            elif match == 5:  # "Please wait"
+            elif match == 7:  # "Please wait"
                 if debug:
                     logging.debug("Got 'Please wait'")
                 timeout = 30
                 continue
-            elif match == 6:  # "Warning added RSA"
+            elif match == 8:  # "Warning added RSA"
                 if debug:
                     logging.debug("Got 'Warning added RSA to known host list")
                 continue
-            elif match == 9:  # prompt
+            elif match == 11:  # prompt
                 if debug:
                     logging.debug("Got shell prompt -- logged in")
                 break
