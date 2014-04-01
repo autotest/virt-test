@@ -1510,7 +1510,7 @@ def get_cpu_flags(cpu_info=""):
     if not cpu_flag_lists:
         return []
     cpu_flags = cpu_flag_lists[0]
-    return cpu_flags.strip().split('\s+')
+    return re.split("\s+", cpu_flags.strip())
 
 
 def get_cpu_vendor(cpu_info="", verbose=True):
