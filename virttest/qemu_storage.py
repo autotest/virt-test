@@ -487,7 +487,12 @@ class Iscsidev(storage.Iscsidev):
         """
         Access the iscsi target. And return the local raw device name.
         """
-        self.iscsidevice.login()
+        if self.iscsidevice.logged_in():
+             logging.warn("Session already present. Don't need to"
+                          " login again")
+        else:
+             self.iscsidevice.login()
+
         device_name = self.iscsidevice.get_device_name()
         if self.device_id:
             device_name += self.device_id
