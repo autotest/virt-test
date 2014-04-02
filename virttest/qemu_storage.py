@@ -493,7 +493,13 @@ class Iscsidev(storage.Iscsidev):
         else:
              self.iscsidevice.login()
 
-        device_name = self.iscsidevice.get_device_name()
+        if utils_misc.wait_for(self.iscsidevice.get_device_name,
+                               self.iscsi_init_timeout):
+            device_name = self.iscsidevice.get_device_name()
+        else:
+            raise error.TestError("Can not get iscsi device name in host"
+                                  " in %ss" % self.iscsi_init_timeout)
+
         if self.device_id:
             device_name += self.device_id
         return device_name
