@@ -43,12 +43,14 @@ _vm_register_thread = None
 _vm_register_thread_termination_event = None
 
 
-def preprocess_image(test, params, image_name):
+def preprocess_image(test, params, image_name, vm_process_status=None):
     """
     Preprocess a single QEMU image according to the instructions in params.
 
     :param test: Autotest test object.
     :param params: A dict containing image preprocessing parameters.
+    :param vm_process_status: This is needed in postprocess_image. Add it here
+                              only for keep it work with process_images()
     :note: Currently this function just creates an image if requested.
     """
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
@@ -165,17 +167,39 @@ def preprocess_vm(test, params, env, name):
         vm.pause()
 
 
-def postprocess_image(test, params, image_name):
+def postprocess_image(test, params, image_name, vm_process_status=None):
     """
     Postprocess a single QEMU image according to the instructions in params.
 
     :param test: An Autotest test object.
     :param params: A dict containing image postprocessing parameters.
+    :param vm_process_status: (optional) vm process status like running, dead
+                              or None for no vm exist.
     """
     clone_master = params.get("clone_master", None)
     base_dir = data_dir.get_data_dir()
     image = qemu_storage.QemuImg(params, base_dir, image_name)
-    if params.get("check_image") == "yes":
+
+    check_image_flag = params.get("check_image") == "yes"
+    if vm_process_status == "running" and check_image_flag:
+        if params.get("skip_image_check_during_running") == "yes":
+            logging.debug("Guest is still running, skip the image check.")
+            check_image_flag = False
+        else:
+            image_info_output = image.info()
+            image_info = {}
+            for image_info_item in image_info_output.splitlines():
+                option = image_info_item.split(":")
+                if len(option) == 2:
+                    image_info[option[0].strip()] = option[1].strip()
+            if ("lazy refcounts" in image_info
+                and image_info["lazy refcounts"] == "true"):
+                logging.debug("Should not check image while guest is alive"
+                              " when the image is create with lazy refcounts."
+                              " Skip the image check.")
+                check_image_flag = False
+
+    if check_image_flag:
         try:
             if clone_master is None:
                 image.check_image(params, base_dir)
@@ -269,7 +293,8 @@ class _CreateImages(threading.Thread):
     in self.exc_info
     """
 
-    def __init__(self, image_func, test, images, params, exit_event):
+    def __init__(self, image_func, test, images, params, exit_event,
+                 vm_process_status):
         threading.Thread.__init__(self)
         self.image_func = image_func
         self.test = test
@@ -277,31 +302,38 @@ class _CreateImages(threading.Thread):
         self.params = params
         self.exit_event = exit_event
         self.exc_info = None
+        self.vm_process_status = vm_process_status
 
     def run(self):
         try:
             _process_images_serial(self.image_func, self.test, self.images,
-                                   self.params, self.exit_event)
+                                   self.params, self.exit_event,
+                                   self.vm_process_status)
         except Exception:
             self.exc_info = sys.exc_info()
             self.exit_event.set()
 
 
-def process_images(image_func, test, params):
+def process_images(image_func, test, params, vm_process_status=None):
     """
     Wrapper which chooses the best way to process images.
     :param image_func: Process function
     :param test: An Autotest test object.
     :param params: A dict containing all VM and image parameters.
+    :param vm_process_status: (optional) vm process status like running, dead
+                              or None for no vm exist.
     """
     images = params.objects("images")
     if len(images) > 20:    # Lets do it in parallel
-        _process_images_parallel(image_func, test, params)
+        _process_images_parallel(image_func, test, params,
+                                 vm_process_status=vm_process_status)
     else:
-        _process_images_serial(image_func, test, images, params)
+        _process_images_serial(image_func, test, images, params,
+                               vm_process_status=vm_process_status)
 
 
-def _process_images_serial(image_func, test, images, params, exit_event=None):
+def _process_images_serial(image_func, test, images, params, exit_event=None,
+                           vm_process_status=None):
     """
     Original process_image function, which allows custom set of images
     :param image_func: Process function
@@ -309,21 +341,25 @@ def _process_images_serial(image_func, test, images, params, exit_event=None):
     :param images: List of images (usually params.objects("images"))
     :param params: A dict containing all VM and image parameters.
     :param exit_event: (optional) exit event which interrupts the processing
+    :param vm_process_status: (optional) vm process status like running, dead
+                              or None for no vm exist.
     """
     for image_name in images:
         image_params = params.object_params(image_name)
-        image_func(test, image_params, image_name)
+        image_func(test, image_params, image_name, vm_process_status)
         if exit_event and exit_event.is_set():
             logging.error("Received exit_event, stop processing of images.")
             break
 
 
-def _process_images_parallel(image_func, test, params):
+def _process_images_parallel(image_func, test, params, vm_process_status=None):
     """
     The same as _process_images but in parallel.
     :param image_func: Process function
     :param test: An Autotest test object.
     :param params: A dict containing all VM and image parameters.
+    :param vm_process_status: (optional) vm process status like running, dead
+                              or None for no vm exist.
     """
     images = params.objects("images")
     no_threads = min(len(images) / 5,
@@ -333,7 +369,7 @@ def _process_images_parallel(image_func, test, params):
     for i in xrange(no_threads):
         imgs = images[i::no_threads]
         threads.append(_CreateImages(image_func, test, imgs, params,
-                                     exit_event))
+                                     exit_event, vm_process_status))
         threads[-1].start()
     finished = False
     while not finished:
@@ -378,11 +414,16 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
                 vm_params = params.object_params(vm_name)
                 vm = env.get_vm(vm_name)
                 unpause_vm = False
+                if vm is None or vm.is_dead():
+                    vm_process_status = 'dead'
+                else:
+                    vm_process_status = 'running'
                 if vm is not None and vm.is_alive() and not vm.is_paused():
                     vm.pause()
                     unpause_vm = True
                 try:
-                    process_images(image_func, test, vm_params)
+                    process_images(image_func, test, vm_params,
+                                   vm_process_status)
                 finally:
                     if unpause_vm:
                         vm.resume()
