@@ -863,6 +863,15 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("mkfs %s %s" % (fstype, device))
 
+    def mkfs_opts(self, fstype, device, opts):
+        """
+        mkfs-opts - make a filesystem with optional arguments
+
+        This creates a filesystem on "device" (usually a partition or LVM
+        logical volume). The filesystem type is "fstype", for example "ext3".
+        """
+        return self.inner_cmd("mkfs %s %s %s" % (fstype, device, opts))
+
     def part_disk(self, device, parttype):
         """
         part-disk - partition whole disk with a single primary partition
@@ -976,6 +985,23 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("blockdev-setrw %s" % device)
 
+    def blockdev_flushbufs(self, device):
+        """
+        blockdev-flushbufs - flush device buffers
+
+        This tells the kernel to flush internal buffers associated with
+        "device".
+        """
+        return self.inner_cmd("blockdev-flushbufs %s" % device)
+
+    def pvcreate(self, physvols):
+        """
+        pvcreate - create an LVM physical volume
+
+        This creates an LVM physical volume called "physvols".
+        """
+        return self.inner_cmd("pvcreate %s" % (physvols))
+
     def vgcreate(self, volgroup, physvols):
         """
         vgcreate - create an LVM volume group
@@ -1060,6 +1086,51 @@ class GuestfishPersistent(Guestfish):
         List all the logical volumes detected.
         """
         return self.inner_cmd("lvs")
+
+    def vfs_type(self, mountable):
+        """
+        vfs-type - get the Linux VFS type corresponding to a mounted device
+
+        Gets the filesystem type corresponding to the filesystem on "mountable".
+        """
+        return self.inner_cmd("vfs-type %s" % (mountable))
+
+    def touch(self, path):
+        """
+        touch - update file timestamps or create a new file
+
+        Touch acts like the touch(1) command. It can be used to update the
+        timestamps on a file, or, if the file does not exist, to create a new
+        zero-length file.
+        """
+        return self.inner_cmd("touch %s" % (path))
+
+    def umount_all(self):
+        """
+        umount-all - unmount all filesystems
+
+        This unmounts all mounted filesystems.
+        Some internal mounts are not unmounted by this call.
+        """
+        return self.inner_cmd("umount-all")
+
+    def ll(self, directory):
+        """
+        ll - list the files in a directory (long format)
+
+        List the files in "directory" (relative to the root directory, there is
+        no cwd) in the format of 'ls -la'.
+        """
+        return self.inner_cmd("ll %s" % (directory))
+
+    def sync(self):
+        """
+        lsync - sync disks, writes are flushed through to the disk image
+
+        This syncs the disk, so that any writes are flushed through to the
+        underlying disk image.
+        """
+        return self.inner_cmd("sync")
 
 # libguestfs module functions follow #####
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
