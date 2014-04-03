@@ -221,7 +221,11 @@ def postprocess_image(test, params, image_name, vm_process_status=None):
                 cl_images = params.get("master_images_clone", "")
                 if image_name in cl_images.split():
                     image.remove()
-            raise e
+            if (params.get("skip_cluster_leak_warn") == "yes"
+                and "Leaked clusters" in e.message):
+                logging.warn(e.message)
+            else:
+                raise e
     if params.get("restore_image_after_testing", "no") == "yes":
         image.backup_image(params, base_dir, "restore", True)
     if params.get("remove_image") == "yes":
@@ -421,6 +425,7 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
                 if vm is not None and vm.is_alive() and not vm.is_paused():
                     vm.pause()
                     unpause_vm = True
+                    vm_params['skip_cluster_leak_warn'] = "yes"
                 try:
                     process_images(image_func, test, vm_params,
                                    vm_process_status)
