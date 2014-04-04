@@ -135,6 +135,7 @@ class Test(object):
         env = utils_env.Env(env_filename, self.env_version)
 
         test_passed = False
+        test_result = None
         t_types = None
         t_type = None
 
@@ -215,7 +216,7 @@ class Test(object):
                         run_func = utils_misc.get_test_entrypoint_func(
                             t_type, test_module)
                         try:
-                            run_func(self, params, env)
+                            test_result = run_func(self, params, env)
                             self.verify_background_errors()
                         finally:
                             env.save()
@@ -266,7 +267,7 @@ class Test(object):
                                  vm.make_qemu_command())
                 raise error.JobError("Abort requested (%s)" % e)
 
-        return test_passed
+        return test_passed, test_result
 
 
 def print_stdout(sr, end=True):
@@ -367,14 +368,19 @@ def print_error(t_elapsed, open_fd=False):
     print_stdout(msg)
 
 
-def print_pass(t_elapsed, open_fd=False):
+def print_pass(t_elapsed, open_fd=False, result=None):
     """
     Print PASS to stdout with PASS (green) color.
     """
-    normal_pass_msg = (bcolors.PASS + "PASS" +
-                       bcolors.ENDC + " (%.2f s)" % t_elapsed)
-    fd_pass_msg = (bcolors.PASS + "PASS" +
-                   bcolors.ENDC + " (%.2f s) (%s fd)" %
+
+    result_string = ""
+    if not result is None:
+        result_string = " [result=%s]" % result
+
+    normal_pass_msg = (bcolors.PASS + "PASS" + bcolors.ENDC +
+                       result_string + " (%.2f s)" % t_elapsed)
+    fd_pass_msg = (bcolors.PASS + "PASS" + bcolors.ENDC +
+                   result_string + " (%.2f s) (%s fd)" %
                    (t_elapsed, utils_misc.get_virt_test_open_fds()))
     if open_fd:
         msg = fd_pass_msg
@@ -929,8 +935,11 @@ def run_tests(parser, options):
                 try:
                     t_begin = time.time()
                     t.start_file_logging()
-                    current_status = t.run_once()
-                    logging.info("PASS %s", t.tag)
+                    current_status, current_result = t.run_once()
+                    if not current_result is None:
+                        logging.info("PASS [result=%s] %s", current_result, t.tag)
+                    else:
+                        logging.info("PASS %s", t.tag)
                     logging.info("")
                     t.stop_file_logging()
                 finally:
@@ -989,7 +998,8 @@ def run_tests(parser, options):
             print_fail(t_elapsed, open_fd=options.show_open_fd)
 
         else:
-            print_pass(t_elapsed, open_fd=options.show_open_fd)
+            print_pass(t_elapsed, open_fd=options.show_open_fd,
+                    result=current_result)
 
         status_dct[dct.get("name")] = current_status
 
