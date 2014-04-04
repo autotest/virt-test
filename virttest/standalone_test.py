@@ -930,7 +930,10 @@ def run_tests(parser, options):
                     t_begin = time.time()
                     t.start_file_logging()
                     current_status = t.run_once()
-                    logging.info("PASS %s", t.tag)
+                    if current_status:
+                        logging.info("PASS %s", t.tag)
+                    else:
+                        logging.info("FAIL %s", t.tag)
                     logging.info("")
                     t.stop_file_logging()
                 finally:
