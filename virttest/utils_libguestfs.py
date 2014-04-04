@@ -165,7 +165,7 @@ class Guestfish(LibguestfsBase):
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
-                 uri=None, mount_options=None, run_mode=None):
+                 uri=None, mount_options=None, run_mode="interactive"):
         """
         Initialize guestfish command with options.
 
@@ -358,7 +358,7 @@ class GuestfishPersistent(Guestfish):
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
-                 uri=None, mount_options=None, run_mode=None):
+                 uri=None, mount_options=None, run_mode="interactive"):
         super(GuestfishPersistent, self).__init__(disk_img, ro_mode,
                                                   libvirt_domain, inspector,
                                                   uri, mount_options, run_mode)
