@@ -717,15 +717,30 @@ def reboot(name, options="", **dargs):
     return command("reboot --domain %s %s" % (name, options), **dargs)
 
 
-def managedsave(name, options="", **dargs):
+def managedsave(name, bypass_cache=False, running=False, paused=False,
+                verbose=False, extra="", **dargs):
     """
     Managed save of a domain state.
 
     :param name: Name of domain to save
-    :param options: options: options to pass to list command
+    :param bypass_cache: avoid file system cache when saving
+    :param running: set domain to be running on next start
+    :param paused: set domain to be paused on next start
+    :param verbose: display the progress of save
+    :param extra: extra options to pass to command
     :return: CmdResult object
     """
-    return command("managedsave --domain %s %s" % (name, options), **dargs)
+    options = ""
+    if bypass_cache:
+        options += " --bypass-cache"
+    if running:
+        options += " --running"
+    if paused:
+        options += " --paused"
+    if verbose:
+        options += " --verbose"
+    return command("managedsave --domain %s %s %s"
+                   % (name, options, extra), **dargs)
 
 
 def managedsave_remove(name, **dargs):
