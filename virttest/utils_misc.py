@@ -20,6 +20,7 @@ import inspect
 import tarfile
 import shutil
 import getpass
+import ctypes
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
@@ -2320,3 +2321,33 @@ class KSMController(object):
                 return ksminfos[_KSM_PARAMS.index(feature)]
             except ValueError:
                 raise KSMError
+
+def monotonic_time():
+    """
+    Get monotonic time
+    """
+    def monotonic_time_os():
+        """
+        Get monotonic time using ctypes
+        """
+        class struct_timespec(ctypes.Structure):
+            _fields_ = [ ('tv_sec', ctypes.c_long), ('tv_nsec', ctypes.c_long) ]
+
+        lib = ctypes.CDLL("librt.so.1", use_errno = True)
+        clock_gettime = lib.clock_gettime
+        clock_gettime.argtypes = [ctypes.c_int, ctypes.POINTER(struct_timespec)]
+
+        timespec = struct_timespec()
+        # CLOCK_MONOTONIC_RAW == 4
+        if not clock_gettime(4, ctypes.pointer(timespec)) == 0:
+            errno = ctypes.get_errno()
+            raise OSError(errno, os.strerror(errno))
+
+        return timespec.tv_sec + timespec.tv_nsec * 10 ** -9
+
+    monotonic_attribute = getattr(time, "monotonic", None)
+    if callable(monotonic_attribute):
+        # Introduced in Python 3.3
+        return time.monotonic()
+    else:
+        return monotonic_time_os()
