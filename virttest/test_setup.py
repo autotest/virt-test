@@ -795,20 +795,32 @@ class PciAssignable(object):
             driver = self.dev_unbind_drivers[pci_id]
             cmd = "echo '%s' > %s/new_id" % (vendor_id, driver)
             logging.info("Run command in host: %s" % cmd)
-            if os.system(cmd):
+            try:
+                output = utils.system_output(cmd, timeout=60)
+            except error.CmdError:
+                msg = "Command %s fail with output %s" % (cmd, output)
+                logging.error(msg)
                 return False
 
             stub_path = os.path.join(base_dir,
                                      "drivers/%s" % self.device_driver)
             cmd = "echo '%s' > %s/unbind" % (pci_id, stub_path)
             logging.info("Run command in host: %s" % cmd)
-            if os.system(cmd):
+            try:
+                output = utils.system_output(cmd, timeout=60)
+            except error.CmdError:
+                msg = "Command %s fail with output %s" % (cmd, output)
+                logging.error(msg)
                 return False
 
             driver = self.dev_unbind_drivers[pci_id]
             cmd = "echo '%s' > %s/bind" % (pci_id, driver)
             logging.info("Run command in host: %s" % cmd)
-            if os.system(cmd):
+            try:
+                output = utils.system_output(cmd, timeout=60)
+            except error.CmdError:
+                msg = "Command %s fail with output %s" % (cmd, output)
+                logging.error(msg)
                 return False
         if self.is_binded_to_stub(pci_id):
             return False
@@ -1079,7 +1091,7 @@ class PciAssignable(object):
         if status:
             re_probe = True
         elif not self.check_vfs_count():
-            os.system("modprobe -r %s" % self.driver)
+            utils.system_output("modprobe -r %s" % self.driver, timeout=60)
             re_probe = True
         else:
             self.setup = None
@@ -1091,7 +1103,7 @@ class PciAssignable(object):
             error.context("Loading the driver '%s' with command '%s'" %
                           (self.driver, cmd), logging.info)
             status = utils.system(cmd, ignore_status=True)
-            dmesg = utils.system_output("dmesg", ignore_status=True)
+            dmesg = utils.system_output("dmesg", timeout=60, ignore_status=True)
             file_name = "host_dmesg_after_load_%s.txt" % self.driver
             logging.info("Log dmesg after loading '%s' to '%s'.", self.driver,
                          file_name)
@@ -1132,7 +1144,7 @@ class PciAssignable(object):
         if status:
             cmd = "modprobe -r %s" % self.driver
             logging.info("Running host command: %s" % cmd)
-            os.system(cmd)
+            utils.system_output(cmd, timeout=60)
             re_probe = True
         else:
             return True
