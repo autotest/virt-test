@@ -46,6 +46,18 @@ class LibvirtXMLTestBase(unittest.TestCase):
     __domain_xml__ = ('<domain type="kvm">'
                       '    <name>%s</name>'
                       '    <uuid>%s</uuid>'
+                      '    <cputune>'
+                      '      <vcpupin vcpu="0" cpuset="1-4,^2"/>'
+                      '      <vcpupin vcpu="1" cpuset="0,1"/>'
+                      '      <vcpupin vcpu="2" cpuset="2,3"/>'
+                      '      <vcpupin vcpu="3" cpuset="0,4"/>'
+                      '      <emulatorpin cpuset="1-3"/>'
+                      '      <shares>2048</shares>'
+                      '      <period>1000000</period>'
+                      '      <quota>-1</quota>'
+                      '      <emulator_period>1000000</emulator_period>'
+                      '      <emulator_quota>-1</emulator_quota>'
+                      '    </cputune>'
                       '    <devices>'  # Tests below depend on device order
 
                       '       <serial type="pty">'
@@ -794,6 +806,43 @@ class testSerialXML(LibvirtXMLTestBase):
         self.assertEqual(source_connect['host'], "4.3.2.1")
         self.assertEqual(source_bind['service'], '2445')
         self.assertEqual(source_connect['service'], '5442')
+
+
+class testVMCPUTune(LibvirtXMLTestBase):
+    def test_get_set_del(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
+        cputune = vmxml.cputune
+
+        # Get, modify, set and delete integer and attribute elements
+        self.assertEqual(cputune.shares, 2048)
+        self.assertEqual(cputune.period, 1000000)
+        self.assertEqual(cputune.quota, -1)
+        self.assertEqual(cputune.emulatorpin, '1-3')
+        self.assertEqual(cputune.emulator_period, 1000000)
+        self.assertEqual(cputune.emulator_quota, -1)
+        cputune.shares = 0
+        self.assertEqual(cputune.shares, 0)
+        cputune.emulatorpin = '2-4'
+        self.assertEqual(cputune.emulatorpin, '2-4')
+        del cputune.shares
+        self.assertRaises(xcepts.LibvirtXMLNotFoundError,
+                          cputune.__getitem__, 'shares')
+        del cputune.emulatorpin
+        self.assertRaises(xcepts.LibvirtXMLNotFoundError,
+                          cputune.__getitem__, 'emulatorpin')
+
+        # Get, modify, set and delete vcpupins
+        vcpupins = cputune.vcpupins
+        self.assertEqual(len(vcpupins), 4)
+        self.assertEqual(vcpupins[3], {'vcpu': '3', 'cpuset': '0,4'})
+        vcpupins.append({'vcpu': '4', 'cpuset': '2-4,^3'})
+        cputune.vcpupins = vcpupins
+        self.assertEqual(len(cputune.vcpupins), 5)
+        self.assertEqual(cputune.vcpupins[4],
+                         {'vcpu': '4', 'cpuset': '2-4,^3'})
+        del cputune.vcpupins
+        self.assertEqual(cputune.vcpupins, [])
 
 
 class testDiskXML(LibvirtXMLTestBase):
