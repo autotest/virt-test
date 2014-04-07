@@ -406,7 +406,7 @@ class QemuImg(storage.QemuImg):
         image_is_checkable = self.image_format in ['qcow2', 'qed']
 
         if (storage.file_exists(params, image_filename) or
-            params.get("enable_gluster", "no") == "yes") and image_is_checkable:
+                params.get("enable_gluster", "no") == "yes") and image_is_checkable:
             check_img = self.support_cmd("check") and self.support_cmd("info")
             if not check_img:
                 logging.debug("Skipping image check "
