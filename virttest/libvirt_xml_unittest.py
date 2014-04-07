@@ -809,6 +809,7 @@ class testSerialXML(LibvirtXMLTestBase):
 
 
 class testVMCPUTune(LibvirtXMLTestBase):
+
     def test_get_set_del(self):
         vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
                                               virsh_instance=self.dummy_virsh)

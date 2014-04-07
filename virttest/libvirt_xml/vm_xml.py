@@ -1056,6 +1056,7 @@ class VMClockXML(VMXML):
 
 
 class VMCPUTune(base.LibvirtXMLBase):
+
     """
     CPU tuning tag XML class
 
