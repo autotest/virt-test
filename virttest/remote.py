@@ -138,7 +138,7 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                     logging.debug("Got 'Are you sure...', sending 'yes'")
                 session.sendline("yes")
                 continue
-            elif match in [1, 2, 3, 10]: # "password:"
+            elif match in [1, 2, 3, 10]:  # "password:"
                 if password_prompt_count == 0:
                     if debug:
                         logging.debug("Got password prompt, sending '%s'",
