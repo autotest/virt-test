@@ -280,6 +280,7 @@ class GuestfishSession(aexpect.ShellSession):
 
 
 class GuestfishRemote():
+
     """
     Remote control of guestfish.
     """
@@ -337,7 +338,7 @@ class GuestfishRemote():
     def cmd(self, cmd, ignore_status=False):
         """Mimic utils.run()"""
         exit_status, stdout = self.cmd_status_output(cmd)
-        stderr = '' # no way to retrieve this separately
+        stderr = ''  # no way to retrieve this separately
         result = utils.CmdResult(cmd, stdout, stderr, exit_status)
         if not ignore_status and exit_status:
             raise error.CmdError(cmd, result,
@@ -1133,6 +1134,8 @@ class GuestfishPersistent(Guestfish):
         return self.inner_cmd("sync")
 
 # libguestfs module functions follow #####
+
+
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
                            timeoutarg=None, ignore_status=True,
                            debug=False, timeout=60):
