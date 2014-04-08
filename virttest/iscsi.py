@@ -25,7 +25,9 @@ def iscsi_get_sessions():
     sessions = []
     if "No active sessions" not in output:
         for session in output.splitlines():
-            sessions.append(session.split()[3])
+            ip_addr = session.split()[2].split(',')[0]
+            target = session.split()[3]
+            sessions.append((ip_addr, target))
     return sessions
 
 
@@ -143,7 +145,7 @@ class Iscsi(object):
         """
         sessions = iscsi_get_sessions()
         login = False
-        if self.target in sessions:
+        if self.target in map(lambda x: x[1], sessions):
             login = True
         return login
 

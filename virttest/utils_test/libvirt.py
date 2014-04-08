@@ -538,15 +538,16 @@ class PoolVolumeTest(object):
         Delete vols, destroy the created pool and restore the env
         """
         sp = libvirt_storage.StoragePool()
-        pv = libvirt_storage.PoolVolume(pool_name)
-        if pool_type in ["dir", "netfs", "logical", "disk"]:
-            vols = pv.list_volumes()
-            for vol in vols:
-                # Ignore failed deletion here for deleting pool
-                pv.delete_volume(vol)
         try:
-            if not sp.delete_pool(pool_name):
-                raise error.TestFail("Delete pool %s failed" % pool_name)
+            if sp.pool_exists(pool_name):
+                pv = libvirt_storage.PoolVolume(pool_name)
+                if pool_type in ["dir", "netfs", "logical", "disk"]:
+                    vols = pv.list_volumes()
+                    for vol in vols:
+                        # Ignore failed deletion here for deleting pool
+                        pv.delete_volume(vol)
+                if not sp.delete_pool(pool_name):
+                    raise error.TestFail("Delete pool %s failed" % pool_name)
         finally:
             if pool_type == "netfs":
                 nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
@@ -642,17 +643,20 @@ class PoolVolumeTest(object):
             extra = "--source-host %s --source-path %s" % (source_host,
                                                            nfs_path)
         elif pool_type == "iscsi":
-            logical_device = setup_or_cleanup_iscsi(is_setup=True,
-                                                    emulated_image=emulated_image,
-                                                    image_size=image_size)
-            iscsi_session = iscsi.iscsi_get_sessions()
-            iscsi_device = ()
-            for iscsi_node in iscsi_session:
+            setup_or_cleanup_iscsi(is_setup=True,
+                                   emulated_image=emulated_image,
+                                   image_size=image_size)
+            # Verify if expected iscsi device has been set
+            iscsi_sessions = iscsi.iscsi_get_sessions()
+            iscsi_target = ()
+            for iscsi_node in iscsi_sessions:
                 if iscsi_node[1].count(emulated_image):
-                    iscsi_device = iscsi_node
+                    # Remove port for pool operations
+                    ip_addr = iscsi_node[0].split(":3260")[0]
+                    iscsi_device = (ip_addr, iscsi_node[1])
                     break
             if iscsi_device == ():
-                raise error.TestFail("No iscsi device.")
+                raise error.TestFail("No matched iscsi device.")
             if "::" in iscsi_device[0]:
                 iscsi_device = ('localhost', iscsi_device[1])
             extra = " --source-host %s  --source-dev %s" % iscsi_device
