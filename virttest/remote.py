@@ -11,6 +11,9 @@ import aexpect
 import utils_misc
 import rss_client
 
+from remote_commander import remote_master
+from remote_commander import messenger
+
 from autotest.client.shared import error
 from autotest.client import utils
 import data_dir
@@ -240,6 +243,81 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
         session.set_output_params((log_filename,))
         session.set_log_file(log_filename)
     return session
+
+
+class AexpectIOWrapperOut(messenger.IOWrapper):
+
+    """
+    Basic implementation of IOWrapper for stdout
+    """
+
+    def close(self):
+        self._obj.close()
+
+    def fileno(self):
+        return os.open(self._obj, os.O_RDWR)
+
+    def write(self, data):
+        self._obj.send(data)
+
+
+def remote_commander(client, host, port, username, password, prompt,
+                     linesep="\n", log_filename=None, timeout=10, path=None):
+    """
+    Log into a remote host (guest) using SSH/Telnet/Netcat.
+
+    :param client: The client to use ('ssh', 'telnet' or 'nc')
+    :param host: Hostname or IP address
+    :param port: Port to connect to
+    :param username: Username (if required)
+    :param password: Password (if required)
+    :param prompt: Shell prompt (regular expression)
+    :param linesep: The line separator to use when sending lines
+            (e.g. '\\n' or '\\r\\n')
+    :param log_filename: If specified, log all output to this file
+    :param timeout: The maximal time duration (in seconds) to wait for
+            each step of the login procedure (i.e. the "Are you sure" prompt
+            or the password prompt)
+    :param path: The path to place where remote_runner.py is placed.
+    :raise LoginBadClientError: If an unknown client is requested
+    :raise: Whatever handle_prompts() raises
+    :return: A ShellSession object.
+    """
+    if path is None:
+        path = "/tmp"
+    if client == "ssh":
+        cmd = ("ssh -o UserKnownHostsFile=/dev/null "
+               "-o PreferredAuthentications=password "
+               "-p %s %s@%s %s agent" %
+               (port, username, host, os.path.join(path, "remote_runner.py")))
+    elif client == "telnet":
+        cmd = "telnet -l %s %s %s" % (username, host, port)
+    elif client == "nc":
+        cmd = "nc %s %s" % (host, port)
+    else:
+        raise LoginBadClientError(client)
+
+    logging.debug("Login command: '%s'", cmd)
+    session = aexpect.Expect(cmd, linesep=linesep)
+    try:
+        handle_prompts(session, username, password, prompt, timeout)
+    except Exception:
+        session.close()
+        raise
+    if log_filename:
+        session.set_output_func(utils_misc.log_line)
+        session.set_output_params((log_filename,))
+        session.set_log_file(log_filename)
+
+    session.send_ctrl("raw")
+
+    # Wrap io interfaces.
+    inw = messenger.StdIOWrapperIn(session._get_fd("tail"))
+    outw = AexpectIOWrapperOut(session)
+    # Create commander
+
+    cmd = remote_master.CommanderMaster(inw, outw, False)
+    return cmd
 
 
 def wait_for_login(client, host, port, username, password, prompt,

@@ -223,7 +223,7 @@ def postprocess_vm(test, params, env, name):
         return
 
     # Close all SSH sessions that might be active to this VM
-    for s in [x for x in vm.remote_sessions]:
+    for s in vm.remote_sessions[:]:
         try:
             s.close()
             vm.remote_sessions.remove(s)
