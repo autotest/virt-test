@@ -998,10 +998,10 @@ class BaseVM(object):
         import remote_commander as rc
         path = os.path.dirname(rc.__file__)
 
-        for f in ["remote_runner.py", "remote_interface.py", "messenger.py"]:
-        # copy remote commnader to vm
-            f_path = os.path.join(path, f)
-            self.copy_files_to(f_path, commander_path)
+        f_path = " ".join((os.path.join(path, _) for _ in
+                          ("remote_runner.py", "remote_interface.py",
+                           "messenger.py")))
+        self.copy_files_to(f_path, commander_path)
 
         # start remote commander
         cmd = remote.remote_commander(client, address, port, username,
