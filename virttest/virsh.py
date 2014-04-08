@@ -1052,16 +1052,17 @@ def dump(name, path, option="", **dargs):
     return command("dump %s %s %s" % (name, path, option), **dargs)
 
 
-def save(option, path, **dargs):
+def save(name, path, options="", **dargs):
     """
     Store state of VM into named file.
 
-    :param option: save command's first option, vm'name, id or uuid.
+    :param name: VM'name, id or uuid.
     :param path: absolute path to state file
+    :param options: command's options.
     :param dargs: standardized virsh function API keywords
     :return: CmdResult instance
     """
-    return command("save %s %s" % (option, path), **dargs)
+    return command("save %s %s %s" % (name, path, options), **dargs)
 
 
 def restore(path, options="", **dargs):
