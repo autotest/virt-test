@@ -571,7 +571,8 @@ class VM(virt_vm.BaseVM):
         def add_net(devices, vlan, nettype, ifname=None, tftp=None,
                     bootfile=None, hostfwd=[], netdev_id=None,
                     netdev_extra_params=None, tapfds=None, script=None,
-                    downscript=None, vhost=None, queues=None, vhostfds=None):
+                    downscript=None, vhost=None, queues=None, vhostfds=None,
+                    add_queues=None, helper=None):
             mode = None
             if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
@@ -641,6 +642,14 @@ class VM(virt_vm.BaseVM):
                         cmd += (",hostfwd=tcp::%%(host_port%d)s"
                                 "-:%%(guest_port%d)s" % (i, i))
                         cmd_nd += ",hostfwd=tcp::DYN-:%%(guest_port)ds"
+
+            if add_queues and queues:
+                cmd += ",queues=%s" % queues
+                cmd_nd += ",queues=%s" % queues
+
+            if helper:
+                cmd += ",helper=%s" % helper
+                cmd_nd += ",helper=%s" % helper
 
             return cmd, cmd_nd
 
@@ -1328,6 +1337,8 @@ class VM(virt_vm.BaseVM):
                 bootindex = nic_params.get("bootindex")
                 netdev_extra = nic.get("netdev_extra_params")
                 bootp = nic.get("bootp")
+                add_queues = nic_params.get("add_queues", "no") == "yes"
+                helper = nic_params.get("helper")
                 if nic.get("tftp"):
                     tftp = utils_misc.get_path(root_dir, nic.get("tftp"))
                 else:
@@ -1364,7 +1375,7 @@ class VM(virt_vm.BaseVM):
                 cmd, cmd_nd = add_net(devices, vlan, nettype, ifname, tftp,
                                       bootp, redirs, netdev_id, netdev_extra,
                                       tapfds, script, downscript, vhost,
-                                      queues, vhostfds)
+                                      queues, vhostfds, add_queues, helper)
 
                 if vhostfds is None:
                     vhostfds = ""
