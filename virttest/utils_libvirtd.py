@@ -16,9 +16,11 @@ except ValueError:
 
 
 class Libvirtd(object):
+
     """
     Class to manage libvirtd service on host or guest.
     """
+
     def __init__(self, session=None):
         """
         Initialize an service object for libvirtd.
@@ -73,13 +75,6 @@ class Libvirtd(object):
         return self.libvirtd.status()
 
 
-# Following functions are old style interfaces in utils_libvirt.
-# When we reimplemenete this module with staging/service.py,
-# usage of utils_libvirtd is changed. But we need to keep the
-# old interface working still for the old version of tp-libvirt.
-global_libvirtd = Libvirtd()
-
-
 def deprecation_warning():
     """
     As the utils_libvirtd.libvirtd_xxx interfaces are deprecated,
@@ -91,25 +86,30 @@ def deprecation_warning():
 
 
 def libvirtd_start():
+    libvirtd_instance = Libvirtd()
     deprecation_warning()
-    return global_libvirtd.start()
+    return libvirtd_instance.start()
 
 
 def libvirtd_is_running():
+    libvirtd_instance = Libvirtd()
     deprecation_warning()
-    return global_libvirtd.is_running()
+    return libvirtd_instance.is_running()
 
 
 def libvirtd_stop():
+    libvirtd_instance = Libvirtd()
     deprecation_warning()
-    return global_libvirtd.stop()
+    return libvirtd_instance.stop()
 
 
 def libvirtd_restart():
+    libvirtd_instance = Libvirtd()
     deprecation_warning()
-    return global_libvirtd.restart()
+    return libvirtd_instance.restart()
 
 
 def service_libvirtd_control(action):
+    libvirtd_instance = Libvirtd()
     deprecation_warning()
-    getattr(global_libvirtd, action)()
+    getattr(libvirtd_instance, action)()
