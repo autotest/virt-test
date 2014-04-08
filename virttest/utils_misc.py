@@ -2322,6 +2322,7 @@ class KSMController(object):
             except ValueError:
                 raise KSMError
 
+
 def monotonic_time():
     """
     Get monotonic time
@@ -2331,9 +2332,9 @@ def monotonic_time():
         Get monotonic time using ctypes
         """
         class struct_timespec(ctypes.Structure):
-            _fields_ = [ ('tv_sec', ctypes.c_long), ('tv_nsec', ctypes.c_long) ]
+            _fields_ = [('tv_sec', ctypes.c_long), ('tv_nsec', ctypes.c_long)]
 
-        lib = ctypes.CDLL("librt.so.1", use_errno = True)
+        lib = ctypes.CDLL("librt.so.1", use_errno=True)
         clock_gettime = lib.clock_gettime
         clock_gettime.argtypes = [ctypes.c_int, ctypes.POINTER(struct_timespec)]
 
