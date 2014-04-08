@@ -26,6 +26,7 @@ def passfd_setup(output_dir=OUTPUT_DIR):
     output_file = os.path.join(output_dir, SHARED_OBJECT)
 
     c = distutils.ccompiler.new_compiler()
+    distutils.sysconfig.customize_compiler(c)
     objects = c.compile(SOURCES, include_dirs=[PYTHON_HEADERS],
                         output_dir=data_dir.get_tmp_dir(),
                         extra_postargs=['-fPIC'])

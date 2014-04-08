@@ -47,7 +47,8 @@ class NetperfTestError(NetperfError):
 class NetperfPackage(remote.Remote_Package):
 
     def __init__(self, address, netperf_path, md5sum="", local_path="",
-                 client="ssh", port="22", username="root", password="redhat"):
+                 client="ssh", port="22", username="root", password="redhat",
+                 check_command=None):
         """
         Class NetperfPackage just represent the netperf package
         Init NetperfPackage class.
@@ -83,27 +84,36 @@ class NetperfPackage(remote.Remote_Package):
             self.netperf_base_dir = os.path.dirname(self.remote_path)
             self.netperf_exec = os.path.basename(self.remote_path)
 
-        if utils.is_url(local_path):
-            logging.debug("Download URL file to local path")
-            tmp_dir = data_dir.get_download_dir()
-            self.local_netperf = utils.unmap_url_cache(tmp_dir, local_path,
-                                                       md5sum)
-        self.push_file(self.local_netperf)
-
         logging.debug("Create remote session")
         self.session = remote.remote_login(self.client, self.address,
                                            self.port, self.username,
                                            self.password, self.prompt,
                                            self.linesep, timeout=360)
 
+        self.build_tool = True
+        if check_command:
+            netperf_status = self.session.cmd_status("which %s" %
+                                                     check_command)
+            if netperf_status == 0:
+                self.build_tool = False
+
+        if self.build_tool:
+            if utils.is_url(local_path):
+                logging.debug("Download URL file to local path")
+                tmp_dir = data_dir.get_download_dir()
+                self.local_netperf = utils.unmap_url_cache(tmp_dir, local_path,
+                                                           md5sum)
+            self.push_file(self.local_netperf)
+
     def __del__(self):
         self.env_cleanup()
 
     def env_cleanup(self, clean_all=True):
-        clean_cmd = "rm -rf %s" % self.netperf_dir
-        if clean_all:
-            clean_cmd += " rm -rf %s" % self.remote_path
-        self.session.cmd(clean_cmd, ignore_all_errors=True)
+        if self.build_tool:
+            clean_cmd = "rm -rf %s" % self.netperf_dir
+            if clean_all:
+                clean_cmd += " rm -rf %s" % self.remote_path
+            self.session.cmd(clean_cmd, ignore_all_errors=True)
 
     def pack_compile(self, compile_option=""):
         pre_setup_cmd = "cd %s " % self.netperf_base_dir
@@ -142,15 +152,22 @@ class NetperfServer(NetperfPackage):
         """
         super(NetperfServer, self).__init__(address, netperf_path, md5sum,
                                             local_path, client, port, username,
-                                            password)
+                                            password,
+                                            check_command="netserver")
 
-        if self.pack_suffix:
-            logging.debug("Compile netperf src")
-            self.pack_compile(compile_option)
-            self.netserver_dir = os.path.join(self.netperf_dir,
-                                              "src/netserver")
+        if self.build_tool:
+            if self.pack_suffix:
+                logging.debug("Compiling netserver from source")
+                self.pack_compile(compile_option)
+                self.netserver_path = os.path.join(self.netperf_dir,
+                                                   "src/netserver")
+            else:
+                self.netserver_path = self.remote_path
         else:
-            self.netserver_dir = self.remote_path
+            netserver_path = self.session.cmd_output("which netserver")
+            self.netserver_path = netserver_path.rstrip()
+            logging.debug("Using local netserver binary: %s" %
+                          self.netserver_path)
 
     def start(self, restart=False):
         """
@@ -162,9 +179,9 @@ class NetperfServer(NetperfPackage):
         logging.info("Start netserver ...")
         server_cmd = ""
         if self.client == "nc":
-            server_cmd += "start /b %s" % self.netserver_dir
+            server_cmd += "start /b %s" % self.netserver_path
         else:
-            server_cmd = self.netserver_dir
+            server_cmd = self.netserver_path
 
         if restart:
             self.stop()
@@ -219,14 +236,21 @@ class NetperfClient(NetperfPackage):
         """
         super(NetperfClient, self).__init__(address, netperf_path, md5sum,
                                             local_path, client, port, username,
-                                            password)
+                                            password,
+                                            check_command="netserver")
 
-        if self.pack_suffix:
-            logging.debug("Compile netperf src for client")
-            self.pack_compile(compile_option)
-            self.client_dir = os.path.join(self.netperf_dir, "src/netperf")
+        if self.build_tool:
+            if self.pack_suffix:
+                logging.debug("Compiling netperf from source")
+                self.pack_compile(compile_option)
+                self.netserver_path = os.path.join(self.netperf_dir,
+                                                   "src/netperf")
+            else:
+                self.netserver_path = self.remote_path
         else:
-            self.client_dir = self.remote_path
+            netperf_path = self.session.cmd_output("which netperf")
+            self.netperf_path = netperf_path.rstrip()
+            logging.debug("Using local netperf binary: %s" % self.netperf_path)
 
     def start(self, server_address, test_option="", timeout=1200,
               cmd_prefix=""):
@@ -238,7 +262,7 @@ class NetperfClient(NetperfPackage):
         :param timeout: Netperf test timeout(-l)
         :return: return test result
         """
-        netperf_cmd = "%s %s -H %s %s " % (cmd_prefix, self.client_dir,
+        netperf_cmd = "%s %s -H %s %s " % (cmd_prefix, self.netperf_path,
                                            server_address, test_option)
         logging.debug("Start netperf with cmd: '%s'" % netperf_cmd)
         (status, output) = self.session.cmd_status_output(netperf_cmd,
@@ -261,7 +285,7 @@ class NetperfClient(NetperfPackage):
         if self.client == "nc":
             raise NetperfTestError("Currently only support linux client")
 
-        netperf_cmd = "%s %s -H %s %s " % (cmd_prefix, self.client_dir,
+        netperf_cmd = "%s %s -H %s %s " % (cmd_prefix, self.netperf_path,
                                            server_address, test_option)
         logging.debug("Start %s sessions netperf background with cmd: '%s'" %
                       (session_num, netperf_cmd))
