@@ -640,7 +640,7 @@ class TCPConnection(ConnectionBase):
                                                     remote_ip=server_ip,
                                                     remote_user=server_user,
                                                     remote_pwd=server_pwd,)
-        except utils_libvirtd.LibvirtdError, detail:
+        except (remote.LoginError, aexpect.ShellError), detail:
             raise ConnServerRestartError(detail)
 
         logging.debug("TCP connection recover successfully.")
@@ -679,7 +679,7 @@ class TCPConnection(ConnectionBase):
                                                     remote_ip=server_ip,
                                                     remote_user=server_user,
                                                     remote_pwd=server_pwd,)
-        except utils_libvirtd.LibvirtdError, detail:
+        except (remote.LoginError, aexpect.ShellError), detail:
             raise ConnServerRestartError(detail)
 
         logging.debug("TCP connection setup successfully.")
@@ -774,7 +774,7 @@ class TLSConnection(ConnectionBase):
                                                     remote_ip=server_ip,
                                                     remote_user=server_user,
                                                     remote_pwd=server_pwd,)
-        except utils_libvirtd.LibvirtdError, detail:
+        except (remote.LoginError, aexpect.ShellError), detail:
             raise ConnServerRestartError(detail)
         logging.debug("TLS connection recover successfully.")
 
@@ -853,7 +853,7 @@ class TLSConnection(ConnectionBase):
                                                     remote_ip=server_ip,
                                                     remote_user=server_user,
                                                     remote_pwd=server_pwd,)
-        except utils_libvirtd.LibvirtdError, detail:
+        except (remote.LoginError, aexpect.ShellError), detail:
             raise ConnServerRestartError(detail)
 
     def client_setup(self):

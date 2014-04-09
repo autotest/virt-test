@@ -109,7 +109,16 @@ def libvirtd_restart():
     return libvirtd_instance.restart()
 
 
-def service_libvirtd_control(action):
-    libvirtd_instance = Libvirtd()
+def service_libvirtd_control(action, remote_ip=None, remote_pwd=None,
+                             remote_user='root'):
     deprecation_warning()
+    session = None
+    if remote_ip:
+        session = remote.wait_for_login('ssh', remote_ip, '22',
+                                        remote_user, remote_pwd,
+                                        r"[\#\$]\s*$")
+        libvirtd_instance = Libvirtd(session)
+    else:
+        libvirtd_instance = Libvirtd()
+
     getattr(libvirtd_instance, action)()
