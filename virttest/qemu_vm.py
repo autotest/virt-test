@@ -1216,7 +1216,7 @@ class VM(virt_vm.BaseVM):
             # single virtio-serial-pci bus. So add a virtio-serial-pci bus
             # when the port is a virtio console.
             if (port_params.get('virtio_port_type') == 'console'
-                and params.get('virtio_port_bus') is None):
+                    and params.get('virtio_port_bus') is None):
                 dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
                 dev.set_param('id',
                               'virtio_serial_pci%d' % no_virtio_serial_pcis)
