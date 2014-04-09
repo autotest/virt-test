@@ -1212,6 +1212,16 @@ class VM(virt_vm.BaseVM):
                 if bus < 0:     # First bus
                     bus = 0
             # Add virtio_serial_pcis
+            # Multiple virtio console devices can't share a
+            # single virtio-serial-pci bus. So add a virtio-serial-pci bus
+            # when the port is a virtio console.
+            if (port_params.get('virtio_port_type') == 'console'
+                and params.get('virtio_port_bus') is None):
+                dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
+                dev.set_param('id',
+                              'virtio_serial_pci%d' % no_virtio_serial_pcis)
+                devices.insert(dev)
+                no_virtio_serial_pcis += 1
             for i in range(no_virtio_serial_pcis, bus + 1):
                 dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
                 dev.set_param('id', 'virtio_serial_pci%d' % i)
