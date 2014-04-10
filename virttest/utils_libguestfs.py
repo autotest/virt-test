@@ -279,7 +279,7 @@ class GuestfishSession(aexpect.ShellSession):
         return result
 
 
-class GuestfishRemote():
+class GuestfishRemote(object):
 
     """
     Remote control of guestfish.
@@ -600,6 +600,24 @@ class GuestfishPersistent(Guestfish):
         That call returns a list of devices.
         """
         return self.inner_cmd("mountpoints")
+
+    def do_mount(self, mountpoint):
+        """
+        do_mount - Automaticly mount
+
+        Mount a lvm or physical partation to '/'
+        """
+        partition_type = self.params.get("partition_type")
+        if partition_type == "lvm":
+            vg_name = self.params.get("vg_name", "vol_test")
+            lv_name = self.params.get("lv_name", "vol_file")
+            device = "/dev/%s/%s" % (vg_name, lv_name)
+            logging.info("mount lvm partition...%s" % device)
+        elif partition_type == "physical":
+            pv_name = self.params.get("pv_name", "/dev/sdb")
+            device = pv_name + "1"
+            logging.info("mount physical partition...%s" % device)
+        self.mount(device, mountpoint)
 
     def read_file(self, path):
         """
