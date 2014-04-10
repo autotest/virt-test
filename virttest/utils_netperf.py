@@ -243,10 +243,10 @@ class NetperfClient(NetperfPackage):
             if self.pack_suffix:
                 logging.debug("Compiling netperf from source")
                 self.pack_compile(compile_option)
-                self.netserver_path = os.path.join(self.netperf_dir,
+                self.netperf_path = os.path.join(self.netperf_dir,
                                                    "src/netperf")
             else:
-                self.netserver_path = self.remote_path
+                self.netperf_path = self.remote_path
         else:
             netperf_path = self.session.cmd_output("which netperf")
             self.netperf_path = netperf_path.rstrip()
