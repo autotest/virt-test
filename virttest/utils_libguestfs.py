@@ -1013,6 +1013,48 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("blockdev-flushbufs %s" % device)
 
+    def canonical_device_name(self, device):
+        """
+        canonical-device-name - return canonical device name
+
+        This utility function is useful when displaying device names to the user.
+        """
+        return self.inner_cmd("canonical-device-name %s" % device)
+
+    def device_index(self, device):
+        """
+        device-index - convert device to index
+
+        This function takes a device name (eg. "/dev/sdb") and returns the index
+        of the device in the list of devices
+        """
+        return self.inner_cmd("device-index %s" % device)
+
+    def disk_format(self, filename):
+        """
+        disk-format - detect the disk format of a disk image
+
+        Detect and return the format of the disk image called "filename",
+        "filename" can also be a host device, etc
+        """
+        return self.inner_cmd("disk-format %s" % filename)
+
+    def disk_has_backing_file(self, filename):
+        """
+        disk-has-backing-file - return whether disk has a backing file
+
+        Detect and return whether the disk image "filename" has a backing file
+        """
+        return self.inner_cmd("disk-has-backing-file %s" % filename)
+
+    def disk_virtual_size(self, filename):
+        """
+        disk-virtual-size - return virtual size of a disk
+
+        Detect and return the virtual size in bytes of the disk image"
+        """
+        return self.inner_cmd("disk-virtual-size %s" % filename)
+
     def pvcreate(self, physvols):
         """
         pvcreate - create an LVM physical volume
