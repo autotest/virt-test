@@ -108,6 +108,7 @@ class VirshSession(aexpect.ShellSession):
                  prompt=r"virsh\s*[\#\>]\s*", remote_ip=None,
                  remote_user=None, remote_pwd=None,
                  ssh_remote_auth=False, readonly=False,
+                 unprivileged_user=None,
                  auto_close=False):
         """
         Initialize virsh session server, or client if id set.
@@ -158,6 +159,10 @@ class VirshSession(aexpect.ShellSession):
 
         if readonly:
             self.virsh_exec += " -r"
+
+        if unprivileged_user:
+            self.virsh_exec = "su - %s -c '%s'" % (unprivileged_user,
+                                                   self.virsh_exec)
 
         # aexpect tries to auto close session because no clients connected yet
         aexpect.ShellSession.__init__(self, self.virsh_exec, a_id,
@@ -395,7 +400,9 @@ class VirshPersistent(Virsh):
     Execute libvirt operations using persistent virsh session.
     """
 
-    __slots__ = ('session_id', 'remote_pwd', 'remote_user')
+    __slots__ = ('session_id', 'remote_pwd', 'remote_user', 'uri',
+                 'remote_ip', 'ssh_remote_auth', 'unprivileged_user',
+                 'readonly')
 
     # B/c the auto_close of VirshSession is False, we
     # need to manager the ref-count of it manully.
@@ -489,12 +496,27 @@ class VirshPersistent(Virsh):
             remote_pwd = self.__dict_get__('remote_pwd')
         except KeyError:
             remote_pwd = None
+        try:
+            remote_ip = self.__dict_get__('remote_ip')
+        except KeyError:
+            remote_ip = None
+        try:
+            ssh_remote_auth = self.__dict_get__('ssh_remote_auth')
+        except KeyError:
+            ssh_remote_auth = False
+        try:
+            unprivileged_user = self.__dict_get__('unprivileged_user')
+        except KeyError:
+            unprivileged_user = None
 
         self.close_session()
         # Always create new session
         new_session = VirshSession(virsh_exec, uri, a_id=None,
+                                   remote_ip=remote_ip,
                                    remote_user=remote_user,
                                    remote_pwd=remote_pwd,
+                                   ssh_remote_auth=ssh_remote_auth,
+                                   unprivileged_user=unprivileged_user,
                                    readonly=readonly)
         session_id = new_session.get_id()
         self.__dict_set__('session_id', session_id)
@@ -595,6 +617,7 @@ def command(cmd, **dargs):
     ignore_status = dargs.get('ignore_status', True)
     session_id = dargs.get('session_id', None)
     readonly = dargs.get('readonly', False)
+    unprivileged_user = dargs.get('unprivileged_user', None)
 
     # Check if this is a VirshPersistent method call
     if session_id:
@@ -626,6 +649,11 @@ def command(cmd, **dargs):
             uri_arg = " "  # No uri argument being used
 
         cmd = "%s%s%s" % (virsh_exec, uri_arg, cmd)
+
+        if unprivileged_user:
+            # Run cmd as unprivileged user
+            cmd = "su - %s -c '%s'" % (unprivileged_user, cmd)
+
         # Raise exception if ignore_status is False
         ret = utils.run(cmd, verbose=debug, ignore_status=ignore_status)
         # Mark return as not coming from persistent virsh session
