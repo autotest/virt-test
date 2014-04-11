@@ -244,7 +244,7 @@ class NetperfClient(NetperfPackage):
                 logging.debug("Compiling netperf from source")
                 self.pack_compile(compile_option)
                 self.netperf_path = os.path.join(self.netperf_dir,
-                                                   "src/netperf")
+                                                 "src/netperf")
             else:
                 self.netperf_path = self.remote_path
         else:
