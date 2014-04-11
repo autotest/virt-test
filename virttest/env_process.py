@@ -1022,14 +1022,30 @@ def store_vm_register(vm, log_filename, append=False):
 
 
 def _store_vm_register(test, params, env):
+    def report_result(status, results):
+       msg = "%s." % status
+       for vm_name in results.keys():
+           if results[vm_name] > 0:
+              msg += " Used to failed to get register info from guest"
+              msg += " %s for %s times." % (vm_name, results[vm_name])
+
+       if msg != "%s." % status:
+           logging.debug(msg)
+
     global _vm_register_thread_termination_event
     delay = float(params.get("vm_register_delay", 5))
     counter = {}
+    vm_register_error_count = {}
     while True:
         for vm in env.get_all_vms():
+            if vm.name not in vm_register_error_count:
+                vm_register_error_count[vm.name] = 0
+
             if not vm.is_alive():
-                logging.warn("%s is not alive. Can not query the "
-                             "register status" % vm.name)
+                if vm_register_error_count[vm.name] < 1:
+                    logging.warn("%s is not alive. Can not query the "
+                                 "register status" % vm.name)
+                vm_register_error_count[vm.name] += 1
                 continue
             vm_pid = vm.get_pid()
             vr_dir = utils_misc.get_path(test.debugdir,
@@ -1044,14 +1060,22 @@ def _store_vm_register(test, params, env):
                 counter[vm] = 1
             vr_filename = utils_misc.get_path(vr_dir, "%04d" % counter[vm])
             stored_log = store_vm_register(vm, vr_filename)
+            if vm_register_error_count[vm.name] >= 1:
+                logging.debug("%s alive now. Used to failed to get register"
+                              " info from guest %s"
+                              " times" % (vm.name,
+                                          vm_register_error_count[vm.name]))
+                vm_register_error_count[vm.name] = 0
             if stored_log:
                 counter[vm] += 1
 
         if _vm_register_thread_termination_event is not None:
             if _vm_register_thread_termination_event.isSet():
                 _vm_register_thread_termination_event = None
+                report_result("Thread quit", vm_register_error_count)
                 break
             _vm_register_thread_termination_event.wait(delay)
         else:
+            report_result("Thread quit", vm_register_error_count)
             # Exit event was deleted, exit this thread
             break
