@@ -1671,7 +1671,7 @@ def pool_create_as(name, pool_type, target, extra="", **dargs):
     if not name:
         logging.error("Please give a pool name")
 
-    types = ['dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical']
+    types = ['dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical', 'gluster']
 
     if pool_type and pool_type not in types:
         logging.error("Only support pool types: %s.", types)

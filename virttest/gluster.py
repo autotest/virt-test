@@ -38,12 +38,13 @@ def glusterd_start():
     """
     cmd = "service glusterd status"
     output = utils.system_output(cmd, ignore_status=True)
-    if 'stopped' in output:
+    if 'inactive' or 'stopped' in output:
         cmd = "service glusterd start"
         error.context("Starting gluster dameon failed")
         output = utils.system_output(cmd)
 
 
+@error.context_aware
 def is_gluster_vol_started(vol_name):
     """
     Returns if the volume is started, if not send false
@@ -58,6 +59,7 @@ def is_gluster_vol_started(vol_name):
         return False
 
 
+@error.context_aware
 def gluster_vol_start(vol_name):
     """
     Starts the volume if it is stopped
@@ -72,6 +74,7 @@ def gluster_vol_start(vol_name):
         return True
 
 
+@error.context_aware
 def gluster_vol_stop(vol_name, force=False):
     """
     Starts the volume if it is stopped
@@ -93,6 +96,7 @@ def gluster_vol_stop(vol_name, force=False):
         return True
 
 
+@error.context_aware
 def gluster_vol_delete(vol_name):
     """
     Starts the volume if it is stopped
@@ -111,6 +115,7 @@ def gluster_vol_delete(vol_name):
         return False
 
 
+@error.context_aware
 def is_gluster_vol_avail(vol_name):
     """
     Returns if the volume already available
@@ -148,6 +153,7 @@ def gluster_brick_delete(brick_path):
             logging.error("Not able to create brick folder %s", details)
 
 
+@error.context_aware
 def gluster_vol_create(vol_name, hostname, brick_path, force=False):
     """
     Gluster Volume Creation
@@ -178,6 +184,7 @@ def glusterfs_mount(g_uri, mount_point):
                      False, "fuse.glusterfs")
 
 
+@error.context_aware
 def create_gluster_vol(params):
     vol_name = params.get("gluster_volume_name")
     force = params.get('force_recreate_gluster') == "yes"
@@ -191,7 +198,12 @@ def create_gluster_vol(params):
     hostname = socket.gethostname()
     if not hostname or hostname == "(none)":
         if_up = utils_net.get_net_if(state="UP")
-        ip_addr = utils_net.get_net_if_addrs(if_up[0])["ipv4"][0]
+        for i in if_up:
+            ipv4_value = utils_net.get_net_if_addrs(i)["ipv4"]
+            logging.debug("ipv4_value is %s", ipv4_value)
+            if ipv4_value != []:
+                ip_addr = ipv4_value[0]
+                break
         hostname = ip_addr
 
     # Start the gluster dameon, if not started
@@ -203,6 +215,7 @@ def create_gluster_vol(params):
         return True
 
 
+@error.context_aware
 def create_gluster_uri(params, stripped=False):
     """
     Find/create gluster volume
