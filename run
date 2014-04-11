@@ -11,6 +11,8 @@ import signal
 import optparse
 import logging
 
+from virttest.defaults import DEFAULT_MACHINE_TYPE
+from virttest.defaults import DEFAULT_GUEST_OS
 
 class StreamProxy(object):
 
@@ -412,8 +414,6 @@ def variant_only_file(filename):
     return ", ".join(result)
 
 
-DEFAULT_MACHINE_TYPE = "i440fx"
-DEFAULT_GUEST_OS = "JeOS.19"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
 LIBVIRT_DEFAULT_SET = variant_only_file('backends/libvirt/cfg/default_tests')
 LVSB_DEFAULT_SET = ("lvsb_date")
@@ -825,7 +825,8 @@ class VirtTestApp(object):
                                 selinux=self.options.selinux_setup,
                                 restore_image=keep_image,
                                 verbose=self.options.verbose,
-                                update_providers=self.options.update_providers)
+                                update_providers=self.options.update_providers,
+                                guest_os=(self.options.guest_os or DEFAULT_GUEST_OS))
             sys.exit(0)
 
         if self.options.type:

@@ -24,6 +24,7 @@ import arch
 import funcatexit
 import version
 import qemu_vm
+from defaults import DEFAULT_GUEST_OS
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -677,7 +678,8 @@ def bootstrap_tests(options):
               'selinux': options.selinux_setup,
               'restore_image': restore_image,
               'interactive': False,
-              'update_providers': options.update_providers}
+              'update_providers': options.update_providers,
+              'guest_os': options.guest_os or DEFAULT_GUEST_OS}
 
     # Tolerance we have without printing a message for the user to wait (3 s)
     tolerance = 3
