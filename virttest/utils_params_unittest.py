@@ -73,6 +73,7 @@ class TestParams(unittest.TestCase):
             self.params['bogus']
             raise ValueError("Did not get a ParamNotFound error when trying "
                              "to access a non-existing param")
+        # pylint: disable=E0712
         except utils_params.ParamNotFound:
             pass
 
