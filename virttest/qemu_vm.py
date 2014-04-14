@@ -150,6 +150,7 @@ class VM(virt_vm.BaseVM):
             self.instance = state['instance']
         self.qemu_command = ''
         self.start_time = 0.0
+        self.start_monotonic_time = 0.0
         self.last_boot_index = 0
         self.last_driver_index = 0
 
@@ -2169,6 +2170,7 @@ class VM(virt_vm.BaseVM):
             logging.info("Created qemu process with parent PID %d",
                          self.process.get_pid())
             self.start_time = time.time()
+            self.start_monotonic_time = utils_misc.monotonic_time()
 
             # test doesn't need to hold tapfd's open
             for nic in self.virtnet:
