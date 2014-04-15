@@ -874,7 +874,7 @@ class VM(virt_vm.BaseVM):
             try:
                 cmd = 'virsh'
                 if self.connect_uri:
-                    cmd += ' --uri=%s' % self.connect_uri
+                    cmd += ' -c %s' % self.connect_uri
                 cmd += (" console %s %s" % (self.name, self.serial_ports[0]))
             except IndexError:
                 raise virt_vm.VMConfigMissingError(self.name, "isa_serial")
