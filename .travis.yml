@@ -6,6 +6,11 @@ branches:
     only:
         - master
 
+before_script:
+    - echo "deb http://ppa.launchpad.net/lmr/autotest/ubuntu saucy main" | sudo tee -a /etc/apt/sources.list
+    - sudo apt-get update -q
+    - sudo apt-get install autotest
+
 install:
     - pip install sphinx tox simplejson MySQL-python
     - pip install -r requirements.txt --use-mirrors
