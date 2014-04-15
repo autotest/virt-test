@@ -1200,38 +1200,50 @@ class NumaInfo(object):
     of the node.
     """
 
-    def __init__(self):
+    def __init__(self, all_nodes_path=None, online_nodes_path=None):
+        """
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/possible. Useful for unittesting.
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/online. Useful for unittesting.
+        """
         self.numa_sys_path = "/sys/devices/system/node"
-        self.all_nodes = self.get_all_nodes()
-        self.online_nodes = self.get_online_nodes()
+        self.all_nodes = self.get_all_nodes(all_nodes_path)
+        self.online_nodes = self.get_online_nodes(online_nodes_path)
         self.nodes = {}
         self.distances = {}
         for node_id in self.online_nodes:
             self.nodes[node_id] = NumaNode(node_id + 1)
             self.distances[node_id] = self.get_node_distance(node_id)
 
-    def get_all_nodes(self):
+    def get_all_nodes(self, all_nodes_path=None):
         """
         Get all node ids in host.
 
         :return: All node ids in host
         :rtype: list
         """
-        all_nodes = get_path(self.numa_sys_path, "possible")
+        if all_nodes_path is None:
+            all_nodes = get_path(self.numa_sys_path, "possible")
+        else:
+            all_nodes = all_nodes_path
         all_nodes_file = open(all_nodes, "r")
         nodes_info = all_nodes_file.read()
         all_nodes_file.close()
 
         return cpu_str_to_list(nodes_info)
 
-    def get_online_nodes(self):
+    def get_online_nodes(self, online_nodes_path=None):
         """
         Get node ids online in host
 
         :return: The ids of node which is online
         :rtype: list
         """
-        online_nodes = get_path(self.numa_sys_path, "online")
+        if online_nodes_path is None:
+            online_nodes = get_path(self.numa_sys_path, "online")
+        else:
+            online_nodes = online_nodes_path
         online_nodes_file = open(online_nodes, "r")
         nodes_info = online_nodes_file.read()
         online_nodes_file.close()
@@ -1293,10 +1305,16 @@ class NumaNode(object):
     Numa node to control processes and shared memory.
     """
 
-    def __init__(self, i=-1):
+    def __init__(self, i=-1, all_nodes_path=None, online_nodes_path=None):
+        """
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/possible. Useful for unittesting.
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/online. Useful for unittesting.
+        """
         self.extra_cpus = []
         if i < 0:
-            host_numa_info = NumaInfo()
+            host_numa_info = NumaInfo(all_nodes_path, online_nodes_path)
             available_nodes = host_numa_info.nodes.keys()
             self.cpus = self.get_node_cpus(available_nodes[-1]).split()
             if len(available_nodes) > 1:
