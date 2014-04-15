@@ -1258,6 +1258,9 @@ class VM(virt_vm.BaseVM):
                     # Try to destroy with shell command
                     logging.debug("Trying to shutdown VM with shell command")
                     try:
+                        if self.connect_uri and self.connect_uri.count("lxc"):
+                            raise virt_vm.VMError("Destroy lxc guest with"
+                                                  " virsh command.")
                         session = self.login()
                     except (remote.LoginError, virt_vm.VMError), e:
                         logging.debug(e)
