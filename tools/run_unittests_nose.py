@@ -17,9 +17,6 @@ import sys
 
 
 logger = logging.getLogger(__name__)
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
-logger.addHandler(stream_handler)
 
 
 class VirtTestSelector(Selector):
@@ -38,7 +35,6 @@ class VirtTestSelector(Selector):
             return False
         if os.path.basename(filename) in blacklist:
             return False
-        logger.info(filename)
 
         skip_tests = []
         if self.config.options.skip_tests:
