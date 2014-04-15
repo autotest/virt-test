@@ -6,6 +6,9 @@ branches:
     only:
         - master
 
+virtualenv:
+    system_site_packages: true
+
 before_script:
     - echo "deb http://ppa.launchpad.net/lmr/autotest/ubuntu saucy main" | sudo tee -a /etc/apt/sources.list
     - sudo apt-get update -q
