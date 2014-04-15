@@ -279,7 +279,7 @@ class GuestfishSession(aexpect.ShellSession):
         return result
 
 
-class GuestfishRemote():
+class GuestfishRemote(object):
 
     """
     Remote control of guestfish.
@@ -600,6 +600,24 @@ class GuestfishPersistent(Guestfish):
         That call returns a list of devices.
         """
         return self.inner_cmd("mountpoints")
+
+    def do_mount(self, mountpoint):
+        """
+        do_mount - Automaticly mount
+
+        Mount a lvm or physical partation to '/'
+        """
+        partition_type = self.params.get("partition_type")
+        if partition_type == "lvm":
+            vg_name = self.params.get("vg_name", "vol_test")
+            lv_name = self.params.get("lv_name", "vol_file")
+            device = "/dev/%s/%s" % (vg_name, lv_name)
+            logging.info("mount lvm partition...%s" % device)
+        elif partition_type == "physical":
+            pv_name = self.params.get("pv_name", "/dev/sdb")
+            device = pv_name + "1"
+            logging.info("mount physical partition...%s" % device)
+        self.mount(device, mountpoint)
 
     def read_file(self, path):
         """
@@ -994,6 +1012,48 @@ class GuestfishPersistent(Guestfish):
         "device".
         """
         return self.inner_cmd("blockdev-flushbufs %s" % device)
+
+    def canonical_device_name(self, device):
+        """
+        canonical-device-name - return canonical device name
+
+        This utility function is useful when displaying device names to the user.
+        """
+        return self.inner_cmd("canonical-device-name %s" % device)
+
+    def device_index(self, device):
+        """
+        device-index - convert device to index
+
+        This function takes a device name (eg. "/dev/sdb") and returns the index
+        of the device in the list of devices
+        """
+        return self.inner_cmd("device-index %s" % device)
+
+    def disk_format(self, filename):
+        """
+        disk-format - detect the disk format of a disk image
+
+        Detect and return the format of the disk image called "filename",
+        "filename" can also be a host device, etc
+        """
+        return self.inner_cmd("disk-format %s" % filename)
+
+    def disk_has_backing_file(self, filename):
+        """
+        disk-has-backing-file - return whether disk has a backing file
+
+        Detect and return whether the disk image "filename" has a backing file
+        """
+        return self.inner_cmd("disk-has-backing-file %s" % filename)
+
+    def disk_virtual_size(self, filename):
+        """
+        disk-virtual-size - return virtual size of a disk
+
+        Detect and return the virtual size in bytes of the disk image"
+        """
+        return self.inner_cmd("disk-virtual-size %s" % filename)
 
     def pvcreate(self, physvols):
         """
