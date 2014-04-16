@@ -122,6 +122,7 @@ except ImportError:
     import common
 
 try:
+    # pylint: disable=E0611
     import autotest.client.shared.ElementPath as ElementPath
 except ImportError:
     from virttest import element_path as ElementPath

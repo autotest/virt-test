@@ -55,6 +55,7 @@ except ImportError:
 # Handle transition from autotest global_config (0.14.x series) to
 # settings (0.15.x onwards)
 try:
+    # pylint: disable=E0611
     from autotest.client.shared import global_config
     section_values = global_config.global_config.get_section_values
     settings_value = global_config.global_config.get_config_value

@@ -1,4 +1,5 @@
 import os
+# pylint: disable=E0611
 import distutils.ccompiler
 import distutils.sysconfig
 import data_dir
