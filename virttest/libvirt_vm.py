@@ -131,10 +131,7 @@ class VM(virt_vm.BaseVM):
         self.vnclisten = "0.0.0.0"
         self.connect_uri = normalize_connect_uri(params.get("connect_uri",
                                                             "default"))
-        if self.connect_uri:
-            self.driver_type = virsh.driver(uri=self.connect_uri)
-        else:
-            self.driver_type = 'qemu'
+        self.driver_type = virsh.driver(uri=self.connect_uri)
         self.params['driver_type_' + self.name] = self.driver_type
         # virtnet init depends on vm_type/driver_type being set w/in params
         super(VM, self).__init__(name, params)
