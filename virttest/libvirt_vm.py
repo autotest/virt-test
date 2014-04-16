@@ -31,13 +31,14 @@ def normalize_connect_uri(connect_uri):
     :param connect_uri: Cartesian Params setting
     :return: Normalized connect_uri
     """
-    if connect_uri == 'default':
-        return None
-    else:  # Validate and canonicalize uri early to catch problems
+    if connect_uri == "default":
+        result = virsh.canonical_uri()
+    else:
         result = virsh.canonical_uri(uri=connect_uri)
-        if not result:
-            raise ValueError("Normalizing connect_uri %s failed" % connect_uri)
-        return result
+
+    if not result:
+        raise ValueError("Normalizing connect_uri '%s' failed" % connect_uri)
+    return result
 
 
 def complete_uri(ip_address):
