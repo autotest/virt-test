@@ -195,7 +195,9 @@ class ConstructorsTest(ModuleLoad):
             vp.close_session()  # Make sure session gets cleaned up
 
     def TestVirshClosure(self):
-        vc = self.virsh.VirshClosure(None, {})
+        class MyDict(dict):
+            pass
+        vc = self.virsh.VirshClosure(None, MyDict())
         del vc  # keep pylint happy
 
 
