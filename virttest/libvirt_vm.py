@@ -1008,6 +1008,8 @@ class VM(virt_vm.BaseVM):
         Close serial console and associated log file
         """
         if self.serial_console is not None:
+            if self.is_lxc():
+                self.serial_console.sendline("^]")
             self.serial_console.close()
             self.serial_console = None
         if hasattr(self, "migration_file"):
