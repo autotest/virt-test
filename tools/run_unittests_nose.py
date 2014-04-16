@@ -30,17 +30,14 @@ class VirtTestSelector(Selector):
         return True
 
     def wantFile(self, filename):
-        blacklist = ['versionable_class_unittest.py', 'virsh_unittest.py']
         if not filename.endswith('_unittest.py'):
-            return False
-        if os.path.basename(filename) in blacklist:
             return False
 
         skip_tests = []
         if self.config.options.skip_tests:
             skip_tests = self.config.options.skip_tests.split()
 
-        if filename[:-3] in skip_tests:
+        if os.path.basename(filename)[:-3] in skip_tests:
             logger.debug('Skipping test: %s' % filename)
             return False
 
