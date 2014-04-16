@@ -19,4 +19,4 @@ install:
     - pip install -r requirements.txt
 
 script:
-    VIRT_TEST_DIR=. ./tools/run_unittests_nose.py -c .nose.cfg -s virttest --virttest-skip-tests "virsh_unittest versionable_class_unittest"
+    VIRT_TEST_DIR=. ./tools/run_unittests_nose.py -c .nose.cfg -s virttest
