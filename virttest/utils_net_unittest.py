@@ -101,6 +101,9 @@ virbr2        8000.525400c0b080    yes        em1
                               'virbr0': ['virbr0-nic', 'virbr2-nic',
                                          'virbr3-nic']})
 
+    def tearDown(self):
+        self.god.unstub_all()
+
 
 class TestVirtIface(unittest.TestCase):
 
