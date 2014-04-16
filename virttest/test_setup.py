@@ -14,6 +14,7 @@ import utils_misc
 try:
     from virttest.staging import utils_memory
 except ImportError:
+    # pylint: disable=E0611
     from autotest.client import utils_memory
 
 

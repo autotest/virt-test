@@ -15,8 +15,10 @@ before_script:
     - sudo apt-get -y --force-yes install autotest
 
 install:
-    - pip install sphinx tox simplejson MySQL-python
+    - pip install sphinx tox simplejson MySQL-python pylint autopep8
+    - pip install inspektor
     - pip install -r requirements.txt
 
 script:
-    VIRT_TEST_DIR=. ./tools/run_unittests_nose.py -c .nose.cfg -s virttest
+    - ./tools/run_unittests_nose.py -c .nose.cfg -s virttest
+    - inspekt lint
