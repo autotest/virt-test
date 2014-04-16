@@ -1016,6 +1016,36 @@ class VM(virt_vm.BaseVM):
             except OSError:
                 pass
 
+    def wait_for_login(self, nic_index=0, timeout=None,
+                       internal_timeout=None,
+                       serial=False, restart_network=False,
+                       username=None, password=None):
+        """
+        Override the wait_for_login method of virt_vm to support other
+        guest in libvirt.
+
+        If connect_uri is lxc related, we call wait_for_serial_login()
+        directly, without attampting login it via network.
+
+        Other connect_uri, call virt_vm.wait_for_login().
+        """
+        # Set the default value of parameters if user did not use it.
+        if not timeout:
+            timeout = super(VM, self).LOGIN_WAIT_TIMEOUT
+
+        if not internal_timeout:
+            internal_timeout = super(VM, self).LOGIN_TIMEOUT
+
+        if self.is_lxc():
+            return self.wait_for_serial_login(timeout, internal_timeout,
+                                              restart_network,
+                                              username, password)
+
+        return super(VM, self).wait_for_login(nic_index, timeout,
+                                              internal_timeout,
+                                              serial, restart_network,
+                                              username, password)
+
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None, timeout=5.0,
                migration_mode=None, mac_source=None, autoconsole=True):
