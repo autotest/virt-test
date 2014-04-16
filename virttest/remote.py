@@ -767,6 +767,9 @@ def copy_files_to(address, client, username, password, port, local_path,
         c = rss_client.FileUploadClient(address, port, log_func)
         c.upload(local_path, remote_path, timeout)
         c.close()
+    else:
+        raise error.TestError("No such file copy client: '%s', valid values"
+                              "are scp and rss" % client)
 
 
 def copy_files_from(address, client, username, password, port, remote_path,
@@ -801,6 +804,9 @@ def copy_files_from(address, client, username, password, port, remote_path,
         c = rss_client.FileDownloadClient(address, port, log_func)
         c.download(remote_path, local_path, timeout)
         c.close()
+    else:
+        raise error.TestError("No such file copy client: '%s', valid values"
+                              "are scp and rss" % client)
 
 
 class Remote_Package(object):

@@ -11,6 +11,7 @@ Contents:
    :maxdepth: 2
 
    VirtTestDocumentation
+   BuildingTestApplications
    RunTestsExistingGuest
    Profiling
    Networking
