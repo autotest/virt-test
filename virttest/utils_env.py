@@ -197,6 +197,7 @@ class Env(UserDict.IterableUserDict):
         Return a list of all VM objects in this Env object.
         """
         vm_list = []
+        suffix = ""
         try:
             suffix = os.environ['AUTOTEST_VM_SUFFIX']
         except KeyError:
