@@ -640,6 +640,29 @@ class VMXML(VMXMLBase):
             vmxml.devices = vmxml.devices.append(channel)
             vmxml.define()
 
+    @staticmethod
+    def remove_agent_channel(vm_name):
+        """
+        Delete channel for guest agent
+
+        :param vm_name: Name of defined vm to remove agent channel
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+
+        try:
+            exist = vmxml.__dict_get__('xml').find('devices').findall('channel')
+            for ec in exist:
+                if ec.find('target').get('name') == "org.qemu.guest_agent.0":
+                    channel = vmxml.get_device_class('channel')(type_name='unix')
+                    channel.add_source(mode='bind',
+                                   path=ec.find('source').get('path'))
+                    channel.add_target(type='virtio',
+                                   name=ec.find('target').get('name'))
+                    vmxml.del_device(channel)
+            vmxml.define()
+        except AttributeError:
+            raise xcepts.LibvirtXMLError("Fail to remove agent channel!")
+
     def get_iface_all(self):
         """
         Get a dict with interface's mac and node.
