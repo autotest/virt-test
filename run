@@ -167,6 +167,7 @@ SUPPORTED_DISK_BUSES = ['ide', 'scsi', 'virtio_blk', 'virtio_scsi', 'lsi_scsi',
 
 SUPPORTED_NIC_MODELS = ["virtio_net", "e1000", "rtl8139", "spapr-vlan"]
 
+SUPPORTED_NET_TYPES = ["bridge", "user", "none"]
 
 class VirtTestRunParser(optparse.OptionParser):
 
@@ -342,10 +343,10 @@ class VirtTestRunParser(optparse.OptionParser):
         qemu.add_option("--accel", action="store", dest="accel", default="kvm",
                         help=("Accelerator used to run qemu (kvm or tcg). "
                               "Default: kvm"))
+        help_msg = "QEMU network option (%s). " % ", ".join(SUPPORTED_NET_TYPES)
+        help_msg += "Default: %default"
         qemu.add_option("--nettype", action="store", dest="nettype",
-                        default=nettype_default,
-                        help=("QEMU network option (bridge, user or none). "
-                              "Default: %default"))
+                        default=nettype_default, help=help_msg)
         qemu.add_option("--netdst", action="store", dest="netdst",
                         default="virbr0",
                         help=("Bridge name to be used "
@@ -496,6 +497,11 @@ class VirtTestApp(object):
             self.cartesian_parser.assign("disable_kvm", "yes")
 
     def _process_bridge_mode(self):
+        if self.options.nettype not in SUPPORTED_NET_TYPES:
+            _restore_stdout()
+            print("Invalid --nettype option '%s'. Valid options are: (%s)" %
+                  (self.options.nettype, ", ".join(SUPPORTED_NET_TYPES)))
+            sys.exit(1)
         if self.options.nettype == 'bridge':
             if os.getuid() != 0:
                 _restore_stdout()
