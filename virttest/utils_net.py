@@ -17,6 +17,7 @@ import utils_misc
 import arch
 import aexpect
 from versionable_class import factory
+from virttest.staging import service
 
 CTYPES_SUPPORT = True
 try:
@@ -2443,3 +2444,21 @@ def restart_windows_guest_network_by_devcon(session, netdevid, timeout=240):
 
     set_guest_network_status_by_devcon(session, 'disable', netdevid)
     set_guest_network_status_by_devcon(session, 'enable', netdevid)
+
+
+def service_NetworkManager_control(action):
+    """
+    Control host NetworkManager service.
+    """
+    try:
+        utils_misc.find_command("NetworkManager")
+    except ValueError:
+        logging.debug("No NetworkManager service.")
+        return False
+    if action in service.COMMANDS:
+        NM_service = service.Factory.create_service("NetworkManager")
+        NM_func = "NM_service.%s()" % action
+        return eval(NM_func)
+    else:
+        logging.error("Unsupport aciton: %s", action)
+        return False
