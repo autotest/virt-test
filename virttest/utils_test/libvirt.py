@@ -829,6 +829,7 @@ class MigrationTest(object):
             # Migrate a vm to remote first,
             # then migrate another to remote with the first vm back
             vm_remote = vms.pop()
+            self.thread_func_migration(vm_remote, desturi)
             for vm in vms:
                 thread1 = threading.Thread(target=self.thread_func_migration,
                                            args=(vm_remote, srcuri, options))
@@ -844,6 +845,8 @@ class MigrationTest(object):
                     self.RET_LOCK.acquire()
                     self.RET_MIGRATION = False
                     self.RET_LOCK.release()
+            # Add popped vm back to list
+            vms.append(vm_remote)
         elif migration_type == "simultaneous":
             migration_threads = []
             for vm in vms:
