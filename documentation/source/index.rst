@@ -18,7 +18,7 @@ Contents:
    basic/index
    advanced/index
    extra/index
-   api/virttest
+   api/modules
 
 Indices and tables
 ==================
