@@ -1220,8 +1220,8 @@ def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
     return lgf_command(cmd, ignore_status, debug, timeout)
 
 
-def virt_edit_cmd(disk_or_domain, file_path, options=None,
-                  extra=None, expr=None, ignore_status=True,
+def virt_edit_cmd(disk_or_domain, file_path, is_disk=False, options=None,
+                  extra=None, expr=None, connect_uri=None, ignore_status=True,
                   debug=False, timeout=60):
     """
     Execute virt-edit command to check whether it is ok.
@@ -1236,7 +1236,14 @@ def virt_edit_cmd(disk_or_domain, file_path, options=None,
     :return: a session of executing virt-edit command.
     """
     # disk_or_domain and file_path are necessary parameters.
-    cmd = "virt-edit '%s' '%s'" % (disk_or_domain, file_path)
+    cmd = "virt-edit"
+    if connect_uri is not None:
+        cmd += " -c %s" % connect_uri
+    if is_disk:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
+    cmd += " %s" % file_path
     if options is not None:
         cmd += " %s" % options
     if extra is not None:
