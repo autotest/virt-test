@@ -8,8 +8,8 @@ properly store instance state in this implementation.
 
 Because none of the methods have a 'self' parameter defined, the classes
 are defined to be dict-like, and get passed in to the methods as a the
-special **dargs parameter.  All virsh module functions _MUST_ include a
-special **dargs (variable keyword arguments) to accept non-default
+special ``**dargs`` parameter.  All virsh module functions _MUST_ include a
+special ``**dargs`` (variable keyword arguments) to accept non-default
 keyword arguments.
 
 The standard set of keyword arguments to all functions/modules is declared
@@ -218,7 +218,7 @@ class VirshSession(aexpect.ShellSession):
 class VirshClosure(object):
 
     """
-    Callable with weak ref. to override **dargs when calling reference_function
+    Callable with weak ref. to override ``**dargs`` when calling reference_function
     """
 
     def __init__(self, reference_function, dict_like_instance):
@@ -235,8 +235,8 @@ class VirshClosure(object):
         """
         Call reference_function with dict_like_instance augmented by **dargs
 
-        :param *args: Passthrough to reference_function
-        :param **dargs: Updates dict_like_instance copy before call
+        :param args: Passthrough to reference_function
+        :param dargs: Updates dict_like_instance copy before call
         """
         new_dargs = self.dict_like_weakref()
         if new_dargs is None:
@@ -259,8 +259,8 @@ class Virsh(VirshBase):
         """
         Initialize Virsh instance with persistent options
 
-        :param *args: Initial property keys/values
-        :param **dargs: Initial property keys/values
+        :param args: Initial property keys/values
+        :param dargs: Initial property keys/values
         """
         super(Virsh, self).__init__(*args, **dargs)
         # Define the instance callables from the contents of this module
@@ -463,12 +463,12 @@ class VirshConnectBack(VirshPersistent):
 
 def command(cmd, **dargs):
     """
-    Interface to cmd function as 'cmd' symbol is polluted
+    Interface to cmd function as 'cmd' symbol is polluted.
 
     :param cmd: Command line to append to virsh command
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
-    :raise:: CmdError if non-zero exit status and ignore_status=False
+    :raise: CmdError if non-zero exit status and ignore_status=False
     """
 
     virsh_exec = dargs.get('virsh_exec', VIRSH_EXEC)
@@ -552,7 +552,7 @@ def setvcpus(name, count, extra="", **dargs):
     """
     Change the number of virtual CPUs in the guest domain.
 
-    @oaram name: name of vm to affect
+    :param name: name of vm to affect
     :param count: value for vcpu parameter
     :param options: any extra command options.
     :param dargs: standardized virsh function API keywords
@@ -906,7 +906,7 @@ def dompmsuspend(name, target, duration=0, **dargs):
 
     :param name: VM name
     :param dargs: standardized virsh function API keywords
-    :return CmdResult object
+    :return: CmdResult object
     """
     cmd = "dompmsuspend %s %s --duration %s" % (name, target, duration)
     return command(cmd, **dargs)
@@ -918,7 +918,7 @@ def dompmwakeup(name, **dargs):
 
     :param name: VM name
     :param dargs: standardized virsh function API keywords
-    :return CmdResult object
+    :return: CmdResult object
     """
     return command("dompmwakeup %s" % name, **dargs)
 
@@ -1646,10 +1646,10 @@ def pool_destroy(name, **dargs):
 
 def pool_create(xml_file, extra="", **dargs):
     """
-    Create a pool from an xml file
+    Create a pool from an xml file.
 
     :param xml_file: file containing an XML pool description
-    :param extra extra parameters to pass to command
+    :param extra: extra parameters to pass to command
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
@@ -1692,12 +1692,17 @@ def pool_create_as(name, pool_type, target, extra="", **dargs):
 
 def pool_list(option="", extra="", **dargs):
     """
-    Prints the pool information of Host
+    Prints the pool information of Host.
 
     :param option: options given to command
-    --all - gives all pool details, including inactive
-    --inactive - gives only inactive pool details
-    --details - Gives the complete details about the pools
+
+    all
+        gives all pool details, including inactive
+    inactive
+        gives only inactive pool details
+    details
+        Gives the complete details about the pools
+
     :param extra: to provide extra options(to enter invalid options)
     """
     return command("pool-list %s %s" % (option, extra), **dargs)
@@ -1798,14 +1803,24 @@ def pool_define_as(name, pool_type, target, extra="", **dargs):
 
     :param name: Name of the pool to be defined
     :param typ: Type of the pool to be defined
-    dir - file system directory
-    disk - Physical Disk Device
-    fs - Pre-formatted Block Device
-    netfs - Network Exported Directory
-    iscsi - iSCSI Target
-    logical - LVM Volume Group
-    mpath - Multipath Device Enumerater
-    scsi - SCSI Host Adapter
+
+        dir
+            file system directory
+        disk
+            Physical Disk Device
+        fs
+            Pre-formatted Block Device
+        netfs
+            Network Exported Directory
+        iscsi
+            iSCSI Target
+        logical
+            LVM Volume Group
+        mpath
+            Multipath Device Enumerater
+        scsi
+            SCSI Host Adapter
+
     :param target: libvirt uri to send guest to
     :param extra: Free-form string of options
     :param dargs: standardized virsh function API keywords
@@ -2372,7 +2387,7 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     :param dargs: standardized virsh function API keywords
     :param flagstr: string of "--config, --live, --current, etc."
     :return: CmdResult instance
-    :raise:: error.CmdError: if libvirtd is not running!!!!!!
+    :raise: error.CmdError: if libvirtd is not running
     """
 
     cmd = "setmem"
@@ -2404,7 +2419,7 @@ def setmaxmem(domainarg=None, sizearg=None, domain=None,
     :param use_kilobytes: True for --kilobytes, False for --size
     :param flagstr: string of "--config, --live, --current, etc."
     :return: CmdResult instance
-    :raise:: error.CmdError: if libvirtd is not running.
+    :raise: error.CmdError: if libvirtd is not running.
     """
     cmd = "setmaxmem"
     if domainarg is not None:  # Allow testing of ""
@@ -2994,7 +3009,7 @@ def autostart(name, options, **dargs):
     """
     Autostart a domain
 
-    @return: cmdresult object.
+    :return: cmdresult object.
     """
     cmd = ("autostart %s %s" % (name, options))
     CmdResult = command(cmd, **dargs)
@@ -3005,10 +3020,13 @@ def autostart(name, options, **dargs):
 def node_memtune(shm_pages_to_scan=None, shm_sleep_millisecs=None,
                  shm_merge_across_nodes=None, options=None, **dargs):
     """
-    Get or set node memory parameters
-    :param options: options may be shm-pages-to-scan, shm-sleep-millisecs
-                    and shm-merge-across-nodes
-    :param dargs: standardized virsh function API keywords
+    Get or set node memory parameters.
+
+    :param options: Extra options to virsh.
+    :param shm-pages-to-scan: Pages to scan.
+    :param shm-sleep-millisecs: Sleep time (ms).
+    :param shm-merge-across-nodes: Merge across nodes.
+    :param dargs: Standardized virsh function API keywords.
     :return: CmdResult instance
     """
     cmd = "node-memory-tune"

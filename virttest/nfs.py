@@ -112,7 +112,6 @@ class Exportfs(object):
         Export one directory if it is not in exported list.
 
         :return: Export nfs file system succeed or not
-        "rtype": Boolean
         """
         if self.is_exported():
             if self.need_reexport():

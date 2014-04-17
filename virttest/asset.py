@@ -336,16 +336,23 @@ def download_asset(asset, interactive=True, restore_image=False):
 
     Asset files are located under /shared/downloads, are .ini files with the
     following keys defined:
-        title: Title string to display in the download progress bar.
-        url = URL of the resource
-        sha1_url = URL with SHA1 information for the resource, in the form
-            sha1sum file_basename
-        destination = Location of your file relative to the data directory
-            (TEST_SUITE_ROOT/shared/data)
-        destination = Location of the uncompressed file relative to the data
-            directory (TEST_SUITE_ROOT/shared/data)
-        uncompress_cmd = Command that needs to be executed with the compressed
-            file as a parameter
+
+    title
+        Title string to display in the download progress bar.
+    url
+        URL of the resource
+    sha1_url
+        URL with SHA1 information for the resource, in the form
+        sha1sum file_basename
+    destination
+        Location of your file relative to the data directory
+        (TEST_SUITE_ROOT/shared/data)
+    destination
+        Location of the uncompressed file relative to the data
+        directory (TEST_SUITE_ROOT/shared/data)
+    uncompress_cmd
+        Command that needs to be executed with the compressed
+        file as a parameter
 
     :param asset: String describing an asset file.
     :param interactive: Whether to ask the user before downloading the file.

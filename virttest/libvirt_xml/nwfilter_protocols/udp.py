@@ -12,6 +12,7 @@ class Udp(base.TypedDeviceBase):
 
     """
     Create new Udp xml instances
+
     Properties:
         attrs: libvirt_xml.nwfilter_protocols.Udp.Attr instance
     """
@@ -30,7 +31,7 @@ class Udp(base.TypedDeviceBase):
         """
         Return a new Attr instance and set properties from dargs
 
-        :param **dargs: dict of attributes
+        :param dargs: dict of attributes
         :return: new Attr instance
         """
         new_one = self.Attr(virsh_instance=self.virsh)

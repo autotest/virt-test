@@ -1251,10 +1251,10 @@ def virt_clone_cmd(original, newname=None, autoclone=False, **dargs):
     """
     Clone existing virtual machine images.
 
-    @param original: Name of the original guest to be cloned.
-    @param newname: Name of the new guest virtual machine instance.
-    @param autoclone: Generate a new guest name, and paths for new storage.
-    @param dargs: Standardized function API keywords. There are many
+    :param original: Name of the original guest to be cloned.
+    :param newname: Name of the new guest virtual machine instance.
+    :param autoclone: Generate a new guest name, and paths for new storage.
+    :param dargs: Standardized function API keywords. There are many
                   options not listed, they can be passed in dargs.
     """
     def storage_config(cmd, options):
@@ -1297,8 +1297,8 @@ def virt_sparsify_cmd(indisk, outdisk, compress=False, convert=None,
     """
     Make a virtual machine disk sparse.
 
-    @param indisk: The source disk to be sparsified.
-    @param outdisk: The destination disk.
+    :param indisk: The source disk to be sparsified.
+    :param outdisk: The destination disk.
     """
     cmd = "virt-sparsify"
     if compress is True:
@@ -1319,8 +1319,8 @@ def virt_resize_cmd(indisk, outdisk, **dargs):
     """
     Resize a virtual machine disk.
 
-    @param indisk: The source disk to be resized
-    @param outdisk: The destination disk.
+    :param indisk: The source disk to be resized
+    :param outdisk: The destination disk.
     """
     cmd = "virt-resize"
     ignore_status = dargs.get("ignore_status", True)
@@ -1354,7 +1354,7 @@ def virt_list_partitions_cmd(disk_or_domain, long=False, total=False,
     "virt-list-partitions" is a command line tool to list the partitions
     that are contained in a virtual machine or disk image.
 
-    @param disk_or_domain: a disk or a domain to be mounted
+    :param disk_or_domain: a disk or a domain to be mounted
     """
     cmd = "virt-list-partitions %s" % disk_or_domain
     if long is True:
@@ -1372,11 +1372,11 @@ def guestmount(disk_or_domain, mountpoint, inspector=False,
     guestmount - Mount a guest filesystem on the host using
                  FUSE and libguestfs.
 
-    @param disk_or_domain: a disk or a domain to be mounted
+    :param disk_or_domain: a disk or a domain to be mounted
            If you need to mount a disk, set is_disk to True in dargs
-    @param mountpoint: the mountpoint of filesystems
-    @param inspector: mount all filesystems automatically
-    @param readonly: if mount filesystem with readonly option
+    :param mountpoint: the mountpoint of filesystems
+    :param inspector: mount all filesystems automatically
+    :param readonly: if mount filesystem with readonly option
     """
     def get_special_mountpoint(cmd, options):
         special_mountpoints = options.get("special_mountpoints", [])
@@ -1408,7 +1408,7 @@ def virt_filesystems(disk_or_domain, **dargs):
     virt-filesystems - List filesystems, partitions, block devices,
     LVM in a virtual machine or disk image
 
-    @param disk_or_domain: a disk or a domain to be mounted
+    :param disk_or_domain: a disk or a domain to be mounted
            If you need to mount a disk, set is_disk to True in dargs
     """
     def get_display_type(cmd, options):
@@ -1466,7 +1466,7 @@ def virt_list_partitions(disk_or_domain, long=False, total=False,
     "virt-list-partitions" is a command line tool to list the partitions
     that are contained in a virtual machine or disk image.
 
-    @param disk_or_domain: a disk or a domain to be mounted
+    :param disk_or_domain: a disk or a domain to be mounted
     """
     cmd = "virt-list-partitions %s" % disk_or_domain
     if long is True:
@@ -1485,7 +1485,7 @@ def virt_list_filesystems(disk_or_domain, format=None, long=False,
     "virt-list-filesystems" is a command line tool to list the filesystems
     that are contained in a virtual machine or disk image.
 
-    @param disk_or_domain: a disk or a domain to be mounted
+    :param disk_or_domain: a disk or a domain to be mounted
     """
     cmd = "virt-list-filesystems %s" % disk_or_domain
     if format is not None:

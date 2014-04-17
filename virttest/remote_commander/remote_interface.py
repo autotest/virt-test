@@ -1,7 +1,7 @@
 '''
 Created on Dec 11, 2013
 
-@author: jzupka
+:author: jzupka
 '''
 import copy
 

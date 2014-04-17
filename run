@@ -169,6 +169,7 @@ SUPPORTED_NIC_MODELS = ["virtio_net", "e1000", "rtl8139", "spapr-vlan"]
 
 SUPPORTED_NET_TYPES = ["bridge", "user", "none"]
 
+
 class VirtTestRunParser(optparse.OptionParser):
 
     def __init__(self):

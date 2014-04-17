@@ -12,6 +12,7 @@ class Ip(base.TypedDeviceBase):
 
     """
     Create new Ip xml instances
+
     Properties:
         attrs: libvirt_xml.nwfilter_protocols.Ip.Attr instance
     """
@@ -30,7 +31,7 @@ class Ip(base.TypedDeviceBase):
         """
         Return a new Attr instance and set properties from dargs
 
-        :param **dargs: dict of attributes
+        :param dargs: dict of attributes
         :return: new Attr instance
         """
         new_one = self.Attr(virsh_instance=self.virsh)
@@ -57,6 +58,7 @@ class Ip(base.TypedDeviceBase):
 
         """
         Ip attribute XML class
+
 
         Properties:
             srcmacaddr: string, MAC address of sender

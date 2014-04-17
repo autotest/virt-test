@@ -475,9 +475,9 @@ class LVMdev(Rawdev):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images
         """
         super(LVMdev, self).__init__(params, root_dir, tag)
         if params.get("emulational_device", "yes") == "yes":

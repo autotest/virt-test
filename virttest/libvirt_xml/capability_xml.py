@@ -13,9 +13,12 @@ class CapabilityXML(base.LibvirtXMLBase):
     Handler of libvirt capabilities and nonspecific item operations.
 
     Properties:
-        uuid: string of host uuid
-        os_arch_machine_map: dict, read-only
-            get: dict map from os type names to dict map from arch names
+        uuid:
+            string of host uuid
+        os_arch_machine_map:
+            dict, read-only
+        get:
+            dict map from os type names to dict map from arch names
     """
 
     # TODO: Add more __slots__ and accessors to get some useful stats

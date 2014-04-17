@@ -1384,7 +1384,7 @@ def if_set_macaddress(ifname, mac):
     Set the mac address for an interface
 
     :param ifname: Name of the interface
-    @mac: Mac address
+    :param mac: Mac address
     """
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
 
@@ -2236,7 +2236,7 @@ def get_linux_ifname(session, mac_address=""):
     Get the interface name through the mac address.
 
     :param session: session to the virtual machine
-    @mac_address: the macaddress of nic
+    :param mac_address: the macaddress of nic
 
     :raise error.TestError in case it was not possible to determine the
             interface name.
@@ -2282,7 +2282,7 @@ def restart_guest_network(session, nic_name=None):
     Restart guest's network via serial console.
 
     :param session: session to virtual machine
-    @nic_name: nic card name in guest to restart
+    :param nic_name: nic card name in guest to restart
     """
     if_list = []
     if not nic_name:

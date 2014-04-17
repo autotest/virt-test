@@ -12,13 +12,19 @@ class SecretXMLBase(base.LibvirtXMLBase):
     Accessor methods for SecretXML class.
 
     Properties:
-        secret_ephemeral: yes or no, operates on XML secret tag
-        secret_private: yes or no, operates on XML secret tag
-        description: string, operates on description tag
-        uuid: string, operates on uuid tag
-        usage: string, operates on usage tag
-        volume: the volume file path, sub-tag of the usage tag,
-                operates on volume tag
+        secret_ephemeral:
+            yes or no, operates on XML secret tag
+        secret_private:
+            yes or no, operates on XML secret tag
+        description:
+            string, operates on description tag
+        uuid:
+            string, operates on uuid tag
+        usage:
+            string, operates on usage tag
+        volume:
+            the volume file path, sub-tag of the usage tag,
+            operates on volume tag
     """
 
     __slots__ = ('secret_ephemeral', 'secret_private', 'description',

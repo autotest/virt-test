@@ -20,17 +20,24 @@ class QSparseBus(object):
 
     """
     Universal bus representation object.
+
     It creates an abstraction of the way how buses works in qemu. Additionally
     it can store incorrect records (out-of-range addr, multiple devs, ...).
     Everything with bad* prefix means it concerns the bad records (badbus).
+
     You can insert and remove device to certain address, address ranges or let
     the bus assign first free address. The order of addr_spec does matter since
     the last item is incremented first.
+
     There are 3 different address representation used:
-    stor_addr = stored address representation '$first-$second-...-$ZZZ'
-    addr = internal address representation [$first, $second, ..., $ZZZ]
-    device_addr = qemu address stored into separate device params (bus, port)
-                  device{$param1:$first, $param2:$second, ..., $paramZZZ, $ZZZ}
+
+    stor_addr
+        stored address representation '$first-$second-...-$ZZZ'
+    addr
+        internal address representation [$first, $second, ..., $ZZZ]
+    device_addr
+        qemu address stored into separate device params (bus, port)
+        device{$param1:$first, $param2:$second, ..., $paramZZZ, $ZZZ}
 
     :note: When you insert a device, it's properties might be updated (addr,..)
     """
@@ -231,6 +238,7 @@ class QSparseBus(object):
     def get_free_slot(self, addr_pattern):
         """
         Finds unoccupied address
+
         :param addr_pattern: Address pattern (full qualified or with Nones)
         :return: First free address when found, (free or reserved for this dev)
                  None when no free address is found, (all occupied)
@@ -301,6 +309,7 @@ class QSparseBus(object):
     def insert(self, device, strict_mode=False):
         """
         Insert device into this bus representation.
+
         :param device: qdevices.QBaseDevice device
         :param strict_mode: Use strict mode (set optional params)
         :return: list of added devices on success,

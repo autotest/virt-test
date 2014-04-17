@@ -78,7 +78,7 @@ def get_primary_disk(vm):
     """
     Get primary disk source.
 
-    @param vm: Libvirt VM object.
+    :param vm: Libvirt VM object.
     """
     vmdisks = vm.get_disk_devices()
     if len(vmdisks):
@@ -95,9 +95,9 @@ def attach_additional_disk(vm, disksize, targetdev):
     """
     Create a disk with disksize, then attach it to given vm.
 
-    @param vm: Libvirt VM object.
-    @param disksize: size of attached disk
-    @param targetdev: target of disk device
+    :param vm: Libvirt VM object.
+    :param disksize: size of attached disk
+    :param targetdev: target of disk device
     """
     logging.info("Attaching disk...")
     disk_path = os.path.join(data_dir.get_tmp_dir(), targetdev)
@@ -199,7 +199,7 @@ class VirtTools(object):
         """
         Clone a new vm with only its filesystem disk.
 
-        @param newname:if newname is None,
+        :param newname:if newname is None,
                        create a new name with clone added.
         """
         logging.info("Cloning...")
@@ -315,7 +315,7 @@ class VirtTools(object):
         """
         Mount filesystems in a disk or domain to host mountpoint.
 
-        @param disk_or_domain: if it is None, use default vm in params
+        :param disk_or_domain: if it is None, use default vm in params
         """
         logging.info("Mounting filesystems...")
         if disk_or_domain is None:

@@ -227,7 +227,7 @@ class UnattendedInstallConfig(object):
 
         :param dirver: Configurable driver name.
         :param run_cmd:  Use hardware id in windows cmd command or not.
-        :param return: Windows driver's hardware id
+        :return: Windows driver's hardware id
         """
         if not os.path.exists(self.cdrom_mount_point):
             os.mkdir(self.cdrom_mount_point)

@@ -84,8 +84,8 @@ def pin_vm_threads(vm, node):
     """
     Pin VM threads to single cpu of a numa node
 
-    @param vm: VM object
-    @param node: NumaNode object
+    :param vm: VM object
+    :param node: NumaNode object
     """
     if len(vm.vcpu_threads) + len(vm.vhost_threads) < len(node.cpus):
         for i in vm.vcpu_threads:
@@ -326,6 +326,9 @@ class MultihostMigration(object):
     case is when the guest images are on an NFS server.
 
     Example:
+
+    ::
+
         class TestMultihostMigration(utils_misc.MultihostMigration):
             def __init__(self, test, params, env):
                 super(testMultihostMigration, self).__init__(test, params, env)
@@ -358,8 +361,8 @@ class MultihostMigration(object):
                 mig2.join()
                 mig1.join()
 
-    mig = TestMultihostMigration(test, params, env)
-    mig.run()
+        mig = TestMultihostMigration(test, params, env)
+        mig.run()
     """
 
     def __init__(self, test, params, env, preprocess_env=True):
@@ -667,20 +670,22 @@ class MultihostMigration(object):
 
         Migration execution progress:
 
-        source host                   |   dest host
-        --------------------------------------------------------
-           prepare guest on both sides of migration
-            - start machine and check if machine works
-            - synchronize transfer data needed for migration
-        --------------------------------------------------------
-        start work on source guests   |   wait for migration
-        --------------------------------------------------------
-                     migrate guest to dest host.
-              wait on finish migration synchronization
-        --------------------------------------------------------
-                                      |   check work on vms
-        --------------------------------------------------------
-                    wait for sync on finish migration
+        ::
+
+            source host                   |   dest host
+            --------------------------------------------------------
+               prepare guest on both sides of migration
+                - start machine and check if machine works
+                - synchronize transfer data needed for migration
+            --------------------------------------------------------
+            start work on source guests   |   wait for migration
+            --------------------------------------------------------
+                         migrate guest to dest host.
+                  wait on finish migration synchronization
+            --------------------------------------------------------
+                                          |   check work on vms
+            --------------------------------------------------------
+                        wait for sync on finish migration
 
         :param vms_name: List of vms.
         :param srchost: src host id.

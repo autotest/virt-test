@@ -204,7 +204,7 @@ class KojiClient(object):
 
         :type check_valid: boolean
         :param check_valid: whether to include a check on the configuration
-        :raise:: ValueError
+        :raise: ValueError
         :return: None
         '''
         if check_is_valid:
