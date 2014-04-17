@@ -35,6 +35,7 @@ from virttest import gluster
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
+from __init__ import ping
 try:
     from autotest.client import lv_utils
 except ImportError:
@@ -868,3 +869,73 @@ class MigrationTest(object):
                 vm.destroy()
         # Set connect uri back to local uri
         vm.connect_uri = srcuri
+
+
+def check_exit_status(result, expect_error=False):
+    """
+    Check the exit status of virsh commands.
+
+    :param result: Virsh command result object
+    :param expect_error: Boolean value, expect command success or fail
+    """
+    if not expect_error:
+        if result.exit_status != 0:
+            raise error.TestFail(result.stderr)
+        else:
+            logging.debug("Command output:\n%s", result.stdout.strip())
+    elif expect_error and result.exit_status == 0:
+        raise error.TestFail("Expect fail, but run successfully.")
+
+
+def check_iface(iface_name, checkpoint, extra=""):
+    """
+    Check interface with specified checkpoint.
+
+    :param iface_name: Interface name
+    :param checkpoint: Check if interface exists, MAC address, IP address or
+                       ping out. Support values: [exists, mac, ip, ping]
+    :param extra: Extra string for checking
+    :return: Boolean value, true for pass, false for fail
+    """
+    support_check = ["exists", "mac", "ip", "ping"]
+    iface = utils_net.Interface(name=iface_name)
+    check_pass = False
+    try:
+        if checkpoint == "exists":
+            # extra is iface-list option
+            list_find, ifcfg_find = (False, False)
+            # Check virsh list output
+            result = virsh.iface_list(extra, ignore_status=True)
+            check_exit_status(result, False)
+            output = re.findall(r"(\S+)\ +(\S+)\ +(\S+)[\ +\n]",
+                                str(result.stdout))
+            if filter(lambda x: x[0] == iface_name, output[1:]):
+                list_find = True
+            logging.debug("Find '%s' in virsh iface-list output: %s",
+                          iface_name, list_find)
+            # Check network script
+            iface_script = "/etc/sysconfig/network-scripts/ifcfg-" + iface_name
+            ifcfg_find = os.path.exists(iface_script)
+            logging.debug("Find '%s': %s", iface_script, ifcfg_find)
+            check_pass = list_find and ifcfg_find
+        elif checkpoint == "mac":
+            # extra is the MAC address to compare
+            iface_mac = iface.get_mac().lower()
+            check_pass = iface_mac == extra
+            logging.debug("MAC address of %s: %s", iface_name, iface_mac)
+        elif checkpoint == "ip":
+            # extra is the IP address to compare
+            iface_ip = iface.get_ip()
+            check_pass = iface_ip == extra
+            logging.debug("IP address of %s: %s", iface_name, iface_ip)
+        elif checkpoint == "ping":
+            # extra is the ping destination
+            ping_s, _ = ping(dest=extra, count=3, interface=iface_name,
+                             timeout=5,)
+            check_pass = ping_s == 0
+        else:
+            logging.debug("Support check points are: %s", support_check)
+            logging.error("Unsupport check point: %s", checkpoint)
+    except Exception, detail:
+        raise error.TestFail("Interface check failed: %s" % detail)
+    return check_pass
