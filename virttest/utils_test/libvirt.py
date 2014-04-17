@@ -30,6 +30,8 @@ from virttest import aexpect
 from virttest import utils_misc
 from virttest import utils_selinux
 from virttest import libvirt_storage
+from virttest import utils_net
+from virttest import gluster
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
@@ -351,6 +353,49 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
     return ""
 
 
+def get_host_ipv4_addr():
+    """
+    Get host ipv4 addr
+    """
+    if_up = utils_net.get_net_if(state="UP")
+    for i in if_up:
+        ipv4_value = utils_net.get_net_if_addrs(i)["ipv4"]
+        logging.debug("ipv4_value is %s", ipv4_value)
+        if ipv4_value != []:
+            ip_addr = ipv4_value[0]
+            break
+    if ip_addr is not None:
+        logging.info("ipv4 address is %s", ip_addr)
+    else:
+        raise error.TestFail("Fail to get ip address")
+    return ip_addr
+
+
+def setup_or_cleanup_gluster(is_setup, vol_name, brick_path="", pool_name=""):
+    """
+    Set up or clean up glusterfs environment on localhost
+    :param is_setup: Boolean value, true for setup, false for cleanup
+    :param vol_name: gluster created volume name
+    :param brick_path: Dir for create glusterfs
+    :return: ip_addr or nothing
+    """
+    if not brick_path:
+        tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
+        brick_path = os.path.join(tmpdir, pool_name)
+    if is_setup:
+        ip_addr = get_host_ipv4_addr()
+        gluster.glusterd_start()
+        logging.debug("finish start gluster")
+        gluster.gluster_vol_create(vol_name, ip_addr, brick_path)
+        logging.debug("finish vol create in gluster")
+        return ip_addr
+    else:
+        gluster.gluster_vol_stop(vol_name, True)
+        gluster.gluster_vol_delete(vol_name)
+        gluster.gluster_brick_delete(brick_path)
+        return ""
+
+
 def define_pool(pool_name, pool_type, pool_target, cleanup_flag):
     """
     To define a given type pool(Support types: 'dir', 'netfs', logical',
@@ -533,7 +578,8 @@ class PoolVolumeTest(object):
         self.tmpdir = test.tmpdir
         self.params = params
 
-    def cleanup_pool(self, pool_name, pool_type, pool_target, emulated_image):
+    def cleanup_pool(self, pool_name, pool_type, pool_target, emulated_image,
+                     source_name=None):
         """
         Delete vols, destroy the created pool and restore the env
         """
@@ -569,9 +615,12 @@ class PoolVolumeTest(object):
                 pool_target = os.path.join(self.tmpdir, pool_target)
                 if os.path.exists(pool_target):
                     shutil.rmtree(pool_target)
+            if pool_type == "gluster":
+                setup_or_cleanup_gluster(False, source_name)
 
     def pre_pool(self, pool_name, pool_type, pool_target, emulated_image,
-                 image_size="100M", pre_disk_vol=[]):
+                 image_size="100M", pre_disk_vol=[], source_name=None,
+                 source_path=None):
         """
         Preapare the specific type pool
         Note:
@@ -685,6 +734,14 @@ class PoolVolumeTest(object):
                 xml_object = open(scsi_xml_file, 'w')
                 xml_object.write(scsi_xml)
                 xml_object.close()
+        elif pool_type == "gluster":
+            # Prepare gluster service and create volume
+            hostip = setup_or_cleanup_gluster(True, source_name,
+                                              pool_name=pool_name)
+            logging.debug("hostip is %s", hostip)
+            cleanup_gluster = True
+            extra = "--source-host %s --source-path %s --source-name %s" % \
+                    (hostip, source_path, source_name)
 
         # Create pool
         if pool_type == "scsi":
