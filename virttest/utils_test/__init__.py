@@ -34,7 +34,7 @@ from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
 from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net
-from virttest import storage, asset, bootstrap
+from virttest import storage, asset, bootstrap, remote
 import virttest
 
 import libvirt
@@ -1585,3 +1585,85 @@ def unload_stress(stress_type, vms):
             VMStress(vm, "stress").unload_stress()
     elif stress_type == "stress_on_host":
         HostStress(None, "stress").unload_stress()
+
+
+class RemoteDiskManager(object):
+
+    """Control images on remote host"""
+
+    def __init__(self, params):
+        remote_host = params.get("remote_ip")
+        remote_user = params.get("remote_user")
+        remote_pwd = params.get("remote_pwd")
+        self.runner = remote.RemoteRunner(host=remote_host,
+                                          username=remote_user,
+                                          password=remote_pwd)
+
+    def get_free_space(self, disk_type, path='/'):
+        """
+        Get free space of remote host for path.
+        """
+        if disk_type == "file":
+            directory = os.path.dirname(path)
+            try:
+                output = self.runner.run("df %s" % directory)
+                logging.debug(output)
+            except error.CmdError, detail:
+                raise error.TestError("Get %s space failed:%s" % (directory,
+                                                                  detail))
+            for line in output.splitlines()[1:]:
+                g_size = int(line.split()[3]) / 1048576
+                return g_size
+            raise error.TestError("Get %s space failed." % directory)
+
+    def create_image(self, disk_type, path=None, size=10, sparse=True):
+        """
+        Create an image for target path.
+        """
+        if disk_type == "file":
+            self.runner.run("mkdir -p %s" % os.path.dirname(path))
+            if not os.path.basename(path):
+                path = os.path.join(path, "temp.img")
+            if sparse:
+                cmd = "qemu-img create %s %sG" % (path, size)
+            else:
+                cmd = "dd if=/dev/zero of=%s bs=1G count=%s" % (path, size)
+
+        result = self.runner.run(cmd, ignore_status=True)
+        if result.exit_status:
+            raise error.TestFail("Create image '%s' on remote host failed." % path)
+        else:
+            return path
+
+    def remove_path(self, disk_type, path):
+        """
+        Only allowed to remove path to file or volume.
+        """
+        if disk_type == "file":
+            if os.path.isdir(path):
+                return
+            self.runner.run("rm -f %s" % path)
+
+
+def check_dest_vm_network(vm, ip, remote_host, username, password):
+    """
+    Ping migrated vms on remote host.
+    """
+    runner = remote.RemoteRunner(host=remote_host, username=username,
+                                 password=password)
+    # Timeout to wait vm's network
+    logging.debug("Verifying VM IP...")
+    timeout = 60
+    ping_failed = True
+    ping_cmd = "ping -c 4 %s" % ip
+    while timeout > 0:
+        ping_result = runner.run(ping_cmd, ignore_status=True)
+        if ping_result.exit_status:
+            time.sleep(5)
+            timeout -= 5
+            continue
+        ping_failed = False
+        break
+    if ping_failed:
+        raise error.TestFail("Check %s IP failed:%s" % (vm.name,
+                                                        ping_result.stdout))
