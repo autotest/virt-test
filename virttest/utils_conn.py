@@ -636,10 +636,11 @@ class TCPConnection(ConnectionBase):
         del self.remote_libvirtdconf
         # restart libvirtd service on server
         try:
-            utils_libvirtd.service_libvirtd_control(action='restart',
-                                                    remote_ip=server_ip,
-                                                    remote_user=server_user,
-                                                    remote_pwd=server_pwd,)
+            session = remote.wait_for_login('ssh', server_ip, '22',
+                                            server_user, server_pwd,
+                                            r"[\#\$]\s*$")
+            libvirtd_service = utils_libvirtd.Libvirtd(session=session)
+            libvirtd_service.restart()
         except (remote.LoginError, aexpect.ShellError), detail:
             raise ConnServerRestartError(detail)
 
@@ -675,10 +676,11 @@ class TCPConnection(ConnectionBase):
 
         # restart libvirtd service on server
         try:
-            utils_libvirtd.service_libvirtd_control(action='restart',
-                                                    remote_ip=server_ip,
-                                                    remote_user=server_user,
-                                                    remote_pwd=server_pwd,)
+            session = remote.wait_for_login('ssh', server_ip, '22',
+                                            server_user, server_pwd,
+                                            r"[\#\$]\s*$")
+            libvirtd_service = utils_libvirtd.Libvirtd(session=session)
+            libvirtd_service.restart()
         except (remote.LoginError, aexpect.ShellError), detail:
             raise ConnServerRestartError(detail)
 
@@ -770,10 +772,11 @@ class TLSConnection(ConnectionBase):
         del self.server_libvirtdconf
         # restart libvirtd service on server
         try:
-            utils_libvirtd.service_libvirtd_control(action='restart',
-                                                    remote_ip=server_ip,
-                                                    remote_user=server_user,
-                                                    remote_pwd=server_pwd,)
+            session = remote.wait_for_login('ssh', server_ip, '22',
+                                            server_user, server_pwd,
+                                            r"[\#\$]\s*$")
+            libvirtd_service = utils_libvirtd.Libvirtd(session=session)
+            libvirtd_service.restart()
         except (remote.LoginError, aexpect.ShellError), detail:
             raise ConnServerRestartError(detail)
         logging.debug("TLS connection recover successfully.")
@@ -849,10 +852,11 @@ class TLSConnection(ConnectionBase):
 
         # restart libvirtd service on server
         try:
-            utils_libvirtd.service_libvirtd_control(action='restart',
-                                                    remote_ip=server_ip,
-                                                    remote_user=server_user,
-                                                    remote_pwd=server_pwd,)
+            session = remote.wait_for_login('ssh', server_ip, '22',
+                                            server_user, server_pwd,
+                                            r"[\#\$]\s*$")
+            libvirtd_service = utils_libvirtd.Libvirtd(session=session)
+            libvirtd_service.restart()
         except (remote.LoginError, aexpect.ShellError), detail:
             raise ConnServerRestartError(detail)
 
