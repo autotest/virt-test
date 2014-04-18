@@ -12,6 +12,7 @@ import os
 import time
 import glob
 import logging
+import re
 
 
 __all__ = ['GstPythonVideoMaker', 'video_maker']
@@ -146,7 +147,16 @@ class GstPythonVideoMaker(object):
         Process the input files and output the video file
         '''
         self.normalize_images(input_dir)
-        no_files = len(glob.glob(os.path.join(input_dir, '*.jpg')))
+        file_list = glob.glob(os.path.join(input_dir, '*.jpg'))
+        no_files = len(file_list)
+        if no_files == 0:
+            if self.verbose:
+                logging.debug("Number of files to encode as video is zero")
+            return
+        index_list = []
+        for ifile in file_list:
+            index_list.append(int(re.findall(r"/+.*/(\d{4})\.jpg", ifile)[0]))
+            index_list.sort()
         if self.verbose:
             logging.debug('Number of files to encode as video: %s', no_files)
 
@@ -157,7 +167,7 @@ class GstPythonVideoMaker(object):
         if self.verbose:
             logging.debug("Source location: %s", source_location)
         source.set_property('location', source_location)
-        source.set_property('index', 1)
+        source.set_property('index', index_list[0])
         source_caps = gst.Caps()
         source_caps.append('image/jpeg,framerate=(fraction)4/1')
         source.set_property('caps', source_caps)

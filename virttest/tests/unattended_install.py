@@ -155,6 +155,7 @@ class UnattendedInstallConfig(object):
             setattr(self, va, params.get(va, ''))
 
         self.tmpdir = test.tmpdir
+        self.qemu_img_binary = utils_misc.get_qemu_img_binary(params)
 
         if getattr(self, 'unattended_file'):
             self.unattended_file = os.path.join(test.virtdir,
@@ -163,13 +164,6 @@ class UnattendedInstallConfig(object):
         if getattr(self, 'finish_program'):
             self.finish_program = os.path.join(test.virtdir,
                                                self.finish_program)
-
-        if getattr(self, 'qemu_img_binary'):
-            if not os.path.isfile(getattr(self, 'qemu_img_binary')):
-                qemu_img_base_dir = os.path.join(data_dir.get_root_dir(),
-                                                 self.params.get("vm_type"))
-                self.qemu_img_binary = os.path.join(qemu_img_base_dir,
-                                                    self.qemu_img_binary)
 
         if getattr(self, 'cdrom_cd1'):
             self.cdrom_cd1 = os.path.join(root_dir, self.cdrom_cd1)
@@ -715,14 +709,23 @@ class UnattendedInstallConfig(object):
             else:
                 # Windows unattended install
                 dest_fname = "autounattend.xml"
-                boot_disk = utils_disk.FloppyDisk(self.floppy,
-                                                  self.qemu_img_binary,
-                                                  self.tmpdir, self.vfd_size)
+                if self.params.get('unattended_delivery_method') == 'cdrom':
+                    boot_disk = utils_disk.CdromDisk(self.cdrom_unattended,
+                                                     self.tmpdir)
+                    if self.install_virtio == "yes":
+                        boot_disk.setup_virtio_win2008(self.virtio_floppy,
+                                                       self.cdrom_virtio)
+                    self.cdrom_virtio = None
+                else:
+                    boot_disk = utils_disk.FloppyDisk(self.floppy,
+                                                      self.qemu_img_binary,
+                                                      self.tmpdir,
+                                                      self.vfd_size)
+                    if self.install_virtio == "yes":
+                        boot_disk.setup_virtio_win2008(self.virtio_floppy)
                 answer_path = boot_disk.get_answer_file_path(dest_fname)
                 self.answer_windows_xml(answer_path)
 
-                if self.install_virtio == "yes":
-                    boot_disk.setup_virtio_win2008(self.virtio_floppy)
                 boot_disk.copy_to(self.finish_program)
 
         else:
@@ -850,6 +853,9 @@ class UnattendedInstallConfig(object):
                 self.kernel_params = re.sub('repo\=[\:\w\d\/]*',
                                             'repo=%s' % self.url,
                                             self.kernel_params)
+            elif 'autoyast=' in self.kernel_params:
+                # SUSE
+                self.kernel_params = (self.kernel_params + " ip=dhcp install=" + self.url)
 
         elif self.vm_type == 'libvirt':
             logging.info("Not downloading vmlinuz/initrd.img from %s, "
@@ -880,6 +886,11 @@ class UnattendedInstallConfig(object):
             utils.run(initrd_fetch_cmd, verbose=DEBUG)
         finally:
             utils_disk.cleanup(self.nfs_mount)
+
+        if 'autoyast=' in self.kernel_params:
+            # SUSE
+            self.kernel_params = (self.kernel_params + " ip=dhcp "
+                                  "install=nfs://" + self.nfs_server + ":" + self.nfs_dir)
 
     def setup_import(self):
         self.unattended_file = None

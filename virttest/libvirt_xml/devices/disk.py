@@ -148,7 +148,7 @@ class Disk(base.TypedDeviceBase):
         def marshal_to_seclabel(tag, attr_dict, index, libvirtxml):
             """Convert a tag + attributes into a Seclabel instance"""
             del index           # not used
-            if tag is not 'seclabel':
+            if tag != 'seclabel':
                 return None     # Don't convert this item
             Seclabel = librarian.get('seclabel')
             newone = Seclabel(virsh_instance=libvirtxml.virsh)
@@ -171,7 +171,7 @@ class Disk(base.TypedDeviceBase):
             """Convert a tag + attributes into a dictionary"""
             del index                    # not used
             del libvirtxml               # not used
-            if tag is not 'host':
+            if tag != 'host':
                 return None              # skip this one
             return dict(attr_dict)       # return copy of dict, not reference
 

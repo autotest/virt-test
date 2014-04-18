@@ -702,17 +702,11 @@ class Factory(object):
         def get_name_of_init(self):
             """
             Internal function to determine what executable is PID 1,
-            aka init by checking /proc/1/exe
             :return: executable name for PID 1, aka init
             :rtype:  str
             """
-            # /proc/1/comm was added in 2.6.33 and is not in RHEL6.x, so use cmdline
-            # Non-root can read cmdline
-            # return os.path.basename(open("/proc/1/cmdline").read().split(chr(0))[0])
-            # readlink /proc/1/exe requires root
-            # inspired by openvswitch.py:ServiceManagerInterface.get_version()
-            output = self.run("readlink /proc/1/exe").stdout.strip()
-            return os.path.basename(output)
+            output = self.run("ps -o comm 1").stdout
+            return output.splitlines()[-1].strip()
 
         def get_generic_service_manager_type(self):
             """

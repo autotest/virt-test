@@ -11,6 +11,9 @@ import aexpect
 import utils_misc
 import rss_client
 
+from remote_commander import remote_master
+from remote_commander import messenger
+
 from autotest.client.shared import error
 from autotest.client import utils
 import data_dir
@@ -126,6 +129,8 @@ def handle_prompts(session, username, password, prompt, timeout=10,
         try:
             match, text = session.read_until_last_line_matches(
                 [r"[Aa]re you sure", r"[Pp]assword:\s*",
+                 r"\(or (press|type) Control-D to continue\):\s*$",  # Prompt of rescue mode for Red Hat.
+                 r"[Gg]ive.*[Ll]ogin:\s*$",  # Prompt of rescue mode for SUSE.
                  r"(?<![Ll]ast).*[Ll]ogin:\s*$",  # Don't match "Last Login:"
                  r"[Cc]onnection.*closed", r"[Cc]onnection.*refused",
                  r"[Pp]lease wait", r"[Ww]arning", r"[Ee]nter.*username",
@@ -136,7 +141,7 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                     logging.debug("Got 'Are you sure...', sending 'yes'")
                 session.sendline("yes")
                 continue
-            elif match == 1 or match == 8:  # "password:"
+            elif match in [1, 2, 3, 10]:  # "password:"
                 if password_prompt_count == 0:
                     if debug:
                         logging.debug("Got password prompt, sending '%s'",
@@ -147,7 +152,7 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                 else:
                     raise LoginAuthenticationError("Got password prompt twice",
                                                    text)
-            elif match == 2 or match == 7:  # "login:"
+            elif match == 4 or match == 9:  # "login:"
                 if login_prompt_count == 0 and password_prompt_count == 0:
                     if debug:
                         logging.debug("Got username prompt; sending '%s'",
@@ -161,20 +166,20 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                     else:
                         msg = "Got username prompt after password prompt"
                     raise LoginAuthenticationError(msg, text)
-            elif match == 3:  # "Connection closed"
+            elif match == 5:  # "Connection closed"
                 raise LoginError("Client said 'connection closed'", text)
-            elif match == 4:  # "Connection refused"
+            elif match == 6:  # "Connection refused"
                 raise LoginError("Client said 'connection refused'", text)
-            elif match == 5:  # "Please wait"
+            elif match == 7:  # "Please wait"
                 if debug:
                     logging.debug("Got 'Please wait'")
                 timeout = 30
                 continue
-            elif match == 6:  # "Warning added RSA"
+            elif match == 8:  # "Warning added RSA"
                 if debug:
                     logging.debug("Got 'Warning added RSA to known host list")
                 continue
-            elif match == 9:  # prompt
+            elif match == 11:  # prompt
                 if debug:
                     logging.debug("Got shell prompt -- logged in")
                 break
@@ -216,6 +221,7 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
         host = "%s%%%s" % (host, interface)
     if client == "ssh":
         cmd = ("ssh -o UserKnownHostsFile=/dev/null "
+               "-o StrictHostKeyChecking=no "
                "-o PreferredAuthentications=password -p %s %s@%s" %
                (port, username, host))
     elif client == "telnet":
@@ -237,6 +243,81 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
         session.set_output_params((log_filename,))
         session.set_log_file(log_filename)
     return session
+
+
+class AexpectIOWrapperOut(messenger.IOWrapper):
+
+    """
+    Basic implementation of IOWrapper for stdout
+    """
+
+    def close(self):
+        self._obj.close()
+
+    def fileno(self):
+        return os.open(self._obj, os.O_RDWR)
+
+    def write(self, data):
+        self._obj.send(data)
+
+
+def remote_commander(client, host, port, username, password, prompt,
+                     linesep="\n", log_filename=None, timeout=10, path=None):
+    """
+    Log into a remote host (guest) using SSH/Telnet/Netcat.
+
+    :param client: The client to use ('ssh', 'telnet' or 'nc')
+    :param host: Hostname or IP address
+    :param port: Port to connect to
+    :param username: Username (if required)
+    :param password: Password (if required)
+    :param prompt: Shell prompt (regular expression)
+    :param linesep: The line separator to use when sending lines
+            (e.g. '\\n' or '\\r\\n')
+    :param log_filename: If specified, log all output to this file
+    :param timeout: The maximal time duration (in seconds) to wait for
+            each step of the login procedure (i.e. the "Are you sure" prompt
+            or the password prompt)
+    :param path: The path to place where remote_runner.py is placed.
+    :raise LoginBadClientError: If an unknown client is requested
+    :raise: Whatever handle_prompts() raises
+    :return: A ShellSession object.
+    """
+    if path is None:
+        path = "/tmp"
+    if client == "ssh":
+        cmd = ("ssh -o UserKnownHostsFile=/dev/null "
+               "-o PreferredAuthentications=password "
+               "-p %s %s@%s %s agent" %
+               (port, username, host, os.path.join(path, "remote_runner.py")))
+    elif client == "telnet":
+        cmd = "telnet -l %s %s %s" % (username, host, port)
+    elif client == "nc":
+        cmd = "nc %s %s" % (host, port)
+    else:
+        raise LoginBadClientError(client)
+
+    logging.debug("Login command: '%s'", cmd)
+    session = aexpect.Expect(cmd, linesep=linesep)
+    try:
+        handle_prompts(session, username, password, prompt, timeout)
+    except Exception:
+        session.close()
+        raise
+    if log_filename:
+        session.set_output_func(utils_misc.log_line)
+        session.set_output_params((log_filename,))
+        session.set_log_file(log_filename)
+
+    session.send_ctrl("raw")
+
+    # Wrap io interfaces.
+    inw = messenger.StdIOWrapperIn(session._get_fd("tail"))
+    outw = AexpectIOWrapperOut(session)
+    # Create commander
+
+    cmd = remote_master.CommanderMaster(inw, outw, False)
+    return cmd
 
 
 def wait_for_login(client, host, port, username, password, prompt,
@@ -408,6 +489,7 @@ def scp_to_remote(host, port, username, password, local_path, remote_path,
         host = "%s%%%s" % (host, interface)
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null "
+               "-o StrictHostKeyChecking=no "
                "-o PreferredAuthentications=password -r %s "
                "-P %s %s %s@\[%s\]:%s" %
                (limit, port, local_path, username, host, remote_path))
@@ -443,6 +525,7 @@ def scp_from_remote(host, port, username, password, remote_path, local_path,
         host = "%s%%%s" % (host, interface)
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null "
+               "-o StrictHostKeyChecking=no "
                "-o PreferredAuthentications=password -r %s "
                "-P %s %s@\[%s\]:%s %s" %
                (limit, port, username, host, remote_path, local_path))
@@ -484,8 +567,9 @@ def scp_between_remotes(src, dst, port, s_passwd, d_passwd, s_name, d_name,
                            "the interface the neighbour attache")
         dst = "%s%%%s" % (dst, dst_inter)
 
-    command = ("scp -v -o UserKnownHostsFile=/dev/null -o "
-               "PreferredAuthentications=password -r %s -P %s"
+    command = ("scp -v -o UserKnownHostsFile=/dev/null "
+               "-o StrictHostKeyChecking=no "
+               "-o PreferredAuthentications=password -r %s -P %s"
                " %s@\[%s\]:%s %s@\[%s\]:%s" %
                (limit, port, s_name, src, s_path, d_name, dst, d_path))
     password_list = []
@@ -683,6 +767,9 @@ def copy_files_to(address, client, username, password, port, local_path,
         c = rss_client.FileUploadClient(address, port, log_func)
         c.upload(local_path, remote_path, timeout)
         c.close()
+    else:
+        raise error.TestError("No such file copy client: '%s', valid values"
+                              "are scp and rss" % client)
 
 
 def copy_files_from(address, client, username, password, port, remote_path,
@@ -717,6 +804,9 @@ def copy_files_from(address, client, username, password, port, remote_path,
         c = rss_client.FileDownloadClient(address, port, log_func)
         c.download(remote_path, local_path, timeout)
         c.close()
+    else:
+        raise error.TestError("No such file copy client: '%s', valid values"
+                              "are scp and rss" % client)
 
 
 class Remote_Package(object):

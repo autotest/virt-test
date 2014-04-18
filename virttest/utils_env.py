@@ -326,8 +326,9 @@ class Env(UserDict.IterableUserDict):
         cmd_template = "%s -npvvvi any 'port 68 or port 546'"
         cmd = cmd_template % utils_misc.find_command("tcpdump")
         if self._params.get("remote_preprocess") == "yes":
-            login_cmd = ("ssh -o UserKnownHostsFile=/dev/null -o "
-                         "PreferredAuthentications=password -p %s %s@%s" %
+            login_cmd = ("ssh -o UserKnownHostsFile=/dev/null "
+                         "-o StrictHostKeyChecking=no "
+                         "-o PreferredAuthentications=password -p %s %s@%s" %
                          (port, username, address))
 
             self._tcpdump = aexpect.ShellSession(

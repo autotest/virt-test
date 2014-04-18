@@ -168,12 +168,16 @@ def get_backend_cfg_path(backend_type, cfg_basename):
     return os.path.join(BASE_BACKEND_DIR, backend_type, 'cfg', cfg_basename)
 
 
-def get_deps_dir():
+def get_deps_dir(target=None):
     """
     For a given test provider, report the appropriate deps dir.
 
     The little inspect trick is used to avoid callers having to do
     sys.modules[] tricks themselves.
+
+    :param target: File we want in deps folder. Will return the path to the
+                   target if set and available. Or will only return the path
+                   to dep folder.
     """
     # Get the frame that called this function
     frame = inspect.stack()[1]
@@ -181,21 +185,24 @@ def get_deps_dir():
     module = inspect.getmodule(frame[0])
     # With the module path, we can keep searching with a parent dir with 'deps'
     # in it, which should be the correct deps directory.
-    p = os.path.dirname(module.__file__)
+    path = os.path.dirname(module.__file__)
     nesting_limit = 10
-    index = 0
-    while 'deps' not in os.listdir(p):
-        if '.git' in os.listdir(p):
-            raise MissingDepsDirError("Could not find a deps dir for git "
-                                      "repo %s" % p)
-        if index >= nesting_limit:
-            raise MissingDepsDirError("Could not find a deps dir after "
-                                      "looking %s parent directories" %
-                                      nesting_limit)
-        p = os.path.dirname(p)
-        index += 1
-
-    return os.path.join(p, 'deps')
+    for index in xrange(nesting_limit):
+        files = os.listdir(path)
+        if 'deps' in files:
+            deps = os.path.join(path, 'deps')
+            if target:
+                if target in os.listdir(deps):
+                    return os.path.join(deps, target)
+            else:
+                return deps
+        if '.git' in os.listdir(path):
+            raise MissingDepsDirError("Could not find specified deps dir for "
+                                      "git repo %s" % path)
+        path = os.path.dirname(path)
+    raise MissingDepsDirError("Could not find specified deps dir after "
+                              "looking %s parent directories" %
+                              nesting_limit)
 
 
 def get_tmp_dir():

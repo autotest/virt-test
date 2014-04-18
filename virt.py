@@ -68,13 +68,15 @@ class virt(test.test):
         utils_misc.set_log_file_dir(self.debugdir)
 
         # Open the environment file
-        env_path = params.get("vm_type")
-        other_subtests_dirs = params.get("other_tests_dirs", "")
-        if other_subtests_dirs:
-            env_path = other_subtests_dirs
+        custom_env_path = params.get("custom_env_path", "")
+        if custom_env_path:
+            env_path = custom_env_path
+        else:
+            env_path = params.get("vm_type")
         env_filename = os.path.join(self.bindir, "backends", env_path,
                                     params.get("env", "env"))
         env = utils_env.Env(env_filename, self.env_version)
+        other_subtests_dirs = params.get("other_tests_dirs", "")
 
         test_passed = False
         t_type = None

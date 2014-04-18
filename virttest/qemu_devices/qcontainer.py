@@ -376,8 +376,8 @@ class DevContainer(object):
         :param device: Desired device
         :return: Is the desired device supported by current qemu?
         """
-        return bool(re.search(r'name "%s"' % device, self.__device_help,
-                              re.MULTILINE))
+        return bool(re.search(r'name "%s"|alias "%s"' % (device, device),
+                              self.__device_help))
 
     def get_help_text(self):
         """

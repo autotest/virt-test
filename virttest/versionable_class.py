@@ -213,9 +213,8 @@ class ModuleWrapper(object):
                 m_cls, _ = Manager(self.wrapped.__name__, self).factory(cls,
                                                                         _class_names=cls_name)
                 return m_cls
-        else:
-            cls = getattr(self.wrapped, name)
-            return cls
+        cls = getattr(self.wrapped, name)
+        return cls
 
 
 class VersionableClass(object):

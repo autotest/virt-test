@@ -20,6 +20,7 @@ import inspect
 import tarfile
 import shutil
 import getpass
+import ctypes
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
@@ -707,7 +708,7 @@ class VirtLoggingConfig(logging_config.LoggingConfig):
                                                          verbose=verbose)
 
 
-def umount(src, mount_point, fstype, verbose=True, fstype_mtab=None):
+def umount(src, mount_point, fstype, verbose=False, fstype_mtab=None):
     """
     Umount the src mounted in mount_point.
 
@@ -723,7 +724,7 @@ def umount(src, mount_point, fstype, verbose=True, fstype_mtab=None):
     if is_mounted(src, mount_point, fstype, None, verbose, fstype_mtab):
         umount_cmd = "umount %s" % mount_point
         try:
-            utils.system(umount_cmd, verbose)
+            utils.system(umount_cmd, verbose=verbose)
             return True
         except error.CmdError:
             return False
@@ -732,7 +733,7 @@ def umount(src, mount_point, fstype, verbose=True, fstype_mtab=None):
         return True
 
 
-def mount(src, mount_point, fstype, perm=None, verbose=True, fstype_mtab=None):
+def mount(src, mount_point, fstype, perm=None, verbose=False, fstype_mtab=None):
     """
     Mount the src into mount_point of the host.
 
@@ -748,23 +749,19 @@ def mount(src, mount_point, fstype, perm=None, verbose=True, fstype_mtab=None):
     if fstype_mtab is None:
         fstype_mtab = fstype
 
-    umount(src, mount_point, fstype, verbose, fstype_mtab)
-
     if is_mounted(src, mount_point, fstype, perm, verbose, fstype_mtab):
         logging.debug("%s is already mounted in %s with %s",
                       src, mount_point, perm)
         return True
-
     mount_cmd = "mount -t %s %s %s -o %s" % (fstype, src, mount_point, perm)
     try:
         utils.system(mount_cmd, verbose=verbose)
     except error.CmdError:
         return False
-
     return is_mounted(src, mount_point, fstype, perm, verbose, fstype_mtab)
 
 
-def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
+def is_mounted(src, mount_point, fstype, perm=None, verbose=False,
                fstype_mtab=None):
     """
     Check mount status from /etc/mtab
@@ -777,6 +774,8 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
     :type fstype: string
     :param perm: mount permission
     :type perm: string
+    :param verbose: if display mtab content
+    :type verbose: Boolean
     :param fstype_mtab: file system type in mtab could be different
     :type fstype_mtab: str
     :return: if the src is mounted as expect
@@ -787,6 +786,10 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
     if fstype_mtab is None:
         fstype_mtab = fstype
 
+    # Version 4 nfs displays 'nfs4' in mtab
+    if fstype == "nfs":
+        fstype_mtab = "nfs\d?"
+
     mount_point = os.path.realpath(mount_point)
     if fstype not in ['nfs', 'smbfs', 'glusterfs']:
         if src:
@@ -795,13 +798,14 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
             # Allow no passed src(None or "")
             src = ""
     mount_string = "%s %s %s %s" % (src, mount_point, fstype_mtab, perm)
-    if mount_string.strip() in file("/etc/mtab").read():
-        logging.debug("%s is successfully mounted", src)
+    logging.debug("Searching '%s' in mtab...", mount_string)
+    if verbose:
+        logging.debug("/etc/mtab contents:\n%s", file("/etc/mtab").read())
+    if re.findall(mount_string.strip(), file("/etc/mtab").read()):
+        logging.debug("%s is mounted.", src)
         return True
     else:
-        if verbose:
-            logging.error("Can't find mounted NFS share - /etc/mtab"
-                          " contents \n%s", file("/etc/mtab").read())
+        logging.debug("%s is not mounted.", src)
         return False
 
 
@@ -1148,15 +1152,15 @@ def get_pid_cpu(pid):
 # Utility functions for numa node pinning
 
 
-def get_node_count():
+def get_node_cpus(i=0):
     """
-    Get the number of nodes of current host.
+    Get cpu ids of one node
 
-    :return: the number of nodes
-    :rtype: string
+    :return: the cpu lists
+    :rtype: list
     """
     cmd = utils.run("numactl --hardware")
-    return int(re.findall("available: (\d+) nodes", cmd.stdout)[0])
+    return re.findall("node %s cpus: (.*)" % i, cmd.stdout)[0].split()
 
 
 def cpu_str_to_list(origin_str):
@@ -1196,38 +1200,50 @@ class NumaInfo(object):
     of the node.
     """
 
-    def __init__(self):
+    def __init__(self, all_nodes_path=None, online_nodes_path=None):
+        """
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/possible. Useful for unittesting.
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/online. Useful for unittesting.
+        """
         self.numa_sys_path = "/sys/devices/system/node"
-        self.all_nodes = self.get_all_nodes()
-        self.online_nodes = self.get_online_nodes()
+        self.all_nodes = self.get_all_nodes(all_nodes_path)
+        self.online_nodes = self.get_online_nodes(online_nodes_path)
         self.nodes = {}
         self.distances = {}
         for node_id in self.online_nodes:
             self.nodes[node_id] = NumaNode(node_id + 1)
             self.distances[node_id] = self.get_node_distance(node_id)
 
-    def get_all_nodes(self):
+    def get_all_nodes(self, all_nodes_path=None):
         """
         Get all node ids in host.
 
         :return: All node ids in host
         :rtype: list
         """
-        all_nodes = get_path(self.numa_sys_path, "possible")
+        if all_nodes_path is None:
+            all_nodes = get_path(self.numa_sys_path, "possible")
+        else:
+            all_nodes = all_nodes_path
         all_nodes_file = open(all_nodes, "r")
         nodes_info = all_nodes_file.read()
         all_nodes_file.close()
 
         return cpu_str_to_list(nodes_info)
 
-    def get_online_nodes(self):
+    def get_online_nodes(self, online_nodes_path=None):
         """
         Get node ids online in host
 
         :return: The ids of node which is online
         :rtype: list
         """
-        online_nodes = get_path(self.numa_sys_path, "online")
+        if online_nodes_path is None:
+            online_nodes = get_path(self.numa_sys_path, "online")
+        else:
+            online_nodes = online_nodes_path
         online_nodes_file = open(online_nodes, "r")
         nodes_info = online_nodes_file.read()
         online_nodes_file.close()
@@ -1244,10 +1260,12 @@ class NumaInfo(object):
         :rtype: list
         """
         cmd = utils.run("numactl --hardware")
-        node_distances = cmd.stdout.split("node distances:")[-1].strip()
-        node_distance = node_distances.splitlines()[node_id + 1]
-        if "%s:" % node_id not in node_distance:
-            logging.warn("Get wrong unexpect information from numctl")
+        try:
+            node_distances = cmd.stdout.split("node distances:")[-1].strip()
+            node_distance = re.findall("%s:" % node_id, node_distances)[0]
+            node_distance = node_distance.split(":")[-1]
+        except Exception:
+            logging.warn("Get unexpect information from numctl")
             numa_sys_path = self.numa_sys_path
             distance_path = get_path(numa_sys_path,
                                      "node%s/distance" % node_id)
@@ -1258,8 +1276,6 @@ class NumaInfo(object):
             node_distance_file = open(distance_path, 'r')
             node_distance = node_distance_file.read()
             node_distance_file.close()
-        else:
-            node_distance = node_distance.split(":")[-1]
 
         return node_distance.strip().split()
 
@@ -1289,16 +1305,30 @@ class NumaNode(object):
     Numa node to control processes and shared memory.
     """
 
-    def __init__(self, i=-1):
-        self.num = get_node_count()
+    def __init__(self, i=-1, all_nodes_path=None, online_nodes_path=None):
+        """
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/possible. Useful for unittesting.
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/online. Useful for unittesting.
+        """
+        self.extra_cpus = []
         if i < 0:
-            self.cpus = self.get_node_cpus(int(self.num) + i).split()
-            self.node_id = self.num + i
+            host_numa_info = NumaInfo(all_nodes_path, online_nodes_path)
+            available_nodes = host_numa_info.nodes.keys()
+            self.cpus = self.get_node_cpus(available_nodes[-1]).split()
+            if len(available_nodes) > 1:
+                self.extra_cpus = self.get_node_cpus(
+                    available_nodes[-2]).split()
+            self.node_id = available_nodes[-1]
         else:
             self.cpus = self.get_node_cpus(i - 1).split()
+            self.extra_cpus = self.get_node_cpus(i).split()
             self.node_id = i - 1
         self.dict = {}
         for i in self.cpus:
+            self.dict[i] = []
+        for i in self.extra_cpus:
             self.dict[i] = []
 
     def get_node_cpus(self, i):
@@ -1370,7 +1400,7 @@ class NumaNode(object):
                     self.free_cpu(i, j)
 
     @error.context_aware
-    def pin_cpu(self, process, cpu=None):
+    def pin_cpu(self, process, cpu=None, extra=False):
         """
         Pin one process to a single cpu.
 
@@ -1379,11 +1409,15 @@ class NumaNode(object):
         """
         self._flush_pin()
         if cpu:
-            error.context("Pinning process %s to the available CPU" % (process))
-        else:
             error.context("Pinning process %s to the CPU(%s)" % (process, cpu))
+        else:
+            error.context("Pinning process %s to the available CPU" % (process))
 
-        for i in self.cpus:
+        cpus = self.cpus
+        if extra:
+            cpus = self.extra_cpus
+
+        for i in cpus:
             if (cpu is not None and cpu == i) or (cpu is None and not self.dict[i]):
                 self.dict[i].append(process)
                 cmd = "taskset -p %s %s" % (hex(2 ** int(i)), process)
@@ -1495,7 +1529,7 @@ def get_cpu_flags(cpu_info=""):
     if not cpu_flag_lists:
         return []
     cpu_flags = cpu_flag_lists[0]
-    return cpu_flags.strip().split('\s+')
+    return re.split("\s+", cpu_flags.strip())
 
 
 def get_cpu_vendor(cpu_info="", verbose=True):
@@ -1656,7 +1690,7 @@ def get_qemu_binary(params):
 
     if not os.path.isfile(qemu_binary_path):
         logging.debug('Could not find params qemu in %s, searching the '
-                      'host PATH for one to use')
+                      'host PATH for one to use', qemu_binary_path)
         try:
             qemu_binary = find_command('qemu-kvm')
             logging.debug('Found %s', qemu_binary)
@@ -1683,7 +1717,7 @@ def get_qemu_img_binary(params):
                                     params.get("qemu_img_binary", "qemu-img"))
     if not os.path.isfile(qemu_img_binary_path):
         logging.debug('Could not find params qemu-img in %s, searching the '
-                      'host PATH for one to use')
+                      'host PATH for one to use', qemu_img_binary_path)
         qemu_img_binary = find_command('qemu-img')
         logging.debug('Found %s', qemu_img_binary)
     else:
@@ -1700,7 +1734,7 @@ def get_qemu_io_binary(params):
                                    params.get("qemu_io_binary", "qemu-io"))
     if not os.path.isfile(qemu_io_binary_path):
         logging.debug('Could not find params qemu-io in %s, searching the '
-                      'host PATH for one to use')
+                      'host PATH for one to use', qemu_io_binary_path)
         qemu_io_binary = find_command('qemu-io')
         logging.debug('Found %s', qemu_io_binary)
     else:
@@ -2305,3 +2339,34 @@ class KSMController(object):
                 return ksminfos[_KSM_PARAMS.index(feature)]
             except ValueError:
                 raise KSMError
+
+
+def monotonic_time():
+    """
+    Get monotonic time
+    """
+    def monotonic_time_os():
+        """
+        Get monotonic time using ctypes
+        """
+        class struct_timespec(ctypes.Structure):
+            _fields_ = [('tv_sec', ctypes.c_long), ('tv_nsec', ctypes.c_long)]
+
+        lib = ctypes.CDLL("librt.so.1", use_errno=True)
+        clock_gettime = lib.clock_gettime
+        clock_gettime.argtypes = [ctypes.c_int, ctypes.POINTER(struct_timespec)]
+
+        timespec = struct_timespec()
+        # CLOCK_MONOTONIC_RAW == 4
+        if not clock_gettime(4, ctypes.pointer(timespec)) == 0:
+            errno = ctypes.get_errno()
+            raise OSError(errno, os.strerror(errno))
+
+        return timespec.tv_sec + timespec.tv_nsec * 10 ** -9
+
+    monotonic_attribute = getattr(time, "monotonic", None)
+    if callable(monotonic_attribute):
+        # Introduced in Python 3.3
+        return time.monotonic()
+    else:
+        return monotonic_time_os()

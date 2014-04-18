@@ -415,7 +415,7 @@ class PoolVolume(object):
             except IndexError:
                 # Do not find a path
                 path = ""
-            name = line.split(path)[0]
+            name = line.split(path)[0].lstrip()
             volumes[name] = path.strip()
         return volumes
 
@@ -461,7 +461,8 @@ class PoolVolume(object):
             return False
 
         if not self.volume_exists(name):
-            logging.error("Created volume does not exist.")
+            logging.error("Created volume does not exist:%s",
+                          self.list_volumes())
             return False
         return True
 

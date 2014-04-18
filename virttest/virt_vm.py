@@ -650,7 +650,7 @@ class BaseVM(object):
 
             if not arp_ip and os.geteuid() != 0:
                 # For non-root, tcpdump won't work for finding IP address,
-                #try arp
+                # try arp
                 ip_map = utils_net.parse_arp()
                 arp_ip = ip_map.get(nic.mac.lower())
                 if arp_ip:
@@ -767,8 +767,8 @@ class BaseVM(object):
                 raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
             try:
                 s_session = None
-                #for windows guest make sure your guest supports
-                #login by serial_console
+                # for windows guest make sure your guest supports
+                # login by serial_console
                 s_session = self.wait_for_serial_login()
                 nic_mac = self.get_mac_address(nic_index_or_name)
                 os_type = self.params.get("os_type")
@@ -866,7 +866,7 @@ class BaseVM(object):
                 raise VMDeadKernelCrashError(match.group(0))
 
     def verify_bsod(self, scrdump_file):
-        #For windows guest
+        # For windows guest
         if (os.path.exists(scrdump_file) and
                 self.params.get("check_guest_bsod", "no") == 'yes' and
                 ppm_utils.Image is not None):
@@ -966,6 +966,56 @@ class BaseVM(object):
         Alias for login() for backward compatibility.
         """
         return self.login(nic_index, timeout, username, password)
+
+    @error.context_aware
+    def commander(self, nic_index=0, timeout=LOGIN_TIMEOUT,
+                  username=None, password=None, commander_path=None):
+        """
+        Log into the guest via SSH/Telnet/Netcat.
+        If timeout expires while waiting for output from the guest (e.g. a
+        password prompt or a shell prompt) -- fail.
+
+        :param nic_index: The index of the NIC to connect to.
+        :param timeout: Time (seconds) before giving up logging into the
+                guest.
+        :param commaner_path: Path where will be commader placed.
+        :return: A ShellSession object.
+        """
+        if commander_path is None:
+            commander_path = "/tmp"
+        error.context("logging into '%s'" % self.name)
+        if not username:
+            username = self.params.get("username", "")
+        if not password:
+            password = self.params.get("password", "")
+        prompt = "^\s*#"
+        linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
+        client = self.params.get("shell_client")
+        address = self.get_address(nic_index)
+        port = self.get_port(int(self.params.get("shell_port")))
+        log_filename = None
+
+        import remote_commander as rc
+        path = os.path.dirname(rc.__file__)
+
+        f_path = " ".join((os.path.join(path, _) for _ in
+                          ("remote_runner.py", "remote_interface.py",
+                           "messenger.py")))
+        self.copy_files_to(f_path, commander_path)
+
+        # start remote commander
+        cmd = remote.remote_commander(client, address, port, username,
+                                      password, prompt, linesep, log_filename,
+                                      timeout, commander_path)
+        self.remote_sessions.append(cmd)
+        return cmd
+
+    def remote_commander(self, nic_index=0, timeout=LOGIN_TIMEOUT,
+                         username=None, password=None):
+        """
+        Alias for commander() for backward compatibility.
+        """
+        return self.commander(nic_index, timeout, username, password)
 
     def wait_for_login(self, nic_index=0, timeout=LOGIN_WAIT_TIMEOUT,
                        internal_timeout=LOGIN_TIMEOUT,
@@ -1111,7 +1161,8 @@ class BaseVM(object):
         status_test_command = self.params.get("status_test_command", "")
 
         # Some times need recreate the serial_console.
-        if not os.path.exists(self.serial_console.inpipe_filename):
+        if not (self.serial_console and
+                os.path.exists(self.serial_console.inpipe_filename)):
             self.create_serial_console()
 
         self.serial_console.set_linesep(linesep)

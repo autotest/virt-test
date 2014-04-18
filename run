@@ -169,12 +169,16 @@ SUPPORTED_DISK_BUSES = ['ide', 'scsi', 'virtio_blk', 'virtio_scsi', 'lsi_scsi',
 
 SUPPORTED_NIC_MODELS = ["virtio_net", "e1000", "rtl8139", "spapr-vlan"]
 
+SUPPORTED_NET_TYPES = ["bridge", "user", "none"]
 
 class VirtTestRunParser(optparse.OptionParser):
 
     def __init__(self):
         optparse.OptionParser.__init__(self, usage='Usage: %prog [options]')
         from virttest import data_dir
+        from virttest import bootstrap
+        jeos_info = bootstrap.get_jeos_info()
+        self.default_guest_os = jeos_info['variant']
 
         try:
             qemu_bin_path = _find_default_qemu_paths()[0]
@@ -254,7 +258,7 @@ class VirtTestRunParser(optparse.OptionParser):
                            default=None,
                            help=("Select the guest OS to be used. "
                                  "If -c is provided, this will be ignored. "
-                                 "Default: %s" % DEFAULT_GUEST_OS))
+                                 "Default: %s" % self.default_guest_os))
         general.add_option("--arch", action="store", dest="arch",
                            default=None,
                            help=("Architecture under test. "
@@ -341,10 +345,10 @@ class VirtTestRunParser(optparse.OptionParser):
         qemu.add_option("--accel", action="store", dest="accel", default="kvm",
                         help=("Accelerator used to run qemu (kvm or tcg). "
                               "Default: kvm"))
+        help_msg = "QEMU network option (%s). " % ", ".join(SUPPORTED_NET_TYPES)
+        help_msg += "Default: %default"
         qemu.add_option("--nettype", action="store", dest="nettype",
-                        default=nettype_default,
-                        help=("QEMU network option (bridge, user or none). "
-                              "Default: %default"))
+                        default=nettype_default, help=help_msg)
         qemu.add_option("--netdst", action="store", dest="netdst",
                         default="virbr0",
                         help=("Bridge name to be used "
@@ -494,6 +498,11 @@ class VirtTestApp(object):
             self.cartesian_parser.assign("disable_kvm", "yes")
 
     def _process_bridge_mode(self):
+        if self.options.nettype not in SUPPORTED_NET_TYPES:
+            _restore_stdout()
+            print("Invalid --nettype option '%s'. Valid options are: (%s)" %
+                  (self.options.nettype, ", ".join(SUPPORTED_NET_TYPES)))
+            sys.exit(1)
         if self.options.nettype == 'bridge':
             if os.getuid() != 0:
                 _restore_stdout()
@@ -649,7 +658,7 @@ class VirtTestApp(object):
                       self.options.guest_os)
                 sys.exit(1)
             self.cartesian_parser.only_filter(
-                self.options.guest_os or DEFAULT_GUEST_OS)
+                self.options.guest_os or self.option_parser.default_guest_os)
         else:
             logging.info("Config provided, ignoring --guest-os option")
 
@@ -918,7 +927,8 @@ class VirtTestApp(object):
                       "names correctly, and double "
                       "check that tests show "
                       "in --list-tests for guest '%s'" %
-                      (self.options.guest_os or DEFAULT_GUEST_OS))
+                      (self.options.guest_os or
+                       self.option_parser.default_guest_os))
                 sys.exit(1)
 
             if self.options.config:

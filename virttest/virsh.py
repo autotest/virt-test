@@ -586,16 +586,20 @@ def vcpuinfo(name, **dargs):
     return command("vcpuinfo %s" % name, **dargs)
 
 
-def freecell(extra="", **dargs):
+def freecell(cellno=None, options="", **dargs):
     """
     Prints the available amount of memory on the machine or within a NUMA cell.
 
-    :param extra: extra argument string to pass to command
+    :param cellno: number of cell to show.
+    :param options: extra argument string to pass to command
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
-    cmd_freecell = "freecell %s" % extra
-    return command(cmd_freecell, **dargs)
+    cmd = "freecell "
+    if cellno:
+        cmd = "%s --cellno %s " % (cmd, cellno)
+    cmd = "%s %s" % (cmd, options)
+    return command(cmd, **dargs)
 
 
 def nodeinfo(extra="", **dargs):
@@ -626,6 +630,25 @@ def nodecpumap(extra="", **dargs):
     return CmdResult
 
 
+def nodesuspend(target, duration, extra='', **dargs):
+    """
+    Suspend the host node for a given time duration.
+
+    :param target: Suspend target mem/disk/hybrid.
+                   mem(Suspend-to-RAM)
+                   disk(Suspend-to-Disk)
+                   hybrid(Hybrid-Suspend)
+    :param duration: Suspend duration in seconds, at least 60.
+    :param extra: extra argument string to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "nodesuspend %s %s" % (target, duration)
+    if extra:
+        cmd += " %s" % extra
+    return command(cmd, **dargs)
+
+
 def canonical_uri(option='', **dargs):
     """
     Return the hypervisor canonical URI.
@@ -654,9 +677,9 @@ def version(option='', **dargs):
 
     :param option: additional option string to pass
     :param dargs: standardized virsh function API keywords
-    :return: standard output from command
+    :return: CmdResult object
     """
-    return command("version %s" % option, **dargs).stdout.strip()
+    return command("version %s" % option, **dargs)
 
 
 def maxvcpus(option='', **dargs):
@@ -729,15 +752,16 @@ def driver(**dargs):
     return scheme.split('+', 2)[0]
 
 
-def domstate(name, **dargs):
+def domstate(name, extra="", **dargs):
     """
     Return the state about a running domain.
 
     :param name: VM name
+    :param extra: command options
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
-    return command("domstate %s" % name, **dargs)
+    return command("domstate %s %s" % (name, extra), **dargs)
 
 
 def domid(name_or_uuid, **dargs):
@@ -1028,16 +1052,17 @@ def dump(name, path, option="", **dargs):
     return command("dump %s %s %s" % (name, path, option), **dargs)
 
 
-def save(option, path, **dargs):
+def save(name, path, options="", **dargs):
     """
     Store state of VM into named file.
 
-    :param option: save command's first option, vm'name, id or uuid.
+    :param name: VM'name, id or uuid.
     :param path: absolute path to state file
+    :param options: command's options.
     :param dargs: standardized virsh function API keywords
     :return: CmdResult instance
     """
-    return command("save %s %s" % (option, path), **dargs)
+    return command("save %s %s %s" % (name, path, options), **dargs)
 
 
 def restore(path, options="", **dargs):
@@ -1453,7 +1478,7 @@ def net_state_dict(only_names=False, virsh_instance=None, **dargs):
     # If command failed, exception would be raised here
     netlist = net_list_result.stdout.strip().splitlines()
     # First two lines contain table header followed by entries
-    # for each pool on the host, such as:
+    # for each network on the host, such as:
     #
     #   Name                 State      Autostart     Persistent
     #  ----------------------------------------------------------
@@ -1646,7 +1671,7 @@ def pool_create_as(name, pool_type, target, extra="", **dargs):
     if not name:
         logging.error("Please give a pool name")
 
-    types = ['dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical']
+    types = ['dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical', 'gluster']
 
     if pool_type and pool_type not in types:
         logging.error("Only support pool types: %s.", types)
@@ -1918,6 +1943,19 @@ def pool_define(xml_path, **dargs):
     return command(cmd, **dargs)
 
 
+def vol_create(pool_name, xml_file, extra="", **dargs):
+    """
+    To create the volumes from xml file.
+
+    :param pool_name: Name of the pool to be used
+    :param xml_file: file containing an XML vol description
+    :param extra: string of extra options
+    :return: CmdResult object
+    """
+    cmd = "vol-create --pool %s --file %s %s" % (pool_name, xml_file, extra)
+    return command(cmd, **dargs)
+
+
 def vol_create_as(volume_name, pool_name, capacity,
                   allocation, frmt, extra="", **dargs):
     """
@@ -2077,6 +2115,60 @@ def vol_pool(volume_name, extra="", **dargs):
     :return: returns the output of the command
     """
     return command("vol-pool %s %s" % (volume_name, extra), **dargs)
+
+
+def vol_clone(volume_name, new_name, pool_name="", extra="", **dargs):
+    """
+    Clone an existing volume.
+
+    :param volume_name: Name of the original volume
+    :param new_name: Clone name
+    :param pool_name: Name of the pool
+    :param extra: Free-form string options
+    :param dargs: Standardized virsh function API keywords
+    :return: Returns the output of the command
+    """
+    cmd = "vol-clone --vol %s --newname %s %s" % (volume_name, new_name, extra)
+    if pool_name:
+        cmd += " --pool %s" % pool_name
+    return command(cmd, **dargs)
+
+
+def vol_wipe(volume_name, pool_name="", alg="", **dargs):
+    """
+    Ensure data previously on a volume is not accessible to future reads.
+
+    :param volume_name: Name of the volume
+    :param pool_name: Name of the pool
+    :param alg: Perform selected wiping algorithm
+    :param dargs: Standardized virsh function API keywords
+    :return: Returns the output of the command
+    """
+    cmd = "vol-wipe --vol %s" % volume_name
+    if pool_name:
+        cmd += " --pool %s" % pool_name
+    if alg:
+        cmd += " --algorithm %s" % alg
+    return command(cmd, **dargs)
+
+
+def vol_resize(volume_name, capacity, pool_name="", extra="", **dargs):
+    """
+    Resizes a storage volume.
+
+    :param volume_name: Name of the volume
+    :param capacity: New capacity for the volume (default bytes)
+    :param pool_name: Name of the pool
+    :param extra: Free-form string options
+    :param dargs: Standardized virsh function API keywords
+    :return: Returns the output of the command
+    """
+    cmd = "vol-resize --vol %s --capacity %s " % (volume_name, capacity)
+    if pool_name:
+        cmd += " --pool %s " % pool_name
+    if extra:
+        cmd += extra
+    return command(cmd, **dargs)
 
 
 def capabilities(option='', **dargs):
@@ -2763,16 +2855,25 @@ def domif_getlink(name, interface, options=None, **dargs):
     return command(cmd, **dargs)
 
 
-def nodedev_list(options="", **dargs):
+def nodedev_list(tree=False, cap="", options="", **dargs):
     """
     List the node devices.
 
+    :param tree: list devices in a tree
+    :param cap: capability names, separated by comma
+    :param options: extra command options.
+    :param dargs: standardized virsh function API keywords
     :return: CmdResult object.
     """
-    cmd = "nodedev-list %s" % (options)
-    CmdResult = command(cmd, **dargs)
+    cmd = "nodedev-list"
+    if tree:
+        cmd += " --tree"
+    if cap:
+        cmd += " --cap %s" % cap
+    if options:
+        cmd += " %s" % options
 
-    return CmdResult
+    return command(cmd, **dargs)
 
 
 def nodedev_detach(name, options="", **dargs):
@@ -2921,6 +3022,142 @@ def node_memtune(shm_pages_to_scan=None, shm_sleep_millisecs=None,
         cmd += " --%s" % options
 
     return command(cmd, **dargs)
+
+
+def iface_list(extra="", **dargs):
+    """
+    List physical host interfaces.
+
+    :param extra: Free-form string of options
+    :param dargs: Standardized virsh functiont API keywords
+    :return: CmdResult object
+    """
+    return command("iface-list %s" % extra, **dargs)
+
+
+def iface_define(xml_path, **dargs):
+    """
+    Define (but don't start) a physical host interface from an XML file.
+
+    :param xml_path: XML file path
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-define --file %s" % xml_path, **dargs)
+
+
+def iface_start(iface, **dargs):
+    """
+    Start a physical host interface.
+
+    :param iface: Interface name or MAC address
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-start %s" % iface, **dargs)
+
+
+def iface_destroy(iface, **dargs):
+    """
+    Destroy a physical host interface.
+
+    :param iface: Interface name or MAC address
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-destroy %s" % iface, **dargs)
+
+
+def iface_undefine(iface, **dargs):
+    """
+    Undefine a physical host interface (remove it from configuration).
+
+    :param iface: Interface name or MAC address
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-undefine %s" % iface, **dargs)
+
+
+def iface_dumpxml(iface, extra="", to_file="", **dargs):
+    """
+    Interface information in XML.
+
+    :param iface: Interface name or MAC address
+    :param extra: Free-form string of options
+    :param to_file: Optional file to write xml
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
+    """
+    dargs['ignore_status'] = True
+    cmd = "iface-dumpxml %s %s" % (iface, extra)
+    result = command(cmd, **dargs)
+    if to_file:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    if result.exit_status:
+        raise error.CmdError(cmd, result,
+                             "Dumpxml returned non-zero exit status")
+    return result.stdout.strip()
+
+
+def iface_name(mac, **dargs):
+    """
+    Convert an interface MAC address to interface name.
+
+    :param mac: Interface MAC address
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-name %s" % mac, **dargs)
+
+
+def iface_mac(name, **dargs):
+    """
+    Convert an interface name to interface MAC address.
+
+    :param name: Interface name
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-mac %s" % name, **dargs)
+
+
+def iface_edit(iface, **dargs):
+    """
+    Edit XML configuration for a physical host interface.
+
+    :param iface: Interface name or MAC address
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-edit %s" % iface, **dargs)
+
+
+def iface_bridge(iface, bridge, extra="", **dargs):
+    """
+    Create a bridge device and attach an existing network device to it.
+
+    :param iface: Interface name or MAC address
+    :param bridge: New bridge device name
+    :param extra: Free-form string of options
+    :param dargs: Standardized virsh functiont API keywords
+    :return: CmdResult object
+    """
+    return command("iface-bridge %s %s %s" % (iface, bridge, extra), **dargs)
+
+
+def iface_unbridge(bridge, extra="", **dargs):
+    """
+    Undefine a bridge device after detaching its slave device.
+
+    :param bridge: Current bridge device name
+    :param extra: Free-form string of options
+    :param dargs: Standardized virsh functiont API keywords
+    :return: CmdResult object
+    """
+    return command("iface-unbridge %s %s" % (bridge, extra), **dargs)
 
 
 def iface_begin(**dargs):
@@ -3370,4 +3607,41 @@ def save_image_define(state_file, xmlfile, options="", **dargs):
     :return: CmdResult object
     """
     cmd = "save-image-define %s %s %s" % (state_file, xmlfile, options)
+    return command(cmd, **dargs)
+
+
+def inject_nmi(name, options="", **dargs):
+    """
+    Inject NMI to the guest
+
+    :param name: domain name
+    :param options: extra options
+    """
+    cmd = "inject-nmi %s %s" % (name, options)
+    return command(cmd, **dargs)
+
+
+def vol_download(name, dfile, options="", **dargs):
+    """
+    Download volume contents to a file
+
+    :param name: name of volume
+    :param dfile: file path that will download to
+    :param options: pool name, offset and length
+    :return: CmdResult object
+    """
+    cmd = "vol-download %s %s %s" % (name, dfile, options)
+    return command(cmd, **dargs)
+
+
+def vol_upload(name, dfile, options="", **dargs):
+    """
+    Upload file contents to a volume
+
+    :param name: name of volume
+    :param dfile: file path that will upload from
+    :param options: pool name, offset and length
+    :return: CmdResult object
+    """
+    cmd = "vol-upload %s %s %s" % (name, dfile, options)
     return command(cmd, **dargs)

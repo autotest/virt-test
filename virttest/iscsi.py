@@ -22,10 +22,12 @@ def iscsi_get_sessions():
     cmd = "iscsiadm --mode session"
 
     output = utils.system_output(cmd, ignore_status=True)
-    pattern = r"(\d+\.\d+\.\d+\.\d+|\W:{2}\d\W):\d+,\d+\s+([\w\.\-:\d]+)"
     sessions = []
     if "No active sessions" not in output:
-        sessions = re.findall(pattern, output)
+        for session in output.splitlines():
+            ip_addr = session.split()[2].split(',')[0]
+            target = session.split()[3]
+            sessions.append((ip_addr, target))
     return sessions
 
 
@@ -143,10 +145,8 @@ class Iscsi(object):
         """
         sessions = iscsi_get_sessions()
         login = False
-        for i in sessions:
-            if i[1] == self.target:
-                login = True
-                break
+        if self.target in map(lambda x: x[1], sessions):
+            login = True
         return login
 
     def portal_visible(self):
@@ -192,14 +192,14 @@ class Iscsi(object):
         device_name = ""
         if self.logged_in():
             output = utils.system_output(cmd)
-            pattern = r"Target:\s+%s\n.*?disk\s+(\w+)\s+" % self.target
-            if re.findall(pattern, output, re.S):
-                device_name = re.findall(pattern, output, re.S)[0]
-                device_name = "/dev/%s" % device_name
-            else:
-                logging.debug("Can not find target '%s' after login", self.target)
+            pattern = r"Target:\s+%s.*?disk\s(\w+)\s+\S+\srunning" % self.target
+            device_name = re.findall(pattern, output, re.S)
+            try:
+                device_name = "/dev/%s" % device_name[0]
+            except IndexError:
+                logging.error("Can not find target '%s' after login.", self.target)
         else:
-            logging.debug("Session is not logged in yet.")
+            logging.error("Session is not logged in yet.")
         return device_name
 
     def get_target_id(self):

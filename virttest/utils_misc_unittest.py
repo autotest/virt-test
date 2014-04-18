@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import os
+import tempfile
 import unittest
 
 import common
@@ -134,54 +136,66 @@ node   0
 def utils_run(cmd):
     return FakeCmd(cmd)
 
+all_nodes_contents = "0\n"
+online_nodes_contents = "0\n"
 
 class TestNumaNode(unittest.TestCase):
 
     def setUp(self):
         self.god = mock.mock_god(ut=self)
         self.god.stub_with(utils, 'run', utils_run)
-        self.numa_node = utils_misc.NumaNode(-1)
+        all_nodes = tempfile.NamedTemporaryFile(delete=False)
+        all_nodes.write(all_nodes_contents)
+        all_nodes.close()
+        online_nodes = tempfile.NamedTemporaryFile(delete=False)
+        online_nodes.write(online_nodes_contents)
+        online_nodes.close()
+        self.all_nodes_path = all_nodes.name
+        self.online_nodes_path = online_nodes.name
+        self.numa_node = utils_misc.NumaNode(-1,
+                                             self.all_nodes_path,
+                                             self.online_nodes_path)
 
     def test_get_node_cpus(self):
         self.assertEqual(self.numa_node.get_node_cpus(0), '0 1 2 3 4 5 6 7')
 
     def test_pin_cpu(self):
         self.assertEqual(self.numa_node.pin_cpu("1230"), "0")
-        self.assertEqual(self.numa_node.dict["0"], "1230")
+        self.assertEqual(self.numa_node.dict["0"], ["1230"])
 
         self.assertEqual(self.numa_node.pin_cpu("1231"), "1")
-        self.assertEqual(self.numa_node.dict["1"], "1231")
+        self.assertEqual(self.numa_node.dict["1"], ["1231"])
 
         self.assertEqual(self.numa_node.pin_cpu("1232"), "2")
-        self.assertEqual(self.numa_node.dict["2"], "1232")
+        self.assertEqual(self.numa_node.dict["2"], ["1232"])
 
         self.assertEqual(self.numa_node.pin_cpu("1233"), "3")
-        self.assertEqual(self.numa_node.dict["3"], "1233")
+        self.assertEqual(self.numa_node.dict["3"], ["1233"])
 
         self.assertEqual(self.numa_node.pin_cpu("1234"), "4")
-        self.assertEqual(self.numa_node.dict["4"], "1234")
+        self.assertEqual(self.numa_node.dict["4"], ["1234"])
 
         self.assertEqual(self.numa_node.pin_cpu("1235"), "5")
-        self.assertEqual(self.numa_node.dict["5"], "1235")
+        self.assertEqual(self.numa_node.dict["5"], ["1235"])
 
         self.assertEqual(self.numa_node.pin_cpu("1236"), "6")
-        self.assertEqual(self.numa_node.dict["6"], "1236")
+        self.assertEqual(self.numa_node.dict["6"], ["1236"])
 
         self.assertEqual(self.numa_node.pin_cpu("1237"), "7")
-        self.assertEqual(self.numa_node.dict["7"], "1237")
+        self.assertEqual(self.numa_node.dict["7"], ["1237"])
 
         self.assertTrue("free" not in self.numa_node.dict.values())
 
     def test_free_cpu(self):
         self.assertEqual(self.numa_node.pin_cpu("1230"), "0")
-        self.assertEqual(self.numa_node.dict["0"], "1230")
+        self.assertEqual(self.numa_node.dict["0"], ["1230"])
 
         self.assertEqual(self.numa_node.pin_cpu("1231"), "1")
-        self.assertEqual(self.numa_node.dict["1"], "1231")
+        self.assertEqual(self.numa_node.dict["1"], ["1231"])
 
         self.numa_node.free_cpu("0")
-        self.assertEqual(self.numa_node.dict["0"], "free")
-        self.assertEqual(self.numa_node.dict["1"], "1231")
+        self.assertEqual(self.numa_node.dict["0"], [])
+        self.assertEqual(self.numa_node.dict["1"], ["1231"])
 
     def test_bitlist_to_string(self):
         string = 'foo'
@@ -197,6 +211,8 @@ class TestNumaNode(unittest.TestCase):
 
     def tearDown(self):
         self.god.unstub_all()
+        os.unlink(self.all_nodes_path)
+        os.unlink(self.online_nodes_path)
 
 
 if __name__ == '__main__':

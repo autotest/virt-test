@@ -28,11 +28,13 @@ import signal
 import tempfile
 import threading
 import time
+import subprocess
 
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
-from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net, storage
+from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net
+from virttest import storage, asset, bootstrap
 import virttest
 
 import libvirt
@@ -53,6 +55,7 @@ except ImportError:
 # Handle transition from autotest global_config (0.14.x series) to
 # settings (0.15.x onwards)
 try:
+    # pylint: disable=E0611
     from autotest.client.shared import global_config
     section_values = global_config.global_config.get_section_values
     settings_value = global_config.global_config.get_config_value
@@ -577,17 +580,21 @@ def run_autotest(vm, session, control_path, timeout,
             session.cmd("mv %s %s" %
                         (autotest_dirname, os.path.basename(dest_dir)))
 
+    def get_last_guest_results_index():
+        res_index = 0
+        for subpath in os.listdir(outputdir):
+            if re.search("guest_autotest_results\d+", subpath):
+                res_index = max(res_index, int(re.search("guest_autotest_results(\d+)", subpath).group(1)))
+        return res_index
+
     def get_results(base_results_dir):
         """
         Copy autotest results present on the guest back to the host.
         """
         logging.debug("Trying to copy autotest results from guest")
-        guest_results_dir = os.path.join(outputdir, "guest_autotest_results")
-        try:
-            os.mkdir(guest_results_dir)
-        except OSError, detail:
-            if detail.errno != errno.EEXIST:
-                raise
+        res_index = get_last_guest_results_index()
+        guest_results_dir = os.path.join(outputdir, "guest_autotest_results%s" % (res_index+1))
+        os.mkdir(guest_results_dir)
         # result info tarball to host result dir
         session = vm.wait_for_login(timeout=360)
         results_dir = "%s/results/default" % base_results_dir
@@ -616,7 +623,8 @@ def run_autotest(vm, session, control_path, timeout,
         NOTE: This function depends on the results copied to host by
               get_results() function, so call get_results() first.
         """
-        base_dir = os.path.join(outputdir, "guest_autotest_results")
+        res_index = get_last_guest_results_index()
+        base_dir = os.path.join(outputdir, "guest_autotest_results%s" % res_index)
         status_paths = glob.glob(os.path.join(base_dir, "*/status"))
         # for control files that do not use job.run_test()
         status_no_job = os.path.join(base_dir, "status")
@@ -818,8 +826,12 @@ def run_autotest(vm, session, control_path, timeout,
                                  "migration")
                     vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
             else:
-                session.cmd_output("./autotest-local --args=\"%s\" --verbose"
-                                   " control" % (control_args),
+                if params.get("guest_autotest_verbosity", "yes") == "yes":
+                    verbose = " --verbose"
+                else:
+                    verbose = ""
+                session.cmd_output("./autotest-local --args=\"%s\"%s"
+                                   " control" % (control_args, verbose),
                                    timeout=timeout,
                                    print_func=logging.info)
         finally:
@@ -1014,27 +1026,37 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     :param tag:    Tag for get the sub_test params
     """
     if sub_type is None:
-        raise error.TestError("No sub test is found")
-    shared_test_dir = os.path.dirname(test.virtdir)
-    shared_test_dir = os.path.join(shared_test_dir, "generic",
-                                   "tests")
-    subtest_dir = None
-    subtest_dirs = data_dir.SubdirList(shared_test_dir)
+        raise error.TestError("Unspecified sub test type. Please specify a"
+                              "sub test type")
 
-    subtest_dir_specific = os.path.join(test.bindir, params.get('vm_type'),
-                                        "tests")
-    subtest_dirs += data_dir.SubdirList(subtest_dir_specific)
+    provider = params.get("provider", None)
+    subtest_dirs = []
+
+    if provider is None:
+        # Verify if we have the correspondent source file for it
+        for generic_subdir in asset.get_test_provider_subdirs('generic'):
+            subtest_dirs += data_dir.SubdirList(generic_subdir,
+                                                bootstrap.test_filter)
+
+        for specific_subdir in asset.get_test_provider_subdirs(params.get("vm_type")):
+            subtest_dirs += data_dir.SubdirList(specific_subdir,
+                                                bootstrap.test_filter)
+    else:
+        provider_info = asset.get_test_provider_info(provider)
+        for key in provider_info['backends']:
+            subtest_dirs += data_dir.SubdirList(
+                provider_info['backends'][key]['path'],
+                bootstrap.test_filter)
+
     for d in subtest_dirs:
         module_path = os.path.join(d, "%s.py" % sub_type)
         if os.path.isfile(module_path):
             subtest_dir = d
             break
+
     if subtest_dir is None:
         raise error.TestError("Could not find test file %s.py "
-                              "on either %s or %s "
-                              "directory" % (sub_type,
-                                             subtest_dir_specific,
-                                             shared_test_dir))
+                              "on directories %s" % (sub_type, subtest_dirs))
 
     f, p, d = imp.find_module(sub_type, [subtest_dir])
     test_module = imp.load_module(sub_type, f, p, d)
@@ -1305,3 +1327,254 @@ def get_date(session=None):
         return date_info
     except (error.CmdError, aexpect.ShellError), detail:
         raise error.TestFail("Get date failed. %s " % detail)
+
+
+##########Stress functions################
+class StressError(Exception):
+    pass
+
+
+class VMStress(object):
+
+    """
+    Run Stress tool in vms, such as stress, unixbench, iozone and etc.
+    """
+
+    def __init__(self, vm, stress_type):
+        """
+        Set parameters for stress type
+        """
+
+        def _parameters_filter(stress_type):
+            """Set parameters according stress_type"""
+            _control_files = {'unixbench': "unixbench5.control",
+                              'stress': "stress.control"}
+            _check_cmds = {'unixbench': "pidof -s ./Run",
+                           'stress': "pidof -s stress"}
+            _stop_cmds = {'unixbench': "killall ./Run",
+                          'stress': "killall stress"}
+            try:
+                control_file = _control_files[stress_type]
+                self.control_path = os.path.join(data_dir.get_root_dir(),
+                                                 "shared/control",
+                                                 control_file)
+                self.check_cmd = _check_cmds[stress_type]
+                self.stop_cmd = _stop_cmds[stress_type]
+            except KeyError:
+                self.control_path = ""
+                self.check_cmd = ""
+                self.stop_cmd = ""
+
+        self.vm = vm
+        self.params = vm.params
+        self.timeout = 60
+        self.stress_type = stress_type
+        if stress_type not in ["stress", "unixbench"]:
+            raise StressError("Stress %s is not supported now." % stress_type)
+
+        _parameters_filter(stress_type)
+        self.stress_arg = self.params.get("stress_args", "")
+
+    def get_session(self):
+        try:
+            session = self.vm.wait_for_login()
+            return session
+        except aexpect.ShellError, detail:
+            raise StressError("Login %s failed:\n%s", self.vm.name, detail)
+
+    @error.context_aware
+    def load_stress_tool(self):
+        """
+        load stress tool in guest
+        """
+        session = self.get_session()
+        command = run_autotest(self.vm, session, self.control_path,
+                               None, None,
+                               self.params, copy_only=True)
+        session.cmd("%s &" % command)
+        logging.info("Command: %s", command)
+        running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
+        if not running:
+            raise StressError("Stress tool %s isn't running"
+                              % self.stress_type)
+
+    @error.context_aware
+    def unload_stress(self):
+        """
+        stop stress tool manually
+        """
+        def _unload_stress():
+            session = self.get_session()
+            session.sendline(self.stop_cmd)
+            if not self.app_running():
+                return True
+            return False
+
+        error.context("stop stress app in guest", logging.info)
+        utils_misc.wait_for(_unload_stress, first=2.0,
+                            text="wait stress app quit", step=1.0, timeout=60)
+
+    def app_running(self):
+        """
+        check whether app really run in background
+        """
+        session = self.get_session()
+        status = session.cmd_status(self.check_cmd, timeout=60)
+        return status == 0
+
+
+class HostStress(object):
+
+    """
+    Run Stress tool on host, such as stress, unixbench, iozone and etc.
+    """
+
+    def __init__(self, params, stress_type):
+        """
+        Set parameters for stress type
+        """
+
+        def _parameters_filter(stress_type):
+            """Set parameters according stress_type"""
+            _control_files = {'unixbench': "unixbench5.control",
+                              'stress': "stress.control"}
+            _check_cmds = {'unixbench': "pidof -s ./Run",
+                           'stress': "pidof -s stress"}
+            _stop_cmds = {'unixbench': "killall ./Run",
+                          'stress': "killall stress"}
+            try:
+                control_file = _control_files[stress_type]
+                self.control_path = os.path.join(data_dir.get_root_dir(),
+                                                 "shared/control",
+                                                 control_file)
+                self.check_cmd = _check_cmds[stress_type]
+                self.stop_cmd = _stop_cmds[stress_type]
+            except KeyError:
+                self.control_path = ""
+                self.check_cmd = ""
+                self.stop_cmd = ""
+
+        self.params = params
+        self.timeout = 60
+        self.stress_type = stress_type
+        self.host_stress_process = None
+        if stress_type not in ["stress", "unixbench"]:
+            raise StressError("Stress %s is not supported now." % stress_type)
+
+        _parameters_filter(stress_type)
+        self.stress_arg = self.params.get("stress_args", "")
+
+    @error.context_aware
+    def load_stress_tool(self):
+        """
+        load stress tool on host.
+        """
+        # Run stress tool on host.
+        from autotest.client import common
+        autotest_client_dir = os.path.dirname(common.__file__)
+        autotest_local_path = os.path.join(autotest_client_dir, "autotest")
+        args = [autotest_local_path, self.control_path, '--verbose']
+        self.host_stress_process = subprocess.Popen(args)
+
+        running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
+        if not running:
+            raise StressError("Stress tool %s isn't running"
+                              % self.stress_type)
+
+    @error.context_aware
+    def unload_stress(self):
+        """
+        stop stress tool manually
+        """
+        def _unload_stress():
+            if self.host_stress_process is not None:
+                utils_misc.kill_process_tree(self.host_stress_process.pid)
+            if not self.app_running():
+                return True
+            return False
+
+        error.context("stop stress app on host", logging.info)
+        utils_misc.wait_for(_unload_stress, first=2.0,
+                            text="wait stress app quit", step=1.0, timeout=60)
+
+    def app_running(self):
+        """
+        check whether app really run in background
+        """
+        result = utils.run(self.check_cmd, timeout=60, ignore_status=True)
+        return result.exit_status == 0
+
+
+def load_stress(stress_type, vms, params):
+    """
+    Load stress for tests.
+
+    :param stress_type: The stress type you need
+    :param params: Useful parameters for stress
+    :param vms: Used when it's stress in vms
+    """
+    fail_info = []
+    # Add stress tool in vms
+    if stress_type == "stress_in_vms":
+        for vm in vms:
+            try:
+                vstress = VMStress(vm, "stress")
+                vstress.load_stress_tool()
+            except StressError, detail:
+                fail_info.append("Launch stress in %s failed:%s" % (vm.name,
+                                                                    detail))
+    # Add stress for host
+    elif stress_type == "stress_on_host":
+        try:
+            hstress = HostStress(params, "stress")
+            hstress.load_stress_tool()
+        except StressError, detail:
+            fail_info.append("Launch stress on host failed:%s" % str(detail))
+    # Booting vm for following test
+    elif stress_type == "load_vm_booting":
+        load_vms = params.get("load_vms", [])
+        if len(load_vms):
+            load_vm = load_vms[0]
+            try:
+                if load_vm.is_alive():
+                    load_vm.destroy()
+                load_vm.start()
+            except virt_vm.VMStartError:
+                fail_info.append("Start load vm %s failed." % load_vm.name)
+        else:
+            fail_info.append("No load vm provided.")
+    # Booting vms for following test
+    elif stress_type == "load_vms_booting":
+        load_vms = params.get("load_vms", [])
+        for load_vm in load_vms:
+            if load_vm.is_alive():
+                load_vm.destroy()
+        # Booting load_vms at same time
+        for load_vm in load_vms:
+            try:
+                load_vm.start()
+            except virt_vm.VMStartError:
+                fail_info.append("Start load vm %s failed." % load_vm.name)
+                break
+    # Booting test vms for following test
+    elif stress_type == "vms_booting":
+        for vm in vms:
+            if vm.is_alive():
+                vm.destroy()
+        try:
+            for vm in vms:
+                vm.start()
+        except virt_vm.VMStartError:
+            fail_info.append("Start vms failed.")
+    return fail_info
+
+
+def unload_stress(stress_type, vms):
+    """
+    Unload stress loaded by load_stress(...).
+    """
+    if stress_type == "stress_in_vms":
+        for vm in vms:
+            VMStress(vm, "stress").unload_stress()
+    elif stress_type == "stress_on_host":
+        HostStress(None, "stress").unload_stress()

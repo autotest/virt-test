@@ -13,17 +13,30 @@ More specifically:
       For example, a function should not be used where it may display
       misleading or inaccurate info or debug messages.
 
-:copyright: 2013 Red Hat Inc.
+:copyright: 2014 Red Hat Inc.
 """
 
 import re
 import os
 import logging
-from virttest import virsh, xml_utils, iscsi, nfs, data_dir, aexpect
-from virttest import utils_misc, utils_selinux
+import shutil
+import threading
+import time
+from virttest import virsh
+from virttest import xml_utils
+from virttest import iscsi
+from virttest import nfs
+from virttest import data_dir
+from virttest import aexpect
+from virttest import utils_misc
+from virttest import utils_selinux
+from virttest import libvirt_storage
+from virttest import utils_net
+from virttest import gluster
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
+from __init__ import ping
 try:
     from autotest.client import lv_utils
 except ImportError:
@@ -96,7 +109,7 @@ def cpus_string_to_affinity_list(cpus_string, num_cpus):
     between_pattern = r"\d+-\d+"
     exclude_pattern = r"\^\d+"
     sub_pattern = r"(%s)|(%s)|(%s)" % (exclude_pattern,
-                  single_pattern, between_pattern)
+                                       single_pattern, between_pattern)
     pattern = r"^((%s),)*(%s)$" % (sub_pattern, sub_pattern)
     if not re.match(pattern, cpus_string):
         logging.debug("Cpus_string=%s is not a supported format for cpu_list."
@@ -182,7 +195,7 @@ def get_all_cells():
                         "1":"1059868 KiB",
                         "Total":"1184068 KiB"}
     """
-    fc_result = virsh.freecell("--all", ignore_status=True)
+    fc_result = virsh.freecell(options="--all", ignore_status=True)
     if fc_result.exit_status:
         if fc_result.stderr.count("NUMA not supported"):
             raise error.TestNAError(fc_result.stderr.strip())
@@ -248,7 +261,8 @@ def check_blockjob(vm_name, target, check_point="none", value="0"):
 
 
 def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
-                         export_options="rw,no_root_squash"):
+                         export_options="rw,no_root_squash",
+                         mount_src="nfs-export"):
     """
     Set up or clean up nfs service on localhost.
 
@@ -259,16 +273,20 @@ def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
     :return: export nfs path or nothing
     """
     tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
-    mount_src = os.path.join(tmpdir, 'nfs-export')
+    if not os.path.isabs(mount_src):
+        mount_src = os.path.join(tmpdir, mount_src)
     if not mount_dir:
         mount_dir = os.path.join(tmpdir, 'nfs-mount')
 
-    nfs_params = {"nfs_mount_dir": mount_dir,
-                  "nfs_mount_options": "rw",
-                  "nfs_mount_src": mount_src,
-                  "setup_local_nfs": "yes",
+    nfs_params = {"nfs_mount_dir": mount_dir, "nfs_mount_options": "rw",
+                  "nfs_mount_src": mount_src, "setup_local_nfs": "yes",
                   "export_options": "rw,no_root_squash"}
     _nfs = nfs.Nfs(nfs_params)
+    # Set selinux to permissive that the file in nfs
+    # can be used freely
+    if utils_misc.selinux_enforcing():
+        sv_status = utils_selinux.get_status()
+        utils_selinux.set_status("permissive")
     if is_setup:
         _nfs.setup()
         if not is_mount:
@@ -291,30 +309,42 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
     :param image_size: emulated image's size
     :return: iscsi device name or iscsi target
     """
+    try:
+        utils_misc.find_command("tgtadm")
+        utils_misc.find_command("iscsiadm")
+    except ValueError:
+        raise error.TestNAError("Missing command 'tgtadm' and/or 'iscsiadm'.")
+
     tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
     emulated_path = os.path.join(tmpdir, emulated_image)
     emulated_target = "iqn.2001-01.com.virttest:%s.target" % emulated_image
-    iscsi_params = {"emulated_image": emulated_path,
-                    "target": emulated_target,
-                    "image_size": image_size,
-                    "iscsi_thread_id": "virt"}
+    iscsi_params = {"emulated_image": emulated_path, "target": emulated_target,
+                    "image_size": image_size, "iscsi_thread_id": "virt"}
     _iscsi = iscsi.Iscsi(iscsi_params)
     if is_setup:
         sv_status = None
         if utils_misc.selinux_enforcing():
             sv_status = utils_selinux.get_status()
-            utils_selinux.set_status("Permissive")
+            utils_selinux.set_status("permissive")
         _iscsi.export_target()
         if sv_status is not None:
             utils_selinux.set_status(sv_status)
         if is_login:
             _iscsi.login()
-            iscsi_device = _iscsi.get_device_name()
-            logging.debug("iscsi device: %s", iscsi_device)
+            # The device doesn't necessarily appear instantaneously, so give
+            # about 5 seconds for it to appear before giving up
+            iscsi_device = utils_misc.wait_for(_iscsi.get_device_name, 5, 0, 1,
+                                               "Searching iscsi device name.")
             if iscsi_device:
+                logging.debug("iscsi device: %s", iscsi_device)
                 return iscsi_device
-            else:
+            if not iscsi_device:
                 logging.error("Not find iscsi device.")
+            # Cleanup and return "" - caller needs to handle that
+            # _iscsi.export_target() will have set the emulated_id and
+            # export_flag already on success...
+            _iscsi.cleanup()
+            utils.run("rm -f %s" % emulated_path)
         else:
             return emulated_target
     else:
@@ -323,6 +353,49 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
         _iscsi.cleanup()
         utils.run("rm -f %s" % emulated_path)
     return ""
+
+
+def get_host_ipv4_addr():
+    """
+    Get host ipv4 addr
+    """
+    if_up = utils_net.get_net_if(state="UP")
+    for i in if_up:
+        ipv4_value = utils_net.get_net_if_addrs(i)["ipv4"]
+        logging.debug("ipv4_value is %s", ipv4_value)
+        if ipv4_value != []:
+            ip_addr = ipv4_value[0]
+            break
+    if ip_addr is not None:
+        logging.info("ipv4 address is %s", ip_addr)
+    else:
+        raise error.TestFail("Fail to get ip address")
+    return ip_addr
+
+
+def setup_or_cleanup_gluster(is_setup, vol_name, brick_path="", pool_name=""):
+    """
+    Set up or clean up glusterfs environment on localhost
+    :param is_setup: Boolean value, true for setup, false for cleanup
+    :param vol_name: gluster created volume name
+    :param brick_path: Dir for create glusterfs
+    :return: ip_addr or nothing
+    """
+    if not brick_path:
+        tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
+        brick_path = os.path.join(tmpdir, pool_name)
+    if is_setup:
+        ip_addr = get_host_ipv4_addr()
+        gluster.glusterd_start()
+        logging.debug("finish start gluster")
+        gluster.gluster_vol_create(vol_name, ip_addr, brick_path)
+        logging.debug("finish vol create in gluster")
+        return ip_addr
+    else:
+        gluster.gluster_vol_stop(vol_name, True)
+        gluster.gluster_vol_delete(vol_name)
+        gluster.gluster_brick_delete(brick_path)
+        return ""
 
 
 def define_pool(pool_name, pool_type, pool_target, cleanup_flag):
@@ -442,3 +515,442 @@ def verify_virsh_console(session, user, passwd, timeout=10, debug=False):
         return False
 
     return True
+
+
+def pci_label_from_address(address_dict, radix=10):
+    """
+    Generate a pci label from a dict of address.
+
+    :param address_dict: A dict contains domain, bus, slot and function.
+    :param radix: The radix of your data in address_dict.
+
+    Example:
+        address_dict: {'domain': '0x0000', 'bus': '0x08',
+                       'slot': '0x10', 'function': '0x0'}
+        radix = 16
+
+    return-value:
+        pci_0000_08_10_0
+    """
+    if not set(['domain', 'bus', 'slot', 'function']).issubset(
+            address_dict.keys()):
+        raise error.TestError("Param %s does not contain keys of "
+                              "['domain', 'bus', 'slot', 'function']." %
+                              str(address_dict))
+    domain = int(address_dict['domain'], radix)
+    bus = int(address_dict['bus'], radix)
+    slot = int(address_dict['slot'], radix)
+    function = int(address_dict['function'], radix)
+    pci_label = ("pci_%04x_%02x_%02x_%01x" % (domain, bus, slot, function))
+    return pci_label
+
+
+def mk_part(disk, size="100M", session=None):
+    """
+    Create a partition for disk
+    """
+    mklabel_cmd = "parted -s %s mklabel msdos" % disk
+    mkpart_cmd = "parted -s %s mkpart primary ext4 0 %s" % (disk, size)
+    if session:
+        session.cmd(mklabel_cmd)
+        session.cmd(mkpart_cmd)
+    else:
+        utils.run(mklabel_cmd)
+        utils.run(mkpart_cmd)
+
+
+def check_actived_pool(pool_name):
+    """
+    Check if pool_name exist in active pool list
+    """
+    sp = libvirt_storage.StoragePool()
+    if not sp.pool_exists(pool_name):
+        raise error.TestFail("Can't find pool %s" % pool_name)
+    if not sp.is_pool_active(pool_name):
+        raise error.TestFail("Pool %s is not active." % pool_name)
+    logging.debug("Find active pool %s", pool_name)
+    return True
+
+
+class PoolVolumeTest(object):
+
+    """Test class for storage pool or volume"""
+
+    def __init__(self, test, params):
+        self.tmpdir = test.tmpdir
+        self.params = params
+
+    def cleanup_pool(self, pool_name, pool_type, pool_target, emulated_image,
+                     source_name=None):
+        """
+        Delete vols, destroy the created pool and restore the env
+        """
+        sp = libvirt_storage.StoragePool()
+        try:
+            if sp.pool_exists(pool_name):
+                pv = libvirt_storage.PoolVolume(pool_name)
+                if pool_type in ["dir", "netfs", "logical", "disk"]:
+                    vols = pv.list_volumes()
+                    for vol in vols:
+                        # Ignore failed deletion here for deleting pool
+                        pv.delete_volume(vol)
+                if not sp.delete_pool(pool_name):
+                    raise error.TestFail("Delete pool %s failed" % pool_name)
+        finally:
+            if pool_type == "netfs":
+                nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
+                nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
+                setup_or_cleanup_nfs(is_setup=False, mount_dir=nfs_path)
+                if os.path.exists(nfs_path):
+                    shutil.rmtree(nfs_path)
+            if pool_type == "logical":
+                cmd = "pvs |grep vg_logical|awk '{print $1}'"
+                pv = utils.system_output(cmd)
+                # Cleanup logical volume anyway
+                utils.run("vgremove -f vg_logical", ignore_status=True)
+                utils.run("pvremove %s" % pv, ignore_status=True)
+            # These types used iscsi device
+            if pool_type in ["logical", "iscsi", "fs", "disk", "scsi"]:
+                setup_or_cleanup_iscsi(is_setup=False,
+                                       emulated_image=emulated_image)
+            if pool_type == "dir":
+                pool_target = os.path.join(self.tmpdir, pool_target)
+                if os.path.exists(pool_target):
+                    shutil.rmtree(pool_target)
+            if pool_type == "gluster":
+                setup_or_cleanup_gluster(False, source_name)
+
+    def pre_pool(self, pool_name, pool_type, pool_target, emulated_image,
+                 image_size="100M", pre_disk_vol=[], source_name=None,
+                 source_path=None):
+        """
+        Preapare the specific type pool
+        Note:
+        1. For scsi type pool, it only could be created from xml file
+        2. Other type pools can be created by pool_creat_as function
+        3. Disk pool will not allow to create volume with virsh commands
+           So we can prepare it before pool created
+
+        :param pool_name: created pool name
+        :param pool_type: dir, disk, logical, fs, netfs or else
+        :param pool_target: target of storage pool
+        :param emulated_image: use an image file to simulate a scsi disk
+                               it could be used for disk, logical pool
+        :param image_size: the size for emulated image
+        :param pre_disk_vol: a list include partition size to be created
+                             no more than 4 partition because msdos label
+        """
+        extra = ""
+        if pool_type == "dir":
+            logging.info("Pool path:%s", self.tmpdir)
+            pool_target = os.path.join(self.tmpdir, pool_target)
+            if not os.path.exists(pool_target):
+                os.mkdir(pool_target)
+        elif pool_type == "disk":
+            device_name = setup_or_cleanup_iscsi(is_setup=True,
+                                                 emulated_image=emulated_image,
+                                                 image_size=image_size)
+            # If pre_vol is None, disk pool will have no volume
+            if type(pre_disk_vol) == list and len(pre_disk_vol):
+                for vol in pre_disk_vol:
+                    mk_part(device_name, vol)
+            extra = " --source-dev %s" % device_name
+        elif pool_type == "fs":
+            device_name = setup_or_cleanup_iscsi(is_setup=True,
+                                                 emulated_image=emulated_image,
+                                                 image_size=image_size)
+            cmd = "mkfs.ext4 -F %s" % device_name
+            pool_target = os.path.join(self.tmpdir, pool_target)
+            if not os.path.exists(pool_target):
+                os.mkdir(pool_target)
+            extra = " --source-dev %s" % device_name
+            utils.run(cmd)
+        elif pool_type == "logical":
+            logical_device = setup_or_cleanup_iscsi(is_setup=True,
+                                                    emulated_image=emulated_image,
+                                                    image_size=image_size)
+            cmd_pv = "pvcreate %s" % logical_device
+            vg_name = "vg_%s" % pool_type
+            cmd_vg = "vgcreate %s %s" % (vg_name, logical_device)
+            extra = "--source-name %s" % vg_name
+            utils.run(cmd_pv)
+            utils.run(cmd_vg)
+            # Create a small volume for verification
+            # And VG path will not exist if no any volume in.(bug?)
+            cmd_lv = "lvcreate --name default_lv --size 1M %s" % vg_name
+            utils.run(cmd_lv)
+        elif pool_type == "netfs":
+            nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
+            nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
+            if not os.path.exists(nfs_path):
+                os.mkdir(nfs_path)
+            pool_target = os.path.join(self.tmpdir, pool_target)
+            if not os.path.exists(pool_target):
+                os.mkdir(pool_target)
+            setup_or_cleanup_nfs(is_setup=True,
+                                 export_options="rw,async,no_root_squash",
+                                 mount_src=nfs_path)
+            source_host = self.params.get("source_host", "localhost")
+            extra = "--source-host %s --source-path %s" % (source_host,
+                                                           nfs_path)
+        elif pool_type == "iscsi":
+            setup_or_cleanup_iscsi(is_setup=True,
+                                   emulated_image=emulated_image,
+                                   image_size=image_size)
+            # Verify if expected iscsi device has been set
+            iscsi_sessions = iscsi.iscsi_get_sessions()
+            iscsi_target = ()
+            for iscsi_node in iscsi_sessions:
+                if iscsi_node[1].count(emulated_image):
+                    # Remove port for pool operations
+                    ip_addr = iscsi_node[0].split(":3260")[0]
+                    iscsi_device = (ip_addr, iscsi_node[1])
+                    break
+            if iscsi_device == ():
+                raise error.TestFail("No matched iscsi device.")
+            if "::" in iscsi_device[0]:
+                iscsi_device = ('localhost', iscsi_device[1])
+            extra = " --source-host %s  --source-dev %s" % iscsi_device
+        elif pool_type == "scsi":
+            scsi_xml_file = self.params.get("scsi_xml_file")
+            if not os.path.exists(scsi_xml_file):
+                scsi_xml_file = os.path.join(self.tmpdir, scsi_xml_file)
+                logical_device = setup_or_cleanup_iscsi(is_setup=True,
+                                                        emulated_image=emulated_image,
+                                                        image_size=image_size)
+                cmd = ("iscsiadm -m session -P 3 |grep -B3 %s| grep Host|awk "
+                       "'{print $3}'" % logical_device.split('/')[2])
+                scsi_host = utils.system_output(cmd)
+                scsi_xml = """
+<pool type='scsi'>
+  <name>%s</name>
+   <source>
+    <adapter type='scsi_host' name='host%s'/>
+  </source>
+  <target>
+    <path>/dev/disk/by-path</path>
+  </target>
+</pool>
+""" % (pool_name, scsi_host)
+                logging.debug("Prepare the scsi pool xml: %s", scsi_xml)
+                xml_object = open(scsi_xml_file, 'w')
+                xml_object.write(scsi_xml)
+                xml_object.close()
+        elif pool_type == "gluster":
+            # Prepare gluster service and create volume
+            hostip = setup_or_cleanup_gluster(True, source_name,
+                                              pool_name=pool_name)
+            logging.debug("hostip is %s", hostip)
+            cleanup_gluster = True
+            extra = "--source-host %s --source-path %s --source-name %s" % \
+                    (hostip, source_path, source_name)
+
+        # Create pool
+        if pool_type == "scsi":
+            re_v = virsh.pool_create(scsi_xml_file)
+        else:
+            re_v = virsh.pool_create_as(pool_name, pool_type,
+                                        pool_target, extra)
+        if not re_v:
+            raise error.TestFail("Create pool failed.")
+        # Check the created pool
+        check_actived_pool(pool_name)
+
+    def pre_vol(self, vol_name, vol_format, capacity, allocation, pool_name):
+        """
+        Preapare the specific type volume in pool
+        """
+        pv = libvirt_storage.PoolVolume(pool_name)
+        if not pv.create_volume(vol_name, capacity, allocation, vol_format):
+            raise error.TestFail("Prepare volume failed.")
+        if not pv.volume_exists(vol_name):
+            raise error.TestFail("Can't find volume: %s", vol_name)
+
+
+##########Migration Relative functions##############
+class MigrationTest(object):
+
+    """Class for migration tests"""
+
+    def __init__(self):
+        # To get result in thread, using member parameters
+        # Result of virsh migrate command
+        # True means command executed successfully
+        self.RET_MIGRATION = True
+        # A lock for threads
+        self.RET_LOCK = threading.RLock()
+        # The time spent when migrating vms
+        # format: vm_name -> time(seconds)
+        self.mig_time = {}
+
+    def thread_func_migration(self, vm, desturi, options=None):
+        """
+        Thread for virsh migrate command.
+
+        :param vm: A libvirt vm instance(local or remote).
+        :param desturi: remote host uri.
+        """
+        # Migrate the domain.
+        try:
+            if options is None:
+                options = "--live --timeout=60"
+            stime = int(time.time())
+            vm.migrate(desturi, option=options, ignore_status=False,
+                       debug=True)
+            etime = int(time.time())
+            self.mig_time[vm.name] = etime - stime
+        except error.CmdError, detail:
+            logging.error("Migration to %s failed:\n%s", desturi, detail)
+            self.RET_LOCK.acquire()
+            self.RET_MIGRATION = False
+            self.RET_LOCK.release()
+
+    def do_migration(self, vms, srcuri, desturi, migration_type, options=None,
+                     thread_timeout=60):
+        """
+        Migrate vms.
+
+        :param vms: migrated vms.
+        :param srcuri: local uri, used when migrate vm from remote to local
+        :param descuri: remote uri, used when migrate vm from local to remote
+        :param migration_type: do orderly for simultaneous migration
+        """
+        if migration_type == "orderly":
+            for vm in vms:
+                migration_thread = threading.Thread(target=self.thread_func_migration,
+                                                    args=(vm, desturi, options))
+                migration_thread.start()
+                migration_thread.join(thread_timeout)
+                if migration_thread.isAlive():
+                    logging.error("Migrate %s timeout.", migration_thread)
+                    self.RET_LOCK.acquire()
+                    self.RET_MIGRATION = False
+                    self.RET_LOCK.release()
+        elif migration_type == "cross":
+            # Migrate a vm to remote first,
+            # then migrate another to remote with the first vm back
+            vm_remote = vms.pop()
+            self.thread_func_migration(vm_remote, desturi)
+            for vm in vms:
+                thread1 = threading.Thread(target=self.thread_func_migration,
+                                           args=(vm_remote, srcuri, options))
+                thread2 = threading.Thread(target=self.thread_func_migration,
+                                           args=(vm, desturi, options))
+                thread1.start()
+                thread2.start()
+                thread1.join(thread_timeout)
+                thread2.join(thread_timeout)
+                vm_remote = vm
+                if thread1.isAlive() or thread1.isAlive():
+                    logging.error("Cross migrate timeout.")
+                    self.RET_LOCK.acquire()
+                    self.RET_MIGRATION = False
+                    self.RET_LOCK.release()
+            # Add popped vm back to list
+            vms.append(vm_remote)
+        elif migration_type == "simultaneous":
+            migration_threads = []
+            for vm in vms:
+                migration_threads.append(threading.Thread(
+                                         target=self.thread_func_migration,
+                                         args=(vm, desturi, options)))
+            # let all migration going first
+            for thread in migration_threads:
+                thread.start()
+
+            # listen threads until they end
+            for thread in migration_threads:
+                thread.join(thread_timeout)
+                if thread.isAlive():
+                    logging.error("Migrate %s timeout.", thread)
+                    self.RET_LOCK.acquire()
+                    self.RET_MIGRATION = False
+                    self.RET_LOCK.release()
+
+        if not self.RET_MIGRATION:
+            raise error.TestFail()
+
+    def cleanup_dest_vm(self, vm, srcuri, desturi):
+        """
+        Cleanup migrated vm on remote host.
+        """
+        vm.connect_uri = desturi
+        if vm.exists():
+            if vm.is_persistent():
+                vm.undefine()
+            if vm.is_alive():
+                # If vm on remote host is unaccessible
+                # graceful shutdown may cause confused
+                vm.destroy(gracefully=False)
+        # Set connect uri back to local uri
+        vm.connect_uri = srcuri
+
+
+def check_exit_status(result, expect_error=False):
+    """
+    Check the exit status of virsh commands.
+
+    :param result: Virsh command result object
+    :param expect_error: Boolean value, expect command success or fail
+    """
+    if not expect_error:
+        if result.exit_status != 0:
+            raise error.TestFail(result.stderr)
+        else:
+            logging.debug("Command output:\n%s", result.stdout.strip())
+    elif expect_error and result.exit_status == 0:
+        raise error.TestFail("Expect fail, but run successfully.")
+
+
+def check_iface(iface_name, checkpoint, extra=""):
+    """
+    Check interface with specified checkpoint.
+
+    :param iface_name: Interface name
+    :param checkpoint: Check if interface exists, MAC address, IP address or
+                       ping out. Support values: [exists, mac, ip, ping]
+    :param extra: Extra string for checking
+    :return: Boolean value, true for pass, false for fail
+    """
+    support_check = ["exists", "mac", "ip", "ping"]
+    iface = utils_net.Interface(name=iface_name)
+    check_pass = False
+    try:
+        if checkpoint == "exists":
+            # extra is iface-list option
+            list_find, ifcfg_find = (False, False)
+            # Check virsh list output
+            result = virsh.iface_list(extra, ignore_status=True)
+            check_exit_status(result, False)
+            output = re.findall(r"(\S+)\ +(\S+)\ +(\S+)[\ +\n]",
+                                str(result.stdout))
+            if filter(lambda x: x[0] == iface_name, output[1:]):
+                list_find = True
+            logging.debug("Find '%s' in virsh iface-list output: %s",
+                          iface_name, list_find)
+            # Check network script
+            iface_script = "/etc/sysconfig/network-scripts/ifcfg-" + iface_name
+            ifcfg_find = os.path.exists(iface_script)
+            logging.debug("Find '%s': %s", iface_script, ifcfg_find)
+            check_pass = list_find and ifcfg_find
+        elif checkpoint == "mac":
+            # extra is the MAC address to compare
+            iface_mac = iface.get_mac().lower()
+            check_pass = iface_mac == extra
+            logging.debug("MAC address of %s: %s", iface_name, iface_mac)
+        elif checkpoint == "ip":
+            # extra is the IP address to compare
+            iface_ip = iface.get_ip()
+            check_pass = iface_ip == extra
+            logging.debug("IP address of %s: %s", iface_name, iface_ip)
+        elif checkpoint == "ping":
+            # extra is the ping destination
+            ping_s, _ = ping(dest=extra, count=3, interface=iface_name,
+                             timeout=5,)
+            check_pass = ping_s == 0
+        else:
+            logging.debug("Support check points are: %s", support_check)
+            logging.error("Unsupport check point: %s", checkpoint)
+    except Exception, detail:
+        raise error.TestFail("Interface check failed: %s" % detail)
+    return check_pass

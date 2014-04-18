@@ -39,6 +39,9 @@ except ImportError:
 _screendump_thread = None
 _screendump_thread_termination_event = None
 
+_vm_register_thread = None
+_vm_register_thread_termination_event = None
+
 
 def preprocess_image(test, params, image_name):
     """
@@ -220,41 +223,18 @@ def postprocess_vm(test, params, env, name):
         return
 
     # Close all SSH sessions that might be active to this VM
-    for s in [x for x in vm.remote_sessions]:
+    for s in vm.remote_sessions[:]:
         try:
             s.close()
             vm.remote_sessions.remove(s)
         except Exception:
             pass
 
-    # Encode an HTML 5 compatible video from the screenshots produced
-    screendump_dir = os.path.join(test.debugdir, "screendumps_%s" % vm.name)
-    if (params.get("encode_video_files", "yes") == "yes" and
-            glob.glob("%s/*" % screendump_dir)):
-        try:
-            video = video_maker.GstPythonVideoMaker()
-            if (video.has_element('vp8enc') and video.has_element('webmmux')):
-                video_file = os.path.join(test.debugdir, "%s-%s.webm" %
-                                          (vm.name, test.iteration))
-            else:
-                video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
-                                          (vm.name, test.iteration))
-            logging.debug("Encoding video file %s", video_file)
-            video.start(screendump_dir, video_file)
-
-        except Exception, detail:
-            logging.info(
-                "Video creation failed for vm %s: %s", vm.name, detail)
-
     if params.get("kill_vm") == "yes":
         kill_vm_timeout = float(params.get("kill_vm_timeout", 0))
         if kill_vm_timeout:
             utils_misc.wait_for(vm.is_dead, kill_vm_timeout, 0, 1)
         vm.destroy(gracefully=params.get("kill_vm_gracefully") == "yes")
-    else:
-        # Close the serial console session, as it'll help
-        # keeping the number of filedescriptors used by virt-test honest.
-        vm.cleanup_serial_console()
 
 
 def process_command(test, params, env, command, command_timeout,
@@ -661,6 +641,15 @@ def preprocess(test, params, env):
                                               args=(test, params, env))
         _screendump_thread.start()
 
+    # Start the register query thread
+    if params.get("store_vm_register") == "yes":
+        global _vm_register_thread, _vm_register_thread_termination_event
+        _vm_register_thread_termination_event = threading.Event()
+        _vm_register_thread = threading.Thread(target=_store_vm_register,
+                                               name='VmRegister',
+                                               args=(test, params, env))
+        _vm_register_thread.start()
+
     return params
 
 
@@ -690,6 +679,28 @@ def postprocess(test, params, env):
         _screendump_thread_termination_event.set()
         _screendump_thread.join(10)
         _screendump_thread = None
+
+    # Encode an HTML 5 compatible video from the screenshots produced
+
+    dirs = re.findall("(screendump\S*_[0-9]+)", str(os.listdir(test.debugdir)))
+    for dir in dirs:
+        screendump_dir = os.path.join(test.debugdir, dir)
+        if (params.get("encode_video_files", "yes") == "yes" and
+           glob.glob("%s/*" % screendump_dir)):
+            try:
+                video = video_maker.GstPythonVideoMaker()
+                if (video.has_element('vp8enc') and video.has_element('webmmux')):
+                    video_file = os.path.join(test.debugdir, "%s-%s.webm" %
+                                             (screendump_dir, test.iteration))
+                else:
+                    video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
+                                             (screendump_dir, test.iteration))
+                logging.debug("Encoding video file %s", video_file)
+                video.start(screendump_dir, video_file)
+
+            except Exception, detail:
+                logging.info(
+                    "Video creation failed for %s: %s", screendump_dir, detail)
 
     # Warn about corrupt PPM files
     for f in glob.glob(os.path.join(test.debugdir, "*.ppm")):
@@ -723,6 +734,13 @@ def postprocess(test, params, env):
         for f in (glob.glob(os.path.join(test.debugdir, '*.ogg')) +
                   glob.glob(os.path.join(test.debugdir, '*.webm'))):
             os.unlink(f)
+
+    # Terminate the register query thread
+    global _vm_register_thread, _vm_register_thread_termination_event
+    if _vm_register_thread is not None:
+        _vm_register_thread_termination_event.set()
+        _vm_register_thread.join()
+        _vm_register_thread = None
 
     # Kill all unresponsive VMs
     if params.get("kill_unresponsive_vms") == "yes":
@@ -768,6 +786,9 @@ def postprocess(test, params, env):
                     m.close()
                 except Exception:
                     pass
+        # Close the serial console session, as it'll help
+        # keeping the number of filedescriptors used by virt-test honest.
+        vm.cleanup_serial_console()
 
     if params.get("setup_hugepages") == "yes":
         try:
@@ -885,12 +906,13 @@ def _take_screendumps(test, params, env):
 
     while True:
         for vm in env.get_all_vms():
-            if vm not in counter.keys():
-                counter[vm] = 0
-            if vm not in inactivity.keys():
-                inactivity[vm] = time.time()
+            if vm.instance not in counter.keys():
+                counter[vm.instance] = 0
+            if vm.instance not in inactivity.keys():
+                inactivity[vm.instance] = time.time()
             if not vm.is_alive():
                 continue
+            vm_pid = vm.get_pid()
             try:
                 vm.screendump(filename=temp_filename, debug=False)
             except qemu_monitor.MonitorError, e:
@@ -907,18 +929,19 @@ def _take_screendumps(test, params, env):
                 os.unlink(temp_filename)
                 continue
             screendump_dir = os.path.join(test.debugdir,
-                                          "screendumps_%s" % vm.name)
+                                          "screendumps_%s_%s" % (vm.name,
+                                                                 vm_pid))
             try:
                 os.makedirs(screendump_dir)
             except OSError:
                 pass
-            counter[vm] += 1
+            counter[vm.instance] += 1
             screendump_filename = os.path.join(screendump_dir, "%04d.jpg" %
-                                               counter[vm])
+                                               counter[vm.instance])
             vm.verify_bsod(screendump_filename)
             image_hash = utils.hash_file(temp_filename)
             if image_hash in cache:
-                time_inactive = time.time() - inactivity[vm]
+                time_inactive = time.time() - inactivity[vm.instance]
                 if time_inactive > inactivity_treshold:
                     msg = (
                         "%s screen is inactive for more than %d s (%d min)" %
@@ -930,7 +953,7 @@ def _take_screendumps(test, params, env):
                         except virt_vm.VMScreenInactiveError:
                             logging.error(msg)
                             # Let's reset the counter
-                            inactivity[vm] = time.time()
+                            inactivity[vm.instance] = time.time()
                             test.background_errors.put(sys.exc_info())
                     elif inactivity_watcher == 'log':
                         logging.debug(msg)
@@ -939,7 +962,7 @@ def _take_screendumps(test, params, env):
                 except OSError:
                     pass
             else:
-                inactivity[vm] = time.time()
+                inactivity[vm.instance] = time.time()
                 try:
                     try:
                         image = PIL.Image.open(temp_filename)
@@ -951,7 +974,7 @@ def _take_screendumps(test, params, env):
                                         "screendump: %s", vm.name, error_detail)
                         # Decrement the counter as we in fact failed to
                         # produce a converted screendump
-                        counter[vm] -= 1
+                        counter[vm.instance] -= 1
                 except NameError:
                     pass
             os.unlink(temp_filename)
@@ -961,6 +984,74 @@ def _take_screendumps(test, params, env):
                 _screendump_thread_termination_event = None
                 break
             _screendump_thread_termination_event.wait(delay)
+        else:
+            # Exit event was deleted, exit this thread
+            break
+
+
+def store_vm_register(vm, log_filename, append=False):
+    """
+    Store the register information of vm into a log file
+
+    :param vm: VM object
+    :type vm: vm object
+    :param log_filename: log file name
+    :type log_filename: string
+    :param append: Add the log to the end of the log file or not
+    :type append: bool
+    :return: Store the vm register information to log file or not
+    :rtype: bool
+    """
+    try:
+        output = vm.monitor.info('registers', debug=False)
+        timestamp = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+    except qemu_monitor.MonitorError, e:
+        logging.warn(e)
+        return False
+
+    log_filename = "%s_%s" % (log_filename, timestamp)
+    if append:
+        vr_log = open(log_filename, 'r+')
+        vr_log.seek(0, 2)
+        output += "\n"
+    else:
+        vr_log = open(log_filename, 'w')
+    vr_log.write(output)
+    vr_log.close()
+    return True
+
+
+def _store_vm_register(test, params, env):
+    global _vm_register_thread_termination_event
+    delay = float(params.get("vm_register_delay", 5))
+    counter = {}
+    while True:
+        for vm in env.get_all_vms():
+            if not vm.is_alive():
+                logging.warn("%s is not alive. Can not query the "
+                             "register status" % vm.name)
+                continue
+            vm_pid = vm.get_pid()
+            vr_dir = utils_misc.get_path(test.debugdir,
+                                         "vm_register_%s_%s" % (vm.name,
+                                                                vm_pid))
+            try:
+                os.makedirs(vr_dir)
+            except OSError:
+                pass
+
+            if vm not in counter:
+                counter[vm] = 1
+            vr_filename = utils_misc.get_path(vr_dir, "%04d" % counter[vm])
+            stored_log = store_vm_register(vm, vr_filename)
+            if stored_log:
+                counter[vm] += 1
+
+        if _vm_register_thread_termination_event is not None:
+            if _vm_register_thread_termination_event.isSet():
+                _vm_register_thread_termination_event = None
+                break
+            _vm_register_thread_termination_event.wait(delay)
         else:
             # Exit event was deleted, exit this thread
             break

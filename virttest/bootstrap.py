@@ -54,6 +54,17 @@ last_subtest = {'qemu': ['shutdown'],
 test_filter = ['__init__', 'cfg', 'dropin.py']
 
 
+def get_jeos_info():
+    """
+    Gets the correct asset and variant information depending on host OS.
+    """
+    jeos_info = {'asset': 'jeos-19-64', 'variant': 'JeOS.19'}
+    issue_contents = utils.read_file('/etc/issue')
+    if 'Fedora' in issue_contents and '20' in issue_contents:
+        jeos_info = {'asset': 'jeos-20-64', 'variant': 'JeOS.20'}
+    return jeos_info
+
+
 def _get_config_filter():
     config_filter = ['__init__', ]
     for provider_subdir in asset.get_test_provider_subdirs():
@@ -795,7 +806,9 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
         step += 2
         logging.info("%s - Verifying (and possibly downloading) guest image",
                      step)
-        asset.download_asset(image_name, interactive=interactive,
+        jeos_info = get_jeos_info()
+        jeos_asset = jeos_info['asset']
+        asset.download_asset(jeos_asset, interactive=interactive,
                              restore_image=restore_image)
 
     if check_modules:

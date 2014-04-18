@@ -1,0 +1,24 @@
+language: python
+python:
+    - "2.7"
+
+branches:
+    only:
+        - master
+
+virtualenv:
+    system_site_packages: true
+
+before_script:
+    - echo "deb http://ppa.launchpad.net/lmr/autotest/ubuntu saucy main" | sudo tee -a /etc/apt/sources.list
+    - sudo apt-get update -q
+    - sudo apt-get -y --force-yes install autotest
+
+install:
+    - pip install sphinx tox simplejson MySQL-python pylint autopep8
+    - pip install inspektor
+    - pip install -r requirements.txt
+
+script:
+    - ./tools/run_unittests_nose.py -c .nose.cfg -s virttest
+    - inspekt lint

@@ -988,12 +988,13 @@ def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4",
     try:
         if os_type == "linux":
             nic_ifname = get_linux_ifname(session, mac_addr)
-            nic_address = get_net_if_addrs(nic_ifname, session.cmd)
             info_cmd = "ifconfig -a; ethtool -S %s" % nic_ifname
+            nic_address = get_net_if_addrs(nic_ifname, session.cmd)
         elif os_type == "windows":
-            nic_address = get_net_if_addrs_win(session, mac_addr)
             info_cmd = "ipconfig /all"
+            nic_address = get_net_if_addrs_win(session, mac_addr)
         else:
+            info_cmd = ""
             raise IPAddrGetError(mac_addr, "Unknown os type")
 
         if ip_version == "ipv4":
@@ -1365,7 +1366,7 @@ def bring_up_ifname(ifname):
 
 def bring_down_ifname(ifname):
     """
-    Bring up an interface
+    Bring down an interface
 
     :param ifname: Name of the interface
     """

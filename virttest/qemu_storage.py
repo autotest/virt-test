@@ -120,7 +120,7 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " %s" % self.size
 
-        if (params.get("image_backend", "filesystem") != "filesystem"):
+        if (params.get("image_backend", "filesystem") == "filesystem"):
             image_dirname = os.path.dirname(self.image_filename)
             if image_dirname and not os.path.isdir(image_dirname):
                 e_msg = ("Parent directory of the image file %s does "
@@ -405,7 +405,8 @@ class QemuImg(storage.QemuImg):
         qemu_img_cmd = self.image_cmd
         image_is_checkable = self.image_format in ['qcow2', 'qed']
 
-        if storage.file_exists(params, image_filename) and image_is_checkable:
+        if (storage.file_exists(params, image_filename) or
+                params.get("enable_gluster", "no") == "yes") and image_is_checkable:
             check_img = self.support_cmd("check") and self.support_cmd("info")
             if not check_img:
                 logging.debug("Skipping image check "
@@ -486,8 +487,19 @@ class Iscsidev(storage.Iscsidev):
         """
         Access the iscsi target. And return the local raw device name.
         """
-        self.iscsidevice.login()
-        device_name = self.iscsidevice.get_device_name()
+        if self.iscsidevice.logged_in():
+            logging.warn("Session already present. Don't need to"
+                         " login again")
+        else:
+            self.iscsidevice.login()
+
+        if utils_misc.wait_for(self.iscsidevice.get_device_name,
+                               self.iscsi_init_timeout):
+            device_name = self.iscsidevice.get_device_name()
+        else:
+            raise error.TestError("Can not get iscsi device name in host"
+                                  " in %ss" % self.iscsi_init_timeout)
+
         if self.device_id:
             device_name += self.device_id
         return device_name

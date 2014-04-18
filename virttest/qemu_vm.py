@@ -150,6 +150,7 @@ class VM(virt_vm.BaseVM):
             self.instance = state['instance']
         self.qemu_command = ''
         self.start_time = 0.0
+        self.start_monotonic_time = 0.0
         self.last_boot_index = 0
         self.last_driver_index = 0
 
@@ -690,20 +691,11 @@ class VM(virt_vm.BaseVM):
 
         def add_pcidevice(devices, host, params, device_driver="pci-assign",
                           pci_bus='pci.0'):
-            if device_driver == "pci-assign":
-                if (devices.has_device("pci-assign") or
-                   devices.has_device("kvm-pci-assign")):
-                    dev = QDevice(device_driver, parent_bus=pci_bus)
-                else:
-                    dev = qdevices.QCustomDevice('pcidevice',
-                                                 parent_bus=pci_bus)
+            if devices.has_device(device_driver):
+                dev = QDevice(device_driver, parent_bus=pci_bus)
             else:
-                if devices.has_device(device_driver):
-                    dev = QDevice(device_driver, parent_bus=pci_bus)
-                else:
-                    dev = qdevices.QCustomDevice('pcidevice',
-                                                 parent_bus=pci_bus)
-            help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
+                dev = qdevices.QCustomDevice('pcidevice', parent_bus=pci_bus)
+            help_cmd = "%s -device %s,\\? 2>&1" % (qemu_binary, device_driver)
             pcidevice_help = utils.system_output(help_cmd)
             dev.set_param('host', host)
             dev.set_param('id', 'id_%s' % host.replace(":", "."))
@@ -711,14 +703,14 @@ class VM(virt_vm.BaseVM):
             for param in params.get("pci-assign_params", "").split():
                 value = params.get(param)
                 if value:
-                    if bool(re.search(param, pcidevice_help, re.M)):
+                    if param in pcidevice_help:
                         dev.set_param(param, value)
                     else:
                         fail_param.append(param)
             if fail_param:
                 msg = ("parameter %s is not support in device pci-assign."
                        " It only support following parameter:\n %s" %
-                       (param, pcidevice_help))
+                       (", ".join(fail_param), pcidevice_help))
                 logging.warn(msg)
             devices.insert(dev)
 
@@ -1092,12 +1084,11 @@ class VM(virt_vm.BaseVM):
         # Add numa memory cmd to pin guest memory to numa node
         if params.get("numa_node"):
             numa_node = int(params.get("numa_node"))
-            if int(utils_misc.get_node_count()) <= int(params.get("smp", 1)):
+            if len(utils_misc.get_node_cpus()) < int(params.get("smp", 1)):
                 logging.info("Skip pinning, no enough nodes")
             elif numa_node < 0:
-                p = utils_misc.NumaNode(numa_node)
-                n = int(utils_misc.get_node_count()) + numa_node
-                cmd += "numactl -m %s " % n
+                n = utils_misc.NumaNode(numa_node)
+                cmd += "numactl -m %s " % n.node_id
             else:
                 n = numa_node - 1
                 cmd += "numactl -m %s " % n
@@ -1222,6 +1213,16 @@ class VM(virt_vm.BaseVM):
                 if bus < 0:     # First bus
                     bus = 0
             # Add virtio_serial_pcis
+            # Multiple virtio console devices can't share a
+            # single virtio-serial-pci bus. So add a virtio-serial-pci bus
+            # when the port is a virtio console.
+            if (port_params.get('virtio_port_type') == 'console'
+                    and params.get('virtio_port_bus') is None):
+                dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
+                dev.set_param('id',
+                              'virtio_serial_pci%d' % no_virtio_serial_pcis)
+                devices.insert(dev)
+                no_virtio_serial_pcis += 1
             for i in range(no_virtio_serial_pcis, bus + 1):
                 dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
                 dev.set_param('id', 'virtio_serial_pci%d' % i)
@@ -1349,7 +1350,7 @@ class VM(virt_vm.BaseVM):
                     if "vectors" in nic:
                         vectors = nic.vectors
                     else:
-                        vectors = 2 * int(queues) + 1
+                        vectors = 2 * int(queues) + 2
                 else:
                     vectors = None
 
@@ -1986,6 +1987,12 @@ class VM(virt_vm.BaseVM):
             if self.redirs != old_redirs:
                 self.devices = None
 
+            # Update the network related parameters as well to conform to
+            # expected behavior on VM creation
+            getattr(self, 'virtnet').__init__(self.params,
+                                              self.name,
+                                              self.instance)
+
             # Generate basic parameter values for all NICs and create TAP fd
             for nic in self.virtnet:
                 nic_params = params.object_params(nic.nic_name)
@@ -2163,6 +2170,7 @@ class VM(virt_vm.BaseVM):
             logging.info("Created qemu process with parent PID %d",
                          self.process.get_pid())
             self.start_time = time.time()
+            self.start_monotonic_time = utils_misc.monotonic_time()
 
             # test doesn't need to hold tapfd's open
             for nic in self.virtnet:
@@ -2791,7 +2799,7 @@ class VM(virt_vm.BaseVM):
         nic.set_if_none('nic_model', params['nic_model'])
         nic.set_if_none('queues', params.get('queues', '1'))
         if params.get("enable_msix_vectors") == "yes":
-            nic.set_if_none('vectors', 2 * int(nic.queues) + 1)
+            nic.set_if_none('vectors', 2 * int(nic.queues) + 2)
         return nic
 
     @error.context_aware
@@ -3069,7 +3077,7 @@ class VM(virt_vm.BaseVM):
                 clean=True, save_path="/tmp", dest_host="localhost",
                 remote_port=None, not_wait_for_migration=False,
                 fd_src=None, fd_dst=None, migration_exec_cmd_src=None,
-                migration_exec_cmd_dst=None):
+                migration_exec_cmd_dst=None, env=None):
         """
         Migrate the VM.
 
@@ -3087,7 +3095,7 @@ class VM(virt_vm.BaseVM):
                 differ.
         :param clean: If True, delete the saved state files (relevant only if
                 stable_check is also True).
-        @save_path: The path for state files.
+        :param save_path: The path for state files.
         :param dest_host: Destination host (defaults to 'localhost').
         :param remote_port: Port to use for remote migration.
         :param not_wait_for_migration: If True migration start but not wait till
@@ -3102,6 +3110,7 @@ class VM(virt_vm.BaseVM):
         :param migration_exec_cmd_dst: Command to embed in '-incoming "exec: "'
                 (e.g. 'gzip -c -d filename') if migration_mode is 'exec'
                 default to listening on a random TCP port
+        :param env: Dictionary with test environment
         """
         if protocol not in self.MIGRATION_PROTOS:
             raise virt_vm.VMMigrateProtoUnknownError(protocol)
@@ -3121,6 +3130,8 @@ class VM(virt_vm.BaseVM):
             os.close(fd_src)
 
         clone = self.clone()
+        if env:
+            env.register_vm("%s_clone" % clone.name, clone)
         if (local and not (migration_exec_cmd_src
                            and "gzip" in migration_exec_cmd_src)):
             error.context("creating destination VM")
@@ -3278,6 +3289,8 @@ class VM(virt_vm.BaseVM):
                 if self.is_alive():
                     self.monitor.cmd("cont")
                 clone.destroy(gracefully=False)
+                if env:
+                    env.unregister_vm("%s_clone" % self.name)
 
     @error.context_aware
     def reboot(self, session=None, method="shell", nic_index=0,
