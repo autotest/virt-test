@@ -3024,6 +3024,142 @@ def node_memtune(shm_pages_to_scan=None, shm_sleep_millisecs=None,
     return command(cmd, **dargs)
 
 
+def iface_list(extra="", **dargs):
+    """
+    List physical host interfaces.
+
+    :param extra: Free-form string of options
+    :param dargs: Standardized virsh functiont API keywords
+    :return: CmdResult object
+    """
+    return command("iface-list %s" % extra, **dargs)
+
+
+def iface_define(xml_path, **dargs):
+    """
+    Define (but don't start) a physical host interface from an XML file.
+
+    :param xml_path: XML file path
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-define --file %s" % xml_path, **dargs)
+
+
+def iface_start(iface, **dargs):
+    """
+    Start a physical host interface.
+
+    :param iface: Interface name or MAC address
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-start %s" % iface, **dargs)
+
+
+def iface_destroy(iface, **dargs):
+    """
+    Destroy a physical host interface.
+
+    :param iface: Interface name or MAC address
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-destroy %s" % iface, **dargs)
+
+
+def iface_undefine(iface, **dargs):
+    """
+    Undefine a physical host interface (remove it from configuration).
+
+    :param iface: Interface name or MAC address
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-undefine %s" % iface, **dargs)
+
+
+def iface_dumpxml(iface, extra="", to_file="", **dargs):
+    """
+    Interface information in XML.
+
+    :param iface: Interface name or MAC address
+    :param extra: Free-form string of options
+    :param to_file: Optional file to write xml
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
+    """
+    dargs['ignore_status'] = True
+    cmd = "iface-dumpxml %s %s" % (iface, extra)
+    result = command(cmd, **dargs)
+    if to_file:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    if result.exit_status:
+        raise error.CmdError(cmd, result,
+                             "Dumpxml returned non-zero exit status")
+    return result.stdout.strip()
+
+
+def iface_name(mac, **dargs):
+    """
+    Convert an interface MAC address to interface name.
+
+    :param mac: Interface MAC address
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-name %s" % mac, **dargs)
+
+
+def iface_mac(name, **dargs):
+    """
+    Convert an interface name to interface MAC address.
+
+    :param name: Interface name
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-mac %s" % name, **dargs)
+
+
+def iface_edit(iface, **dargs):
+    """
+    Edit XML configuration for a physical host interface.
+
+    :param iface: Interface name or MAC address
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    return command("iface-edit %s" % iface, **dargs)
+
+
+def iface_bridge(iface, bridge, extra="", **dargs):
+    """
+    Create a bridge device and attach an existing network device to it.
+
+    :param iface: Interface name or MAC address
+    :param bridge: New bridge device name
+    :param extra: Free-form string of options
+    :param dargs: Standardized virsh functiont API keywords
+    :return: CmdResult object
+    """
+    return command("iface-bridge %s %s %s" % (iface, bridge, extra), **dargs)
+
+
+def iface_unbridge(bridge, extra="", **dargs):
+    """
+    Undefine a bridge device after detaching its slave device.
+
+    :param bridge: Current bridge device name
+    :param extra: Free-form string of options
+    :param dargs: Standardized virsh functiont API keywords
+    :return: CmdResult object
+    """
+    return command("iface-unbridge %s %s" % (bridge, extra), **dargs)
+
+
 def iface_begin(**dargs):
     """
     Create a snapshot of current interfaces settings
