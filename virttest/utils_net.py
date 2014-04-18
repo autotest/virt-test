@@ -521,11 +521,6 @@ class Macvtap(Interface):
     def get_device(self):
         return "/dev/tap%s" % self.get_index()
 
-    def ip_link_ctl(self, params, ignore_status=False):
-        return utils.run(os_dep.command("ip"), timeout=10,
-                         ignore_status=ignore_status, verbose=False,
-                         args=params)
-
     def create(self, device, mode="vepa"):
         """
         Create a macvtap device, only when the device does not exist.
@@ -535,13 +530,13 @@ class Macvtap(Interface):
         """
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
         if not os.path.exists(path):
-            self.ip_link_ctl(["link", "add", "link", device, "name",
-                             self.tapname, "type", "macvtap", "mode", mode])
+            ip_link_ctl(["link", "add", "link", device, "name",
+                         self.tapname, "type", "macvtap", "mode", mode])
 
     def delete(self):
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
         if os.path.exists(path):
-            self.ip_link_ctl(["link", "delete", self.tapname])
+            ip_link_ctl(["link", "delete", self.tapname])
 
     def open(self):
         device = self.get_device()
@@ -2443,3 +2438,21 @@ def restart_windows_guest_network_by_devcon(session, netdevid, timeout=240):
 
     set_guest_network_status_by_devcon(session, 'disable', netdevid)
     set_guest_network_status_by_devcon(session, 'enable', netdevid)
+
+
+def ip_link_ctl(params, ignore_status=False):
+    return utils.run(os_dep.command("ip"), timeout=10,
+                     ignore_status=ignore_status, verbose=False,
+                     args=params)
+
+
+def ip_link_enable_interface(ifname):
+    ip_link_ctl(["link", "set", ifname, "up"])
+
+
+def ip_link_disable_interface(ifname):
+    ip_link_ctl(["link", "set", ifname, "down"])
+
+
+def ip_link_delete_interface(ifname):
+    ip_link_ctl(["link", "delete", ifname])
