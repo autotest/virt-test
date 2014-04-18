@@ -1554,7 +1554,7 @@ def load_stress(stress_type, vms, params):
             try:
                 load_vm.start()
             except virt_vm.VMStartError:
-                fail_info.append("Start load vm %s failed." % vm.name)
+                fail_info.append("Start load vm %s failed." % load_vm.name)
                 break
     # Booting test vms for following test
     elif stress_type == "vms_booting":

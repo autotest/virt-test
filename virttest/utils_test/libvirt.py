@@ -21,6 +21,7 @@ import os
 import logging
 import shutil
 import threading
+import time
 from virttest import virsh
 from virttest import xml_utils
 from virttest import iscsi
@@ -777,8 +778,11 @@ class MigrationTest(object):
         self.RET_MIGRATION = True
         # A lock for threads
         self.RET_LOCK = threading.RLock()
+        # The time spent when migrating vms
+        # format: vm_name -> time(seconds)
+        self.mig_time = {}
 
-    def thread_func_migration(self, vm, desturi):
+    def thread_func_migration(self, vm, desturi, options=None):
         """
         Thread for virsh migrate command.
 
@@ -787,14 +791,20 @@ class MigrationTest(object):
         """
         # Migrate the domain.
         try:
-            vm.migrate(desturi, ignore_status=False, debug=True)
+            if options is None:
+                options = "--live --timeout=60"
+            stime = int(time.time())
+            vm.migrate(desturi, option=options, ignore_status=False,
+                       debug=True)
+            etime = int(time.time())
+            self.mig_time[vm.name] = etime - stime
         except error.CmdError, detail:
             logging.error("Migration to %s failed:\n%s", desturi, detail)
             self.RET_LOCK.acquire()
             self.RET_MIGRATION = False
             self.RET_LOCK.release()
 
-    def do_migration(self, vms, srcuri, desturi, migration_type,
+    def do_migration(self, vms, srcuri, desturi, migration_type, options=None,
                      thread_timeout=60):
         """
         Migrate vms.
@@ -807,7 +817,7 @@ class MigrationTest(object):
         if migration_type == "orderly":
             for vm in vms:
                 migration_thread = threading.Thread(target=self.thread_func_migration,
-                                                    args=(vm, desturi))
+                                                    args=(vm, desturi, options))
                 migration_thread.start()
                 migration_thread.join(thread_timeout)
                 if migration_thread.isAlive():
@@ -819,11 +829,12 @@ class MigrationTest(object):
             # Migrate a vm to remote first,
             # then migrate another to remote with the first vm back
             vm_remote = vms.pop()
+            self.thread_func_migration(vm_remote, desturi)
             for vm in vms:
                 thread1 = threading.Thread(target=self.thread_func_migration,
-                                           args=(vm_remote, srcuri))
+                                           args=(vm_remote, srcuri, options))
                 thread2 = threading.Thread(target=self.thread_func_migration,
-                                           args=(vm, desturi))
+                                           args=(vm, desturi, options))
                 thread1.start()
                 thread2.start()
                 thread1.join(thread_timeout)
@@ -834,12 +845,14 @@ class MigrationTest(object):
                     self.RET_LOCK.acquire()
                     self.RET_MIGRATION = False
                     self.RET_LOCK.release()
+            # Add popped vm back to list
+            vms.append(vm_remote)
         elif migration_type == "simultaneous":
             migration_threads = []
             for vm in vms:
                 migration_threads.append(threading.Thread(
                                          target=self.thread_func_migration,
-                                         args=(vm, desturi)))
+                                         args=(vm, desturi, options)))
             # let all migration going first
             for thread in migration_threads:
                 thread.start()
@@ -865,6 +878,8 @@ class MigrationTest(object):
             if vm.is_persistent():
                 vm.undefine()
             if vm.is_alive():
-                vm.destroy()
+                # If vm on remote host is unaccessible
+                # graceful shutdown may cause confused
+                vm.destroy(gracefully=False)
         # Set connect uri back to local uri
         vm.connect_uri = srcuri
