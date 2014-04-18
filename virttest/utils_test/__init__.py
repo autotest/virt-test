@@ -687,6 +687,9 @@ def run_autotest(vm, session, control_path, timeout,
     The following params is used by the migration
     :param params: Test params used in the migration test
     """
+    def directory_exists(remote_path):
+        return session.cmd_status("test -d %s" % remote_path) == 0
+
     def copy_if_hash_differs(vm, local_path, remote_path):
         """
         Copy a file to a guest if it doesn't exist or if its MD5sum differs.
@@ -928,7 +931,7 @@ def run_autotest(vm, session, control_path, timeout,
                                   compressed_autotest_path)
 
     # Extract autotest.tar.bz2
-    if update:
+    if update or not directory_exists(destination_autotest_path):
         extract(vm, compressed_autotest_path, destination_autotest_path)
 
     g_fd, g_path = tempfile.mkstemp(dir='/tmp/')
