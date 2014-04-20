@@ -1366,7 +1366,7 @@ def bring_up_ifname(ifname):
 
 def bring_down_ifname(ifname):
     """
-    Bring down an interface
+    Bring up an interface
 
     :param ifname: Name of the interface
     """
