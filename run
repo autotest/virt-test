@@ -126,7 +126,7 @@ def _import_autotest_modules():
         sys.exit(1)
 
 
-def _find_default_qemu_paths(options_qemu=None):
+def _find_default_qemu_paths(options_qemu=None, options_dst_qemu=None):
     qemu_bin_path = None
     from virttest import utils_misc
 
@@ -141,6 +141,14 @@ def _find_default_qemu_paths(options_qemu=None):
         except ValueError:
             qemu_bin_path = utils_misc.find_command('kvm')
 
+    if options_dst_qemu is not None:
+        if not os.path.isfile(options_dst_qemu):
+            raise RuntimeError("Invalid dst qemu binary provided (%s)" %
+                               options_dst_qemu)
+        qemu_dst_bin_path = options_dst_qemu
+    else:
+        qemu_dst_bin_path = None
+
     qemu_dirname = os.path.dirname(qemu_bin_path)
     qemu_img_path = os.path.join(qemu_dirname, 'qemu-img')
     qemu_io_path = os.path.join(qemu_dirname, 'qemu-io')
@@ -151,7 +159,7 @@ def _find_default_qemu_paths(options_qemu=None):
     if not os.path.exists(qemu_io_path):
         qemu_io_path = utils_misc.find_command('qemu-io')
 
-    return [qemu_bin_path, qemu_img_path, qemu_io_path]
+    return [qemu_bin_path, qemu_img_path, qemu_io_path, qemu_dst_bin_path]
 
 
 SUPPORTED_LOG_LEVELS = [
@@ -336,6 +344,14 @@ class VirtTestRunParser(optparse.OptionParser):
                               "If -c is provided and this flag is omitted, "
                               "no attempt to set the qemu binaries will be made. "
                               "Default path: %s" % qemu_bin_path))
+        qemu.add_option("--qemu-dst-bin", action="store", dest="dst_qemu",
+                        default=None,
+                        help=("Path to a custom qemu binary to be tested for "
+                              "the destination of a migration, overrides "
+                              "--qemu-bin. "
+                              "If -c is provided and this flag is omitted, "
+                              "no attempt to set the qemu binaries will be made. "
+                              "Default path: %s" % qemu_bin_path))
         qemu.add_option("--use-malloc-perturb", action="store",
                         dest="malloc_perturb", default="yes",
                         help=("Use MALLOC_PERTURB_ env variable set to 1 "
@@ -472,11 +488,15 @@ class VirtTestApp(object):
             logging.info("Config provided and no --qemu-bin set. Not trying "
                          "to automatically set qemu bin.")
         else:
-            (qemu_bin_path, qemu_img_path,
-             qemu_io_path) = _find_default_qemu_paths(self.options.qemu)
+            (qemu_bin_path, qemu_img_path, qemu_io_path,
+             qemu_dst_bin_path) = _find_default_qemu_paths(self.options.qemu,
+                                                           self.options.dst_qemu)
             self.cartesian_parser.assign("qemu_binary", qemu_bin_path)
             self.cartesian_parser.assign("qemu_img_binary", qemu_img_path)
             self.cartesian_parser.assign("qemu_io_binary", qemu_io_path)
+            if qemu_dst_bin_path is not None:
+                self.cartesian_parser.assign("qemu_dst_binary",
+                                             qemu_dst_bin_path)
 
     def _process_qemu_img(self):
         """
@@ -487,7 +507,8 @@ class VirtTestApp(object):
                          "to automatically set qemu bin.")
         else:
             (_, qemu_img_path,
-             _) = _find_default_qemu_paths(self.options.qemu)
+             _, _) = _find_default_qemu_paths(self.options.qemu,
+                                              self.options.dst_qemu)
             self.cartesian_parser.assign("qemu_img_binary", qemu_img_path)
 
     def _process_qemu_accel(self):

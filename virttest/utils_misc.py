@@ -1711,6 +1711,28 @@ def get_qemu_binary(params):
     return qemu_binary
 
 
+def get_qemu_dst_binary(params):
+    """
+    Get the path to the qemu dst binary currently in use.
+    """
+    qemu_dst_binary = params.get("qemu_dst_binary", None)
+    if qemu_dst_binary is None:
+        return qemu_dst_binary
+
+    qemu_binary_path = get_path(_get_backend_dir(params), qemu_dst_binary)
+
+    # Update LD_LIBRARY_PATH for built libraries (libspice-server)
+    library_path = os.path.join(_get_backend_dir(params), 'install_root', 'lib')
+    if os.path.isdir(library_path):
+        library_path = os.path.abspath(library_path)
+        qemu_dst_binary = ("LD_LIBRARY_PATH=%s %s" %
+                           (library_path, qemu_binary_path))
+    else:
+        qemu_dst_binary = qemu_binary_path
+
+    return qemu_dst_binary
+
+
 def get_qemu_img_binary(params):
     """
     Get the path to the qemu-img binary currently in use.
