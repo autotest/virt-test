@@ -800,14 +800,230 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("rm %s" % path)
 
-    def is_file(self, path):
+    def is_file(self, path, followsymlinks=None):
         """
         is-file - test if a regular file
 
         This returns "true" if and only if there is a regular file with the
         given "path" name.
         """
-        return self.inner_cmd("is-file %s" % path)
+        cmd = "is-file %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_file_opts(self, path, followsymlinks=None):
+        """
+        is-file_opts - test if a regular file
+
+        This returns "true" if and only if there is a regular file with the
+        given "path" name.
+
+        An alias of command is-file
+        """
+        cmd = "is-file-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_blockdev(self, path, followsymlinks=None):
+        """
+        is-blockdev - test if block device
+
+        This returns "true" if and only if there is a block device with the
+        given "path" name
+        """
+        cmd = "is-blockdev %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_blockdev_opts(self, path, followsymlinks=None):
+        """
+        is-blockdev_opts - test if block device
+
+        This returns "true" if and only if there is a block device with the
+        given "path" name
+
+        An alias of command is-blockdev
+        """
+        cmd = "is-blockdev-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_chardev(self, path, followsymlinks=None):
+        """
+        is-chardev - test if character device
+
+        This returns "true" if and only if there is a character device with the
+        given "path" name.
+        """
+        cmd = "is-chardev %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_chardev_opts(self, path, followsymlinks=None):
+        """
+        is-chardev_opts - test if character device
+
+        This returns "true" if and only if there is a character device with the
+        given "path" name.
+
+        An alias of command is-chardev
+        """
+        cmd = "is-chardev-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_dir(self, path, followsymlinks=None):
+        """
+        is-dir - test if a directory
+
+        This returns "true" if and only if there is a directory with the given
+        "path" name. Note that it returns false for other objects like files.
+        """
+        cmd = "is-dir %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_dir_opts(self, path, followsymlinks=None):
+        """
+        is-dir-opts - test if character device
+
+        This returns "true" if and only if there is a character device with the
+        given "path" name.
+
+        An alias of command is-dir
+        """
+        cmd = "is-dir-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_fifo(self, path, followsymlinks=None):
+        """
+        is-fifo - test if FIFO (named pipe)
+
+        This returns "true" if and only if there is a FIFO (named pipe) with the
+        given "path" name.
+        """
+        cmd = "is-fifo %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_fifo_opts(self, path, followsymlinks=None):
+        """
+        is-fifo-opts - test if FIFO (named pipe)
+
+        This returns "true" if and only if there is a FIFO (named pipe) with the
+        given "path" name.
+
+        An alias of command is-fifo
+        """
+        cmd = "is-fifo-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_lv(self, device):
+        """
+        is-lv - test if device is a logical volume
+
+        This command tests whether "device" is a logical volume, and returns
+        true iff this is the case.
+        """
+        return self.inner_cmd("is-lv %s" % device)
+
+    def is_socket(self, path, followsymlinks=None):
+        """
+        is-socket - test if socket
+
+        This returns "true" if and only if there is a Unix domain socket with
+        the given "path" name.
+        """
+        cmd = "is-socket %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_socket_opts(self, path, followsymlinks=None):
+        """
+        is-socket-opts - test if socket
+
+        This returns "true" if and only if there is a Unix domain socket with
+        the given "path" name.
+
+        An alias of command is-socket
+        """
+        cmd = "is-socket-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_symlink(self, path):
+        """
+        is-symlink - test if symbolic link
+
+        This returns "true" if and only if there is a symbolic link with the
+        given "path" name.
+        """
+        return self.inner_cmd("is-symlink %s" % path)
+
+    def is_whole_device(self, device):
+        """
+        is-symlink - test if symbolic link
+
+        This returns "true" if and only if "device" refers to a whole block
+        device. That is, not a partition or a logical device.
+        """
+        return self.inner_cmd("is-whole-device %s" % device)
+
+    def is_zero(self, path):
+        """
+        is-zero - test if a file contains all zero bytes
+
+        This returns true iff the file exists and the file is empty or it
+        contains all zero bytes.
+        """
+        return self.inner_cmd("is-zero %s" % path)
+
+    def is_zero_device(self, device):
+        """
+        is-zero-device - test if a device contains all zero bytes
+
+        This returns true iff the device exists and contains all zero bytes.
+        Note that for large devices this can take a long time to run.
+        """
+        return self.inner_cmd("is-zero-device %s" % device)
 
     def cp(self, src, dest):
         """
