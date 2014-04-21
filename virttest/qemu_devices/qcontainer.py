@@ -632,7 +632,8 @@ class DevContainer(object):
         This function should be used after you verify, that hotplug was
         successful. For each hotplug call, hotplug_verified have to be
         executed in order to mark VM as clear.
-        @warning: If you can't verify, that hotplug was successful, don't
+
+        :warning: If you can't verify, that hotplug was successful, don't
                   use this function! You could screw-up following tests.
         """
         self.set_clean()
@@ -1331,6 +1332,7 @@ class DevContainer(object):
                                 image_bootindex=None):
         """
         Wrapper for creating disks and related hbas from autotest image params.
+
         :note: To skip the argument use None, to disable it use False
         :note: Strictly bool options accept "yes", "on" and True ("no"...)
         :note: Options starting with '_' are optional and used only when
@@ -1397,6 +1399,7 @@ class DevContainer(object):
                                 image_bootindex=None):
         """
         Wrapper for creating cdrom and related hbas from autotest image params.
+
         :note: To skip the argument use None, to disable it use False
         :note: Strictly bool options accept "yes", "on" and True ("no"...)
         :note: Options starting with '_' are optional and used only when
@@ -1472,6 +1475,7 @@ class DevContainer(object):
     def pcic_by_params(self, name, params):
         """
         Creates pci controller/switch/... based on params
+
         :param name: Autotest name
         :param params: PCI controller params
         :note: x3130 creates x3130-upstream bus + xio3130-downstream port for

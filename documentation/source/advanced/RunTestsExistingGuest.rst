@@ -137,7 +137,7 @@ Before you start
 ----------------
 
 #. Make sure you have the appropriate packages installed. You can read
-   :doc:`the install prerequesite packages (client section) <KVMAutotest-InstallPrerequesitePackagesClient>` for more
+   :doc:`the install prerequesite packages (client section) <../basic/InstallPrerequesitePackages>` for more
    information. For this how to our focus is not to build kvm from git
    repos, so we are assuming you are going to use the default qemu
    installed in the system. However, if you are interested in doing so,

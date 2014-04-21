@@ -14,22 +14,37 @@ class Disk(base.TypedDeviceBase):
     Disk device XML class
 
     Properties:
-        device: string, how exposted to guest
-        rawio: string (yes/no), disk needs rawio capability
-        sgio: string, "filtered" or "unfiltered"
-        snapshot: string, "yes", "no", "internal" or "external"
-        driver: dict, keys: name, type, cache, error_policy, io, ioeventfd,
-                            event_idx, copy_on_read, discard
-        target: dict, keys: dev, bus, tray
-        address: libvirt_xml.devices.Address instance
-        boot: string, boot order number to use if not using boot in os element
-        readonly: bool, True/False
-        transient: bool, True/False
-        share: bool, True/False
-        mirror: bool, read-only, True if block copy started
-        ready: bool, read-only, True if disk ready for pivot
-        iotune: libvirt_xml.devices.Disk.IOTune instance
-        source: libvirt_xml.devices.Disk.DiskSource instance
+        device:
+            string, how exposted to guest
+        rawio:
+            string (yes/no), disk needs rawio capability
+        sgio:
+            string, "filtered" or "unfiltered"
+        snapshot:
+            string, "yes", "no", "internal" or "external"
+        driver:
+            dict, keys: name, type, cache, error_policy, io, ioeventfd,
+            event_idx, copy_on_read, discard
+        target:
+            dict, keys: dev, bus, tray
+        address:
+            libvirt_xml.devices.Address instance
+        boot:
+            string, boot order number to use if not using boot in os element
+        readonly:
+            bool, True/False
+        transient:
+            bool, True/False
+        share:
+            bool, True/False
+        mirror:
+            bool, read-only, True if block copy started
+        ready:
+            bool, read-only, True if disk ready for pivot
+        iotune:
+            libvirt_xml.devices.Disk.IOTune instance
+        source:
+            libvirt_xml.devices.Disk.DiskSource instance
     """
 
     __slots__ = ('device', 'rawio', 'sgio', 'snapshot', 'driver', 'target',

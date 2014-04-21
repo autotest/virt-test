@@ -12,6 +12,7 @@ class Esp_ipv6(base.TypedDeviceBase):
 
     """
     Create new Esp_ipv6 xml instances
+
     Properties:
         attrs: libvirt_xml.nwfilter_protocols.Esp_ipv6.Attr instance
     """
@@ -31,7 +32,7 @@ class Esp_ipv6(base.TypedDeviceBase):
         """
         Return a new Attr instance and set properties from dargs
 
-        :param **dargs: dict of attributes
+        :param dargs: dict of attributes
         :return: new Attr instance
         """
         new_one = self.Attr(virsh_instance=self.virsh)
@@ -58,6 +59,7 @@ class Esp_ipv6(base.TypedDeviceBase):
 
         """
         Esp_ipv6 attribute XML class
+
 
         Properties:
             srcmacaddr: string, MAC address of sender

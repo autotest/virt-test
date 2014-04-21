@@ -469,7 +469,8 @@ class SourceBuildFailed(Exception):
     '''
     Exception raised when building with parallel jobs fails
 
-    This serves as feedback for code using *BuildHelper
+    This serves as feedback for code using
+    :class:`virttest.build_helper.BuildHelper`.
     '''
     pass
 
@@ -479,7 +480,8 @@ class SourceBuildParallelFailed(Exception):
     '''
     Exception raised when building with parallel jobs fails
 
-    This serves as feedback for code using *BuildHelper
+    This serves as feedback for code using
+    :class:`virttest.build_helper.BuildHelper`.
     '''
     pass
 
@@ -504,7 +506,7 @@ class GnuSourceBuildHelper(object):
         :param build_dir: temporary directory used for building the source code
         :type configure_options: list
         :param configure_options: options to pass to configure
-        @throws: GnuSourceBuildInvalidSource
+        :throws: GnuSourceBuildInvalidSource
         '''
         self.source = source
         self.build_dir = build_dir
@@ -519,8 +521,8 @@ class GnuSourceBuildHelper(object):
 
         This is currently not optional as there is no observed adverse side
         effects of enabling this. As the "prefix" is usually only valid during
-        a test run, we believe that having other pkg-config files (*.pc) in
-        either '<prefix>/share/pkgconfig' or '<prefix>/lib/pkgconfig' is
+        a test run, we believe that having other pkg-config files (``*.pc``) in
+        either ``<prefix>/share/pkgconfig`` or ``<prefix>/lib/pkgconfig`` is
         exactly for the purpose of using them.
 
         :return: None

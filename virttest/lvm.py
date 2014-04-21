@@ -9,13 +9,17 @@ required and a new volumegroup will be created on device named pv_name, But
 it will destroy data on your device and it's not recommended;
 
 Required params:
-    params["lv_name"] lv_name like /dev/vg/lv; If not params["vg_name"]
-                      is requried and if lv_name not set, use guest_name as
-                      lv_name; device mapper path (eg, /dev/mapper/vg-lv)
-                      doesn't support it now;
-    params["lv_size"] string (eg, 30G) if not set image_size will be used;
-    params["vg_name"] LogicalVolume group name, eg, "test_vg";
-    params["pv_name"] PhysicalVolume name eg, /dev/sdb or /dev/sdb1;
+    lv_name:
+        lv_name like /dev/vg/lv; If not params["vg_name"]
+        is requried and if lv_name not set, use guest_name as
+        lv_name; device mapper path (eg, /dev/mapper/vg-lv)
+        doesn't support it now;
+    lv_size
+        string (eg, 30G) if not set image_size will be used;
+    vg_name
+        LogicalVolume group name, eg, "test_vg";
+    pv_name
+        PhysicalVolume name eg, /dev/sdb or /dev/sdb1;
 """
 import os
 import re
@@ -117,8 +121,8 @@ class PhysicalVolume(Volume):
         """
         Remove a physical volume
 
-        :param extra_args: extra argurments for pvremove command;
-        :raise CmdError
+        :param extra_args: extra argurments for ``pvremove`` command
+        :raise: CmdError
         """
         cmd = "lvm pvremove %s %s" % (extra_args, self.name)
         utils.system(cmd)

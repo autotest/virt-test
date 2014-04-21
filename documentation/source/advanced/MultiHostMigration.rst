@@ -1,5 +1,5 @@
 Writing your own QEMU multi host migration test
-==============================================
+===============================================
 
 Client part of Autotest works only on a single host, for this reason multi host
 migration test needs to be started from the server part of Autotest. The server

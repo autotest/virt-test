@@ -222,38 +222,6 @@ class ConnectionBase(propcan.PropCanBase):
 
     Connection is build to from client to server. And there are
     some information for server and client in ConnectionBase.
-
-    server_ip: Ip of server.
-    server_user: Username to login server.
-    server_pwd: Password for server_user.
-    client_ip: IP of client.
-    client_user: Username to login client.
-    client_pwd: Password for client_user.
-    server_session: Session to server and execute command on
-                    server.
-    client_session: Session to client and execute command on
-                    client.
-    tmp_dir: A tmp dir to store some tmp file.
-    auto_recover: If it is False same as the default,
-                  conn_recover() will not called by __del__()
-                  If it is True, Connection class will call
-                  conn_recover() in __del__(), then user need not
-                  call it manully. But the errors in conn_recover()
-                  will be ignored.
-    Then we sugguest *not* to pass auto_recover=True to __init__(),
-    and call conn_recover() manually when you don't need this
-    connection any more.
-
-    e.g:
-          connection = ConnectionBase(server_ip=server_ip,
-                                      server_user=server_user,
-                                      server_pwd=server_pwd,
-                                      client_ip=client_ip,
-                                      client_user=client_user,
-                                      client_pwd=client_pwd)
-          connection.conn_setup()
-          virsh.connect(URI)
-          connection.conn_recover()
     """
     __slots__ = ('server_ip', 'server_user', 'server_pwd',
                  'client_ip', 'client_user', 'client_pwd',
@@ -263,6 +231,42 @@ class ConnectionBase(propcan.PropCanBase):
     def __init__(self, *args, **dargs):
         """
         Initialize instance with server info and client info.
+
+        :param server_ip: Ip of server.
+        :param server_user: Username to login server.
+        :param server_pwd: Password for server_user.
+        :param client_ip: IP of client.
+        :param client_user: Username to login client.
+        :param client_pwd: Password for client_user.
+        :param server_session: Session to server and execute command on
+                               server.
+        :param client_session: Session to client and execute command on
+                               client.
+        :param tmp_dir: A tmp dir to store some tmp file.
+        :param auto_recover: If it is False same as the default,
+                             conn_recover() will not called by __del__()
+                             If it is True, Connection class will call
+                             conn_recover() in __del__(), then user need not
+                             call it manully. But the errors in conn_recover()
+                             will be ignored.
+
+        Example:
+
+        ::
+
+          connection = ConnectionBase(server_ip=server_ip,
+                                      server_user=server_user,
+                                      server_pwd=server_pwd,
+                                      client_ip=client_ip,
+                                      client_user=client_user,
+                                      client_pwd=client_pwd)
+          connection.conn_setup()
+          virsh.connect(URI)
+          connection.conn_recover()
+
+        We sugguest *not* to pass auto_recover=True to __init__(),
+        and call conn_recover() manually when you don't need this
+        connection any more.
         """
         init_dict = dict(*args, **dargs)
         init_dict['server_ip'] = init_dict.get('server_ip', 'SERVER.IP')
@@ -586,18 +590,18 @@ class TCPConnection(ConnectionBase):
     Connection class for TCP transport.
 
     Some specific varaibles for TCPConnection class.
-
-    tcp_port: Port of tcp connection, default is 16509.
-    sysconfig_libvirtd_path: Path of libvirtd file, default is
-                             /etc/sysconfig/libvirtd.
-    libvirtd_conf_path: Path of libvirtd.conf, default is
-                        /etc/libvirt/libvirtd.conf.
     """
     __slots__ = ('tcp_port', 'remote_syslibvirtd', 'remote_libvirtdconf')
 
     def __init__(self, *args, **dargs):
         """
         init params for TCP connection and init tmp_dir.
+
+        param tcp_port: Port of tcp connection, default is 16509.
+        param sysconfig_libvirtd_path: Path of libvirtd file, default is
+                                       ``/etc/sysconfig/libvirtd``.
+        param libvirtd_conf_path: Path of libvirtd.conf, default is
+                                  ``/etc/libvirt/libvirtd.conf``.
         """
         init_dict = dict(*args, **dargs)
         init_dict['tcp_port'] = init_dict.get('tcp_port', '16509')

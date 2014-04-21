@@ -163,12 +163,15 @@ class TestEnv(unittest.TestCase):
 
     def test_unregister_syncserver(self):
         """
+        Unregister a sync server.
+
         1) Create an env file.
         2) Create and register 2 SyncListenServers in the env.
-        4) Get one of the SyncListenServers in the env.
-        5) Unregister one of the SyncListenServers.
-        6) Verify that the SyncListenServer unregistered can't be retrieved
-           anymore with get_syncserver().
+        3) Get one of the SyncListenServers in the env.
+        4) Unregister one of the SyncListenServers.
+        5) Verify that the SyncListenServer unregistered can't be retrieved
+           anymore with ``get_syncserver()``.
+
         """
         env = utils_env.Env(filename=self.envfilename)
         sync1 = FakeSyncListenServer(port=333)

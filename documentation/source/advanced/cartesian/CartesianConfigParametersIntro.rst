@@ -40,9 +40,9 @@ test. Typical usage of the parameter would be:
 
 This would indicate that our test requires 3 VMs. Let us now assume that
 a VM object accepts a parameter
-`mem <CartesianConfigReference/KVM/mem>`_ which specifies the
+``mem`` which specifies the
 amount of memory to give the VM. In order to specify
-`mem <CartesianConfigReference/KVM/mem>`_ for **vm1**, we may
+``mem`` for **vm1**, we may
 write:
 
 ::
@@ -55,8 +55,7 @@ and in order to specify it for **second\_vm** we may write:
 
     mem_second_vm = 1024
 
-If we wanted to specify `mem <CartesianConfigReference/KVM/mem>`_
-for all existing VM objects, we would write:
+If we wanted to specify ``mem`` for all existing VM objects, we would write:
 
 ::
 
@@ -64,9 +63,9 @@ for all existing VM objects, we would write:
 
 However, this would only apply to **another\_vm**, because the previous
 statements, which each specify
-`mem <CartesianConfigReference/KVM/mem>`_ for a single VM, override
+``mem`` for a single VM, override
 the statement that specifies
-`mem <CartesianConfigReference/KVM/mem>`_ for all VMs. The order in
+``mem`` for all VMs. The order in
 which these statements are written in a configuration file is not
 important; statements addressing a single object always override
 statements addressing all objects.
@@ -181,9 +180,9 @@ change them, the VM must be restarted with new parameters.
 +----------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------+
 | md5sum\_1m?                                              | Similar to **md5sum**, but specifies the MD5 sum of only the first MB of the **cdrom** image. If specified, this parameter is used instead of **md5sum**. Calculating the MD5 sum of the first MB of an image is much quicker than calculating it for the entire image.   | no                                                       |
 +----------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------+
-| `mem <CartesianConfigReference/KVM/mem>`_           | Specifies the amount of memory, in MB, the VM should have                                                                                                                                                                                                                 | yes                                                      |
+| `mem <CartesianConfigReference-KVM-mem>`_                | Specifies the amount of memory, in MB, the VM should have                                                                                                                                                                                                                 | yes                                                      |
 +----------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------+
-| `display <CartesianConfigReference/KVM/display>`_   | Selects the rendering method to be used by the VM; valid values are 'vnc', 'sdl' and 'nographic'. If 'vnc' is selected, the VM will be assigned an available VNC port automatically.                                                                                      | no                                                       |
+| `display <CartesianConfigReference/KVM/display>`_        | Selects the rendering method to be used by the VM; valid values are 'vnc', 'sdl' and 'nographic'. If 'vnc' is selected, the VM will be assigned an available VNC port automatically.                                                                                      | no                                                       |
 +----------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------+
 | extra\_params?                                           | Specifies a string to append to the QEMU command line, e.g. '-snapshot'                                                                                                                                                                                                   | no                                                       |
 +----------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------+
@@ -201,14 +200,14 @@ change them, the VM must be restarted with new parameters.
 +----------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------+
 | cmd\_reboot?                                             | Specifies the shell command to be used to reboot the guest (via SSH/Telnet) whenever necessary                                                                                                                                                                            | if the VM should support rebooting via SSH/Telnet        |
 +----------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------+
-| `images <CartesianConfigReference/KVM/images>`_     | Lists the image objects to be used by the VM                                                                                                                                                                                                                              | yes                                                      |
+| `images <CartesianConfigReference/KVM/images>`_          | Lists the image objects to be used by the VM                                                                                                                                                                                                                              | yes                                                      |
 +----------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------+
-| `nics <CartesianConfigReference/KVM/nics>`_         | Lists the NIC objects to be used by the VM                                                                                                                                                                                                                                | yes                                                      |
+| `nics <CartesianConfigReference/KVM/nics>`_              | Lists the NIC objects to be used by the VM                                                                                                                                                                                                                                | yes                                                      |
 +----------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------+
 
 A VM will be restarted automatically if a parameter change leads to a
 different QEMU command line (for example, when
-`mem <CartesianConfigReference/KVM/mem>`_ changes). However, when
+``mem`` changes). However, when
 other parameters change (such as **cmd\_shutdown**) the VM will not be
 automatically restarted (unless **restart\_vm** is set to 'yes'), and
 the change will have no effect.
@@ -223,17 +222,17 @@ objects <CartesianConfigParametersIntro#AddressingobjectsVMsimagesNICsetc>`_.
 +----------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
 | **Parameter**                                                                    | **Effect/meaning**                                                                                                                                                                 | **Required?**                 |
 +----------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
-| `create\_image <CartesianConfigReference/KVM/create_image>`_                | If equals 'yes', the image file will be created using qemu-img **if it doesn't already exist**                                                                                     | no                            |
+| `create\_image <CartesianConfigReference/KVM/create_image>`_                     | If equals 'yes', the image file will be created using qemu-img **if it doesn't already exist**                                                                                     | no                            |
 +----------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
-| `force\_create\_image <CartesianConfigReference/KVM/force_create_image>`_   | If equals 'yes', the image file will be created using qemu-img regardless of whether it already exists. If the file already exists it will be overwritten by a blank image file.   | no                            |
+| `force\_create\_image <CartesianConfigReference/KVM/force_create_image>`_        | If equals 'yes', the image file will be created using qemu-img regardless of whether it already exists. If the file already exists it will be overwritten by a blank image file.   | no                            |
 +----------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
-| `image\_name <CartesianConfigReference/KVM/image_name>`_                    | Specifies the image filename **without the extension**                                                                                                                             | yes                           |
+| `image\_name <CartesianConfigReference/KVM/image_name>`_                         | Specifies the image filename **without the extension**                                                                                                                             | yes                           |
 +----------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
-| `image\_format <CartesianConfigReference/KVM/image_format>`_                | Specifies the format of the image to be created/used, e.g. qcow2, raw, vmdk etc                                                                                                    | yes                           |
+| `image\_format <CartesianConfigReference/KVM/image_format>`_                     | Specifies the format of the image to be created/used, e.g. qcow2, raw, vmdk etc                                                                                                    | yes                           |
 +----------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
-| `image\_size <CartesianConfigReference/KVM/image_size>`_                    | Specifies the size of the image to be created, in a format understood by qemu-img (e.g. 10G)                                                                                       | only when creating an image   |
+| `image\_size <CartesianConfigReference/KVM/image_size>`_                         | Specifies the size of the image to be created, in a format understood by qemu-img (e.g. 10G)                                                                                       | only when creating an image   |
 +----------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
-| `drive\_format <CartesianConfigReference/KVM/drive_format>`_                | Specifies a string to pass to QEMU as the drive's 'if' parameter (e.g. ide, scsi)                                                                                                  | no                            |
+| `drive\_format <CartesianConfigReference/KVM/drive_format>`_                     | Specifies a string to pass to QEMU as the drive's 'if' parameter (e.g. ide, scsi)                                                                                                  | no                            |
 +----------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
 | image\_snapshot?                                                                 | If equals 'yes', 'snapshot=on' will be appended to the 'drive' option passed to QEMU                                                                                               | no                            |
 +----------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
@@ -244,8 +243,7 @@ NIC preprocessor parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following parameters should be specified for each NIC of each VM, as
-explained in `addressing
-objects <CartesianConfigParametersIntro#AddressingobjectsVMsimagesNICsetc>`_.
+explained in the section "addressing objects".
 
 +-----------------+--------------------------------------------------------------------------------+-----------------+
 | **Parameter**   | **Effect/meaning**                                                             | **Required?**   |
@@ -298,39 +296,37 @@ The following parameters define the postprocessor's behavior:
 +--------------------------------------------------------------------------+------------------------------------------------------------------------------------------+-----------------+
 | vms?                                                                     | Lists the VM objects to be handled by the postprocessor                                  | yes             |
 +--------------------------------------------------------------------------+------------------------------------------------------------------------------------------+-----------------+
-| `keep\_ppm\_files <CartesianConfigReference/KVM/keep_ppm_files>`_   | If equals 'yes', the PPM image files in the test's debug directory will not be removed   | no              |
+| `keep\_ppm\_files <CartesianConfigReference/KVM/keep_ppm_files>`_        | If equals 'yes', the PPM image files in the test's debug directory will not be removed   | no              |
 +--------------------------------------------------------------------------+------------------------------------------------------------------------------------------+-----------------+
 
 VM postprocessor parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These parameters should be specified for each VM as explained above in
-`addressing
-objects <CartesianConfigParametersIntro#AddressingobjectsVMsimagesNICsetc>`_.
+"addressing objects".
 
 +----------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+
 | **Parameter**                                                                    | **Effect/meaning**                                                                                                                                                                                                                                                                                                                                                                                                                                                          | **Required?**   |
 +----------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+
-| `kill\_vm <CartesianConfigReference/KVM/kill_vm>`_                          | If equals 'yes', the VM will be shut down after the test                                                                                                                                                                                                                                                                                                                                                                                                                    | no              |
+| `kill\_vm <CartesianConfigReference/KVM/kill_vm>`_                               | If equals 'yes', the VM will be shut down after the test                                                                                                                                                                                                                                                                                                                                                                                                                    | no              |
 +----------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+
-| `kill\_vm\_gracefully <CartesianConfigReference/KVM/kill_vm_gracefully>`_   | If equals 'yes', and **kill\_vm** equals 'yes', the first attempt to kill the VM will be done via SSH/Telnet with a clean shutdown command (rather than a quick 'quit' monitor command)                                                                                                                                                                                                                                                                                     | no              |
+| `kill\_vm\_gracefully <CartesianConfigReference/KVM/kill_vm_gracefully>`_        | If equals 'yes', and **kill\_vm** equals 'yes', the first attempt to kill the VM will be done via SSH/Telnet with a clean shutdown command (rather than a quick 'quit' monitor command)                                                                                                                                                                                                                                                                                     | no              |
 +----------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+
-| `kill\_vm\_timeout <CartesianConfigReference/KVM/kill_vm_timeout>`_         | If **kill\_vm** equals 'yes', this parameter specifies the time duration (in seconds) to wait for the VM to shut itself down, before attempting to shut it down externally; if this parameter isn't specified the VM killing procedure will start immediately following the test. This parameter is useful for tests that instruct a VM to shut down internally and need the postprocessor to shut it down only if it fails to shut itself down in a given amount of time   | no              |
+| `kill\_vm\_timeout <CartesianConfigReference/KVM/kill_vm_timeout>`_              | If **kill\_vm** equals 'yes', this parameter specifies the time duration (in seconds) to wait for the VM to shut itself down, before attempting to shut it down externally; if this parameter isn't specified the VM killing procedure will start immediately following the test. This parameter is useful for tests that instruct a VM to shut down internally and need the postprocessor to shut it down only if it fails to shut itself down in a given amount of time   | no              |
 +----------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+
-| `images <CartesianConfigReference/KVM/images>`_                             | Lists the images objects, for this VM, to be handled by the postprocessor                                                                                                                                                                                                                                                                                                                                                                                                   | no              |
+| `images <CartesianConfigReference/KVM/images>`_                                  | Lists the images objects, for this VM, to be handled by the postprocessor                                                                                                                                                                                                                                                                                                                                                                                                   | no              |
 +----------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+
 
 Image postprocessor parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These parameters should be specified for each image of each VM as
-explained above in `addressing
-objects <CartesianConfigParametersIntro#Addressing%20objects%20(VMs,%20images,%20NICs%20etc)>`_.
+explained above in "addressing objects".
 
 +---------------------------------------------------------------------+------------------------------------------------------------------+-----------------+
 | **Parameter**                                                       | **Effect/meaning**                                               | **Required?**   |
 +---------------------------------------------------------------------+------------------------------------------------------------------+-----------------+
-| `remove\_image <CartesianConfigReference/KVM/remove_image>`_   | If equals 'yes', the image file will be removed after the test   | no              |
+| `remove\_image <CartesianConfigReference/KVM/remove_image>`_        | If equals 'yes', the image file will be removed after the test   | no              |
 +---------------------------------------------------------------------+------------------------------------------------------------------+-----------------+
 
 Test parameters
@@ -392,7 +388,7 @@ variants this test belongs to; its **shortname**, however, is much
 shorter: **Fedora.9.32.e1000.migrate.1**.
 
 The test depends on 4 other tests, as indicated by the depend?
-parameter. The listed strings are the **name**s of these tests. If any
+parameter. The listed strings are the **names** of these tests. If any
 of these 4 tests runs and fails, the current test will be skipped.
 
 Preprocessing
@@ -429,7 +425,7 @@ one wished to specify a different NIC model for each VM, one could
 specify, for example, **nic\_model\_vm1 = e1000** and **nic\_model\_dst
 = rtl8139**.
 
-The parameters `mem <CartesianConfigReference/KVM/mem>`_,
+The parameters ``mem``,
 ssh\_port?, ssh\_prompt?, username?, password?, cmd\_reboot? and
 cmd\_shutdown? apply to both VMs. See `#VM preprocessor
 parameters <CartesianConfigParametersIntro#VM%20preprocessor%20parameters>`_

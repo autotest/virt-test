@@ -185,15 +185,22 @@ def clean_up_snapshots(vm_name, snapshot_list=[]):
 def get_all_cells():
     """
     Use virsh freecell --all to get all cells on host
-    # virsh freecell --all
-        0:     124200 KiB
-        1:    1059868 KiB
-    --------------------
-    Total:    1184068 KiB
 
-    return: cell_dict, {"0":"124200 KiB",
-                        "1":"1059868 KiB",
-                        "Total":"1184068 KiB"}
+    ::
+
+        # virsh freecell --all
+            0:     124200 KiB
+            1:    1059868 KiB
+        --------------------
+        Total:    1184068 KiB
+
+    That would return a dict like:
+
+    ::
+
+        cell_dict = {"0":"124200 KiB", "1":"1059868 KiB", "Total":"1184068 KiB"}
+
+    :return: cell_dict
     """
     fc_result = virsh.freecell(options="--all", ignore_status=True)
     if fc_result.exit_status:
@@ -525,12 +532,12 @@ def pci_label_from_address(address_dict, radix=10):
     :param radix: The radix of your data in address_dict.
 
     Example:
-        address_dict: {'domain': '0x0000', 'bus': '0x08',
-                       'slot': '0x10', 'function': '0x0'}
-        radix = 16
 
-    return-value:
-        pci_0000_08_10_0
+    ::
+
+        address_dict = {'domain': '0x0000', 'bus': '0x08', 'slot': '0x10', 'function': '0x0'}
+        radix = 16
+        return = pci_0000_08_10_0
     """
     if not set(['domain', 'bus', 'slot', 'function']).issubset(
             address_dict.keys()):
@@ -625,11 +632,12 @@ class PoolVolumeTest(object):
                  source_path=None):
         """
         Preapare the specific type pool
+
         Note:
-        1. For scsi type pool, it only could be created from xml file
-        2. Other type pools can be created by pool_creat_as function
-        3. Disk pool will not allow to create volume with virsh commands
-           So we can prepare it before pool created
+            1. For scsi type pool, it only could be created from xml file
+            2. Other type pools can be created by pool_creat_as function
+            3. Disk pool will not allow to create volume with virsh commands
+               So we can prepare it before pool created
 
         :param pool_name: created pool name
         :param pool_type: dir, disk, logical, fs, netfs or else

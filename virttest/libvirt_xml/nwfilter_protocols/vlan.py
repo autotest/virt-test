@@ -12,6 +12,7 @@ class Vlan(base.TypedDeviceBase):
 
     """
     Create new Vlan xml instances
+
     Properties:
         attrs: libvirt_xml.nwfilter_protocols.Vlan.Attr instance
     """
@@ -30,7 +31,7 @@ class Vlan(base.TypedDeviceBase):
         """
         Return a new Attr instance and set properties from dargs
 
-        :param **dargs: dict of attributes
+        :param dargs: dict of attributes
         :return: new Attr instance
         """
         new_one = self.Attr(virsh_instance=self.virsh)

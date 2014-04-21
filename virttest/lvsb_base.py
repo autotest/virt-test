@@ -481,7 +481,7 @@ class TestSandboxes(object):
         """
         Iterate over all sandboxes, calling do_something on each
 
-        :param do_sometihng: Called with the item and *args, **dargs
+        :param do_sometihng: Called with the item and ``*args``, ``**dargs``
         """
         # Simplify making the same call to every running sandbox
         return [do_something(sandbox, *args, **dargs)

@@ -864,13 +864,18 @@ class PciAssignable(object):
 
     def get_pf_vf_info(self):
         """
-        Get pf and vf related information in this host that mattch
-        self.pf_filter_re
+        Get pf and vf related information in this host that match ``self.pf_filter_re``.
+
         for every pf it will create following information:
-            pf_id: The id of the pf device.
-            occupied: Whether the pf device assigned or not
-            vf_ids: Id list of related vf in this pf.
-            ethname: eth device name in host for this pf.
+
+        pf_id:
+            The id of the pf device.
+        occupied:
+            Whether the pf device assigned or not
+        vf_ids:
+            Id list of related vf in this pf.
+        ethname:
+            eth device name in host for this pf.
 
         :return: return a list contains pf vf information.
         :rtype: list of dict

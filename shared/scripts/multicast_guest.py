@@ -9,7 +9,7 @@ import sys
 """
 Script used to join machine into multicast groups.
 
-@author Amos Kong <akong@redhat.com>
+:author Amos Kong <akong@redhat.com>
 """
 
 if __name__ == "__main__":

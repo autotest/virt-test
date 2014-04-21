@@ -895,8 +895,8 @@ def run_autotest(vm, session, control_path, timeout,
 
 def get_loss_ratio(output):
     """
-    Get the packet loss ratio from the output of ping
-.
+    Get the packet loss ratio from the output of ping.
+
     :param output: Ping output.
     """
     try:
@@ -1121,7 +1121,7 @@ def summary_up_result(result_file, ignore, row_head, column_mark):
     @row_head: pattern for the items in row
     @column_mark: pattern for the first line in matrix which used to generate
     the items in column
-    Return: A dictionary with the average value of results
+    :return: A dictionary with the average value of results
     """
     head_flag = False
     result_dict = {}
@@ -1184,7 +1184,7 @@ def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
     :param re_hw_id: the pattern for getting hardware id from inf files
     :param run_cmd:  Use hardware id in windows cmd command or not
 
-    Return: Windows driver's hardware id
+    :return: Windows driver's hardware id
     """
     if not os.path.exists(mount_point):
         os.mkdir(mount_point)
@@ -1259,20 +1259,27 @@ class BackgroundTest(object):
 def get_image_info(image_file):
     """
     Get image information and put it into a dict. Image information like this:
-    *******************************
-    image: /path/vm1_6.3.img
-    file format: raw
-    virtual size: 10G (10737418240 bytes)
-    disk size: 888M
-    ....
-    ....
-    *******************************
+
+    ::
+
+        *******************************
+        image: /path/vm1_6.3.img
+        file format: raw
+        virtual size: 10G (10737418240 bytes)
+        disk size: 888M
+        ....
+        ....
+        *******************************
+
     And the image info dict will be like this
-    image_info_dict = { 'format':'raw',
-                        'vsize' : '10737418240'
-                        'dsize' : '931135488'
-                      }
-    TODO: Add more information to dict
+
+    ::
+
+        image_info_dict = {'format':'raw',
+                           'vsize' : '10737418240'
+                           'dsize' : '931135488'}
+
+    :todo: Add more information to `image_info_dict`.
     """
     try:
         cmd = "qemu-img info %s" % image_file

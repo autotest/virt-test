@@ -707,10 +707,13 @@ class BaseVM(object):
         structure addrs.
 
         :param addrs: Dict of interfaces and address
-                        {"if_name":{"mac":['addrs',],
-                                    "ipv4":['addrs',],
-                                    "ipv6":['addrs',]},
-                          ...}
+
+        ::
+
+            {"if_name":{"mac":['addrs',],
+                        "ipv4":['addrs',],
+                        "ipv6":['addrs',]},
+              ...}
         """
         for virtnet in self.virtnet:
             for iface_name, iface in addrs.iteritems():
@@ -803,10 +806,7 @@ class BaseVM(object):
         """
         Add new or setup existing NIC with optional model type and mac address
 
-        :param **params: Additional NIC parameters to set.
-        :param nic_name: Name for device
-        :param mac: Optional MAC address, None to randomly generate.
-        :param ip: Optional IP address to register in address_cache
+        :param params: Dict with additional NIC parameters to set.
         :return: Dict with new NIC's info.
         """
         if not params.has_key('nic_name'):
@@ -1372,7 +1372,7 @@ class BaseVM(object):
                 differ.
         :param clean: If True, delete the saved state files (relevant only if
                 stable_check is also True).
-        @save_path: The path for state files.
+        :param save_path: The path for state files.
         :param dest_host: Destination host (defaults to 'localhost').
         :param remote_port: Port to use for remote migration.
         """

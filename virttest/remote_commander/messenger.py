@@ -3,7 +3,7 @@
 '''
 Created on Dec 6, 2013
 
-@author: jzupka
+:author: jzupka
 '''
 
 import os

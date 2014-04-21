@@ -1,6 +1,6 @@
 #!/usr/bin/python
 """
-@author Amos Kong <akong@redhat.com>
+:author Amos Kong <akong@redhat.com>
 
 """
 import os

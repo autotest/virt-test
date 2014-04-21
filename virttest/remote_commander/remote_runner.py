@@ -3,7 +3,7 @@
 '''
 Created on Dec 6, 2013
 
-@author: jzupka
+:author: jzupka
 '''
 
 import os
@@ -288,9 +288,12 @@ class CmdSlave(object):
 
     def parse_func_name(self, func_name, commander):
         """
-        Parse name sended from master
-        format:
-           ["manage|async|nohup| ", "fnname1", "fnname2", ...]
+        Parse name sended from master.
+
+        format: ``["manage|async|nohup| ", "fnname1", "fnname2", ...]``
+
+        :param func_name: Function name
+        :param commander: Where to execute the command (remote or local)
         """
         if func_name[0] == "manage":  # start command in main process.
             self.manage = True

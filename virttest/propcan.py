@@ -24,44 +24,46 @@ values and subclass-defined attributes (such as __slots__).
 
 example:
 
-class A(PropCan):
-   # Class with *attributes*
-    __slots__ = ('a', 'b')
-    # 'a' has defined a set/get/del by definition of method with prefix
-    #     set_a, get_a, del_a
-    # 'b' doesn't have defined set/get/del then classic set/get/del will be
-    #     called instead.
+::
+
+    class A(PropCan):
+       # Class with *attributes*
+        __slots__ = ('a', 'b')
+        # 'a' has defined a set/get/del by definition of method with prefix
+        #     set_a, get_a, del_a
+        # 'b' doesn't have defined set/get/del then classic set/get/del will be
+        #     called instead.
 
 
-    def __init__(self, a=1, b='b'):
-       super(A, self).__init__(a, b)
+        def __init__(self, a=1, b='b'):
+           super(A, self).__init__(a, b)
 
 
-    def set_a(self, value)
-        # If is_instance(obj, A) then obj.a = "val" call this method.
-        self.__dict_set__("a", value)
+        def set_a(self, value)
+            # If is_instance(obj, A) then obj.a = "val" call this method.
+            self.__dict_set__("a", value)
 
 
-    def get_a(self, value)
-        # If is_instance(obj, A) then xx = obj.a call this method.
-        return self.__dict_get__("a")
+        def get_a(self, value)
+            # If is_instance(obj, A) then xx = obj.a call this method.
+            return self.__dict_get__("a")
 
 
-    def del_a(self, value)
-        # If is_instance(obj, A) then del obj.a call this method.
-        self.__dict_del__("a")
+        def del_a(self, value)
+            # If is_instance(obj, A) then del obj.a call this method.
+            self.__dict_del__("a")
 
 
-class B(PropCan):
-   # Class without *attributes*
-   # ***** Even if class doesn't have attributes there should be
-   # defined __slots__ = []. Because it is preferred by new style of class.
-   # *****
-    __slots__ = []
+    class B(PropCan):
+       # Class without *attributes*
+       # ***** Even if class doesn't have attributes there should be
+       # defined __slots__ = []. Because it is preferred by new style of class.
+       # *****
+        __slots__ = []
 
 
-    def __init__(self):
-       super(B, self).__init__()
+        def __init__(self):
+           super(B, self).__init__()
 """
 
 
@@ -159,8 +161,8 @@ class PropCanBase(dict, PropCanInternal):
         """
         Initialize contents directly or by way of accessors
 
-        :param *args: Initial values for __slots__ keys, same as dict.
-        :param **dargs: Initial values for __slots__ keys, same as dict.
+        :param args: Initial values for __slots__ keys, same as dict.
+        :param dargs: Initial values for __slots__ keys, same as dict.
         """
         # Params are initialized here, not in super
         super(PropCanBase, self).__init__()

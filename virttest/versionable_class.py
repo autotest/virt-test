@@ -260,8 +260,8 @@ class Manager(object):
 
         :param _class: Class which should be prepared.
         :type _class: class.
-        :param *args: Params for _is_right_ver function.
-        :param *kargs: Params for _is_right_ver function.
+        :param args: Params for _is_right_ver function.
+        :params kargs: Params for _is_right_ver function.
         """
         def add_to_structure(cl, new_bases):
             if VersionableClass in cl.__mro__:
@@ -350,8 +350,8 @@ def factory(orig_cls, *args, **kargs):
     Create class with specific version.
 
     :param orig_class: Class from which should be derived good version.
-    :param *args: list of parameters for _ir_right_ver
-    :param *kargs: dict of named parameters for _ir_right_ver
+    :param args: list of parameters for _ir_right_ver
+    :params kargs: dict of named parameters for _ir_right_ver
     :return: params specific class.
     :rtype: class
     """

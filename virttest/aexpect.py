@@ -367,13 +367,12 @@ class ShellStatusError(ShellError):
 def run_tail(command, termination_func=None, output_func=None, output_prefix="",
              timeout=1.0, auto_close=True):
     """
+    Run a subprocess in the background and collect its output and exit status.
+
     Run command as a subprocess.  Call output_func with each line of output
     from the subprocess (prefixed by output_prefix).  Call termination_func
     when the subprocess terminates.  Return when timeout expires or when the
     subprocess exits -- whichever occurs first.
-
-    @brief: Run a subprocess in the background and collect its output and
-            exit status.
 
     :param command: The shell command to execute
     :param termination_func: A function to call when the process terminates
@@ -405,13 +404,12 @@ def run_tail(command, termination_func=None, output_func=None, output_prefix="",
 def run_bg(command, termination_func=None, output_func=None, output_prefix="",
            timeout=1.0, auto_close=True):
     """
+    Run a subprocess in the background and collect its output and exit status.
+
     Run command as a subprocess.  Call output_func with each line of output
     from the subprocess (prefixed by output_prefix).  Call termination_func
     when the subprocess terminates.  Return when timeout expires or when the
     subprocess exits -- whichever occurs first.
-
-    @brief: Run a subprocess in the background and collect its output and
-            exit status.
 
     :param command: The shell command to execute
     :param termination_func: A function to call when the process terminates
@@ -442,13 +440,12 @@ def run_bg(command, termination_func=None, output_func=None, output_prefix="",
 
 def run_fg(command, output_func=None, output_prefix="", timeout=1.0):
     """
+    Run a subprocess in the foreground and collect its output and exit status.
+
     Run command as a subprocess.  Call output_func with each line of output
     from the subprocess (prefixed by prefix).  Return when timeout expires or
     when the subprocess exits -- whichever occurs first.  If timeout expires
     and the subprocess is still running, kill it before returning.
-
-    @brief: Run a subprocess in the foreground and collect its output and
-            exit status.
 
     :param command: The shell command to execute
     :param output_func: A function to call with each line of output from
@@ -1159,12 +1156,12 @@ class Expect(Tail):
                                   timeout=60, internal_timeout=None,
                                   print_func=None, match_func=None):
         """
+        Read from child using read_nonblocking until a pattern matches.
+
         Read using read_nonblocking until a match is found using match_patterns,
         or until timeout expires. Before attempting to search for a match, the
         data is filtered using the filter_func function provided.
 
-        @brief: Read from child using read_nonblocking until a pattern
-                matches.
         :param patterns: List of strings (regular expression patterns)
         :param filter_func: Function to apply to the data read from the child before
                 attempting to match it against the patterns (should take and
@@ -1247,13 +1244,12 @@ class Expect(Tail):
     def read_until_last_line_matches(self, patterns, timeout=60,
                                      internal_timeout=None, print_func=None):
         """
+        Read using read_nonblocking until the last non-empty line matches a pattern.
+
         Read using read_nonblocking until the last non-empty line of the output
         matches one of the patterns (using match_patterns), or until timeout
         expires. Return a tuple containing the match index (or None if no match
         was found) and the data read so far.
-
-        @brief: Read using read_nonblocking until the last non-empty line
-                matches a pattern.
 
         :param patterns: A list of strings (regular expression patterns)
         :param timeout: The duration (in seconds) to wait until a match is
@@ -1281,12 +1277,12 @@ class Expect(Tail):
     def read_until_any_line_matches(self, patterns, timeout=60,
                                     internal_timeout=None, print_func=None):
         """
+        Read using read_nonblocking until any line matches a pattern.
+
         Read using read_nonblocking until any line of the output matches
         one of the patterns (using match_patterns_multiline), or until timeout
         expires. Return a tuple containing the match index (or None if no match
         was found) and the data read so far.
-
-        @brief: Read using read_nonblocking until any line matches a pattern.
 
         :param patterns: A list of strings (regular expression patterns)
                          Consider using '^' in the beginning.
@@ -1426,12 +1422,11 @@ class ShellSession(Expect):
     def read_up_to_prompt(self, timeout=60, internal_timeout=None,
                           print_func=None):
         """
+        Read using read_nonblocking until the last non-empty line matches the prompt.
+
         Read using read_nonblocking until the last non-empty line of the output
         matches the prompt regular expression set by set_prompt, or until
         timeout expires.
-
-        @brief: Read using read_nonblocking until the last non-empty line
-                matches the prompt.
 
         :param timeout: The duration (in seconds) to wait until a match is
                 found

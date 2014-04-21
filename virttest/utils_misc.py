@@ -47,9 +47,11 @@ import traceback
 
 def log_last_traceback(msg=None, log=logging.error):
     """
-    @warning: This function is being moved into autotest and your code should
-              use autotest.client.shared.base_utils function instead.
     Writes last traceback into specified log.
+
+    :warning: This function is being moved into autotest and your code should
+              use autotest.client.shared.base_utils function instead.
+
     :param msg: Override the default message. ["Original traceback"]
     :param log: Where to log the traceback [logging.error]
     """
@@ -71,8 +73,8 @@ def aton(sr):
     Transform a string to a number(include float and int). If the string is
     not in the form of number, just return false.
 
-    @str: string to transfrom
-    Return: float, int or False for failed transform
+    :param sr: string to transfrom
+    :return: float, int or False for failed transform
     """
     try:
         return int(sr)
@@ -88,11 +90,11 @@ def find_substring(string, pattern1, pattern2=None):
     Return the match of pattern1 in string. Or return the match of pattern2
     if pattern is not matched.
 
-    @string: string
-    @pattern1: first pattern want to match in string, must set.
-    @pattern2: second pattern, it will be used if pattern1 not match, optional.
+    :param string: string
+    :param pattern1: first pattern want to match in string, must set.
+    :param pattern2: second pattern, it will be used if pattern1 not match, optional.
 
-    Return: Match substing or None
+    :return: Match substing or None
     """
     if not pattern1:
         logging.debug("pattern1: get empty string.")
@@ -280,7 +282,7 @@ def find_free_ports(start_port, end_port, count, address="localhost"):
     """
     Return count of host free ports in the range [start_port, end_port].
 
-    @count: Initial number of ports known to be free in the range.
+    :param count: Initial number of ports known to be free in the range.
     :param start_port: First port that will be checked.
     :param end_port: Port immediately after the last one that will be checked.
     """
@@ -437,10 +439,10 @@ def format_str_for_message(sr):
 
 def wait_for(func, timeout, first=0.0, step=1.0, text=None):
     """
+    Wait until func() evaluates to True.
+
     If func() evaluates to True before timeout expires, return the
     value of func(). Otherwise return None.
-
-    @brief: Wait until func() evaluates to True.
 
     :param timeout: Timeout in seconds
     :param first: Time to sleep before first attempt
@@ -1040,11 +1042,11 @@ def create_x509_dir(path, cacert_subj, server_subj, passphrase,
 
     :param path: defines path to directory which will be created
     :param cacert_subj: ca-cert.pem subject
-    :param server_key.csr subject
-    :param passphrase - passphrase to ca-key.pem
-    :param secure = False - defines if the server-key.pem will use a passphrase
-    :param bits = 1024: bit length of keys
-    :param days = 1095: cert expiration
+    :param server_key.csr: subject
+    :param passphrase: passphrase to ca-key.pem
+    :param secure: defines if the server-key.pem will use a passphrase
+    :param bits: bit length of keys
+    :param days: cert expiration
 
     :raise ValueError: openssl not found or rc != 0
     :raise OSError: if os.makedirs() fails
@@ -1404,8 +1406,8 @@ class NumaNode(object):
         """
         Pin one process to a single cpu.
 
-        @param process: Process ID.
-        @param cpu: CPU ID, pin thread to free CPU if cpu ID isn't set
+        :param process: Process ID.
+        :param cpu: CPU ID, pin thread to free CPU if cpu ID isn't set
         """
         self._flush_pin()
         if cpu:
@@ -1504,8 +1506,8 @@ def kvm_flags_to_stresstests(flags):
     """
     Covert [cpu flags] to [tests]
 
-    @param cpuflags: list of cpuflags
-    @return: Return tests like string.
+    :param cpuflags: list of cpuflags
+    :return: Return tests like string.
     """
     tests = set([])
     for f in flags:
@@ -1999,13 +2001,12 @@ def selinux_enforcing():
 
 def get_winutils_vol(session, label="WIN_UTILS"):
     """
-    Return Volum ID of winutils CDROM;ISO file should be create via command:
-    mkisofs -V $label -o winutils.iso
+    Return Volume ID of winutils CDROM ISO file should be create via command
+    ``mkisofs -V $label -o winutils.iso``.
 
-    @parm session: session Object
-    @parm label:volum ID of WIN_UTILS.iso
-
-    :return: volum ID
+    :param session: session Object
+    :param label: volume ID of WIN_UTILS.iso
+    :return: volume ID
     """
     cmd = "wmic logicaldisk where (VolumeName='%s') get DeviceID" % label
     output = session.cmd(cmd, timeout=120)
@@ -2049,20 +2050,27 @@ def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
 def get_image_info(image_file):
     """
     Get image information and put it into a dict. Image information like this:
-    *******************************
-    image: /path/vm1_6.3.img
-    file format: raw
-    virtual size: 10G (10737418240 bytes)
-    disk size: 888M
-    ....
-    ....
-    *******************************
+
+    ::
+
+        *******************************
+        image: /path/vm1_6.3.img
+        file format: raw
+        virtual size: 10G (10737418240 bytes)
+        disk size: 888M
+        ....
+        ....
+        *******************************
+
     And the image info dict will be like this
-    image_info_dict = { 'format':'raw',
-                        'vsize' : '10737418240'
-                        'dsize' : '931135488'
-                      }
-    TODO: Add more information to dict
+
+    ::
+
+        image_info_dict = {'format':'raw',
+                           'vsize' : '10737418240'
+                           'dsize' : '931135488'}
+
+    :todo: Add more information to `image_info_dict`.
     """
     try:
         cmd = "qemu-img info %s" % image_file
