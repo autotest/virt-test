@@ -1087,15 +1087,16 @@ def start(name, **dargs):
     return command("start %s" % name, **dargs)
 
 
-def shutdown(name, **dargs):
+def shutdown(name, options="", **dargs):
     """
     True on successful domain shutdown.
 
     :param name: VM name
+    :param options: options for virsh shutdown.
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
-    return command("shutdown %s" % (name), **dargs)
+    return command("shutdown %s %s" % (name, options), **dargs)
 
 
 def destroy(name, **dargs):
