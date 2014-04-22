@@ -108,6 +108,7 @@ class Iscsi(object):
     def __init__(self, params, root_dir="/tmp"):
         os_dep.command("iscsiadm")
         self.target = params.get("target")
+        self.export_flag = False
         if params.get("portal_ip"):
             self.portal_ip = params.get("portal_ip")
         else:
@@ -126,7 +127,6 @@ class Iscsi(object):
             self.emulated_size = params.get("image_size")
             self.unit = self.emulated_size[-1].upper()
             self.emulated_size = self.emulated_size[:-1]
-            self.export_flag = False
             # maps K,M,G,T => (count, bs)
             emulated_size = {'K': (1, 1),
                              'M': (1, 1024),
