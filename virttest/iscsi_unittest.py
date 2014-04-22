@@ -7,7 +7,7 @@ try:
 except ImportError:
     import common
 
-from autotest.client.shared import iscsi
+import iscsi
 from autotest.client.shared.test_utils import mock
 from autotest.client import os_dep
 from autotest.client.shared import utils
@@ -35,19 +35,17 @@ class iscsi_test(unittest.TestCase):
         utils.system_output.expect_call(lg_cmd).and_return(lg_msg)
 
     def setup_stubs_get_device_name(self, iscsi_obj):
-        s_msg = "127.0.0.1:3260,1 %s" % iscsi_obj.target
+        s_msg = "tcp [15] 127.0.0.1:3260,1 %s" % iscsi_obj.target
         utils.system_output.expect_call("iscsiadm --mode session",
                                         ignore_status=True
                                         ).and_return(s_msg)
-        detail = "Target: iqn.iscsitest\n Attached scsi disk sdb State"
+        detail = "Target: iqn.iscsitest\n Attached scsi disk "
+        detail += "sdb State running"
         utils.system_output.expect_call("iscsiadm -m session -P 3"
                                         ).and_return(detail)
 
     def setup_stubs_cleanup(self, iscsi_obj, fname=""):
-        s_msg = "127.0.0.1:3260,1 %s" % iscsi_obj.target
-        utils.system_output.expect_call("iscsiadm --mode session",
-                                        ignore_status=True
-                                        ).and_return(s_msg)
+        s_msg = "tcp [15] 127.0.0.1:3260,1 %s" % iscsi_obj.target
         utils.system_output.expect_call("iscsiadm --mode session",
                                         ignore_status=True
                                         ).and_return(s_msg)
@@ -81,14 +79,16 @@ class iscsi_test(unittest.TestCase):
         t_cmd += " %s --lld iscsi " % iscsi_obj.emulated_id
         t_cmd += "--targetname %s" % iscsi_obj.target
         utils.system.expect_call(t_cmd)
-        l_cmd = "tgtadm --mode logicalunit --op new --tid"
-        l_cmd += " %s --lld iscsi" % iscsi_obj.emulated_id
-        l_cmd += " --lun 1 --backing-store "
-        l_cmd += "%s" % iscsi_obj.emulated_image
-        b_cmd = "tgtadm --lld iscsi --op bind --mode target --tid"
-        b_cmd += " %s -I ALL" % iscsi_obj.emulated_id
+        l_cmd = "tgtadm --lld iscsi --op bind --mode target"
+        l_cmd += " --tid %s -I ALL" % iscsi_obj.emulated_id
         utils.system.expect_call(l_cmd)
-        utils.system.expect_call(b_cmd)
+        utils.system_output.expect_call(s_cmd).and_return("")
+        t_cmd = "tgtadm --mode logicalunit --op new "
+        t_cmd += "--tid %s --lld iscsi " % iscsi_obj.emulated_id
+        t_cmd += "--lun %s " % 0
+        t_cmd += "--backing-store %s" % iscsi_obj.emulated_image
+        utils.system.expect_call(t_cmd)
+
 
     def setup_stubs_get_target_id(self):
         s_cmd = "tgtadm --lld iscsi --mode target --op show"
@@ -133,7 +133,7 @@ class iscsi_test(unittest.TestCase):
         iscsi_emulated = iscsi.Iscsi(self.iscsi_emulated_params)
         self.setup_stubs_logged_in()
         self.assertFalse(iscsi_emulated.logged_in())
-        result = "127.0.0.1:3260,1 %s" % iscsi_emulated.target
+        result = "tcp [15] 127.0.0.1:3260,1 %s" % iscsi_emulated.target
         self.setup_stubs_logged_in(result)
         self.assertTrue(iscsi_emulated.logged_in())
 
