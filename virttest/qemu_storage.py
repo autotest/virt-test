@@ -43,25 +43,34 @@ class QemuImg(storage.QemuImg):
 
         :param params: Dictionary containing the test parameters.
         :param ignore_errors: Whether to ignore errors on the image creation
-                cmd.
+                              cmd.
 
         :note: params should contain:
-               image_name -- the name of the image file, without extension
-               image_format -- the format of the image (qcow2, raw etc)
-               image_cluster_size (optional) -- the cluster size for the image
-               image_size -- the requested size of the image (a string
-                   qemu-img can understand, such as '10G')
-               create_with_dd -- use dd to create the image (raw format only)
-               base_image(optional) -- the base image name when create
-                   snapshot
-               base_format(optional) -- the format of base image
-               encrypted(optional) -- if the image is encrypted, allowed
-               values: on and off. Default is "off"
-               preallocated(optional) -- if preallocation when create image,
-               allowed values: off, metadata. Default is "off"
+
+               image_name
+                   name of the image file, without extension
+               image_format
+                   format of the image (qcow2, raw etc)
+               image_cluster_size (optional)
+                   cluster size for the image
+               image_size
+                   requested size of the image (a string qemu-img can
+                   understand, such as '10G')
+               create_with_dd
+                   use dd to create the image (raw format only)
+               base_image(optional)
+                   the base image name when create snapshot
+               base_format(optional)
+                   the format of base image
+               encrypted(optional)
+                   if the image is encrypted, allowed values: on and off.
+                   Default is "off"
+               preallocated(optional)
+                   if preallocation when create image, allowed values: off,
+                   metadata. Default is "off"
 
         :return: tuple (path to the image created, utils.CmdResult object
-                containing the result of the creation command).
+                 containing the result of the creation command).
         """
         if params.get("create_with_dd") == "yes" and self.image_format == "raw":
             # maps K,M,G,T => (count, bs)
@@ -154,17 +163,23 @@ class QemuImg(storage.QemuImg):
 
         :param params: dictionary containing the test parameters
         :param root_dir: dir for save the convert image
-        :param cache_mode: the cache mode used to write the output disk image,
-            the valid options are: 'none', 'writeback' (default),
-            'writethrough', 'directsync' and 'unsafe'.
+        :param cache_mode: The cache mode used to write the output disk image.
+                           Valid options are: ``none``, ``writeback``
+                           (default), ``writethrough``, ``directsync`` and
+                           ``unsafe``.
 
         :note: params should contain:
-            convert_image_tag -- the image name of the convert image
-            convert_filename -- the name of the image after convert
-            convert_fmt -- the format after convert
-            compressed -- indicates that target image must be compressed
-            encrypted -- there are two value "off" and "on",
-                default value is "off"
+
+            convert_image_tag
+                the image name of the convert image
+            convert_filename
+                the name of the image after convert
+            convert_fmt
+                the format after convert
+            compressed
+                indicates that target image must be compressed
+            encrypted
+                there are two value "off" and "on", default value is "off"
         """
         convert_image_tag = params["image_convert"]
         convert_image = params["convert_name_%s" % convert_image_tag]
@@ -199,21 +214,27 @@ class QemuImg(storage.QemuImg):
 
     def rebase(self, params, cache_mode=None):
         """
-        Rebase image
+        Rebase image.
 
         :param params: dictionary containing the test parameters
         :param cache_mode: the cache mode used to write the output disk image,
-            the valid options are: 'none', 'writeback' (default),
-            'writethrough', 'directsync' and 'unsafe'.
+                           the valid options are: 'none', 'writeback' (default),
+                           'writethrough', 'directsync' and 'unsafe'.
 
         :note: params should contain:
-            cmd -- qemu-img cmd
-            snapshot_img -- the snapshot name
-            base_img -- base image name
-            base_fmt -- base image format
-            snapshot_fmt -- the snapshot format
-            mode -- there are two value, "safe" and "unsafe",
-                default is "safe"
+
+            cmd
+                qemu-img cmd
+            snapshot_img
+                the snapshot name
+            base_img
+                base image name
+            base_fmt
+                base image format
+            snapshot_fmt
+                the snapshot format
+            mode
+                there are two value, "safe" and "unsafe", default is "safe"
         """
         self.check_option("base_image_filename")
         self.check_option("base_format")
@@ -528,9 +549,9 @@ class LVMdev(storage.LVMdev):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images
         """
         super(LVMdev, self).__init__(params, root_dir, tag)
 

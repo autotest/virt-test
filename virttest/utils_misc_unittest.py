@@ -139,6 +139,7 @@ def utils_run(cmd):
 all_nodes_contents = "0\n"
 online_nodes_contents = "0\n"
 
+
 class TestNumaNode(unittest.TestCase):
 
     def setUp(self):

@@ -4,7 +4,6 @@ Step file creator/editor.
 
 :copyright: Red Hat Inc 2009
 :author: mgoldish@redhat.com (Michael Goldish)
-@version: "20090401"
 """
 
 import pygtk

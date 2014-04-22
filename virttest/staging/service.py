@@ -92,13 +92,19 @@ def sys_v_init_result_parser(command):
     """
     Parse results from sys_v style commands.
 
+    Valid commands:
+        status:
+            return true if service is running.
+        is_enabled:
+            return true if service is enabled.
+        list:
+            return a dict from service name to status.
+        others:
+            return true if operate success.
+
     :param command: command.
     :type command: str.
     :return: different from the command.
-    command is status: return true if service is running.
-    command is is_enabled: return true if service is enalbled.
-    command is list: return a dict from service name to status.
-    command is others: return true if operate success.
     """
     if command == "status":
         def method(cmdResult):
@@ -180,13 +186,19 @@ def systemd_result_parser(command):
     """
     Parse results from systemd style commands.
 
+    Valid commands:
+        status:
+            return true if service is running.
+        is_enabled:
+            return true if service is enabled.
+        list:
+            return a dict from service name to status.
+        others:
+            return true if operate success.
+
     :param command: command.
     :type command: str.
     :return: different from the command.
-    command is status: return true if service is running.
-    command is is_enabled: return true if service is enalbled.
-    command is list: return a dict from service name to status.
-    command is others: return true if operate success.
     """
     if command == "status":
         def method(cmdResult):
@@ -756,10 +768,12 @@ class Factory(object):
             Create a class that will create partial functions that generate commands
             for the current init command.
 
-            lldpad = SpecificServiceManager("lldpad",
-             auto_create_specific_service_command_generator())
-            lldpad.start()
-            lldpad.stop()
+            ::
+
+                lldpad = SpecificServiceManager("lldpad",
+                             auto_create_specific_service_command_generator())
+                lldpad.start()
+                lldpad.stop()
 
             :return: A ServiceCommandGenerator for the auto-detected init command.
             :rtype: _ServiceCommandGenerator
@@ -776,20 +790,22 @@ class Factory(object):
         Detect which init program is being used, init or systemd and return a
         class with methods to start/stop services.
 
-        # Get the system service manager
-        service_manager = Factory.create_generic_service()
+        ::
 
-        # Stating service/unit "sshd"
-        service_manager.start("sshd")
+            # Get the system service manager
+            service_manager = Factory.create_generic_service()
 
-        # Getting a list of available units
-        units = service_manager.list()
+            # Stating service/unit "sshd"
+            service_manager.start("sshd")
 
-        # Disabling and stopping a list of services
-        services_to_disable = ['ntpd', 'httpd']
-        for s in services_to_disable:
-            service_manager.disable(s)
-            service_manager.stop(s)
+            # Getting a list of available units
+            units = service_manager.list()
+
+            # Disabling and stopping a list of services
+            services_to_disable = ['ntpd', 'httpd']
+            for s in services_to_disable:
+                service_manager.disable(s)
+                service_manager.stop(s)
 
         :return: SysVInitServiceManager or SystemdServiceManager
         :rtype: _GenericServiceManager

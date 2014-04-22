@@ -284,7 +284,7 @@ class VMManager(virt_vm.BaseVM):
         """
         Remove a VM from specified export domain.
 
-        @export_name: export domain name.
+        :param export_name: export domain name.
         """
         vm = self.lookup_by_storagedomains(export_name)
         try:
@@ -297,9 +297,9 @@ class VMManager(virt_vm.BaseVM):
         """
         Import a VM from export domain to data domain.
 
-        @export_name: Export domain name.
-        @storage_name: Storage domain name.
-        @cluster_name: Cluster name.
+        :param export_name: Export domain name.
+        :param storage_name: Storage domain name.
+        :param cluster_name: Cluster name.
         """
         vm = self.lookup_by_storagedomains(export_name)
         storage_domains = self.api.storagedomains.get(storage_name)
@@ -320,7 +320,7 @@ class VMManager(virt_vm.BaseVM):
         """
         Export a VM from storage domain to export domain.
 
-        @export_name: Export domain name.
+        :param export_name: Export domain name.
         """
         storage_domains = self.api.storagedomains.get(export_name)
         try:
@@ -338,7 +338,7 @@ class VMManager(virt_vm.BaseVM):
         """
         Create a snapshot to VM.
 
-        @snapshot_name: 'my_snapshot' is default snapshot name.
+        :param snapshot_name: 'my_snapshot' is default snapshot name.
         """
         snap_params = param.Snapshot(description=snapshot_name,
                                      vm=self.instance)
@@ -358,8 +358,8 @@ class VMManager(virt_vm.BaseVM):
         """
         Create a template from VM.
 
-        @cluster_name: cluster name.
-        @template_name: 'my_template' is default template name.
+        :param cluster_name: cluster name.
+        :param template_name: 'my_template' is default template name.
         """
         cluster = self.api.clusters.get(cluster_name)
 
@@ -384,16 +384,16 @@ class VMManager(virt_vm.BaseVM):
         """
         Create VM with one NIC and one Disk.
 
-        @memory: VM's memory size such as 1024*1024*1024=1GB.
-        @disk_size: VM's disk size such as 512*1024=512MB.
-        @nic_name: VM's NICs name such as 'eth0'.
-        @network_interface: VM's network interface such as 'virtio'.
-        @network_name: network such as ovirtmgmt for ovirt, rhevm for rhel.
-        @disk_format: VM's disk format such as 'raw' or 'cow'.
-        @disk_interface: VM's disk interface such as 'virtio'.
-        @cluster_name: cluster name.
-        @storage_name: storage domain name.
-        @template_name: VM's template name, default is 'Blank'.
+        :param memory: VM's memory size such as 1024*1024*1024=1GB.
+        :param disk_size: VM's disk size such as 512*1024=512MB.
+        :param nic_name: VM's NICs name such as 'eth0'.
+        :param network_interface: VM's network interface such as 'virtio'.
+        :param network_name: network such as ovirtmgmt for ovirt, rhevm for rhel.
+        :param disk_format: VM's disk format such as 'raw' or 'cow'.
+        :param disk_interface: VM's disk interface such as 'virtio'.
+        :param cluster_name: cluster name.
+        :param storage_name: storage domain name.
+        :param template_name: VM's template name, default is 'Blank'.
         """
         # network name is ovirtmgmt for ovirt, rhevm for rhel.
         vm_params = param.VM(name=self.name, memory=memory,
@@ -439,9 +439,9 @@ class VMManager(virt_vm.BaseVM):
         """
         Create a VM from template.
 
-        @cluster_name: cluster name.
-        @template_name: default template is 'Blank'.
-        @new_name: 'my_new_vm' is a default new VM's name.
+        :param cluster_name: cluster name.
+        :param template_name: default template is 'Blank'.
+        :param new_name: 'my_new_vm' is a default new VM's name.
         """
         vm_params = param.VM(name=new_name,
                              cluster=self.api.clusters.get(cluster_name),
@@ -681,13 +681,13 @@ class StorageDomainManager(object):
         """
         Attach ISO/export domain into data center.
 
-        @name: ISO or Export name.
-        @host_name: host name.
-        @dc_name: data center name.
-        @path: ISO/export domain path.
-        @address: ISO/export domain address.
-        @domain_type: storage domain type, it may be 'iso' or 'export'.
-        @storage_type: storage type, it may be 'nfs', 'iscsi', or 'fc'.
+        :param name: ISO or Export name.
+        :param host_name: host name.
+        :param dc_name: data center name.
+        :param path: ISO/export domain path.
+        :param address: ISO/export domain address.
+        :param domain_type: storage domain type, it may be 'iso' or 'export'.
+        :param storage_type: storage type, it may be 'nfs', 'iscsi', or 'fc'.
         """
         dc = self.api.datacenters.get(dc_name)
         host = self.api.hosts.get(host_name)

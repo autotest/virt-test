@@ -182,15 +182,19 @@ That should be enough to have one sanity and stable job for:
 What does these 'stable' and 'sanity' jobs do? In short:
 
 * Host OS (Fedora 18) installation through cobbler
-* Latest kernel for the Host OS installation (either the last kernel update
-  build for fedora, or check out, compile and install kvm.git).
-* 'sanity' job:
-** Install latest Fedora 18 qemu-kvm, or compiles the latest qemu.git
-** Installs a VM with Fedora 18, boots, reboots, does simple, single host migration with all supported protocols
-** Takes about two hours. In fact, internally we test more guests, but they are not widely available (RHEL 6 and Windows 7), so we just replaced them with Fedora 18.
+* Latest kernel for the Host OS installation (either the last kernel update build for fedora, or check out, compile and install kvm.git).
 
-* 'stable' job:
-** Same as above, but many more networking, timedrift and other tests
+sanity job
+----------
+
+* Install latest Fedora 18 qemu-kvm, or compiles the latest qemu.git
+* Installs a VM with Fedora 18, boots, reboots, does simple, single host migration with all supported protocols
+* Takes about two hours. In fact, internally we test more guests, but they are not widely available (RHEL 6 and Windows 7), so we just replaced them with Fedora 18.
+
+stable job
+----------
+
+* Same as above, but many more networking, timedrift and other tests
 
 Setup cobbler to install hosts
 ------------------------------

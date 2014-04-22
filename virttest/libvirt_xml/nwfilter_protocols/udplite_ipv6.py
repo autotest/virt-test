@@ -12,6 +12,7 @@ class Udplite_ipv6(base.TypedDeviceBase):
 
     """
     Create new Udplite_ipv6 xml instances
+
     Properties:
         attrs: libvirt_xml.nwfilter_protocols.Udplite_ipv6.Attr instance
     """
@@ -31,7 +32,7 @@ class Udplite_ipv6(base.TypedDeviceBase):
         """
         Return a new Attr instance and set properties from dargs
 
-        :param **dargs: dict of attributes
+        :param dargs: dict of attributes
         :return: new Attr instance
         """
         new_one = self.Attr(virsh_instance=self.virsh)

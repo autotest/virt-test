@@ -1355,7 +1355,7 @@ class QMPMonitor(Monitor):
         :raise MonitorProtocolError: Raised if no response is received
         :raise QMPCmdError: Raised if the response is an error message
                             (the exception's args are (cmd, args, data)
-                             where data is the error data)
+                            where data is the error data)
         """
         self._log_command(cmd, debug)
         if not self._acquire_lock():

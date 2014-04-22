@@ -12,6 +12,7 @@ class Icmp(base.TypedDeviceBase):
 
     """
     Create new Icmp xml instances
+
     Properties:
         attrs: libvirt_xml.nwfilter_protocols.Icmp.Attr instance
     """
@@ -30,7 +31,7 @@ class Icmp(base.TypedDeviceBase):
         """
         Return a new Attr instance and set properties from dargs
 
-        :param **dargs: dict of attributes
+        :param dargs: dict of attributes
         :return: new Attr instance
         """
         new_one = self.Attr(virsh_instance=self.virsh)

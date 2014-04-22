@@ -2320,13 +2320,13 @@ class VM(virt_vm.BaseVM):
         """
         Wait until the VM status changes to specified status
 
-        :return: True in case the status has changed before timeout, otherwise
-        return None.
-
         :param timeout: Timeout in seconds
         :param first: Time to sleep before first attempt
         :param steps: Time to sleep between attempts in seconds
         :param text: Text to print while waiting, for debug purposes
+
+        :return: True in case the status has changed before timeout, otherwise
+                 return None.
         """
         return utils_misc.wait_for(lambda: self.monitor.verify_status(status),
                                    timeout, first, step, text)
@@ -2335,10 +2335,10 @@ class VM(virt_vm.BaseVM):
         """
         Wait until the VM is paused.
 
-        :return: True in case the VM is paused before timeout, otherwise
-        return None.
+        :param timeout: Timeout in seconds.
 
-        :param timeout: Timeout in seconds
+        :return: True in case the VM is paused before timeout, otherwise
+                 return None.
         """
         return self.wait_for_status("paused", timeout)
 
@@ -2597,7 +2597,7 @@ class VM(virt_vm.BaseVM):
         Return the VM's PID.  If the VM is dead return None.
 
         :note: This works under the assumption that self.process.get_pid()
-        returns the PID of the parent shell process.
+        :return: the PID of the parent shell process.
         """
         try:
             children = commands.getoutput("ps --ppid=%d -o pid=" %
@@ -2611,7 +2611,7 @@ class VM(virt_vm.BaseVM):
         Return the PID of the parent shell process.
 
         :note: This works under the assumption that self.process.get_pid()
-        returns the PID of the parent shell process.
+        :return: the PID of the parent shell process.
         """
         return self.process.get_pid()
 
@@ -2734,7 +2734,7 @@ class VM(virt_vm.BaseVM):
         """
         Hotplug a netdev device.
 
-        :param **params: NIC info. dict.
+        :param params: NIC info. dict.
         :return: netdev_id
         """
         nic_name = params['nic_name']
@@ -2781,7 +2781,7 @@ class VM(virt_vm.BaseVM):
         """
         Add new or setup existing NIC, optionally creating netdev if None
 
-        :param **params: Parameters to set
+        :param params: Parameters to set
         :param nic_name: Name for existing or new device
         :param nic_model: Model name to emulate
         :param netdev_id: Existing qemu net device ID name, None to create new
@@ -2807,10 +2807,10 @@ class VM(virt_vm.BaseVM):
         """
         Activate an inactive host-side networking device
 
-        :raise:: IndexError if nic doesn't exist
-        :raise:: VMUnknownNetTypeError: if nettype is unset/unsupported
-        :raise:: IOError if TAP device node cannot be opened
-        :raise:: VMAddNetDevError: if operation failed
+        :raise: IndexError if nic doesn't exist
+        :raise: VMUnknownNetTypeError: if nettype is unset/unsupported
+        :raise: IOError if TAP device node cannot be opened
+        :raise: VMAddNetDevError: if operation failed
         """
         nic = self.virtnet[nic_index_or_name]
         error.context("Activating netdev for %s based on %s" %
@@ -3139,6 +3139,9 @@ class VM(virt_vm.BaseVM):
                 # Pause the dest vm after creation
                 extra_params = clone.params.get("extra_params", "") + " -S"
                 clone.params["extra_params"] = extra_params
+            if self.params.get('qemu_dst_binary', None) is not None:
+                clone.params['qemu_binary'] = utils_misc.get_qemu_dst_binary(self.params)
+
             clone.create(migration_mode=protocol, mac_source=self,
                          migration_fd=fd_dst,
                          migration_exec_cmd=migration_exec_cmd_dst)
@@ -3495,8 +3498,9 @@ class VM(virt_vm.BaseVM):
 
     def process_info_block(self, blocks_info):
         """
-        process the info block, so that can deal with
-        the new and old qemu formart.
+        Process the info block, so that can deal with the new and old
+        qemu format.
+
         :param blocks_info: the output of qemu command
                             'info block'
         """

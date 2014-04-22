@@ -218,7 +218,7 @@ class Cgroup(object):
         Delete desired cgroup.
 
         :params cgroup: desired cgroup
-        :params force:If true, sub cgroup can be deleted with parent cgroup
+        :params force: If true, sub cgroup can be deleted with parent cgroup
         """
         try:
             cgroup_pwd = self.__get_cgroup_pwd(cgroup)
@@ -527,7 +527,8 @@ class CgroupModules(object):
     def init(self, _modules):
         """
         Checks the mounted modules and if necessary mounts them into tmp
-            mountdir.
+        mountdir.
+
         :param _modules: Desired modules.'memory','cpu,cpuset'...
         :return: Number of initialized modules.
         """

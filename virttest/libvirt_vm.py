@@ -1368,8 +1368,8 @@ class VM(virt_vm.BaseVM):
         """
         Return the PID of the parent shell process.
 
-        :note: This works under the assumption that self.process.get_pid()
-        returns the PID of the parent shell process.
+        :note: This works under the assumption that ``self.process.get_pid()``
+            returns the PID of the parent shell process.
         """
         return self.process.get_pid()
 

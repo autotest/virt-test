@@ -72,8 +72,10 @@ Execute testing
 
 - Submit jobs in Autotest server, only execute netperf.guset_exhost for three times.
 
-tests.cfg:
+``tests.cfg``:
+
 ::
+
   only netperf.guest_exhost
   variants:
       - repeat1:
@@ -88,8 +90,11 @@ tests.cfg:
   # external host static ip:
   client = 192.168.100.15
 
+
 Result files:
+
 ::
+
   # cd /usr/local/autotest/results/8-debug_user/192.168.122.1/
   # find .|grep RHS
   kvm.repeat1.r61.virtio_blk.smp2.virtio_net.RHEL.6.1.x86_64.netperf.exhost_guest/results/netperf-result.RHS
@@ -99,7 +104,9 @@ Result files:
 - Submit same job in another env (different packages) with same configuration
 
 Result files:
+
 ::
+
   # cd /usr/local/autotest/results/9-debug_user/192.168.122.1/
   # find .|grep RHS
   kvm.repeat1.r61.virtio_blk.smp2.virtio_net.RHEL.6.1.x86_64.netperf.exhost_guest/results/netperf-result.RHS
@@ -136,45 +143,40 @@ Analysis result
 
 - T-test:
 
-::
-
-  scipy: http://www.scipy.org/
-  t-test: http://en.wikipedia.org/wiki/Student's_t-test
-  Two python modules (scipy and numpy) are needed.
-  Script to install numpy/scipy on rhel6 automatically:
-    https://github.com/kongove/misc/blob/master/scripts/install-numpy-scipy.sh
-
-
-  Unpaired T-test is used to compare two samples, user can check p-value to know if regression bug exists. If the difference of two samples is considered to be not statistically significant(p <= 0.05), it will add a '+' or '-' before p-value. ('+': avg_sample1 < avg_sample2, '-': avg_sample1 > avg_sample2)
+scipy: http://www.scipy.org/
+t-test: http://en.wikipedia.org/wiki/Student's_t-test
+Two python modules (scipy and numpy) are needed.
+Script to install numpy/scipy on rhel6 automatically:
+https://github.com/kongove/misc/blob/master/scripts/install-numpy-scipy.sh
+Unpaired T-test is used to compare two samples, user can check p-value to know if regression bug exists. If the difference of two samples is considered to be not statistically significant(p <= 0.05), it will add a '+' or '-' before p-value. ('+': avg_sample1 < avg_sample2, '-': avg_sample1 > avg_sample2)
 "- only over 95% confidence results will be added "+/-" in "Significance" part.
 "+" for cpu-usage means regression, "+" for throughput means improvement."
+
 
 Regression results
 
 
-  `netperf.exhost_guest.html <https://i-kvm.rhcloud.com/static/pub/netperf.exhost_guest.html>`_
-  `fio.html <http://i-kvm.rhcloud.com/static/pub/fio.html>`_
-  - Every Avg line represents the average value based on *$n* repetitions of the same test,
-    and the following SD line represents the Standard Deviation between the *$n* repetitions.
-  - The Standard deviation is displayed as a percentage of the average.
-  - The significance of the differences between the two averages is calculated using unpaired T-test that
-    takes into account the SD of the averages.
-  - The paired t-test is computed for the averages of same category.
-  - only over 95% confidence results will be added "+/-" in "Significance" part. "+" for cpu-usage means regression, "+" for throughput means improvement.
+`netperf.exhost_guest.html <https://i-kvm.rhcloud.com/static/pub/netperf.exhost_guest.html>`_
+`fio.html <http://i-kvm.rhcloud.com/static/pub/fio.html>`_
+- Every Avg line represents the average value based on *$n* repetitions of the same test, and the following SD line represents the Standard Deviation between the *$n* repetitions.
+- The Standard deviation is displayed as a percentage of the average.
+- The significance of the differences between the two averages is calculated using unpaired T-test that takes into account the SD of the averages.
+- The paired t-test is computed for the averages of same category.
+- only over 95% confidence results will be added "+/-" in "Significance" part. "+" for cpu-usage means regression, "+" for throughput means improvement.
 
 
-  Highlight HTML result
-  o green/red --> good/bad
-  o Significance is larger than 0.95 --> green
-    drak green/red --> important (eg: cpu)
-    light green/red --> other
-  o test time
-  o version (only when diff)
-  o other: repeat time, title
-  o user light green/red to highlight small (< %5) DIFF
-  o highlight Significance with same color in one raw
-  o add doc link to result file, and describe color in doc
+Highlight HTML result
+o green/red --> good/bad
+o Significance is larger than 0.95 --> green
+dark green/red --> important (eg: cpu)
+light green/red --> other
+o test time
+o version (only when diff)
+o other: repeat time, title
+o user light green/red to highlight small (< %5) DIFF
+o highlight Significance with same color in one raw
+o add doc link to result file, and describe color in doc
 
 
-  `netperf.avg.html <https://github.com/kongove/misc/blob/master/html/netperf.avg.html>`_
-  - Raw data that the averages are based on.
+`netperf.avg.html <https://github.com/kongove/misc/blob/master/html/netperf.avg.html>`_
+- Raw data that the averages are based on.

@@ -3,127 +3,131 @@
 """
 Cartesian configuration format file parser.
 
- Filter syntax:
- , means OR
- .. means AND
- . means IMMEDIATELY-FOLLOWED-BY
- (xx=yy) where xx=VARIANTS_name and yy=VARIANT
+Filter syntax:
 
- Example:
- qcow2..(guest_os=Fedora).14, RHEL.6..raw..boot, smp2..qcow2..migrate..ide
- means match all dicts whose names have:
- (qcow2 AND ((guest_os=Fedora) IMMEDIATELY-FOLLOWED-BY 14)) OR
- ((RHEL IMMEDIATELY-FOLLOWED-BY 6) AND raw AND boot) OR
- (smp2 AND qcow2 AND migrate AND ide)
+* ``,`` means ``OR``
+* ``..`` means ``AND``
+* ``.`` means ``IMMEDIATELY-FOLLOWED-BY``
+* ``(xx=yy)`` where ``xx=VARIANT_NAME`` and ``yy=VARIANT_VALUE``
+
+Example:
+
+::
+
+     qcow2..(guest_os=Fedora).14, RHEL.6..raw..boot, smp2..qcow2..migrate..ide
+
+means match all dicts whose names have:
+
+::
+
+    (qcow2 AND ((guest_os=Fedora) IMMEDIATELY-FOLLOWED-BY 14)) OR
+    ((RHEL IMMEDIATELY-FOLLOWED-BY 6) AND raw AND boot) OR
+    (smp2 AND qcow2 AND migrate AND ide)
+
+Note:
+
+* ``qcow2..Fedora.14`` is equivalent to ``Fedora.14..qcow2``.
+* ``qcow2..Fedora.14`` is not equivalent to ``qcow2..14.Fedora``.
+* ``ide, scsi`` is equivalent to ``scsi, ide``.
+
+Filters can be used in 3 ways:
+
+::
+
+    only <filter>
+    no <filter>
+    <filter>:
+
+The last one starts a conditional block.
+
+Formal definition: Regexp come from `python <http://docs.python.org/2/library/re.html>`__.
+They're not deterministic, but more readable for people. Spaces between
+terminals and nonterminals are only for better reading of definitions.
+
+The base of the definitions come verbatim as follows:
 
 
- Note:
- 'qcow2..Fedora.14' is equivalent to 'Fedora.14..qcow2'.
- 'qcow2..Fedora.14' is not equivalent to 'qcow2..14.Fedora'.
- 'ide, scsi' is equivalent to 'scsi, ide'.
+::
 
- Filters can be used in 3 ways:
- only <filter>
- no <filter>
- <filter>:
- The last one starts a conditional block.
+    E = {\\n, #, :, "-", =, +=, <=, ?=, ?+=, ?<=, !, < , del, @, variants, include, only, no, name, value}
+
+    N = {S, DEL, FILTER, FILTER_NAME, FILTER_GROUP, PN_FILTER_GROUP, STAT, VARIANT, VAR-TYPE, VAR-NAME, VAR-NAME-F, VAR, COMMENT, TEXT, DEPS, DEPS-NAME-F, META-DATA, IDENTIFIER}``
 
 
-Formal definition:
+    I = I^n | n in N              // indentation from start of line
+                                  // where n is indentation length.
+    I = I^n+x | n,x in N          // indentation with shift
 
- regexp from python http://docs.python.org/2/library/re.html
- Not deterministic but more readable for people.
- Spaces between terminals and nontermials are only for better
- reading of definitions.
+    start symbol = S
+    end symbol = eps
 
-  E={\n, #, :, "-", =, +=, <=, ?=, ?+=, ?<=, !, < , del, @, variants, include,
-    only, no, name, value}
-  N={S, DEL, FILTER, FILTER_NAME, FILTER_GROUP, PN_FILTER_GROUP,
-    STAT, VARIANT, VAR-TYPE, VAR-NAME, VAR-NAME-F, VAR, COMMENT,
-    TEXT, DEPS, DEPS-NAME-F, META-DATA, IDENTIFIER}
+    S -> I^0+x STATV | eps
 
-  I = I^n | n in N              // indentation from start of line
-                                // where n is indentation length.
-  I = I^n+x | n,x in N          // indentation with shift
-  start symbol = S
-  end symbol = eps
+    I^n    STATV
+    I^n    STATV
 
-  S -> I^0+x STATV | eps
+    I^n STATV -> I^n STATV \\n I^n STATV | I^n STAT | I^n variants VARIANT
+    I^n STAT -> I^n STAT \\n I^n STAT | I^n COMMENT | I^n include INC
+    I^n STAT -> I^n del DEL | I^n FILTER
 
- #
- #I^n    STATV
- #I^n    STATV
- #
+    DEL -> name \\n
 
-  I^n STATV -> I^n STATV \n I^n STATV | I^n STAT | I^n variants VARIANT
+    I^n STAT -> I^n name = VALUE | I^n name += VALUE | I^n name <= VALUE
+    I^n STAT -> I^n name ?= VALUE | I^n name ?+= VALUE | I^n name ?<= VALUE
 
-  I^n STAT -> I^n STAT \n I^n STAT | I^n COMMENT | I^n include INC
-  I^n STAT -> I^n del DEL | I^n FILTER
+    VALUE -> TEXT \\n | 'TEXT' \\n | "TEXT" \\n
 
-  DEL -> name \n
+    COMMENT_BLOCK -> #TEXT | //TEXT
+    COMMENT ->  COMMENT_BLOCK\\n
+    COMMENT ->  COMMENT_BLOCK\\n
 
-  I^n STAT -> I^n name = VALUE | I^n name += VALUE | I^n name <= VALUE
-  I^n STAT -> I^n name ?= VALUE | I^n name ?+= VALUE | I^n name ?<= VALUE
+    TEXT = [^\\n] TEXT            //python format regexp
 
-  VALUE -> TEXT \n | 'TEXT' \n | "TEXT" \n
+    I^n    variants VAR #comments:             add possibility for comment
+    I^n+x       VAR-NAME: DEPS
+    I^n+x+x2        STATV
+    I^n         VAR-NAME:
 
-  COMMENT_BLOCK -> #TEXT | //TEXT
-  COMMENT ->  COMMENT_BLOCK\n
-  COMMENT ->  COMMENT_BLOCK\n
+    IDENTIFIER -> [A-Za-z0-9][A-Za-z0-9_-]*
 
-  TEXT = [^\n] TEXT            //python format regexp
+    VARIANT -> VAR COMMENT_BLOCK\\n I^n+x VAR-NAME
+    VAR -> VAR-TYPE: | VAR-TYPE META-DATA: | :         // Named | unnamed variant
 
- #
- #I^n    variants VAR #comments:             add possibility for comment
- #I^n+x       VAR-NAME: DEPS
- #I^n+x+x2        STATV
- #I^n         VAR-NAME:
- #
+    VAR-TYPE -> IDENTIFIER
 
-  IDENTIFIER -> [A-Za-z0-9][A-Za-z0-9_-]*
+    variants _name_ [xxx] [zzz=yyy] [uuu]:
 
-  VARIANT -> VAR COMMENT_BLOCK\n I^n+x VAR-NAME
-  VAR -> VAR-TYPE: | VAR-TYPE META-DATA: | :         // Named | unnamed variant
+    META-DATA -> [IDENTIFIER] | [IDENTIFIER=TEXT] | META-DATA META-DATA
 
-  VAR-TYPE -> IDENTIFIER
+    I^n VAR-NAME -> I^n VAR-NAME \\n I^n VAR-NAME | I^n VAR-NAME-N \\n I^n+x STATV
+    VAR-NAME-N -> - @VAR-NAME-F: DEPS | - VAR-NAME-F: DEPS
+    VAR-NAME-F -> [a-zA-Z0-9\\._-]+                  // Python regexp
 
- #
- # variants _name_ [xxx] [zzz=yyy] [uuu]:
- #
+    DEPS -> DEPS-NAME-F | DEPS-NAME-F,DEPS
+    DEPS-NAME-F -> [a-zA-Z0-9\\._- ]+                // Python regexp
 
-  META-DATA -> [IDENTIFIER] | [IDENTIFIER=TEXT] | META-DATA META-DATA
+    INC -> name \\n
 
-  I^n VAR-NAME -> I^n VAR-NAME \n I^n VAR-NAME | I^n VAR-NAME-N \n I^n+x STATV
-  VAR-NAME-N -> - @VAR-NAME-F: DEPS | - VAR-NAME-F: DEPS
-  VAR-NAME-F -> [a-zA-Z0-9\._-]+                  // Python regexp
 
-  DEPS -> DEPS-NAME-F | DEPS-NAME-F,DEPS
-  DEPS-NAME-F -> [a-zA-Z0-9\._- ]+                // Python regexp
+    FILTER_GROUP: STAT
+        STAT
 
-  INC -> name \n
+    I^n STAT -> I^n PN_FILTER_GROUP | I^n ! PN_FILTER_GROUP
 
- #
- # FILTER_GROUP: STAT
- #     STAT
- #
-  I^n STAT -> I^n PN_FILTER_GROUP | I^n ! PN_FILTER_GROUP
+    PN_FILTER_GROUP -> FILTER_GROUP: \\n I^n+x STAT
+    PN_FILTER_GROUP -> FILTER_GROUP: STAT \\n I^n+x STAT
 
-  PN_FILTER_GROUP -> FILTER_GROUP: \n I^n+x STAT
-  PN_FILTER_GROUP -> FILTER_GROUP: STAT \n I^n+x STAT
+    only FILTER_GROUP
+    no FILTER_GROUP
 
- #
- # only FILTER_GROUP
- # no FILTER_GROUP
+    FILTER -> only FILTER_GROUP \\n | no FILTER_GROUP \\n
 
-  FILTER -> only FILTER_GROUP \n | no FILTER_GROUP \n
+    FILTER_GROUP -> FILTER_NAME
+    FILTER_GROUP -> FILTER_GROUP..FILTER_GROUP
+    FILTER_GROUP -> FILTER_GROUP,FILTER_GROUP
 
-  FILTER_GROUP -> FILTER_NAME
-  FILTER_GROUP -> FILTER_GROUP..FILTER_GROUP
-  FILTER_GROUP -> FILTER_GROUP,FILTER_GROUP
-
-  FILTER_NAME -> FILTER_NAME.FILTER_NAME
-  FILTER_NAME -> VAR-NAME-F | (VAR-NAME-F=VAR-NAME-F)
-
+    FILTER_NAME -> FILTER_NAME.FILTER_NAME
+    FILTER_NAME -> VAR-NAME-F | (VAR-NAME-F=VAR-NAME-F)
 
 :copyright: Red Hat 2008-2013
 """
@@ -427,7 +431,7 @@ class FileReader(StrReader):
         """
         Initialize the reader.
 
-        @parse filename: The name of the input file.
+        :parse filename: The name of the input file.
         """
         StrReader.__init__(self, open(filename).read())
         self.filename = filename

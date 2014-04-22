@@ -453,7 +453,7 @@ class GuestFSModiDisk(object):
         """
         read file from the guest disk, return the content of the file
 
-        @Param file_name: the file you want to read.
+        :param file_name: the file you want to read.
         """
 
         try:
@@ -469,14 +469,14 @@ class GuestFSModiDisk(object):
 
     def write_to_image_file(self, file_name, content, w_append=False):
         """
-        wirte content to the file on the guest disk.
-        when using this method all the original content will be overriding.
-        if you don't hope your original data be override make:
-        'w_append=True'
+        Write content to the file on the guest disk.
 
-        @Param  file_name: the file you want to write
-        @Param  content: the content you want to write.
-        @Param  w_append append the content or override
+        When using this method all the original content will be overriding.
+        if you don't hope your original data be override set ``w_append=True``.
+
+        :param file_name: the file you want to write
+        :param content: the content you want to write.
+        :param w_append: append the content or override
         """
 
         try:
@@ -497,9 +497,9 @@ class GuestFSModiDisk(object):
         replace file content matchs in the file with rep_con.
         suport using Regular expression
 
-        @Param  file_name: the file you want to replace
-        @Param  find_con: the orign content you want to replace.
-        @Param  rep_con: the replace content you want.
+        :param file_name: the file you want to replace
+        :param find_con: the orign content you want to replace.
+        :param rep_con: the replace content you want.
         """
 
         try:

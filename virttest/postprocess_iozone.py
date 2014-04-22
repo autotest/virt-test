@@ -32,7 +32,7 @@ def geometric_mean(values):
 
     :param values: List with values.
     :return: Single value representing the geometric mean for the list values.
-    :see:: http://en.wikipedia.org/wiki/Geometric_mean
+    :see: `Geometric mean definition <http://en.wikipedia.org/wiki/Geometric_mean>`__
     """
     try:
         values = [int(value) for value in values]
@@ -125,10 +125,10 @@ class IOzoneAnalyzer(object):
         """
         Process a list of IOzone results according to label.
 
-        @label: IOzone column label that we'll use to filter and compute
-                geometric mean results, in practical term either 'file_size'
-                or 'record_size'.
-        @result: A list of n x m columns with original iozone results.
+        :param label: IOzone column label that we'll use to filter and compute
+                    geometric mean results, in practical term either 'file_size'
+                    or 'record_size'.
+        :param result: A list of n x m columns with original iozone results.
         :return: A list of n-? x (m-1) columns with geometric averages for
                 values of each label (ex, average for all file_sizes).
         """

@@ -332,6 +332,7 @@ class GuestWorker(object):
     def read_nonblocking(self, internal_timeout=None, timeout=None):
         """
         Reads-out all remaining output from GuestWorker.
+
         :param internal_timeout: Time (seconds) to wait before we give up
                                  reading from the child process, or None to
                                  use the default value.
@@ -402,9 +403,8 @@ class GuestWorker(object):
     def cleanup_ports(self):
         """
         Clean state of all ports and set port to default state.
-        Default state:
-           No data on port or in port buffer.
-           Read mode = blocking.
+
+        Default state: No data on port or in port buffer. Read mode = blocking.
         """
         # Check if python is still alive
         match, tmp = self._cmd("is_alive()", 10)

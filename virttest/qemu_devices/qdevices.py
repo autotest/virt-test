@@ -242,6 +242,8 @@ class QBaseDevice(object):
 
     def cmdline_nd(self):
         """
+        Command line without dynamic params.
+
         :return: cmdline command to define this device
                  without dynamic parameters
         """
@@ -322,7 +324,12 @@ class QStringDevice(QBaseDevice):
     """
     General device which allows to specify methods by fixed or parametrizable
     strings in this format:
-      "%(type)s,id=%(id)s,addr=%(addr)s" -- params will be used to subst %()s
+
+    ::
+
+        "%(type)s,id=%(id)s,addr=%(addr)s"
+
+    ``params`` will be used to subst ``%()s``
     """
 
     def __init__(self, dev_type="dummy", params=None, aobject=None,
@@ -353,8 +360,9 @@ class QStringDevice(QBaseDevice):
 
     def cmdline_nd(self):
         """
-        :return: cmdline command to define this device
-                 without dynamic parameters
+        Command line without dynamic parameters.
+
+        :return: cmdline command to define this device without dynamic parameters.
         """
         try:
             if self._cmdline_nd:
@@ -403,8 +411,9 @@ class QCustomDevice(QBaseDevice):
 
     def cmdline_nd(self):
         """
-        :return: cmdline command to define this device
-                     without dynamic parameters
+        Command line without dynamic parameters.
+
+        :return: cmdline command to define this device without dynamic parameters.
         """
         if self.__backend and self.params.get(self.__backend):
             out = "-%s %s," % (self.type, self.params.get(self.__backend))

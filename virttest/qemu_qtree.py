@@ -384,9 +384,10 @@ class QtreeDisksContainer(object):
     def parse_info_block(self, info):
         """
         Extracts all information about self.disks and fills them in.
-        :param info: output of 'info block' command
-        :return: (self.disks defined in qtree but not in info block,
-                  self.disks defined in block info but not in qtree)
+
+        :param info: output of ``info block`` command
+        :return: ``self.disks`` defined in qtree but not in ``info block``,
+                 ``self.disks`` defined in ``block info`` but not in qtree
         """
         additional = 0
         missing = 0
@@ -423,10 +424,11 @@ class QtreeDisksContainer(object):
     def check_guests_proc_scsi(self, info):
         """
         Check info from guest's /proc/scsi/scsi file with qtree/block info
+
         :note: Not tested disks are of different type (virtio_blk, ...)
         :param info: contents of guest's /proc/scsi/scsi file
-        :return: (#disks missing in guest os, #disks missing in qtree,
-                  #not tested disks from qtree, #not tested disks from guest)
+        :return: Number of disks missing in guest os, disks missing in qtree,
+                 disks not tested from qtree, disks not tested from guest)
         """
         # Check only channel, id and lun for now
         additional = 0

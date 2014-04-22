@@ -56,7 +56,7 @@ class AccessorBase(PropCanBase):
         :param operation: Debug String for 'Getter', 'Setter', or 'Delter'
         :param property_name: String name of property (for exception detail)
         :param libvirtxml: An instance of a LibvirtXMLBase subclass
-        :param **dargs: Necessary for subclasses to extend required parameters
+        :param dargs: Necessary for subclasses to extend required parameters
         """
         type_check('Parameter property_name', property_name, str)
         type_check('Operation attribute', operation, str)
@@ -100,7 +100,7 @@ class AccessorBase(PropCanBase):
         :param tag_name: name of element under parent to retrieve/create
         :param create: True to create new element if not exist
         :return: ElementTree.Element instance
-        :raise:: LibvirtXMLError: If element not exist & create=False
+        :raise: LibvirtXMLError: If element not exist & create=False
         """
         type_check('parent_xpath', parent_xpath, str)
         type_check('tag_name', tag_name, str)
@@ -179,7 +179,7 @@ class AccessorGeneratorBase(object):
         :param property_name: Name of the property
         :param libvirtxml: Instance reference to LibvirtXMLBase subclass
         :param forbidden: Optional string list of 'get', 'set', and/or 'del'
-        :param **dargs: Specific AccessorGeneratorBase subclass info.
+        :param dargs: Specific AccessorGeneratorBase subclass info.
         """
         if forbidden is None:
             forbidden = []
@@ -424,11 +424,11 @@ class XMLElementBool(AccessorGeneratorBase):
         """
         Create undefined accessors on libvirt instance
 
-        @param: property_name: String name of property (for exception detail)
-        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: forbidden: Optional list of 'get', 'set', 'del'
-        @param: parent_xpath: XPath string of parent element
-        @param: tag_name: element tag name to manipulate text attribute on.
+        :param property_name: String name of property (for exception detail)
+        :param libvirtxml: An instance of a LibvirtXMLBase subclass
+        :param forbidden: Optional list of 'get', 'set', 'del'
+        :param parent_xpath: XPath string of parent element
+        :param tag_name: element tag name to manipulate text attribute on.
         """
         super(XMLElementBool, self).__init__(property_name, libvirtxml,
                                              forbidden,
@@ -614,13 +614,13 @@ class XMLElementNest(AccessorGeneratorBase):
         """
         Create undefined accessors on libvirt instance
 
-        @param: property_name: String name of property (for exception detail)
-        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: forbidden: Optional list of 'Getter', 'Setter', 'Delter'
-        @param: parent_xpath: XPath string of parent element
-        @param: tag_name: element tag name to manipulate text attribute on.
-        @param: subclass: A LibvirtXMLBase subclass with root tag == tag_name
-        @param: subclass_dargs: dict. to pass as kw args to subclass.__init__
+        :param property_name: String name of property (for exception detail)
+        :param libvirtxml: An instance of a LibvirtXMLBase subclass
+        :param forbidden: Optional list of 'Getter', 'Setter', 'Delter'
+        :param parent_xpath: XPath string of parent element
+        :param tag_name: element tag name to manipulate text attribute on.
+        :param subclass: A LibvirtXMLBase subclass with root tag == tag_name
+        :param subclass_dargs: dict. to pass as kw args to subclass.__init__
 
         N/B: Works ONLY if tag_name is unique within parent element
         """
@@ -702,15 +702,15 @@ class XMLElementList(AccessorGeneratorBase):
         """
         Create undefined accessors on libvirt instance
 
-        @param: property_name: String name of property (for exception detail)
-        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: forbidden: Optional list of 'Getter', 'Setter', 'Delter'
-        @param: parent_xpath: XPath string of parent element
-        @param: marshal_from: Callable, passed the item, index, and
+        :param property_name: String name of property (for exception detail)
+        :param libvirtxml: An instance of a LibvirtXMLBase subclass
+        :param forbidden: Optional list of 'Getter', 'Setter', 'Delter'
+        :param parent_xpath: XPath string of parent element
+        :param marshal_from: Callable, passed the item, index, and
                               libvirtxml instance.  Must return tuple
                               of tag-name, and an attribute-dict or raise
                               ValueError exception.
-        @param: marshal_to: Callable. Passed a the item tag, attribute-dict.,
+        :param marshal_to: Callable. Passed a the item tag, attribute-dict.,
                             index, and libvirtxml instance.  Returns
                             item value accepted by marshal_from or None to skip
         """

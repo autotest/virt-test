@@ -79,14 +79,22 @@ class PoolXMLBase(base.LibvirtXMLBase):
     Accessor methods for PoolXML class.
 
     Properties:
-        pool_type: string, pool type
-        name: string, pool name
-        uuid: string, pool uuid
-        capacity: integer, pool total capacity
-        allocation: integer, pool allocated capacity
-        available: integer, pool available capacity
-        source: PoolSourceXML instanc
-        target: string, target path of pool
+        pool_type:
+            string, pool type
+        name:
+            string, pool name
+        uuid:
+            string, pool uuid
+        capacity:
+            integer, pool total capacity
+        allocation:
+            integer, pool allocated capacity
+        available:
+            integer, pool available capacity
+        source:
+            PoolSourceXML instanc
+        target:
+            string, target path of pool
     """
 
     __slots__ = ('pool_type', 'name', 'uuid', 'capacity',

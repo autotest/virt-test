@@ -103,12 +103,11 @@ class SCPTransferFailedError(SCPError):
 def handle_prompts(session, username, password, prompt, timeout=10,
                    debug=False):
     """
-    Connect to a remote host (guest) using SSH or Telnet or other else.
+    Connect to a remote host (guest) using SSH or Telnet or else.
+
     Wait for questions and provide answers.  If timeout expires while
     waiting for output from the child (e.g. a password prompt or
     a shell prompt) -- fail.
-
-    @brief: Connect to a remote host (guest) using SSH or Telnet or else.
 
     :param session: An Expect or ShellSession instance to operate on
     :param username: The username to send in reply to a login prompt
@@ -324,16 +323,15 @@ def wait_for_login(client, host, port, username, password, prompt,
                    linesep="\n", log_filename=None, timeout=240,
                    internal_timeout=10, interface=None):
     """
-    Make multiple attempts to log into a remote host (guest) until one succeeds
-    or timeout expires.
+    Make multiple attempts to log into a guest until one succeeds or timeouts.
 
     :param timeout: Total time duration to wait for a successful login
-    :param internal_timeout: The maximal time duration (in seconds) to wait for
-            each step of the login procedure (e.g. the "Are you sure" prompt
-            or the password prompt)
+    :param internal_timeout: The maximum time duration (in seconds) to wait for
+                             each step of the login procedure (e.g. the
+                             "Are you sure" prompt or the password prompt)
     :interface: The interface the neighbours attach to (only use when using ipv6
                 linklocal address.)
-    :see:: remote_login()
+    :see: remote_login()
     :raise: Whatever remote_login() raises
     :return: A ShellSession object.
     """
@@ -355,12 +353,12 @@ def wait_for_login(client, host, port, username, password, prompt,
 
 def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=20):
     """
+    Transfer files using SCP, given a command line.
+
     Transfer file(s) to a remote host (guest) using SCP.  Wait for questions
     and provide answers.  If login_timeout expires while waiting for output
     from the child (e.g. a password prompt), fail.  If transfer_timeout expires
     while waiting for the transfer to complete, fail.
-
-    @brief: Transfer files using SCP, given a command line.
 
     :param session: An Expect or ShellSession instance to operate on
     :param password_list: Password list to send in reply to the password prompt
@@ -429,9 +427,7 @@ def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=20):
 def remote_scp(command, password_list, log_filename=None, transfer_timeout=600,
                login_timeout=20):
     """
-    Transfer file(s) to a remote host (guest) using SCP.
-
-    @brief: Transfer files using SCP, given a command line.
+    Transfer files using SCP, given a command line.
 
     :param command: The command to execute
         (e.g. "scp -r foobar root@localhost:/tmp/").
@@ -584,17 +580,18 @@ def nc_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
                             d_port="8888", d_protocol="udp", timeout=10,
                             check_sum=True):
     """
-    Copy files from a remote host (guest) to another remote host (guest) using
-    netcat. now this method only support linux
+    Copy files from guest to guest using netcat.
+
+    This method only supports linux guest OS.
 
     :param src/dst: Hostname or IP address of src and dst
     :param s_name/d_name: Username (if required)
     :param s_passwd/d_passwd: Password (if required)
     :param s_path/d_path: Path on the remote machine where we are copying
     :param c_type: Login method to remote host(guest).
-    :param c_prompt : command line prompt of remote host(guest)
+    :param c_prompt: command line prompt of remote host(guest)
     :param d_port:  the port data transfer
-    :param d_protocol : nc protocol use (tcp or udp)
+    :param d_protocol: nc protocol use (tcp or udp)
     :param timeout: If a connection and stdin are idle for more than timeout
                     seconds, then the connection is silently closed.
 
@@ -626,18 +623,16 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
                              c_type="ssh", c_prompt="\n",
                              d_port="9000", timeout=600):
     """
-    Copy files from a remote host (guest) to another remote host (guest) by
-    udp.
+    Copy files from guest to guest using udp.
 
     :param src/dst: Hostname or IP address of src and dst
     :param s_name/d_name: Username (if required)
     :param s_passwd/d_passwd: Password (if required)
     :param s_path/d_path: Path on the remote machine where we are copying
     :param c_type: Login method to remote host(guest).
-    :param c_prompt : command line prompt of remote host(guest)
+    :param c_prompt: command line prompt of remote host(guest)
     :param d_port:  the port data transfer
     :param timeout: data transfer timeout
-
     """
     s_session = remote_login(c_type, src, s_port, s_name, s_passwd, c_prompt)
     d_session = remote_login(c_type, dst, s_port, d_name, d_passwd, c_prompt)
@@ -786,12 +781,12 @@ def copy_files_from(address, client, username, password, port, remote_path,
     :param address: Address of remote host(guest)
     :param limit: Speed limit of file transfer.
     :param log_filename: If specified, log all output to this file (SCP only)
-    :param verbose: If True, log some stats using logging.debug (RSS only)
+    :param verbose: If True, log some stats using ``logging.debug`` (RSS only)
     :param timeout: The time duration (in seconds) to wait for the transfer to
-    complete.
+                    complete.
     :interface: The interface the neighbours attach to (only use when using ipv6
                 linklocal address.)
-    :raise: Whatever remote_scp() raises
+    :raise: Whatever ``remote_scp()`` raises
     """
     if client == "scp":
         scp_from_remote(address, port, username, password, remote_path,
