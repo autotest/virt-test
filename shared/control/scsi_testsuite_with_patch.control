@@ -31,4 +31,4 @@ job.run_test('scsi_testsuite',
               source_location='scsi_testsuite.tar',
               disk_addr=(disk_id_type,disk_id),
               run_tests=tests_to_run,
-              patches=[])
+              patches=['new_version.patch'])
