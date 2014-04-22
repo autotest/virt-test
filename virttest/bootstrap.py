@@ -10,6 +10,7 @@ import asset
 import cartesian_config
 import utils_selinux
 from defaults import DEFAULT_GUEST_OS
+from defaults import get_default_guest_os_info
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
@@ -54,16 +55,22 @@ last_subtest = {'qemu': ['shutdown'],
 test_filter = ['__init__', 'cfg', 'dropin.py']
 
 
-def get_jeos_info():
+def get_guest_os_info(test_name, guest_os):
     """
-    Gets the correct asset and variant information depending on host OS.
+    Gets the correct asset and variant information depending on host OS, 
+    test name and guest OS.
     """
-    jeos_info = {'asset': 'jeos-19-64', 'variant': 'JeOS.19'}
-    issue_contents = utils.read_file('/etc/issue')
-    if 'Fedora' in issue_contents and '20' in issue_contents:
-        jeos_info = {'asset': 'jeos-20-64', 'variant': 'JeOS.20'}
-    return jeos_info
+    os_info = get_default_guest_os_info()
 
+    cartesian_parser = cartesian_config.Parser()
+    cartesian_parser.parse_file(data_dir.get_backend_cfg_path(test_name, 'guest-os.cfg'))
+    cartesian_parser.only_filter(guest_os)
+
+    for params in cartesian_parser.get_dicts():
+        image_name = params.get('image_name', 'image').split('/')[-1]
+	os_info = {'asset': image_name, 'variant': guest_os}
+
+    return os_info
 
 def _get_config_filter():
     config_filter = ['__init__', ]
@@ -806,9 +813,9 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
         step += 2
         logging.info("%s - Verifying (and possibly downloading) guest image",
                      step)
-        jeos_info = get_jeos_info()
-        jeos_asset = jeos_info['asset']
-        asset.download_asset(jeos_asset, interactive=interactive,
+        os_info = get_guest_os_info(test_name, guest_os)
+        os_asset = os_info['asset']
+        asset.download_asset(os_asset, interactive=interactive,
                              restore_image=restore_image)
 
     if check_modules:

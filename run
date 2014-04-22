@@ -12,7 +12,6 @@ import optparse
 import logging
 
 from virttest.defaults import DEFAULT_MACHINE_TYPE
-from virttest.defaults import DEFAULT_GUEST_OS
 
 class StreamProxy(object):
 
@@ -176,9 +175,9 @@ class VirtTestRunParser(optparse.OptionParser):
     def __init__(self):
         optparse.OptionParser.__init__(self, usage='Usage: %prog [options]')
         from virttest import data_dir
-        from virttest import bootstrap
-        jeos_info = bootstrap.get_jeos_info()
-        self.default_guest_os = jeos_info['variant']
+        from virttest import defaults 
+        os_info = defaults.get_default_guest_os_info()
+        self.default_guest_os = os_info['variant']
 
         try:
             qemu_bin_path = _find_default_qemu_paths()[0]
@@ -835,7 +834,8 @@ class VirtTestApp(object):
                                 restore_image=keep_image,
                                 verbose=self.options.verbose,
                                 update_providers=self.options.update_providers,
-                                guest_os=(self.options.guest_os or DEFAULT_GUEST_OS))
+                                guest_os=(self.options.guest_os or 
+                                          self.option_parser.default_guest_os))
             sys.exit(0)
 
         if self.options.type:
