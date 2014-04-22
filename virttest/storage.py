@@ -11,9 +11,9 @@ import shutil
 import re
 from autotest.client import utils
 try:
-    from autotest.client.shared import iscsi
-except ImportError:
     from virttest import iscsi
+except ImportError:
+    from autotest.client.shared import iscsi
 
 import utils_misc
 import virt_vm
