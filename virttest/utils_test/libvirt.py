@@ -930,7 +930,7 @@ def check_iface(iface_name, checkpoint, extra=""):
             # Check virsh list output
             result = virsh.iface_list(extra, ignore_status=True)
             check_exit_status(result, False)
-            output = re.findall(r"(\S+)\ +(\S+)\ +(\S+)[\ +\n]",
+            output = re.findall(r"(\S+)\ +(\S+)\ +(\S+|\s+)[\ +\n]",
                                 str(result.stdout))
             if filter(lambda x: x[0] == iface_name, output[1:]):
                 list_find = True
