@@ -620,7 +620,7 @@ class PoolVolumeTest(object):
             if pool_type in ["logical", "iscsi", "fs", "disk", "scsi"]:
                 setup_or_cleanup_iscsi(is_setup=False,
                                        emulated_image=emulated_image)
-            if pool_type == "dir":
+            if pool_type in ["dir", "fs", "netfs"]:
                 pool_target = os.path.join(self.tmpdir, pool_target)
                 if os.path.exists(pool_target):
                     shutil.rmtree(pool_target)
