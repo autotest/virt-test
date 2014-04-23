@@ -215,5 +215,5 @@ class BaseCmd(CmdMessage):
         self._async = basecmd._async
 
     def update_cmd_hash(self, basecmd):
-        if not basecmd.cmd_hash is None:
+        if basecmd.cmd_hash is not None:
             self.cmd_hash = basecmd.cmd_hash

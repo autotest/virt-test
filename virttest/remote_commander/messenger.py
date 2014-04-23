@@ -99,7 +99,7 @@ class StdIOWrapperIn(StdIOWrapper):
     """
 
     def read(self, max_len, timeout=None):
-        if not timeout is None:
+        if timeout is not None:
             return self._wait_for_data(max_len, timeout)
         else:
             return os.read(self._obj, max_len)
@@ -211,7 +211,7 @@ class Messenger(object):
         data = ""
 
         endtime = None
-        if not timeout is None:
+        if timeout is not None:
             endtime = time.time() + timeout
 
         while len(data) < 10 and (endtime is None or time.time() < endtime):
