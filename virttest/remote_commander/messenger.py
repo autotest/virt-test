@@ -13,6 +13,7 @@ import cPickle
 import time
 import remote_interface
 import cStringIO
+import base64
 
 
 class IOWrapper(object):
@@ -79,7 +80,43 @@ class IOWrapper(object):
         return None
 
 
-class StdIOWrapper(IOWrapper):
+class DataWrapper(object):
+
+    """
+    Basic implementation of IOWrapper for stdio.
+    """
+
+    def decode(self, data):
+        """
+        Decodes the data which was read.
+
+        :return: decoded data.
+        """
+        return data
+
+    def encode(self, data):
+        """
+        Encode data.
+
+        :return: encoded data.
+        """
+        return data
+
+
+class DataWrapperBase64(DataWrapper):
+
+    """
+    Basic implementation of IOWrapper for stdio.
+    """
+
+    def decode(self, data):
+        return base64.b64decode(data)
+
+    def encode(self, data):
+        return base64.b64encode(data)
+
+
+class StdIOWrapper(IOWrapper, DataWrapper):
 
     """
     Basic implementation of IOWrapper for stdio.
@@ -105,25 +142,6 @@ class StdIOWrapperIn(StdIOWrapper):
             return os.read(self._obj, max_len)
 
 
-class TerStdIOWrapperIn(StdIOWrapper):
-
-    """
-    Basic implementation of IOWrapper for stdin
-    """
-
-    def read(self, max_len, timeout=None):
-        if not timeout is None:
-            return self._wait_for_data(max_len, timeout)
-        else:
-            data = ""
-            d = None
-            while d != "" and len(data) < max_len:
-                d = os.read(self._obj, max_len)
-                if d != "\n":
-                    data += d
-            return data
-
-
 class StdIOWrapperOut(StdIOWrapper):
 
     """
@@ -132,6 +150,20 @@ class StdIOWrapperOut(StdIOWrapper):
 
     def write(self, data):
         os.write(self._obj, data)
+
+
+class StdIOWrapperInBase64(StdIOWrapperIn, DataWrapperBase64):
+
+    """
+    Basic implementation of IOWrapper for stdin
+    """
+
+
+class StdIOWrapperOutBase64(StdIOWrapperOut, DataWrapperBase64):
+
+    """
+    Basic implementation of IOWrapper for stdout
+    """
 
 
 class MessengerError(Exception):
@@ -172,6 +204,9 @@ class Messenger(object):
         self.stdin = stdin
         self.stdout = stdout
 
+        # Unfortunately only static length of data length is supported.
+        self.enc_len_length = len(stdout.encode("0" * 10))
+
     def close(self):
         self.stdin.close()
         self.stdout.close()
@@ -181,8 +216,10 @@ class Messenger(object):
         Format message where first 10 char is length of message and rest is
         piclked message.
         """
-        pdata = cPickle.dumps(data, protocol=cPickle.HIGHEST_PROTOCOL)
-        return "%10d%s" % (len(pdata), pdata)
+        pdata = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)
+        pdata = self.stdout.encode(pdata)
+        len_enc = self.stdout.encode("%10d" % len(pdata))
+        return "%s%s" % (len_enc, pdata)
 
     def flush_stdin(self):
         """
@@ -214,19 +251,18 @@ class Messenger(object):
         if timeout is not None:
             endtime = time.time() + timeout
 
-        while len(data) < 10 and (endtime is None or time.time() < endtime):
+        while (len(data) < self.enc_len_length and
+               (endtime is None or time.time() < endtime)):
             d = self.stdin.read(1, timeout)
             if d is None:
                 return None
             if len(d) == 0:
                 return d
-            if d.isdigit() or d == " ":
-                data += d
-            else:
-                data = ""
-        if len(data) < 10:
+            data += d
+        if len(data) < self.enc_len_length:
             return None
-        return data
+
+        return self.stdout.decode(data)
 
     def read_msg(self, timeout=None):
         """
@@ -251,7 +287,7 @@ class Messenger(object):
             while (rdata_len < cmd_len):
                 rdata += self.stdin.read(cmd_len - rdata_len)
                 rdata_len = len(rdata)
-            rdataIO = cStringIO.StringIO(rdata)
+            rdataIO = cStringIO.StringIO(self.stdin.decode(rdata))
             unp = cPickle.Unpickler(rdataIO)
             unp.find_global = _map_path
             data = unp.load()

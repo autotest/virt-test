@@ -701,14 +701,14 @@ class CommanderSlaveCmds(CommanderSlave):
         return "bye"
 
 
-def remote_agent(terminal_input=False):
+def remote_agent(in_stream_cls, out_stream_cls):
     """
     Connect file descriptors to right pipe and start slave command loop.
     When something happend it raise exception which could be caught by cmd
     master.
 
-    :param terminal_input: If True read commands in terminal mode.
-    :type terminal_input: Bool
+    :params in_stream_cls: Class encapsulated input stream.
+    :params out_stream_cls: Class encapsulated output stream.
     """
     try:
         fd_stdout = sys.stdout.fileno()
@@ -723,8 +723,8 @@ def remote_agent(terminal_input=False):
         logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
         w_stdin = None
-        w_stdout = ms.StdIOWrapperOut(fd_stdout)
-        w_stdin = ms.StdIOWrapperIn(fd_stdin)
+        w_stdout = out_stream_cls(fd_stdout)
+        w_stdin = in_stream_cls(fd_stdin)
 
         cmd = CommanderSlaveCmds(w_stdin,
                                  w_stdout,
@@ -742,4 +742,6 @@ def remote_agent(terminal_input=False):
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         if sys.argv[1] == "agent":
-            remote_agent()
+            remote_agent(ms.StdIOWrapperIn, ms.StdIOWrapperOut)
+        elif sys.argv[1] == "agent_base64":
+            remote_agent(ms.StdIOWrapperInBase64, ms.StdIOWrapperOutBase64)

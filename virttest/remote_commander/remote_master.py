@@ -53,8 +53,8 @@ class CmdMaster(object):
         """
         Property basecmd getter
         """
-        return self._basecmd
         self._results_cnt = 0
+        return self._basecmd
 
     def setbasecmd(self, value):
         """
@@ -111,7 +111,7 @@ class CmdMaster(object):
         """
         Wait until command return results.
         """
-        return self.commander.wait(self.basecmd)
+        return self.commander.wait(self)
 
     def wait_response(self, timeout=None):
         """

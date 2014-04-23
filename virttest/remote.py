@@ -10,6 +10,7 @@ import tempfile
 import aexpect
 import utils_misc
 import rss_client
+import base64
 
 from remote_commander import remote_master
 from remote_commander import messenger
@@ -244,7 +245,7 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
     return session
 
 
-class AexpectIOWrapperOut(messenger.IOWrapper):
+class AexpectIOWrapperOut(messenger.StdIOWrapperOutBase64):
 
     """
     Basic implementation of IOWrapper for stdout
@@ -287,7 +288,7 @@ def remote_commander(client, host, port, username, password, prompt,
     if client == "ssh":
         cmd = ("ssh -o UserKnownHostsFile=/dev/null "
                "-o PreferredAuthentications=password "
-               "-p %s %s@%s %s agent" %
+               "-p %s %s@%s %s agent_base64" %
                (port, username, host, os.path.join(path, "remote_runner.py")))
     elif client == "telnet":
         cmd = "telnet -l %s %s %s" % (username, host, port)
@@ -309,9 +310,8 @@ def remote_commander(client, host, port, username, password, prompt,
         session.set_log_file(log_filename)
 
     session.send_ctrl("raw")
-
     # Wrap io interfaces.
-    inw = messenger.StdIOWrapperIn(session._get_fd("tail"))
+    inw = messenger.StdIOWrapperInBase64(session._get_fd("tail"))
     outw = AexpectIOWrapperOut(session)
     # Create commander
 
