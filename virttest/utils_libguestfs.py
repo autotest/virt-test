@@ -345,6 +345,16 @@ class GuestfishRemote(object):
                                  "Guestfish Command returned non-zero exit status")
         return result
 
+    def cmd_result(self, cmd, ignore_status=False):
+        """Mimic utils.run()"""
+        exit_status, stdout = self.cmd_status_output(cmd)
+        stderr = ''  # no way to retrieve this separately
+        result = utils.CmdResult(cmd, stdout, stderr, exit_status)
+        if not ignore_status and exit_status:
+            raise error.CmdError(cmd, result,
+                                 "Guestfish Command returned non-zero exit status")
+        return result
+
 
 class GuestfishPersistent(Guestfish):
 
@@ -1228,6 +1238,14 @@ class GuestfishPersistent(Guestfish):
         "device".
         """
         return self.inner_cmd("blockdev-flushbufs %s" % device)
+
+    def blockdev_rereadpt(self, device):
+        """
+        blockdev-rereadpt - reread partition table
+
+        Reread the partition table on "device".
+        """
+        return self.inner_cmd("blockdev-rereadpt %s" % device)
 
     def canonical_device_name(self, device):
         """
