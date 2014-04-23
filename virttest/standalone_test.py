@@ -227,7 +227,7 @@ class Test(object):
                                              % error_message)
 
                 except Exception, e:
-                    if (not t_type is None):
+                    if (t_type is not None):
                         error_message = funcatexit.run_exitfuncs(env, t_type)
                         if error_message:
                             logging.error(error_message)
@@ -307,7 +307,7 @@ class Bcolors(object):
         allowed_terms = ['linux', 'xterm', 'xterm-256color', 'vt100',
                          'screen', 'screen-256color']
         term = os.environ.get("TERM")
-        if (not os.isatty(1)) or (not term in allowed_terms):
+        if (not os.isatty(1)) or (term not in allowed_terms):
             self.disable()
 
     def disable(self):
@@ -393,7 +393,7 @@ def print_fail(t_elapsed, open_fd=False):
                        bcolors.ENDC + " (%.2f s)" % t_elapsed)
     fd_fail_msg = (bcolors.FAIL + "FAIL" +
                    bcolors.ENDC + " (%.2f s) (%s fd)" %
-                  (t_elapsed, utils_misc.get_virt_test_open_fds()))
+                   (t_elapsed, utils_misc.get_virt_test_open_fds()))
     if open_fd:
         msg = fd_fail_msg
     else:
@@ -913,7 +913,7 @@ def run_tests(parser, options):
         dependencies_satisfied = True
         for dep in dct.get("dep"):
             for test_name in status_dct.keys():
-                if not dep in test_name:
+                if dep not in test_name:
                     continue
 
                 if not status_dct[test_name]:
