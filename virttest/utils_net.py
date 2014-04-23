@@ -115,6 +115,16 @@ class TAPBringUpError(NetError):
         return "Cannot bring up TAP %s" % self.ifname
 
 
+class TAPBringDownError(NetError):
+
+    def __init__(self, ifname):
+        NetError.__init__(self, ifname)
+        self.ifname = ifname
+
+    def __str__(self):
+        return "Cannot bring down TAP %s" % self.ifname
+
+
 class BRAddIfError(NetError):
 
     def __init__(self, ifname, brname, details):
@@ -1375,7 +1385,7 @@ def bring_down_ifname(ifname):
     try:
         fcntl.ioctl(ctrl_sock, arch.SIOCSIFFLAGS, ifr)
     except IOError:
-        raise TAPBringUpError(ifname)
+        raise TAPBringDownError(ifname)
     ctrl_sock.close()
 
 
