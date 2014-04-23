@@ -53,8 +53,8 @@ class CmdMaster(object):
         """
         Property basecmd getter
         """
-        return self._basecmd
         self._results_cnt = 0
+        return self._basecmd
 
     def setbasecmd(self, value):
         """
@@ -111,7 +111,7 @@ class CmdMaster(object):
         """
         Wait until command return results.
         """
-        return self.commander.wait(self.basecmd)
+        return self.commander.wait(self)
 
     def wait_response(self, timeout=None):
         """
@@ -212,7 +212,7 @@ class CommanderMaster(messenger.Messenger):
     def close(self):
         try:
             self.manage.exit()
-        except Exception, e:
+        except Exception:
             pass
         super(CommanderMaster, self).close()
 
@@ -294,7 +294,7 @@ class CommanderMaster(messenger.Messenger):
         self.cmds[cmd.basecmd.cmd_id] = cmd
         self.write_msg(cmd.basecmd)
         while (1):
-            if not cmd.basecmd.func[0] in ["async", "nohup"]:
+            if cmd.basecmd.func[0] not in ["async", "nohup"]:
                 # If not async wait for finish.
                 self.wait(cmd, timeout)
             else:
@@ -306,7 +306,7 @@ class CommanderMaster(messenger.Messenger):
         """
         Wait until command return results.
         """
-        if not cmd.cmd_id in self.cmds:
+        if cmd.cmd_id not in self.cmds:
             return cmd
         m_cmd = self.cmds[cmd.cmd_id]
         if m_cmd.is_finished():
@@ -315,7 +315,7 @@ class CommanderMaster(messenger.Messenger):
         r_cmd = None
 
         time_step = None
-        if not timeout is None:
+        if timeout is not None:
             time_step = timeout / 10.0
         w = wait_timeout(timeout)
         for _ in w:
@@ -323,7 +323,7 @@ class CommanderMaster(messenger.Messenger):
             if isinstance(r_cmd, remote_interface.BaseCmd):
                 if (self.debug):
                     print m_cmd._stdout
-                if not r_cmd is None and r_cmd == m_cmd.basecmd:
+                if r_cmd is not None and r_cmd == m_cmd.basecmd:
                     # If command which we waiting for.
                     if r_cmd.is_finished():
                         del self.cmds[m_cmd.basecmd.cmd_id]
@@ -339,7 +339,7 @@ class CommanderMaster(messenger.Messenger):
         """
         Wait until command return any cmd.
         """
-        if not cmd.cmd_id in self.cmds:
+        if cmd.cmd_id not in self.cmds:
             return cmd
         if cmd.is_finished() or cmd._stdout_cnt or cmd._stderr_cnt:
             return cmd
@@ -348,12 +348,12 @@ class CommanderMaster(messenger.Messenger):
         r_cmd = None
 
         time_step = None
-        if not timeout is None:
+        if timeout is not None:
             time_step = timeout / 10.0
         w = wait_timeout(timeout)
         while (w.next()):
             r_cmd = self.listen_messenger(time_step)
-            if not r_cmd is None and r_cmd == m_cmd.basecmd:
+            if r_cmd is not None and r_cmd == m_cmd.basecmd:
                 return m_cmd
 
         if r_cmd is None:

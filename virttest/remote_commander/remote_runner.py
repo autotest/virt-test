@@ -275,15 +275,15 @@ class CmdSlave(object):
         """
         Close command communication pipe.
         """
-        if not self.r_pipe is None:
+        if self.r_pipe is not None:
             os.close(self.r_pipe)
-        if not self.w_pipe is None:
+        if self.w_pipe is not None:
             os.close(self.w_pipe)
-        if not self.stdin_pipe is None:
+        if self.stdin_pipe is not None:
             os.close(self.stdin_pipe)
-        if not self.stdout_pipe is None:
+        if self.stdout_pipe is not None:
             os.close(self.stdout_pipe)
-        if not self.stderr_pipe is None:
+        if self.stderr_pipe is not None:
             os.close(self.stderr_pipe)
 
     def parse_func_name(self, func_name, commander):
@@ -530,11 +530,11 @@ class CommanderSlave(ms.Messenger):
             while (not self._exit):
                 stdios = [self.stdin, self.o_stdout, self.o_stderr]
                 r_pipes = [cmd.r_pipe for cmd in self.cmds.values()
-                           if not cmd.r_pipe is None]
+                           if cmd.r_pipe is not None]
                 stdouts = [cmd.stdout_pipe for cmd in self.cmds.values()
-                           if not cmd.stdout_pipe is None]
+                           if cmd.stdout_pipe is not None]
                 stderrs = [cmd.stderr_pipe for cmd in self.cmds.values()
-                           if not cmd.stderr_pipe is None]
+                           if cmd.stderr_pipe is not None]
 
                 r, _, _ = select.select(stdios + r_pipes + stdouts + stderrs, [], [])
 
@@ -583,7 +583,7 @@ class CommanderSlave(ms.Messenger):
 
     def _close_cmds_stdios(self, exclude_cmd):
         for cmd in self.cmds.values():
-            if not cmd is exclude_cmd:
+            if cmd is not exclude_cmd:
                 cmd.close_pipes()
 
 
@@ -597,6 +597,7 @@ class CommanderSlaveCmds(CommanderSlave):
     def __init__(self, stdin, stdout, o_stdout, o_stderr):
         super(CommanderSlaveCmds, self).__init__(stdin, stdout,
                                                  o_stdout, o_stderr)
+
         while (1):
             succ, data = self.read_msg()
             if succ and data == "start":
@@ -659,7 +660,7 @@ class CommanderSlaveCmds(CommanderSlave):
         remote_interface.BaseCmd.single_cmd_id = basecmd_cmd_id
         cmd = CmdSlave(basecmd)
         self.cmds[basecmd.cmd_id] = cmd
-        if not cmd.basecmd.cmd_hash is None:
+        if cmd.basecmd.cmd_hash is not None:
             cmd.recover_fds()
         return basecmd
 
@@ -686,7 +687,7 @@ class CommanderSlaveCmds(CommanderSlave):
         Import file to running python session.
         """
         if path:
-            if not path in sys.path:
+            if path not in sys.path:
                 sys.path.append(path)
         mod = __import__(name, globals(), locals())
         globals()[name] = mod
@@ -700,14 +701,14 @@ class CommanderSlaveCmds(CommanderSlave):
         return "bye"
 
 
-def remote_agent(terminal_input=False):
+def remote_agent(in_stream_cls, out_stream_cls):
     """
     Connect file descriptors to right pipe and start slave command loop.
     When something happend it raise exception which could be caught by cmd
     master.
 
-    :param terminal_input: If True read commands in terminal mode.
-    :type terminal_input: Bool
+    :params in_stream_cls: Class encapsulated input stream.
+    :params out_stream_cls: Class encapsulated output stream.
     """
     try:
         fd_stdout = sys.stdout.fileno()
@@ -722,8 +723,8 @@ def remote_agent(terminal_input=False):
         logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
         w_stdin = None
-        w_stdout = ms.StdIOWrapperOut(fd_stdout)
-        w_stdin = ms.StdIOWrapperIn(fd_stdin)
+        w_stdout = out_stream_cls(fd_stdout)
+        w_stdin = in_stream_cls(fd_stdin)
 
         cmd = CommanderSlaveCmds(w_stdin,
                                  w_stdout,
@@ -741,4 +742,6 @@ def remote_agent(terminal_input=False):
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         if sys.argv[1] == "agent":
-            remote_agent()
+            remote_agent(ms.StdIOWrapperIn, ms.StdIOWrapperOut)
+        elif sys.argv[1] == "agent_base64":
+            remote_agent(ms.StdIOWrapperInBase64, ms.StdIOWrapperOutBase64)
