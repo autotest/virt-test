@@ -1599,14 +1599,14 @@ class RemoteDiskManager(object):
                                           username=remote_user,
                                           password=remote_pwd)
 
-    def get_free_space(self, disk_type, path='/'):
+    def get_free_space(self, disk_type, path='/', vgname=None):
         """
         Get free space of remote host for path.
         """
         if disk_type == "file":
             directory = os.path.dirname(path)
             try:
-                output = self.runner.run("df %s" % directory)
+                output = self.runner.run("df %s" % directory).stdout
                 logging.debug(output)
             except error.CmdError, detail:
                 raise error.TestError("Get %s space failed:%s" % (directory,
@@ -1615,8 +1615,79 @@ class RemoteDiskManager(object):
                 g_size = int(line.split()[3]) / 1048576
                 return g_size
             raise error.TestError("Get %s space failed." % directory)
+        elif disk_type == "lvm":
+            output = self.runner.run("vgs --units=g | grep %s" % vgname).stdout
+            if re.search(vgname, output.stdout):
+                try:
+                    return int(output.split('g')[0])
+                except (IndexError, ValueError), detail:
+                    output = detail
+            raise error.TestError("Get VG %s space failed:%s" % (vgname,
+                                                                 output))
 
-    def create_image(self, disk_type, path=None, size=10, sparse=True):
+    def iscsi_login_setup(self, host, target_name, is_login=True):
+        """
+        Login or logout to a target on remote host.
+        """
+        if is_login:
+            discovery_cmd = "iscsiadm -m discovery -t sendtargets -p %s" % host
+            output = self.runner.run(discovery_cmd, ignore_status=True).stdout
+            if target_name not in output:
+                raise error.TestError("Discovery %s on %s failed."
+                                      % (target_name, host))
+            cmd = "iscsiadm --mode node --login --targetname %s" % target_name
+            output = self.runner.run(cmd).stdout
+            if "successful" not in output:
+                raise error.TestError("Login to %s failed." % target_name)
+            else:
+                cmd = "iscsiadm -m session -P 3"
+                output = self.runner.run(cmd).stdout
+                pattern = r"Target:\s+%s.*?disk\s(\w+)\s+\S+\srunning" % target_name
+                device_name = re.findall(pattern, output, re.S)
+                try:
+                    return "/dev/%s" % device_name[0]
+                except IndexError:
+                    raise error.TestError("Can not find target '%s' after login."
+                                          % self.target)
+        else:
+            if target_name:
+                cmd = "iscsiadm --mode node --logout -T %s" % target_name
+            else:
+                cmd = "iscsiadm --mode node --logout all"
+            output = self.runner.run(cmd, ignore_status=True).stdout
+            if "successful" not in output:
+                logging.error("Logout to %s failed.", target_name)
+
+    def create_vg(self, vgname, device):
+        """
+        Create volume group with provided device.
+        """
+        try:
+            self.runner.run("vgs | grep %s" % vgname)
+            logging.debug("Volume group %s does already exist.", vgname)
+            return True
+        except error.CmdError:
+            pass    # Not found
+        try:
+            self.runner.run("vgcreate %s %s" % (vgname, device))
+            return True
+        except error.CmdError, detail:
+            logging.error("Create vgroup '%s' on remote host failed:%s",
+                          vgname, detail)
+            return False
+
+    def remove_vg(self, vgname):
+        """
+        Remove volume group on remote host.
+        """
+        try:
+            self.runner.run("vgremove -f %s" % vgname)
+        except error.CmdError:
+            return False
+        return True
+
+    def create_image(self, disk_type, path=None, size=10, vgname=None,
+                     lvname=None, sparse=True):
         """
         Create an image for target path.
         """
@@ -1628,10 +1699,18 @@ class RemoteDiskManager(object):
                 cmd = "qemu-img create %s %sG" % (path, size)
             else:
                 cmd = "dd if=/dev/zero of=%s bs=1G count=%s" % (path, size)
+        elif disk_type == "lvm":
+            if sparse:
+                cmd = "lvcreate -V %sG %s --name %s --size 1M" % (size, vgname,
+                                                                  lvname)
+            else:
+                cmd = "lvcreate -L %sG %s --name %s" % (size, vgname, lvname)
+            path = "/dev/%s/%s" % (vgname, lvname)
 
         result = self.runner.run(cmd, ignore_status=True)
         if result.exit_status:
-            raise error.TestFail("Create image '%s' on remote host failed." % path)
+            raise error.TestFail("Create image '%s' on remote host failed."
+                                 % path)
         else:
             return path
 
@@ -1642,7 +1721,9 @@ class RemoteDiskManager(object):
         if disk_type == "file":
             if os.path.isdir(path):
                 return
-            self.runner.run("rm -f %s" % path)
+            self.runner.run("rm -f %s" % path, ignore_status=True)
+        elif disk_type == "lvm":
+            self.runner.run("lvremove -f %s" % path, ignore_status=True)
 
 
 def check_dest_vm_network(vm, ip, remote_host, username, password):
