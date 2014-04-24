@@ -226,7 +226,7 @@ class NwfilterXMLBase(base.LibvirtXMLBase):
                 "Value must be a NwfilterXMLRules or subclass")
         try:
             source_root = self.xmltreefile.findall('rule')
-        except KeyError as detail:
+        except KeyError, detail:
             raise xcepts.LibvirtXMLError(detail)
         if source_root[rule_index] is not None:
             self.del_rule(rule_index)
