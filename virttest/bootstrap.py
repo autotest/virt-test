@@ -9,8 +9,7 @@ import data_dir
 import asset
 import cartesian_config
 import utils_selinux
-from defaults import DEFAULT_GUEST_OS
-from defaults import get_default_guest_os_info
+import defaults
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
@@ -60,7 +59,7 @@ def get_guest_os_info(test_name, guest_os):
     Gets the correct asset and variant information depending on host OS,
     test name and guest OS.
     """
-    os_info = get_default_guest_os_info()
+    os_info = defaults.get_default_guest_os_info()
 
     cartesian_parser = cartesian_config.Parser()
     cartesian_parser.parse_file(data_dir.get_backend_cfg_path(test_name, 'guest-os.cfg'))
@@ -713,7 +712,8 @@ def verify_selinux(datadir, imagesdir, isosdir, tmpdir,
 def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
               check_modules, online_docs_url, restore_image=False,
               download_image=True, interactive=True, selinux=False,
-              verbose=False, update_providers=False, guest_os=DEFAULT_GUEST_OS):
+              verbose=False, update_providers=False,
+              guest_os=defaults.DEFAULT_GUEST_OS):
     """
     Common virt test assistant module.
 

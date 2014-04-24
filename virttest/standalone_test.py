@@ -24,7 +24,7 @@ import arch
 import funcatexit
 import version
 import qemu_vm
-from defaults import get_default_guest_os_info
+import defaults
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -668,7 +668,7 @@ def bootstrap_tests(options):
     else:
         restore_image = False
 
-    os_info = get_default_guest_os_info()
+    os_info = defaults.get_default_guest_os_info()
 
     kwargs = {'test_name': options.type,
               'test_dir': test_dir,
