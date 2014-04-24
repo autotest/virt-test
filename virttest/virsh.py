@@ -1617,6 +1617,23 @@ def net_info(network, extra="", **dargs):
     return command("net-info %s %s" % (network, extra), **dargs)
 
 
+def net_update(network, update_cmd, section, xml, extra="", **dargs):
+    """
+    Update parts of an existing network's configuration
+
+    :param network: network name or uuid
+    :param update_cmd: type of update (add-first, add-last, delete, or modify)
+    :param section: which section of network configuration to update
+    :param xml: name of file containing xml
+    :param extra: extra parameters to pass to command.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "net-update %s %s %s %s %s" \
+          % (network, update_cmd, section, xml, extra)
+    return command(cmd, **dargs)
+
+
 def pool_info(name, **dargs):
     """
     Returns basic information about the storage pool.
@@ -3236,16 +3253,8 @@ def secret_list(options="", **dargs):
     :return: list of secret
     """
     # CmdResult is handled here, force ignore_status
-    dargs['ignore_status'] = True
     cmd = "secret-list %s" % options
-    if options:
-        cmd += " %s" % options
-
-    result = command(cmd, **dargs)
-    if result.exit_status != 0:
-        raise error.CmdError(cmd, result, "Failed to get list of secret")
-
-    return result
+    return command(cmd, **dargs)
 
 
 def secret_define(xml_file, options=None, **dargs):
