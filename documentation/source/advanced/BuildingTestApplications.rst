@@ -45,7 +45,9 @@ A simple example:
 
 ::
 
-    builder = utils_build.Builder(address, source_dir)
+    address = vm.get_address(0)
+    source_dir = data_dir.get_deps_dir("<testapp>")
+    builder = utils_build.Builder(params, address, source_dir)
     full_build_path = builder.build()
 
 In this case, we utilize the `.build()` method, which execute the neccessary
@@ -64,7 +66,7 @@ above is:
 
 ::
 
-    builder = utils_build.Builder(address, source_dir)
+    builder = utils_build.Builder(params, address, source_dir)
     if builder.sync_directories():
         builder.make()
     full_build_path = builder.full_build_path

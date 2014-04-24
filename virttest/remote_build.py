@@ -21,25 +21,32 @@ class BuildError(Exception):
 
 class Builder(object):
 
-    def __init__(self, address, source, client="ssh",
-                 file_transfer_client="scp", port="22", username="root",
-                 password="redhat", make_flags="", build_dir="/tmp",
-                 build_dir_prefix=None, linesep="\n",
-                 prompt="^(root@[^:]*[^\#\$]*[\#\$]\s*|\[.*\][\#\$]\s*)$"):
+    def __init__(self, params, address, source, shell_client=None,
+                 shell_port=None, file_transfer_client=None,
+                 file_transfer_port=None, username=None, password=None,
+                 make_flags="", build_dir=None, build_dir_prefix=None,
+                 shell_linesep=None, shell_prompt=None):
         """
+        :param params: Dictionary with test parameters, used to get the default
+                       values of all named parameters.
         :param address: Remote host or guest address
         :param source: Directory containing the source on the machine
                        where this script is running
-        :param client: The client to use ('ssh', 'telnet' or 'nc')
+        :param shell_client: The client to use ('ssh', 'telnet' or 'nc')
+        :param shell_port: Port to connect to for the shell client
         :param file_transfer_client: The file transfer client to use ('scp' or
                                      'rss')
-        :param port: Port to connect to
+        :param file_transfer_port: Port to connect to for the file transfer
+                                   client
         :param username: Username (if required)
         :param password: Password (if required)
-        :param make_flags: Flags to pass to the make process
-        :param build_dir: Where to copy and build the files on target
+        :param make_flags: Flags to pass to the make process, default: ""
+        :param build_dir: Where to copy and build the files on target. If None,
+                          use params['tmp_dir']
         :param build_dir_prefix: What to name the build directory on target
-                                 (default: the name of the source directory)
+                                 If None, use the name of the source directory.
+        :param shell_linesep: Line separator in the shell
+        :param shell_prompt: Regexp that matches the prompt in the shell.
         """
 
         def full_build_path(build_dir, directory_prefix, make_flags):
@@ -54,21 +61,31 @@ class Builder(object):
                                        (extra_flags_hash.hexdigest())[:8])
             return os.path.join(build_dir, directory_name)
 
+        def def_helper(arg, param, default):
+            if arg is None:
+                return params.get(param, default)
+            else:
+                return arg
+
         self.address = address
         self.source = os.path.normpath(source)
-        self.client = client
-        self.file_transfer_client = file_transfer_client
-        self.port = port
-        self.username = username
-        self.password = password
+        self.client = def_helper(shell_client, "shell_client", "ssh")
+        self.port = def_helper(shell_port, "shell_port", "22")
+        self.file_transfer_client = def_helper(file_transfer_client,
+                                               "file_transfer_client", "scp")
+        self.file_transfer_port = def_helper(file_transfer_port,
+                                             "file_transfer_port", "22")
+        self.username = def_helper(username, "username", "root")
+        self.password = def_helper(password, "password", "redhat")
         self.make_flags = make_flags
-        self.build_dir = build_dir
-        self.linesep = linesep
-        self.prompt = prompt
+        self.build_dir = def_helper(build_dir, "tmp_dir", "/tmp")
         if build_dir_prefix is None:
             build_dir_prefix = os.path.basename(source)
-        self.full_build_path = full_build_path(build_dir,
+        self.full_build_path = full_build_path(self.build_dir,
                                                build_dir_prefix, make_flags)
+        self.linesep = def_helper(shell_linesep, "shell_linesep", "\n")
+        self.prompt = def_helper(shell_prompt, "shell_prompt",
+                                 "^\[.*\][\#\$]\s*)$")
 
         self.session = remote.remote_login(self.client, self.address,
                                            self.port, self.username,
@@ -204,8 +221,9 @@ class Builder(object):
                 local_path = os.path.join(self.source, file_name)
                 remote_path = os.path.join(self.full_build_path, file_name)
                 remote.copy_files_to(self.address, self.file_transfer_client,
-                                     self.username, self.password, self.port,
-                                     local_path, remote_path)
+                                     self.username, self.password,
+                                     self.file_transfer_port, local_path,
+                                     remote_path)
 
         else:
             logging.info("Directory %s on target already up-to-date" %
