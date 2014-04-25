@@ -16,6 +16,8 @@ if ARCH == "ppc64":
     SIOCGIFINDEX = 0x8933
     SIOCBRADDIF = 0x89a2
     SIOCBRDELIF = 0x89a3
+    SIOCBRADDBR = 0x89a0
+    SIOCBRDELBR = 0x89a1
     # From linux/include/linux/if_tun.h
     TUNSETIFF = 0x800454ca
     TUNGETIFF = 0x400454d2
@@ -40,6 +42,8 @@ else:
     SIOCGIFINDEX = 0x8933
     SIOCBRADDIF = 0x89a2
     SIOCBRDELIF = 0x89a3
+    SIOCBRADDBR = 0x89a0
+    SIOCBRDELBR = 0x89a1
     # From linux/include/linux/if_tun.h
     TUNSETIFF = 0x400454ca
     TUNGETIFF = 0x800454d2

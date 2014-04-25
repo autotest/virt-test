@@ -739,6 +739,22 @@ class Bridge(object):
         except IOError, details:
             raise BRDelIfError(ifname, brname, details)
 
+    def add_bridge(self, brname):
+        """
+        Add a bridge in host
+        """
+        ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+        fcntl.ioctl(ctrl_sock, arch.SIOCBRADDBR, brname)
+        ctrl_sock.close()
+
+    def del_bridge(self, brname):
+        """
+        Delete a bridge in host
+        """
+        ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+        fcntl.ioctl(ctrl_sock, arch.SIOCBRDELBR, brname)
+        ctrl_sock.close()
+
 
 def __init_openvswitch(func):
     """
