@@ -739,6 +739,22 @@ class Bridge(object):
         except IOError, details:
             raise BRDelIfError(ifname, brname, details)
 
+    def add_bridge(self, brname):
+        """
+        Add a bridge in host
+        """
+        ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+        fcntl.ioctl(ctrl_sock, arch.SIOCBRADDBR, brname)
+        ctrl_sock.close()
+
+    def del_bridge(self, brname):
+        """
+        Delete a bridge in host
+        """
+        ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+        fcntl.ioctl(ctrl_sock, arch.SIOCBRDELBR, brname)
+        ctrl_sock.close()
+
 
 def __init_openvswitch(func):
     """
@@ -2443,3 +2459,15 @@ def restart_windows_guest_network_by_devcon(session, netdevid, timeout=240):
 
     set_guest_network_status_by_devcon(session, 'disable', netdevid)
     set_guest_network_status_by_devcon(session, 'enable', netdevid)
+
+
+def get_host_iface():
+    """
+    List the nic interface in host.
+    :return: a list of the interfaces in host
+    :rtype: list
+    """
+    proc_net_file = open(PROCFS_NET_PATH, 'r')
+    host_iface_info = proc_net_file.read()
+    proc_net_file.close()
+    return [_.strip() for _ in re.findall("(.*):", host_iface_info)]
