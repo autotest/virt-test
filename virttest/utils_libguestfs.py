@@ -1289,6 +1289,22 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("disk-virtual-size %s" % filename)
 
+    def max_disks(self):
+        """
+        max-disks - maximum number of disks that may be added
+
+        Return the maximum number of disks that may be added to a handle
+        """
+        return self.inner_cmd("max-disks")
+
+    def nr_devices(self):
+        """
+        nr-devices - return number of whole block devices (disks) added
+
+        This returns the number of whole block devices that were added
+        """
+        return self.inner_cmd("nr-devices")
+
     def pvcreate(self, physvols):
         """
         pvcreate - create an LVM physical volume
