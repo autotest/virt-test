@@ -653,6 +653,7 @@ class GuestfishTools(lgf.GuestfishPersistent):
             self.part_disk(pv_name, "mbr")
             self.part_list(pv_name)
 
+        self.params["mount_point"] = mount_point
         if with_blocksize == "yes" and fs_type != "btrfs":
             if blocksize:
                 self.mkfs_opts(fs_type, mount_point, "blocksize:%s" % (blocksize))
@@ -668,7 +669,7 @@ class GuestfishTools(lgf.GuestfishPersistent):
 
         if tarball_path:
             self.mount_options("noatime", mount_point, '/')
-            self.tar_in(tarball_path, '/')
+            self.tar_in_opts(tarball_path, '/', 'gzip')
             self.ll('/')
 
         self.umount_all()
