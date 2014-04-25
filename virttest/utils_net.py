@@ -2459,3 +2459,15 @@ def restart_windows_guest_network_by_devcon(session, netdevid, timeout=240):
 
     set_guest_network_status_by_devcon(session, 'disable', netdevid)
     set_guest_network_status_by_devcon(session, 'enable', netdevid)
+
+
+def get_host_iface():
+    """
+    List the nic interface in host.
+    :return: a list of the interfaces in host
+    :rtype: list
+    """
+    proc_net_file = open(PROCFS_NET_PATH, 'r')
+    host_iface_info = proc_net_file.read()
+    proc_net_file.close()
+    return [_.strip() for _ in re.findall("(.*):", host_iface_info)]
