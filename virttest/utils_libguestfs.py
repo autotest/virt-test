@@ -782,6 +782,49 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("tar-in %s %s" % (tarfile, directory))
 
+    def file_architecture(self, filename):
+        """
+        file-architecture - detect the architecture of a binary file
+
+        This detects the architecture of the binary "filename", and returns it
+        if known.
+        """
+        return self.inner_cmd("file-architecture %s" % filename)
+
+    def filesize(self, file):
+        """
+        filesize - return the size of the file in bytes
+
+        This command returns the size of "file" in bytes.
+        """
+        return self.inner_cmd("filesize %s" % file)
+
+    def stat(self, path):
+        """
+        stat - get file information
+
+        Returns file information for the given "path".
+        """
+        return self.inner_cmd("stat %s" % path)
+
+    def lstat(self, path):
+        """
+        lstat - get file information for a symbolic link
+
+        Returns file information for the given "path".
+        """
+        return self.inner_cmd("lstat %s" % path)
+
+    def lstatlist(self, path, names):
+        """
+        lstatlist - lstat on multiple files
+
+        This call allows you to perform the "lstat" operation on multiple files,
+        where all files are in the directory "path". "names" is the list of
+        files from this directory.
+        """
+        return self.inner_cmd("lstatlist %s %s" % (path, names))
+
     def copy_out(self, remote, localdir):
         """
         copy-out - copy remote files or directories out of an image
