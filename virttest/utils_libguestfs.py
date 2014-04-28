@@ -592,7 +592,7 @@ class GuestfishPersistent(Guestfish):
 
         Mount a guest disk at a position in the filesystem.
         """
-        return self.inner_cmd("mount %s %s %s" % (options, device, mountpoint))
+        return self.inner_cmd("mount-options %s %s %s" % (options, device, mountpoint))
 
     def mounts(self):
         """
@@ -782,6 +782,18 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("tar-in %s %s" % (tarfile, directory))
 
+    def tar_in_opts(self, tarfile, directory, compress=None):
+        """
+        tar-in-opts - unpack tarfile to directory
+
+        This command uploads and unpacks local file "tarfile"
+        (an *compressed* tar file) into "directory".
+        """
+        if compress:
+            return self.inner_cmd("tar-in-opts %s %s compress:%s" % (tarfile, directory, compress))
+        else:
+            return self.inner_cmd("tar-in-opts %s %s" % (tarfile, directory))
+
     def file_architecture(self, filename):
         """
         file-architecture - detect the architecture of a binary file
@@ -844,6 +856,51 @@ class GuestfishPersistent(Guestfish):
         exist).
         """
         return self.inner_cmd("copy-in %s /%s" % (local, remotedir))
+
+    def chmod(self, mode, path):
+        """
+        chmod - change file mode
+
+        Change the mode (permissions) of "path" to "mode". Only numeric modes
+        are supported.
+        """
+        return self.inner_cmd("chmod %s %s" % (mode, path))
+
+    def chown(self, owner, group, path):
+        """
+        chown - change file owner and group
+
+        Change the file owner to "owner" and group to "group".
+        """
+        return self.inner_cmd("chown %s %s %s" % (owner, group, path))
+
+    def lchown(self, owner, group, path):
+        """
+        lchown - change file owner and group
+
+        Change the file owner to "owner" and group to "group". This is like
+        "chown" but if "path" is a symlink then the link itself is changed, not
+        the target.
+        """
+        return self.inner_cmd("lchown %s %s %s" % (owner, group, path))
+
+    def du(self, path):
+        """
+        du - estimate file space usage
+
+        This command runs the "du -s" command to estimate file space usage for
+        "path".
+        """
+        return self.inner_cmd("du %s" % path)
+
+    def file(self, path):
+        """
+        file - determine file type
+
+        This call uses the standard file(1) command to determine the type or
+        contents of the file.
+        """
+        return self.inner_cmd("file %s" % path)
 
     def rm(self, path):
         """
