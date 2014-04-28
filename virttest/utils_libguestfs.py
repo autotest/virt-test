@@ -782,14 +782,17 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("tar-in %s %s" % (tarfile, directory))
 
-    def tar_in_opts(self, tarfile, directory, compress):
+    def tar_in_opts(self, tarfile, directory, compress=None):
         """
         tar-in-opts - unpack tarfile to directory
 
         This command uploads and unpacks local file "tarfile"
         (an *compressed* tar file) into "directory".
         """
-        return self.inner_cmd("tar-in-opts %s %s compress:%s" % (tarfile, directory, compress))
+        if compress:
+            return self.inner_cmd("tar-in-opts %s %s compress:%s" % (tarfile, directory, compress))
+        else:
+            return self.inner_cmd("tar-in-opts %s %s" % (tarfile, directory))
 
     def copy_out(self, remote, localdir):
         """
