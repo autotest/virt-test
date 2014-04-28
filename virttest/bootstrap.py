@@ -54,22 +54,29 @@ last_subtest = {'qemu': ['shutdown'],
 test_filter = ['__init__', 'cfg', 'dropin.py']
 
 
-def get_guest_os_info(test_name, guest_os):
+def get_guest_os_info_list(test_name, guest_os):
     """
-    Gets the correct asset and variant information depending on host OS,
-    test name and guest OS.
+    Returns a list of matching assets compatible with the specified test name
+    and guest OS
     """
-    os_info = defaults.get_default_guest_os_info()
+    os_info_list = []
 
     cartesian_parser = cartesian_config.Parser()
     cartesian_parser.parse_file(data_dir.get_backend_cfg_path(test_name, 'guest-os.cfg'))
     cartesian_parser.only_filter(guest_os)
+    dicts = cartesian_parser.get_dicts();
 
-    for params in cartesian_parser.get_dicts():
+    for params in dicts:
         image_name = params.get('image_name', 'image').split('/')[-1]
-        os_info = {'asset': image_name, 'variant': guest_os}
+        shortname = params.get('shortname', guest_os)
+        os_info_list.append({'asset': image_name, 'variant': shortname})
 
-    return os_info
+    if not os_info_list:
+        logging.error("Could not find any assets compatible with %s for %s",
+                      guest_os, test_name)
+        raise ValueError("Missing compatible assets for %s", guest_os)
+
+    return os_info_list
 
 
 def _get_config_filter():
@@ -805,11 +812,11 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
         logging.info("")
         step += 2
         logging.info("%s - Verifying (and possibly downloading) guest image",
-                     step)
-        os_info = get_guest_os_info(test_name, guest_os)
-        os_asset = os_info['asset']
-        asset.download_asset(os_asset, interactive=interactive,
-                             restore_image=restore_image)
+                     step)        
+        for os_info in get_guest_os_info_list(test_name, guest_os):
+            os_asset = os_info['asset']
+            asset.download_asset(os_asset, interactive=interactive,
+                                 restore_image=restore_image)
 
     if check_modules:
         logging.info("")
