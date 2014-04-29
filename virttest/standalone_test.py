@@ -24,6 +24,7 @@ import arch
 import funcatexit
 import version
 import qemu_vm
+import defaults
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -226,7 +227,7 @@ class Test(object):
                                              % error_message)
 
                 except Exception, e:
-                    if (not t_type is None):
+                    if (t_type is not None):
                         error_message = funcatexit.run_exitfuncs(env, t_type)
                         if error_message:
                             logging.error(error_message)
@@ -306,7 +307,7 @@ class Bcolors(object):
         allowed_terms = ['linux', 'xterm', 'xterm-256color', 'vt100',
                          'screen', 'screen-256color']
         term = os.environ.get("TERM")
-        if (not os.isatty(1)) or (not term in allowed_terms):
+        if (not os.isatty(1)) or (term not in allowed_terms):
             self.disable()
 
     def disable(self):
@@ -392,7 +393,7 @@ def print_fail(t_elapsed, open_fd=False):
                        bcolors.ENDC + " (%.2f s)" % t_elapsed)
     fd_fail_msg = (bcolors.FAIL + "FAIL" +
                    bcolors.ENDC + " (%.2f s) (%s fd)" %
-                  (t_elapsed, utils_misc.get_virt_test_open_fds()))
+                   (t_elapsed, utils_misc.get_virt_test_open_fds()))
     if open_fd:
         msg = fd_fail_msg
     else:
@@ -667,6 +668,8 @@ def bootstrap_tests(options):
     else:
         restore_image = False
 
+    os_info = defaults.get_default_guest_os_info()
+
     kwargs = {'test_name': options.type,
               'test_dir': test_dir,
               'base_dir': data_dir.get_data_dir(),
@@ -677,7 +680,8 @@ def bootstrap_tests(options):
               'selinux': options.selinux_setup,
               'restore_image': restore_image,
               'interactive': False,
-              'update_providers': options.update_providers}
+              'update_providers': options.update_providers,
+              'guest_os': options.guest_os or os_info['variant']}
 
     # Tolerance we have without printing a message for the user to wait (3 s)
     tolerance = 3
@@ -909,7 +913,7 @@ def run_tests(parser, options):
         dependencies_satisfied = True
         for dep in dct.get("dep"):
             for test_name in status_dct.keys():
-                if not dep in test_name:
+                if dep not in test_name:
                     continue
 
                 if not status_dct[test_name]:

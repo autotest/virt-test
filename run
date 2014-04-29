@@ -10,6 +10,7 @@ import traceback
 import signal
 import optparse
 import logging
+import virttest.defaults
 
 
 class StreamProxy(object):
@@ -183,9 +184,8 @@ class VirtTestRunParser(optparse.OptionParser):
     def __init__(self):
         optparse.OptionParser.__init__(self, usage='Usage: %prog [options]')
         from virttest import data_dir
-        from virttest import bootstrap
-        jeos_info = bootstrap.get_jeos_info()
-        self.default_guest_os = jeos_info['variant']
+        os_info = virttest.defaults.get_default_guest_os_info()
+        self.default_guest_os = os_info['variant']
 
         try:
             qemu_bin_path = _find_default_qemu_paths()[0]
@@ -277,7 +277,7 @@ class VirtTestRunParser(optparse.OptionParser):
             help=("Machine type under test. "
                   "If -c is provided, this will be ignored. "
                   "Default: all for the chosen guests, %s if "
-                  "--guest-os not given." % DEFAULT_MACHINE_TYPE))
+                  "--guest-os not given." % virttest.defaults.DEFAULT_MACHINE_TYPE))
         general.add_option("--tests", action="store", dest="tests",
                            default="",
                            help=('List of space separated tests to be '
@@ -433,7 +433,6 @@ def variant_only_file(filename):
     return ", ".join(result)
 
 
-DEFAULT_MACHINE_TYPE = "i440fx"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
 LIBVIRT_DEFAULT_SET = variant_only_file('backends/libvirt/cfg/default_tests')
 LVSB_DEFAULT_SET = ("lvsb_date")
@@ -574,7 +573,7 @@ class VirtTestApp(object):
                 # TODO: this is x86-specific, instead we can get the default
                 # arch from qemu binary and run on all supported machine types
                 if self.options.arch is None and self.options.guest_os is None:
-                    self.cartesian_parser.only_filter(DEFAULT_MACHINE_TYPE)
+                    self.cartesian_parser.only_filter(virttest.defaults.DEFAULT_MACHINE_TYPE)
             else:
                 self.cartesian_parser.only_filter(self.options.machine_type)
         else:
@@ -855,7 +854,9 @@ class VirtTestApp(object):
                                 selinux=self.options.selinux_setup,
                                 restore_image=keep_image,
                                 verbose=self.options.verbose,
-                                update_providers=self.options.update_providers)
+                                update_providers=self.options.update_providers,
+                                guest_os=(self.options.guest_os or
+                                          self.option_parser.default_guest_os))
             sys.exit(0)
 
         if self.options.type:
