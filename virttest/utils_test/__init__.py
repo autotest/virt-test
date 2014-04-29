@@ -850,7 +850,7 @@ def run_autotest(vm, session, control_path, timeout,
                                              "results",
                                              os.path.basename(server_control_path))
                 if os.path.isdir(server_result):
-                    utils.safe_rmdir()
+                    utils.safe_rmdir(server_result)
                 # Remove the control file for server.
                 if os.path.exists(server_control_path):
                     os.remove(server_control_path)
