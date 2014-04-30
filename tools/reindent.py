@@ -216,10 +216,8 @@ class Reindenter:
                                 if have == getlspace(lines[jline]):
                                     want = jlevel * 4
                                 break
-                    if want < 0:           # Maybe it's a hanging
-                                           # comment like this one,
-                        # in which case we should shift it like its base
-                        # line got shifted.
+                    if want < 0:
+                        # Hanging comments should have their base line shifted
                         for j in xrange(i - 1, -1, -1):
                             jline, jlevel = stats[j]
                             if jlevel >= 0:
