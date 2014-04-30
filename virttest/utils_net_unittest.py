@@ -438,7 +438,7 @@ class TestVmNetSubclasses(unittest.TestCase):
             self.assertEqual(len(param_nics), len(virtnet))
             # Test each interface data
             for virtnet_index in xrange(0, len(virtnet)):
-            # index correspondence already established/asserted
+                # index correspondence already established/asserted
                 virtnet_nic = virtnet[virtnet_index]
                 params_nic = param_nics[virtnet_index]
                 self.assert_(issubclass(virtnet_nic.__class__,

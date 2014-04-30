@@ -199,7 +199,7 @@ class TestEnv(unittest.TestCase):
             def _update_env(env, key, value):
                 env["changing_dict"][key] = value
 
-            if not "changing_dict" in env:
+            if "changing_dict" not in env:
                 env["changing_dict"] = {}
             while True:
                 key = "%s" % utils_misc.generate_random_string(length=10)

@@ -444,9 +444,9 @@ class TestSandboxes(object):
         self.opts_count = int(pop.get('lvsb_opts_count', '1'))
         # FIXME: should automatically generate this
         self.lvsb_option_mapper = {'optarg': {'connect': '-c', 'name': '-n',
-                                   'mount': '-m', 'include': '-i',
-                                   'includefile': '-I', 'network': '-N',
-                                   'security': '-s'},
+                                              'mount': '-m', 'include': '-i',
+                                              'includefile': '-I', 'network': '-N',
+                                              'security': '-s'},
                                    'flag': {'help': '-h', 'version': '-V',
                                             'debug': '-d', 'privileged': '-p',
                                             'shell': '-l'}}

@@ -36,7 +36,7 @@ def download_assets():
         for asset_info in all_assets:
             asset_keys = asset_info.keys()
             logging.info("%d - %s" % (all_assets.index(asset_info) + 1,
-                         asset_info['title']))
+                                      asset_info['title']))
             asset_keys.pop(asset_keys.index('title'))
             asset_keys.sort()
             for k in asset_keys:

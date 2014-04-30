@@ -211,7 +211,7 @@ class BRIpError(NetError):
     def __str__(self):
         return ("Bridge %s doesn't have an IP address assigned. It's"
                 " impossible to start dnsmasq for this bridge." %
-               (self.brname))
+                (self.brname))
 
 
 class VMIPV6NeighNotFoundError(NetError):
@@ -536,7 +536,7 @@ class Macvtap(Interface):
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
         if not os.path.exists(path):
             self.ip_link_ctl(["link", "add", "link", device, "name",
-                             self.tapname, "type", "macvtap", "mode", mode])
+                              self.tapname, "type", "macvtap", "mode", mode])
 
     def delete(self):
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
@@ -1223,7 +1223,7 @@ def find_bridge_manager(br_name, ovs=None):
     # find ifname in standard linux bridge.
     if br_name in __bridge.list_br():
         return __bridge
-    elif not ovs is None and br_name in ovs.list_br():
+    elif ovs is not None and br_name in ovs.list_br():
         return ovs
     else:
         return None
@@ -1268,12 +1268,12 @@ def change_iface_bridge(ifname, new_bridge, ovs=None):
 
     if type(ifname) is str:
         (br_manager_old, br_old) = find_current_bridge(ifname, ovs)
-        if not br_manager_old is None:
+        if br_manager_old is not None:
             br_manager_old.del_port(br_old, ifname)
         br_manager_new.add_port(new_bridge, ifname)
     elif issubclass(type(ifname), VirtIface):
         br_manager_old = find_bridge_manager(ifname.netdst, ovs)
-        if not br_manager_old is None:
+        if br_manager_old is not None:
             br_manager_old.del_port(ifname.netdst, ifname.ifname)
         br_manager_new.add_port(new_bridge, ifname.ifname)
         ifname.netdst = new_bridge
@@ -1772,6 +1772,7 @@ class ParamsNet(VMNet):
     # __init__ must not presume clean state, it should behave
     # assuming there is existing properties/data on the instance
     # and take steps to preserve or update it as appropriate.
+
     def __init__(self, params, vm_name):
         self.subclass_pre_init(params, vm_name)
         # use temporary list to initialize
@@ -1850,6 +1851,7 @@ class DbNet(VMNet):
     # __init__ must not presume clean state, it should behave
     # assuming there is existing properties/data on the instance
     # and take steps to preserve or update it as appropriate.
+
     def __init__(self, params, vm_name, db_filename, db_key):
         self.subclass_pre_init(params, vm_name)
         self.db_key = db_key

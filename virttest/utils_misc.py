@@ -534,7 +534,7 @@ def run_tests(parser, job):
         dependencies_satisfied = True
         for dep in param_dict.get("dep"):
             for test_name in status_dict.keys():
-                if not dep in test_name:
+                if dep not in test_name:
                     continue
                 # So the only really non-fatal state is WARN,
                 # All the others make it not safe to proceed with dependency
@@ -918,7 +918,7 @@ def install_disktest_on_vm(test, vm, src_dir, dst_dir):
     vm.copy_files_to(disktest_src, disktest_dst)
     session.cmd("sync")
     session.cmd("cd %s; make;" %
-               (os.path.join(disktest_dst, "src")))
+                (os.path.join(disktest_dst, "src")))
     session.cmd("sync")
     session.close()
 
@@ -2059,7 +2059,7 @@ def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
             if len(match_list) == 2:
                 key = match_list[0]
                 value = match_list[1]
-                if not key in option_dict:
+                if key not in option_dict:
                     option_dict[key] = value
                 else:
                     logging.debug("key %s in option_dict", key)

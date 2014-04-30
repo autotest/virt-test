@@ -572,7 +572,7 @@ class Spawn(object):
             sub.stdin.write("%s\n" % ",".join(self.readers))
             sub.stdin.write("%s\n" % command)
             # Wait for the server to complete its initialization
-            while not "Server %s ready" % self.a_id in sub.stdout.readline():
+            while "Server %s ready" % self.a_id not in sub.stdout.readline():
                 pass
 
         # Open the reading pipes

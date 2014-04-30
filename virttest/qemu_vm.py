@@ -594,7 +594,7 @@ class VM(virt_vm.BaseVM):
                     cmd_nd = cmd
                     if vhostfds:
                         if (int(queues) > 1 and
-                           'vhostfds=' in devices.get_help_text()):
+                                'vhostfds=' in devices.get_help_text()):
                             cmd += ",vhostfds=%(vhostfds)s"
                             cmd_nd += ",vhostfds=DYN"
                         else:
@@ -629,7 +629,7 @@ class VM(virt_vm.BaseVM):
                         cmd_nd = cmd
                 elif tapfds:
                     if (int(queues) > 1 and
-                       ',fds=' in devices.get_help_text()):
+                            ',fds=' in devices.get_help_text()):
                         cmd += ",fds=%(tapfds)s"
                         cmd_nd += ",fds=DYN"
                     else:
@@ -875,7 +875,7 @@ class VM(virt_vm.BaseVM):
 
                 set_yes_no_value("spice_x509_secure",
                                  yes_value="x509-key-password=%s" %
-                                (optget("spice_x509_key_password")))
+                                 (optget("spice_x509_key_password")))
 
                 tmp = optget("spice_secure_channels")
                 if tmp:
@@ -1513,7 +1513,7 @@ class VM(virt_vm.BaseVM):
             use_default_cpu_model = False
             for model in re.split(",", cpu_model):
                 model = model.strip()
-                if not model in support_cpu_model:
+                if model not in support_cpu_model:
                     continue
                 cpu_model = model
                 break
@@ -2903,7 +2903,7 @@ class VM(virt_vm.BaseVM):
                 err_msg = "Can't add nic for VM which is not running."
                 raise virt_vm.VMAddNetDevError(err_msg)
             if ((int(nic.queues)) > 1 and
-               ',fds=' in self.devices.get_help_text()):
+                    ',fds=' in self.devices.get_help_text()):
                 attach_cmd += " type=tap,id=%s,fds=%s" % (nic.device_id,
                                                           nic.tapfds)
             else:
@@ -2913,7 +2913,7 @@ class VM(virt_vm.BaseVM):
                           logging.debug)
             utils_net.bring_up_ifname(nic.ifname)
             # assume this will puke if netdst unset
-            if not nic.netdst is None and nic.nettype == "bridge":
+            if nic.netdst is not None and nic.nettype == "bridge":
                 error.context("Raising bridge for " + msg_sfx + attach_cmd,
                               logging.debug)
                 utils_net.add_to_bridge(nic.ifname, nic.netdst)
@@ -2976,7 +2976,7 @@ class VM(virt_vm.BaseVM):
 
         error.context("Verifying nic %s shows in qtree" % nic.nic_name)
         qtree = self.monitor.info("qtree")
-        if not nic.nic_name in qtree:
+        if nic.nic_name not in qtree:
             logging.error(qtree)
             raise virt_vm.VMAddNicError("Device %s was not plugged into qdev"
                                         "tree" % nic.nic_name)
@@ -3077,7 +3077,7 @@ class VM(virt_vm.BaseVM):
                 ret = s.get("migrated") == "true"
         o = self.monitor.info("migrate")
         if isinstance(o, str):
-            return ret and (not "status: active" in o)
+            return ret and ("status: active" not in o)
         else:
             return ret and (o.get("status") != "active")
 
@@ -3584,7 +3584,7 @@ class VM(virt_vm.BaseVM):
                 logging.info("block = %s" % block)
                 if key == 'removable':
                     if value is False:
-                        if not 'Removable device' in block:
+                        if 'Removable device' not in block:
                             return block.split(":")[0]
                     elif value is True:
                         if 'Removable device' in block:

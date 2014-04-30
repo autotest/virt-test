@@ -593,7 +593,7 @@ def run_autotest(vm, session, control_path, timeout,
         """
         logging.debug("Trying to copy autotest results from guest")
         res_index = get_last_guest_results_index()
-        guest_results_dir = os.path.join(outputdir, "guest_autotest_results%s" % (res_index+1))
+        guest_results_dir = os.path.join(outputdir, "guest_autotest_results%s" % (res_index + 1))
         os.mkdir(guest_results_dir)
         # result info tarball to host result dir
         session = vm.wait_for_login(timeout=360)

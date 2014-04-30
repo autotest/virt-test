@@ -904,7 +904,7 @@ class LUpdateFileMap(LOperators):
 
     def apply_to_dict(self, d):
         dest = self.dest
-        if not dest in d:
+        if dest not in d:
             d[dest] = {}
 
         if self.shortname in d[dest]:
@@ -1104,7 +1104,7 @@ class Lexer(object):
         if end_tokens is None:
             end_tokens = [LEndL]
         token = self.generator.next()
-        while not type(token) in end_tokens:
+        while type(token) not in end_tokens:
             yield token
             token = self.generator.next()
         yield token
@@ -1176,8 +1176,8 @@ class Lexer(object):
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']=[%s]" %
-                             ([x.identifier for x in lType],
-                              token.identifier, token),
+                              ([x.identifier for x in lType],
+                               token.identifier, token),
                               self.line, self.filename, self.linenum)
 
     def get_next_check_nw(self, lType):
@@ -1188,8 +1188,8 @@ class Lexer(object):
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']" %
-                             ([x.identifier for x in lType],
-                              token.identifier),
+                              ([x.identifier for x in lType],
+                               token.identifier),
                               self.line, self.filename, self.linenum)
 
     def check_token(self, token, lType):
@@ -1197,8 +1197,8 @@ class Lexer(object):
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']" %
-                             ([x.identifier for x in lType],
-                              token.identifier),
+                              ([x.identifier for x in lType],
+                               token.identifier),
                               self.line, self.filename, self.linenum)
 
 
@@ -1234,7 +1234,7 @@ def parse_filter(lexer, tokens):
     and_filter = []
     con_filter = []
     dots = 1
-    while not typet in [LEndL]:
+    while typet not in [LEndL]:
         if typet in [LIdentifier, LLRBracket]:        # join    identifier
             if typet == LLRBracket:    # (xxx=ttt)
                 _, ident = lexer.check_token(next_nw(tokens),
@@ -1500,7 +1500,7 @@ class Parser(object):
                     if "default" in meta:
                         meta_with_default = True
                     meta_in_expand_defautls = False
-                    if not var_name in self.expand_defaults:
+                    if var_name not in self.expand_defaults:
                         meta_in_expand_defautls = True
                     node4 = Node()
                     while True:
@@ -1579,7 +1579,7 @@ class Parser(object):
                                     meta["default"].remove(wd)
 
                         if (is_default and not already_default and
-                           meta_in_expand_defautls):
+                                meta_in_expand_defautls):
                             node3.default = True
                             already_default = True
 
@@ -1634,7 +1634,7 @@ class Parser(object):
                     var_name = ""
                     meta.clear()
                     # [meta1=xxx] [yyy] [xxx]
-                    while not vtypet in [LColon, LEndL]:
+                    while vtypet not in [LColon, LEndL]:
                         if vtypet == LIdentifier:
                             if var_name != "":
                                 raise ParserError("Syntax ERROR expected"
@@ -1647,14 +1647,14 @@ class Parser(object):
                             typet, _ = lexer.get_next_check_nw([LSet,
                                                                 LRBracket])
                             if typet == LRBracket:  # [xxx]
-                                if not ident in meta:
+                                if ident not in meta:
                                     meta[ident] = []
                                 meta[ident].append(True)
                             elif typet == LSet:  # [xxx = yyyy]
                                 tokens = lexer.get_until_no_white([LRBracket,
-                                                                  LEndL])
+                                                                   LEndL])
                                 if type(tokens[-1]) == LRBracket:
-                                    if not ident in meta:
+                                    if ident not in meta:
                                         meta[ident] = []
                                     meta[ident].append(tokens[:-1])
                                 else:
@@ -1703,7 +1703,7 @@ class Parser(object):
                     path = lexer.rest_line_as_LString()
                     filename = os.path.expanduser(path)
                     if (isinstance(lexer.reader, FileReader) and
-                       not os.path.isabs(filename)):
+                            not os.path.isabs(filename)):
                         filename = os.path.join(
                             os.path.dirname(lexer.filename),
                             filename)
@@ -1779,7 +1779,7 @@ class Parser(object):
                 if obj.requires_action(ctx, ctx_set, labels):
                     # This filter requires action now
                     if type(obj) is OnlyFilter or type(obj) is NoFilter:
-                        if not obj in blocked_filters:
+                        if obj not in blocked_filters:
                             self._debug("    filter did not pass: %r (%s:%s)",
                                         obj.line, filename, linenum)
                             failed_filters.append(t)
@@ -1813,7 +1813,7 @@ class Parser(object):
                        failed_internal_filters):
             all_content = content + node.content
             for t in failed_external_filters + failed_internal_filters:
-                if not t in all_content:
+                if t not in all_content:
                     return True
             for t in failed_external_filters:
                 _, _, external_filter = t
@@ -1823,7 +1823,7 @@ class Parser(object):
                                                   labels):
                     return False
             for t in failed_internal_filters:
-                if not t in node.content:
+                if t not in node.content:
                     return True
 
             for t in failed_internal_filters:
@@ -1886,7 +1886,7 @@ class Parser(object):
 
         # Recurse into children
         count = 0
-        if self.defaults and not node.var_name in self.expand_defaults:
+        if self.defaults and node.var_name not in self.expand_defaults:
             for n in node.children:
                 for d in self.get_dicts(n, ctx, new_content, shortname, dep):
                     count += 1

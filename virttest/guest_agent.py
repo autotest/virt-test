@@ -533,7 +533,7 @@ class QemuAgent(Monitor):
         """
         error.context("Suspend guest '%s' to '%s'" % (self.vm.name, mode))
 
-        if not mode in [self.SUSPEND_MODE_DISK, self.SUSPEND_MODE_RAM,
+        if mode not in [self.SUSPEND_MODE_DISK, self.SUSPEND_MODE_RAM,
                         self.SUSPEND_MODE_HYBRID]:
             raise VAgentSuspendUnknownModeError("Not supported suspend"
                                                 " mode '%s'" % mode)

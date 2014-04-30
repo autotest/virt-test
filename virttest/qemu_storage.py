@@ -374,7 +374,7 @@ class QemuImg(storage.QemuImg):
         """
         supports_cmd = True
 
-        if not cmd in self.help_text:
+        if cmd not in self.help_text:
             logging.error("%s does not support command '%s'", self.image_cmd,
                           cmd)
             supports_cmd = False

@@ -73,7 +73,7 @@ class AccessorBase(PropCanBase):
             if slot in AccessorBase.__all_slots__:
                 continue  # already checked these
             # Don't care about value type
-            if not slot in dargs:
+            if slot not in dargs:
                 raise ValueError('Required accessor generator parameter %s'
                                  % slot)
             self.__dict_set__(slot, dargs[slot])
@@ -106,7 +106,7 @@ class AccessorBase(PropCanBase):
         type_check('tag_name', tag_name, str)
         parent_element = self.xmltreefile().find(parent_xpath)
         if (parent_element == self.xmltreefile().getroot() and
-           parent_element.tag == tag_name):
+                parent_element.tag == tag_name):
             return parent_element
         excpt_str = ('Exception thrown from %s for property "%s" while'
                      ' looking for element tag "%s", on parent at xpath'

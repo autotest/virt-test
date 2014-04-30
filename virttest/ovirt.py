@@ -152,7 +152,7 @@ class VMManager(virt_vm.BaseVM):
             return storage.vms.get(self.name)
         except Exception, e:
             logging.error('Failed to get %s from %s:\n%s' % (self.name,
-                          storage_name, str(e)))
+                                                             storage_name, str(e)))
 
     def is_alive(self):
         """
@@ -642,7 +642,7 @@ class HostManager(object):
             return self.instance.get_address()
         except Exception, e:
             logging.error('Failed to get host %s IP address:\n%s' %
-                         (self.name, str(e)))
+                          (self.name, str(e)))
 
 
 class StorageDomainManager(object):

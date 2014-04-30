@@ -58,7 +58,7 @@ class Builder(object):
             extra_flags_hash = hashlib.sha1()
             extra_flags_hash.update(make_flags)
             directory_name = "%s-%s" % (directory_prefix,
-                                       (extra_flags_hash.hexdigest())[:8])
+                                        (extra_flags_hash.hexdigest())[:8])
             return os.path.join(build_dir, directory_name)
 
         def def_helper(arg, param, default):

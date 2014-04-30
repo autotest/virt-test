@@ -418,7 +418,7 @@ class ConnectionBase(propcan.PropCanBase):
         """
         server_session = self.__dict_get__('server_session')
 
-        if (not server_session is None) and (server_session.is_alive()):
+        if (server_session is not None) and (server_session.is_alive()):
             return server_session
         else:
             server_session = self._new_server_session()

@@ -307,7 +307,7 @@ class HugePageConfig(object):
                                                      zones="DMA32 Normal")
             for size in chunk_info:
                 available_hugepages += int(chunk_info[size] * math.pow(2,
-                                           int(int(size) - chunk_bottom)))
+                                                                       int(int(size) - chunk_bottom)))
 
             available_hugepages = available_hugepages - decreased_pages
             if target_hugepages > available_hugepages:
@@ -983,7 +983,7 @@ class PciAssignable(object):
                 dev_id = pf_ids.pop(0)
             dev_ids.append(dev_id)
             unbind_driver = os.path.realpath(os.path.join(base_dir,
-                                             "devices/%s/driver" % dev_id))
+                                                          "devices/%s/driver" % dev_id))
             self.dev_unbind_drivers[dev_id] = unbind_driver
         if len(dev_ids) != len(devices):
             logging.error("Did not get enough PCI Device")
@@ -1195,7 +1195,7 @@ class PciAssignable(object):
                 short_id = pci_id[5:]
                 drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
                 dev_prev_driver = os.path.realpath(os.path.join(drv_path,
-                                                   os.readlink(drv_path)))
+                                                                os.readlink(drv_path)))
                 self.dev_drivers[pci_id] = dev_prev_driver
 
                 # Judge whether the device driver has been binded to stub

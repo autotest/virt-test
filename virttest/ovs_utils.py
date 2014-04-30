@@ -27,7 +27,7 @@ class Machine(object):
         """
         :return: True when Machine is virtual.
         """
-        return not self.vm is None
+        return self.vm is not None
 
     def cmd(self, cmd, timeout=60):
         """
@@ -92,7 +92,7 @@ class Machine(object):
         :param vlan_id: Id of vlan.
         """
         self.cmd("ip link add link %s name %s-vl%s type vlan id %s" %
-                (iface, iface, vlan_id, vlan_id))
+                 (iface, iface, vlan_id, vlan_id))
 
     def del_vlan_iface(self, iface, vlan_id):
         """

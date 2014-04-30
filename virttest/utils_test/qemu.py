@@ -540,7 +540,7 @@ class MultihostMigration(object):
         """
         logging.info("Try check vms %s" % (mig_data.vms_name))
         for vm in mig_data.vms_name:
-            if not self.env.get_vm(vm) in mig_data.vms:
+            if self.env.get_vm(vm) not in mig_data.vms:
                 mig_data.vms.append(self.env.get_vm(vm))
         for vm in mig_data.vms:
             logging.info("Check vm %s on host %s" % (vm.name, self.hostid))
@@ -628,9 +628,8 @@ class MultihostMigration(object):
 
         logging.info("Logging into migrated guest after migration...")
         for vm in mig_data.vms:
-            if not self.regain_ip_cmd is None:
-                session_serial = vm.wait_for_serial_login(timeout=
-                                                          self.login_timeout)
+            if self.regain_ip_cmd is not None:
+                session_serial = vm.wait_for_serial_login(timeout=self.login_timeout)
                 # There is sometime happen that system sends some message on
                 # serial console and IP renew command block test. Because
                 # there must be added "sleep" in IP renew command.
@@ -768,7 +767,7 @@ class MultihostMigration(object):
                     mig_error = True
                     raise
             finally:
-                if not mig_error and cancel_delay is None:
+                if mig_error and cancel_delay is not None:
                     self._hosts_barrier(self.hosts,
                                         mig_data.mig_id,
                                         'test_finihed',
@@ -1119,7 +1118,7 @@ class MultihostMigrationExec(MultihostMigration):
                     fnam = ("mig_" + utils.generate_random_string(6) +
                             "." + vm_name)
                     fpath = os.path.join(self.test.tmpdir, fnam)
-                    if (not fnam in mig_fnam.values() and
+                    if (fnam not in mig_fnam.values() and
                             not os.path.exists(fnam)):
                         mig_fnam[vm_name] = fpath
                         break
