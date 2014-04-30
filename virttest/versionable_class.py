@@ -206,7 +206,7 @@ class ModuleWrapper(object):
         :return: specific class when name of class starts with managed or
                  normal attribute from wrapped class.
         """
-        if not name in self.wrapped.__dict__:
+        if name not in self.wrapped.__dict__:
             if name.startswith("managed"):
                 cls_name = name.split("_")
                 cls = self.wrapped.__dict__[cls_name[1]]

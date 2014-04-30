@@ -1513,7 +1513,7 @@ class VM(virt_vm.BaseVM):
             use_default_cpu_model = False
             for model in re.split(",", cpu_model):
                 model = model.strip()
-                if not model in support_cpu_model:
+                if model not in support_cpu_model:
                     continue
                 cpu_model = model
                 break
@@ -2976,7 +2976,7 @@ class VM(virt_vm.BaseVM):
 
         error.context("Verifying nic %s shows in qtree" % nic.nic_name)
         qtree = self.monitor.info("qtree")
-        if not nic.nic_name in qtree:
+        if nic.nic_name not in qtree:
             logging.error(qtree)
             raise virt_vm.VMAddNicError("Device %s was not plugged into qdev"
                                         "tree" % nic.nic_name)
@@ -3077,7 +3077,7 @@ class VM(virt_vm.BaseVM):
                 ret = s.get("migrated") == "true"
         o = self.monitor.info("migrate")
         if isinstance(o, str):
-            return ret and (not "status: active" in o)
+            return ret and ("status: active" not in o)
         else:
             return ret and (o.get("status") != "active")
 
@@ -3584,7 +3584,7 @@ class VM(virt_vm.BaseVM):
                 logging.info("block = %s" % block)
                 if key == 'removable':
                     if value is False:
-                        if not 'Removable device' in block:
+                        if 'Removable device' not in block:
                             return block.split(":")[0]
                     elif value is True:
                         if 'Removable device' in block:

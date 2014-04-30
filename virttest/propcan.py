@@ -328,7 +328,7 @@ class PropCan(PropCanBase):
         """
         Set the value of key, only if it's not set or None
         """
-        if not key in self:
+        if key not in self:
             self[key] = value
 
     def set_if_value_not_none(self, key, value):

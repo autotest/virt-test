@@ -77,7 +77,7 @@ class QtreeNode(object):
         self.children.append(child)
 
     def replace_child(self, oldchild, newchild):
-        if not oldchild in self.children:
+        if oldchild not in self.children:
             raise ValueError('child %s not in children %s' % (oldchild,
                                                               self.children))
         self.add_child(newchild)
@@ -336,7 +336,7 @@ class QtreeContainer(object):
                     line = line.split(' ', 1)
                     # HOOK: mmio can have multiple values
                     if line[0] == 'mmio':
-                        if not 'mmio' in current.qtree:
+                        if 'mmio' not in current.qtree:
                             current.set_qtree_prop('mmio', [])
                         current.qtree['mmio'].append(line[1])
                         line = None

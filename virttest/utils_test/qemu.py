@@ -540,7 +540,7 @@ class MultihostMigration(object):
         """
         logging.info("Try check vms %s" % (mig_data.vms_name))
         for vm in mig_data.vms_name:
-            if not self.env.get_vm(vm) in mig_data.vms:
+            if self.env.get_vm(vm) not in mig_data.vms:
                 mig_data.vms.append(self.env.get_vm(vm))
         for vm in mig_data.vms:
             logging.info("Check vm %s on host %s" % (vm.name, self.hostid))
@@ -1118,7 +1118,7 @@ class MultihostMigrationExec(MultihostMigration):
                     fnam = ("mig_" + utils.generate_random_string(6) +
                             "." + vm_name)
                     fpath = os.path.join(self.test.tmpdir, fnam)
-                    if (not fnam in mig_fnam.values() and
+                    if (fnam not in mig_fnam.values() and
                             not os.path.exists(fnam)):
                         mig_fnam[vm_name] = fpath
                         break

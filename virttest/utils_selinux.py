@@ -88,7 +88,7 @@ def set_status(status):
     :raise SelinuxError: cmd setenforce exit normally,
                 but status of selinux is not set to expected.
     """
-    if not status in STATUS_LIST:
+    if status not in STATUS_LIST:
         raise SelinuxError("Status %s is not accepted." % status)
 
     current_status = get_status()

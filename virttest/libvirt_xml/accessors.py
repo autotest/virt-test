@@ -73,7 +73,7 @@ class AccessorBase(PropCanBase):
             if slot in AccessorBase.__all_slots__:
                 continue  # already checked these
             # Don't care about value type
-            if not slot in dargs:
+            if slot not in dargs:
                 raise ValueError('Required accessor generator parameter %s'
                                  % slot)
             self.__dict_set__(slot, dargs[slot])

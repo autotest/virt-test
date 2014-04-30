@@ -44,7 +44,7 @@ def lgf_cmd_check(cmd):
                        'virt-tar', 'virt-tar-in', 'virt-tar-out',
                        'virt-win-reg', 'virt-inspector2']
 
-    if not (cmd in libguestfs_cmds):
+    if cmd not in libguestfs_cmds:
         raise LibguestfsCmdError(
             "Command %s is not supported by libguestfs yet." % cmd)
 

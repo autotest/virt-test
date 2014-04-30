@@ -148,7 +148,7 @@ class DevContainer(object):
         out = []
         for device in self.__devices:
             for key, value in filt.iteritems():
-                if not key in device.params:
+                if key not in device.params:
                     break
                 if device.params[key] != value:
                     break
@@ -646,7 +646,7 @@ class DevContainer(object):
         :param bus_count: Desired number of buses.
         :return: List of buses, which are missing in range(bus_count)
         """
-        if not "%s" in bus_pattern:
+        if "%s" not in bus_pattern:
             bus_pattern = bus_pattern + "%s"
         missing_buses = [bus_pattern % i for i in xrange(bus_count)]
         for bus in self.__buses:
@@ -662,7 +662,7 @@ class DevContainer(object):
         :return: Name of the next bus (integer is appended and incremented
                  until there is no existing bus).
         """
-        if not "%s" in bus_pattern:
+        if "%s" not in bus_pattern:
             bus_pattern = bus_pattern + "%s"
         buses = []
         for bus in self.__buses:
@@ -1122,7 +1122,7 @@ class DevContainer(object):
             if media != 'cdrom':    # ignore only 'disk'
                 media = None
 
-        if not ("[,boot=on|off]" in self.get_help_text()):
+        if "[,boot=on|off]" not in self.get_help_text():
             if boot in ('yes', 'on', True):
                 bootindex = "1"
             boot = None

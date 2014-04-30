@@ -515,7 +515,7 @@ def preprocess(test, params, env):
         vm = env[key]
         if not isinstance(vm, virt_vm.BaseVM):
             continue
-        if not vm.name in requested_vms:
+        if vm.name not in requested_vms:
             vm.destroy()
             del env[key]
 
