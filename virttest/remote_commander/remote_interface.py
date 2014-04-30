@@ -64,7 +64,7 @@ class CmdMessage(object):
         self.cmd_id = state[0]
 
     def isCmdMsg(self):
-        return not self.cmd_id is None
+        return self.cmd_id is not None
 
     def __eq__(self, other):
         return self.cmd_id == other.cmd_id

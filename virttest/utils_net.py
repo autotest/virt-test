@@ -1223,7 +1223,7 @@ def find_bridge_manager(br_name, ovs=None):
     # find ifname in standard linux bridge.
     if br_name in __bridge.list_br():
         return __bridge
-    elif not ovs is None and br_name in ovs.list_br():
+    elif ovs is not None and br_name in ovs.list_br():
         return ovs
     else:
         return None
@@ -1268,12 +1268,12 @@ def change_iface_bridge(ifname, new_bridge, ovs=None):
 
     if type(ifname) is str:
         (br_manager_old, br_old) = find_current_bridge(ifname, ovs)
-        if not br_manager_old is None:
+        if br_manager_old is not None:
             br_manager_old.del_port(br_old, ifname)
         br_manager_new.add_port(new_bridge, ifname)
     elif issubclass(type(ifname), VirtIface):
         br_manager_old = find_bridge_manager(ifname.netdst, ovs)
-        if not br_manager_old is None:
+        if br_manager_old is not None:
             br_manager_old.del_port(ifname.netdst, ifname.ifname)
         br_manager_new.add_port(new_bridge, ifname.ifname)
         ifname.netdst = new_bridge

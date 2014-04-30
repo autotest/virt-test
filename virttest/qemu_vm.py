@@ -2913,7 +2913,7 @@ class VM(virt_vm.BaseVM):
                           logging.debug)
             utils_net.bring_up_ifname(nic.ifname)
             # assume this will puke if netdst unset
-            if not nic.netdst is None and nic.nettype == "bridge":
+            if nic.netdst is not None and nic.nettype == "bridge":
                 error.context("Raising bridge for " + msg_sfx + attach_cmd,
                               logging.debug)
                 utils_net.add_to_bridge(nic.ifname, nic.netdst)

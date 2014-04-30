@@ -27,7 +27,7 @@ class Machine(object):
         """
         :return: True when Machine is virtual.
         """
-        return not self.vm is None
+        return self.vm is not None
 
     def cmd(self, cmd, timeout=60):
         """

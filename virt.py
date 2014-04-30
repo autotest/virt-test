@@ -162,7 +162,7 @@ class virt(test.test):
                                              % error_message)
 
                 except Exception, e:
-                    if (not t_type is None):
+                    if t_type is not None:
                         error_message = funcatexit.run_exitfuncs(env, t_type)
                         if error_message:
                             logging.error(error_message)
