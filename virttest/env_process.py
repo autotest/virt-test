@@ -193,7 +193,7 @@ def postprocess_image(test, params, image_name, vm_process_status=None):
                 if len(option) == 2:
                     image_info[option[0].strip()] = option[1].strip()
             if ("lazy refcounts" in image_info
-                and image_info["lazy refcounts"] == "true"):
+                    and image_info["lazy refcounts"] == "true"):
                 logging.debug("Should not check image while guest is alive"
                               " when the image is create with lazy refcounts."
                               " Skip the image check.")
@@ -222,7 +222,7 @@ def postprocess_image(test, params, image_name, vm_process_status=None):
                 if image_name in cl_images.split():
                     image.remove()
             if (params.get("skip_cluster_leak_warn") == "yes"
-                and "Leaked clusters" in e.message):
+                    and "Leaked clusters" in e.message):
                 logging.warn(e.message)
             else:
                 raise e
@@ -737,10 +737,10 @@ def postprocess(test, params, env):
                 video = video_maker.GstPythonVideoMaker()
                 if (video.has_element('vp8enc') and video.has_element('webmmux')):
                     video_file = os.path.join(test.debugdir, "%s-%s.webm" %
-                                             (screendump_dir, test.iteration))
+                                              (screendump_dir, test.iteration))
                 else:
                     video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
-                                             (screendump_dir, test.iteration))
+                                              (screendump_dir, test.iteration))
                 logging.debug("Encoding video file %s", video_file)
                 video.start(screendump_dir, video_file)
 
@@ -1069,14 +1069,14 @@ def store_vm_register(vm, log_filename, append=False):
 
 def _store_vm_register(test, params, env):
     def report_result(status, results):
-       msg = "%s." % status
-       for vm_name in results.keys():
-           if results[vm_name] > 0:
-              msg += " Used to failed to get register info from guest"
-              msg += " %s for %s times." % (vm_name, results[vm_name])
+        msg = "%s." % status
+        for vm_name in results.keys():
+            if results[vm_name] > 0:
+                msg += " Used to failed to get register info from guest"
+                msg += " %s for %s times." % (vm_name, results[vm_name])
 
-       if msg != "%s." % status:
-           logging.debug(msg)
+        if msg != "%s." % status:
+            logging.debug(msg)
 
     global _vm_register_thread_termination_event
     delay = float(params.get("vm_register_delay", 5))

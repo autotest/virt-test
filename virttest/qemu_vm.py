@@ -875,7 +875,7 @@ class VM(virt_vm.BaseVM):
 
                 set_yes_no_value("spice_x509_secure",
                                  yes_value="x509-key-password=%s" %
-                                (optget("spice_x509_key_password")))
+                                 (optget("spice_x509_key_password")))
 
                 tmp = optget("spice_secure_channels")
                 if tmp:

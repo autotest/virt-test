@@ -642,7 +642,7 @@ class HostManager(object):
             return self.instance.get_address()
         except Exception, e:
             logging.error('Failed to get host %s IP address:\n%s' %
-                         (self.name, str(e)))
+                          (self.name, str(e)))
 
 
 class StorageDomainManager(object):

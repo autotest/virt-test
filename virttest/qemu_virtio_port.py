@@ -808,7 +808,7 @@ class ThRecvCheck(Thread):
                                     logging.info("ThRecvCheck %s: "
                                                  "MaxSendIDX = %d",
                                                  self.getName(),
-                                                (self.sendlen - self.sendidx))
+                                                 (self.sendlen - self.sendidx))
                                     raise error.TestFail("ThRecvCheck %s: "
                                                          "incorrect data" %
                                                          self.getName())

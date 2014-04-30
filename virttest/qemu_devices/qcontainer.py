@@ -1152,7 +1152,7 @@ class DevContainer(object):
         #
         if not use_device:
             if fmt and (fmt == "scsi" or (fmt.startswith('scsi') and
-                                         (scsi_hba == 'lsi53c895a' or
+                                          (scsi_hba == 'lsi53c895a' or
                                           scsi_hba == 'spapr-vscsi'))):
                 if not (bus is None and unit is None and port is None):
                     logging.warn("Using scsi interface without -device "

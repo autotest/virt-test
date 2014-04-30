@@ -629,8 +629,7 @@ class MultihostMigration(object):
         logging.info("Logging into migrated guest after migration...")
         for vm in mig_data.vms:
             if not self.regain_ip_cmd is None:
-                session_serial = vm.wait_for_serial_login(timeout=
-                                                          self.login_timeout)
+                session_serial = vm.wait_for_serial_login(timeout=self.login_timeout)
                 # There is sometime happen that system sends some message on
                 # serial console and IP renew command block test. Because
                 # there must be added "sleep" in IP renew command.

@@ -445,8 +445,8 @@ class TestSandboxes(object):
         # FIXME: should automatically generate this
         self.lvsb_option_mapper = {'optarg': {'connect': '-c', 'name': '-n',
                                    'mount': '-m', 'include': '-i',
-                                   'includefile': '-I', 'network': '-N',
-                                   'security': '-s'},
+                                              'includefile': '-I', 'network': '-N',
+                                              'security': '-s'},
                                    'flag': {'help': '-h', 'version': '-V',
                                             'debug': '-d', 'privileged': '-p',
                                             'shell': '-l'}}

@@ -918,7 +918,7 @@ def install_disktest_on_vm(test, vm, src_dir, dst_dir):
     vm.copy_files_to(disktest_src, disktest_dst)
     session.cmd("sync")
     session.cmd("cd %s; make;" %
-               (os.path.join(disktest_dst, "src")))
+                (os.path.join(disktest_dst, "src")))
     session.cmd("sync")
     session.close()
 

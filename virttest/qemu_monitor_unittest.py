@@ -66,23 +66,23 @@ sd0: [not inserted]
                                                             "file": "c.qcow2", "encryption_key_missing": False},
                     "type": "unknown"}, {"io-status": "ok", "device":
                     "scsi0-hd0", "locked": False, "removable": False,
-                    "inserted": {"iops_rd": 0, "iops_wr": 0, "ro": True,
-                                 "backing_file_depth": 0, "drv": "raw", "iops": 0,
-                                 "bps_wr": 0, "encrypted": False, "bps": 0, "bps_rd": 0,
-                                 "file": "a.qcow", "encryption_key_missing": False},
-                    "type": "unknown"}, {"io-status": "ok", "device":
+                                         "inserted": {"iops_rd": 0, "iops_wr": 0, "ro": True,
+                                                      "backing_file_depth": 0, "drv": "raw", "iops": 0,
+                                                      "bps_wr": 0, "encrypted": False, "bps": 0, "bps_rd": 0,
+                                                      "file": "a.qcow", "encryption_key_missing": False},
+                                         "type": "unknown"}, {"io-status": "ok", "device":
                     "scsi0-hd1", "locked": False, "removable": False,
-                    "inserted": {"iops_rd": 0, "iops_wr": 0, "ro": False,
-                                 "backing_file_depth": 0, "drv": "qcow2", "iops": 0,
-                                 "bps_wr": 0, "encrypted": True, "bps": 0, "bps_rd": 0,
-                                 "file": "enc.qcow2", "encryption_key_missing": True},
-                    "type": "unknown"}, {"io-status": "ok", "device":
+                                                              "inserted": {"iops_rd": 0, "iops_wr": 0, "ro": False,
+                                                                           "backing_file_depth": 0, "drv": "qcow2", "iops": 0,
+                                                                           "bps_wr": 0, "encrypted": True, "bps": 0, "bps_rd": 0,
+                                                                           "file": "enc.qcow2", "encryption_key_missing": True},
+                                                              "type": "unknown"}, {"io-status": "ok", "device":
                     "ide1-cd0", "locked": False, "removable": True,
-                    "tray_open": False, "type": "unknown"}, {"device":
+                                                                                   "tray_open": False, "type": "unknown"}, {"device":
                     "floppy0", "locked": False, "removable": True,
-                    "tray_open": False, "type": "unknown"}, {"device": "sd0",
+                                                                                                                            "tray_open": False, "type": "unknown"}, {"device": "sd0",
                     "locked": False, "removable": True, "tray_open": False,
-                    "type": "unknown"}]
+                                                                                                                                                                     "type": "unknown"}]
         monitor = MockMonitor()
 
         # Test "info block" version 1.4

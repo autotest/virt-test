@@ -655,9 +655,9 @@ class VMXML(VMXMLBase):
                 if ec.find('target').get('name') == "org.qemu.guest_agent.0":
                     channel = vmxml.get_device_class('channel')(type_name='unix')
                     channel.add_source(mode='bind',
-                                   path=ec.find('source').get('path'))
+                                       path=ec.find('source').get('path'))
                     channel.add_target(type='virtio',
-                                   name=ec.find('target').get('name'))
+                                       name=ec.find('target').get('name'))
                     vmxml.del_device(channel)
             vmxml.define()
         except AttributeError:

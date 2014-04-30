@@ -64,7 +64,7 @@ def get_guest_os_info_list(test_name, guest_os):
     cartesian_parser = cartesian_config.Parser()
     cartesian_parser.parse_file(data_dir.get_backend_cfg_path(test_name, 'guest-os.cfg'))
     cartesian_parser.only_filter(guest_os)
-    dicts = cartesian_parser.get_dicts();
+    dicts = cartesian_parser.get_dicts()
 
     for params in dicts:
         image_name = params.get('image_name', 'image').split('/')[-1]
@@ -812,7 +812,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
         logging.info("")
         step += 2
         logging.info("%s - Verifying (and possibly downloading) guest image",
-                     step)        
+                     step)
         for os_info in get_guest_os_info_list(test_name, guest_os):
             os_asset = os_info['asset']
             asset.download_asset(os_asset, interactive=interactive,

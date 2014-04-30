@@ -211,7 +211,7 @@ class BRIpError(NetError):
     def __str__(self):
         return ("Bridge %s doesn't have an IP address assigned. It's"
                 " impossible to start dnsmasq for this bridge." %
-               (self.brname))
+                (self.brname))
 
 
 class VMIPV6NeighNotFoundError(NetError):
@@ -1772,6 +1772,7 @@ class ParamsNet(VMNet):
     # __init__ must not presume clean state, it should behave
     # assuming there is existing properties/data on the instance
     # and take steps to preserve or update it as appropriate.
+
     def __init__(self, params, vm_name):
         self.subclass_pre_init(params, vm_name)
         # use temporary list to initialize
@@ -1850,6 +1851,7 @@ class DbNet(VMNet):
     # __init__ must not presume clean state, it should behave
     # assuming there is existing properties/data on the instance
     # and take steps to preserve or update it as appropriate.
+
     def __init__(self, params, vm_name, db_filename, db_key):
         self.subclass_pre_init(params, vm_name)
         self.db_key = db_key

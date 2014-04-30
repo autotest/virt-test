@@ -92,7 +92,7 @@ class Machine(object):
         :param vlan_id: Id of vlan.
         """
         self.cmd("ip link add link %s name %s-vl%s type vlan id %s" %
-                (iface, iface, vlan_id, vlan_id))
+                 (iface, iface, vlan_id, vlan_id))
 
     def del_vlan_iface(self, iface, vlan_id):
         """

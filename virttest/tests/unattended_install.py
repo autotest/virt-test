@@ -809,8 +809,8 @@ class UnattendedInstallConfig(object):
                     # Red Hat
                     self.kernel_params = re.sub('repo\=[\:\w\d\/]*',
                                                 'repo=http://%s:%s' %
-                                               (self.url_auto_content_ip,
-                                                self.url_auto_content_port),
+                                                (self.url_auto_content_ip,
+                                                 self.url_auto_content_port),
                                                 self.kernel_params)
 
     @error.context_aware

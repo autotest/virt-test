@@ -1176,8 +1176,8 @@ class Lexer(object):
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']=[%s]" %
-                             ([x.identifier for x in lType],
-                              token.identifier, token),
+                              ([x.identifier for x in lType],
+                               token.identifier, token),
                               self.line, self.filename, self.linenum)
 
     def get_next_check_nw(self, lType):
@@ -1188,8 +1188,8 @@ class Lexer(object):
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']" %
-                             ([x.identifier for x in lType],
-                              token.identifier),
+                              ([x.identifier for x in lType],
+                               token.identifier),
                               self.line, self.filename, self.linenum)
 
     def check_token(self, token, lType):
@@ -1197,8 +1197,8 @@ class Lexer(object):
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']" %
-                             ([x.identifier for x in lType],
-                              token.identifier),
+                              ([x.identifier for x in lType],
+                               token.identifier),
                               self.line, self.filename, self.linenum)
 
 

@@ -85,7 +85,6 @@ class Uri(object):
         uri = "esx://" + self.host + "/?no_verify=1"
         return uri
 
-
     # add new hypervisor in here.
 
 
@@ -126,8 +125,8 @@ class Target(object):
         Return command options.
         """
         options = " -ic %s -os %s -b %s %s " % (self.uri,
-                  self.params.get('storage'), self.params.get('network'),
-                  self.params.get('vms'))
+                                                self.params.get('storage'), self.params.get('network'),
+                                                self.params.get('vms'))
         return options
 
     def _get_libvirtxml_options(self):
@@ -135,8 +134,8 @@ class Target(object):
         Return command options.
         """
         options = " -os %s -b %s %s " % (self.params.get('storage'),
-                  self.params.get('network'),
-                  self.params.get('vms'))
+                                         self.params.get('network'),
+                                         self.params.get('vms'))
         return options
 
     def _get_ovirt_options(self):
@@ -144,11 +143,10 @@ class Target(object):
         Return command options.
         """
         options = " -ic %s -o rhev -os %s -n %s %s " % (self.uri,
-                  self.params.get('storage'), self.params.get('network'),
-                  self.params.get('vms'))
+                                                        self.params.get('storage'), self.params.get('network'),
+                                                        self.params.get('vms'))
 
         return options
-
 
     # add new target in here.
 
