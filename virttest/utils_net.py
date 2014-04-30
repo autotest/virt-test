@@ -536,7 +536,7 @@ class Macvtap(Interface):
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
         if not os.path.exists(path):
             self.ip_link_ctl(["link", "add", "link", device, "name",
-                             self.tapname, "type", "macvtap", "mode", mode])
+                              self.tapname, "type", "macvtap", "mode", mode])
 
     def delete(self):
         path = os.path.join(SYSFS_NET_PATH, self.tapname)

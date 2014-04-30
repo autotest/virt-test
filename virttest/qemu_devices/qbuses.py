@@ -256,7 +256,7 @@ class QSparseBus(object):
             if self._addr2stor(last_addr) not in self.bus:
                 return last_addr
             if (use_reserved and
-               self.bus[self._addr2stor(last_addr)] == "reserved"):
+                    self.bus[self._addr2stor(last_addr)] == "reserved"):
                 return last_addr
             last_addr = self._increment_addr(addr_pattern, last_addr)
         return None     # No free matching address found
@@ -268,7 +268,7 @@ class QSparseBus(object):
         :return: True in case ids are correct, False when not
         """
         if (device.get_param(self.bus_item) and
-           device.get_param(self.bus_item) != self.busid):
+                device.get_param(self.bus_item) != self.busid):
             return False
         else:
             return True

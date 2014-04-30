@@ -724,7 +724,7 @@ class DevContainer(object):
                                                    parent_bus={'aobject':
                                                                params.get('pci_bus',
                                                                           'pci.0')},
-                            child_bus=bus))
+                                                   child_bus=bus))
             else:
                 _name = 'lsi53c895a%s' % i
                 bus = qbuses.QSCSIBus("scsi.0", 'SCSI', [8, 16384], atype='lsi53c895a')
@@ -1153,7 +1153,7 @@ class DevContainer(object):
         if not use_device:
             if fmt and (fmt == "scsi" or (fmt.startswith('scsi') and
                                           (scsi_hba == 'lsi53c895a' or
-                                          scsi_hba == 'spapr-vscsi'))):
+                                           scsi_hba == 'spapr-vscsi'))):
                 if not (bus is None and unit is None and port is None):
                     logging.warn("Using scsi interface without -device "
                                  "support; ignoring bus/unit/port. (%s)", name)

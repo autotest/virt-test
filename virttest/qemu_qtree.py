@@ -94,7 +94,7 @@ class QtreeNode(object):
     def set_qtree_prop(self, prop, value):
         if prop in self.qtree:
             raise ValueError("Property %s = %s, not rewriting with %s" % (prop,
-                             self.qtree.get(prop), value))
+                                                                          self.qtree.get(prop), value))
         self.update_qtree_prop(prop, value)
 
     def update_qtree_prop(self, prop, value):
@@ -191,7 +191,7 @@ class QtreeDisk(QtreeDev):
     def set_block_prop(self, prop, value):
         if prop in self.block:
             raise ValueError("Property %s = %s, not rewriting with %s" % (prop,
-                             self.block.get(prop), value))
+                                                                          self.block.get(prop), value))
         self.update_block_prop(prop, value)
 
     def update_block_prop(self, prop, value):

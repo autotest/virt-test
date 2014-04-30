@@ -276,7 +276,7 @@ class Manager(object):
         if "_class_names" in kargs:
             _class_names = kargs["_class_names"]
         if (_class.__name__.startswith("managed") and
-           hasattr(_class, "__original_class__")):
+                hasattr(_class, "__original_class__")):
             _class = _class.__original_class__
         new_bases = []
         cls_ver_name = ""
@@ -301,7 +301,7 @@ class Manager(object):
         else:
             for m_cls in _class.__bases__:
                 if (VersionableClass in m_cls.__mro__ or
-                   hasattr(m_cls, "__original_class__")):
+                        hasattr(m_cls, "__original_class__")):
                     cls, cls_vn = self.factory(m_cls, *args, **kargs)
                     new_bases.append(cls)
                     cls_ver_name += cls_vn

@@ -68,9 +68,9 @@ class Runner(object):
         pid_file = "/tmp/pid_file_%s" % "".join(random.sample(string.letters,
                                                               4))
         monitor = threading.Thread(target=self.monitor_thread, args=(m_cmd,
-                                   pid_file, r_path))
+                                                                     pid_file, r_path))
         test_runner = threading.Thread(target=self.test_thread, args=(m_cmd,
-                                       t_cmd, pid_file))
+                                                                      t_cmd, pid_file))
 
         monitor.start()
         test_runner.start()

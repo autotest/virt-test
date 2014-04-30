@@ -117,7 +117,7 @@ class Cgroup(object):
             if cgroup is None:
                 range = "abcdefghijklmnopqrstuvwxyz0123456789"
                 sub_cgroup = "cgroup-" + "".join(random.sample(range +
-                                                 range.upper(), 6))
+                                                               range.upper(), 6))
             else:
                 sub_cgroup = cgroup
             if parent_cgroup is None:

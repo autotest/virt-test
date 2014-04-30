@@ -594,7 +594,7 @@ class VM(virt_vm.BaseVM):
                     cmd_nd = cmd
                     if vhostfds:
                         if (int(queues) > 1 and
-                           'vhostfds=' in devices.get_help_text()):
+                                'vhostfds=' in devices.get_help_text()):
                             cmd += ",vhostfds=%(vhostfds)s"
                             cmd_nd += ",vhostfds=DYN"
                         else:
@@ -629,7 +629,7 @@ class VM(virt_vm.BaseVM):
                         cmd_nd = cmd
                 elif tapfds:
                     if (int(queues) > 1 and
-                       ',fds=' in devices.get_help_text()):
+                            ',fds=' in devices.get_help_text()):
                         cmd += ",fds=%(tapfds)s"
                         cmd_nd += ",fds=DYN"
                     else:
@@ -2903,7 +2903,7 @@ class VM(virt_vm.BaseVM):
                 err_msg = "Can't add nic for VM which is not running."
                 raise virt_vm.VMAddNetDevError(err_msg)
             if ((int(nic.queues)) > 1 and
-               ',fds=' in self.devices.get_help_text()):
+                    ',fds=' in self.devices.get_help_text()):
                 attach_cmd += " type=tap,id=%s,fds=%s" % (nic.device_id,
                                                           nic.tapfds)
             else:

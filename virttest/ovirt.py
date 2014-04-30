@@ -152,7 +152,7 @@ class VMManager(virt_vm.BaseVM):
             return storage.vms.get(self.name)
         except Exception, e:
             logging.error('Failed to get %s from %s:\n%s' % (self.name,
-                          storage_name, str(e)))
+                                                             storage_name, str(e)))
 
     def is_alive(self):
         """

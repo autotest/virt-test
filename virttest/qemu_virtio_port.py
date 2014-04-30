@@ -365,7 +365,7 @@ class GuestWorker(object):
         # in LOOP_NONE mode it might stuck in read/write
         # This command can't fail, can only freze so wait for the correct msg
         match, tmp = self._cmd("virt.exit_threads()", 3, ("^PASS: All threads"
-                               " finished",))
+                                                          " finished",))
         if match is None:
             logging.warn("Workaround the stuck thread on guest")
             # Thread is stuck in read/write

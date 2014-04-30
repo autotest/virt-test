@@ -1579,7 +1579,7 @@ class Parser(object):
                                     meta["default"].remove(wd)
 
                         if (is_default and not already_default and
-                           meta_in_expand_defautls):
+                                meta_in_expand_defautls):
                             node3.default = True
                             already_default = True
 
@@ -1652,7 +1652,7 @@ class Parser(object):
                                 meta[ident].append(True)
                             elif typet == LSet:  # [xxx = yyyy]
                                 tokens = lexer.get_until_no_white([LRBracket,
-                                                                  LEndL])
+                                                                   LEndL])
                                 if type(tokens[-1]) == LRBracket:
                                     if ident not in meta:
                                         meta[ident] = []
@@ -1703,7 +1703,7 @@ class Parser(object):
                     path = lexer.rest_line_as_LString()
                     filename = os.path.expanduser(path)
                     if (isinstance(lexer.reader, FileReader) and
-                       not os.path.isabs(filename)):
+                            not os.path.isabs(filename)):
                         filename = os.path.join(
                             os.path.dirname(lexer.filename),
                             filename)
