@@ -35,11 +35,7 @@ class QemuIO(object):
         self.prompt = prompt
         self.blkdebug_cfg = blkdebug_cfg
 
-        base_dir = utils_misc.get_path(data_dir.get_root_dir(),
-                                       params.get("vm_type"))
-        self.qemu_io_cmd = utils_misc.get_path(base_dir,
-                                               params.get("qemu_io_binary",
-                                                          "qemu-io"))
+        self.qemu_io_cmd = utils_misc.get_qemu_io_binary(params)
         self.io_options = io_options
         self.run_command = False
         self.image_name = image_name
