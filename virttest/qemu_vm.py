@@ -571,7 +571,9 @@ class VM(virt_vm.BaseVM):
         def add_net(devices, vlan, nettype, ifname=None, tftp=None,
                     bootfile=None, hostfwd=[], netdev_id=None,
                     netdev_extra_params=None, tapfds=None, script=None,
-                    downscript=None, vhost=None, queues=None, vhostfds=None):
+                    downscript=None, vhost=None, queues=None, vhostfds=None,
+                    add_queues=None, helper=None, add_tapfd=None,
+                    add_vhostfd=None):
             mode = None
             if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
@@ -607,6 +609,10 @@ class VM(virt_vm.BaseVM):
                                 txt += " qemu do not support vhostfd."
                             if txt:
                                 logging.warn(txt)
+                        # For negative test
+                        if add_vhostfd:
+                            cmd += ",vhostfd=%(vhostfd)s"
+                            cmd_nd += ",vhostfd=%(vhostfd)s"
                 if netdev_extra_params:
                     cmd += "%s" % netdev_extra_params
                     cmd_nd += "%s" % netdev_extra_params
@@ -629,6 +635,10 @@ class VM(virt_vm.BaseVM):
                     else:
                         cmd += ",fd=%(tapfd)s"
                         cmd_nd += ",fd=DYN"
+                    # For negative test
+                    if add_tapfd:
+                        cmd += ",fd=%(tapfd)s"
+                        cmd_nd += ",fd=%(tapfd)s"
             elif mode == "user":
                 if tftp and "[,tftp=" in devices.get_help_text():
                     cmd += ",tftp='%s'" % tftp
@@ -641,6 +651,14 @@ class VM(virt_vm.BaseVM):
                         cmd += (",hostfwd=tcp::%%(host_port%d)s"
                                 "-:%%(guest_port%d)s" % (i, i))
                         cmd_nd += ",hostfwd=tcp::DYN-:%%(guest_port)ds"
+
+            if add_queues and queues:
+                cmd += ",queues=%s" % queues
+                cmd_nd += ",queues=%s" % queues
+
+            if helper:
+                cmd += ",helper=%s" % helper
+                cmd_nd += ",helper=%s" % helper
 
             return cmd, cmd_nd
 
@@ -1328,6 +1346,12 @@ class VM(virt_vm.BaseVM):
                 bootindex = nic_params.get("bootindex")
                 netdev_extra = nic.get("netdev_extra_params")
                 bootp = nic.get("bootp")
+                add_queues = nic_params.get("add_queues", "no") == "yes"
+                add_tapfd = nic_params.get("add_tapfd", "no") == "yes"
+                add_vhostfd = nic_params.get("add_vhostfd", "no") == "yes"
+                helper = nic_params.get("helper")
+                tapfds_len = int(nic_params.get("tapfds_len", -1))
+                vhostfds_len = int(nic_params.get("vhostfds_len", -1))
                 if nic.get("tftp"):
                     tftp = utils_misc.get_path(root_dir, nic.get("tftp"))
                 else:
@@ -1354,6 +1378,25 @@ class VM(virt_vm.BaseVM):
                 else:
                     vectors = None
 
+                # Setup some exclusive parameters if we are not running a
+                # negative test.
+                if nic_params.get("run_invalid_cmd_nic") != "yes":
+                    if vhostfds or tapfds or add_queues:
+                        helper = None
+                    if vhostfds or tapfds:
+                        add_queues = None
+                    add_vhostfd = None
+                    add_tapfd = None
+                else:
+                    if vhostfds and vhostfds_len > -1:
+                        vhostfd_list = re.split(":", vhostfds)
+                        if vhostfds_len < len(vhostfd_list):
+                            vhostfds = ":".join(vhostfd_list[:vhostfds_len])
+                    if tapfds and tapfds_len > -1:
+                        tapfd_list = re.split(":", tapfds)
+                        if tapfds_len < len(tapfd_list):
+                            tapfds = ":".join(tapfd_list[:tapfds_len])
+
                 # Handle the '-net nic' part
                 add_nic(devices, vlan, nic_model, mac,
                         device_id, netdev_id, nic_extra,
@@ -1364,7 +1407,8 @@ class VM(virt_vm.BaseVM):
                 cmd, cmd_nd = add_net(devices, vlan, nettype, ifname, tftp,
                                       bootp, redirs, netdev_id, netdev_extra,
                                       tapfds, script, downscript, vhost,
-                                      queues, vhostfds)
+                                      queues, vhostfds, add_queues, helper,
+                                      add_tapfd, add_vhostfd)
 
                 if vhostfds is None:
                     vhostfds = ""
