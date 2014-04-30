@@ -22,3 +22,4 @@ install:
 script:
     - ./tools/run_unittests_nose.py -c .nose.cfg -s virttest
     - inspekt lint
+    - inspekt style
