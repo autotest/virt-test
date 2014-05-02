@@ -58,22 +58,22 @@ class Icmpv6(base.TypedDeviceBase):
         Icmpv6 attribute XML class
 
         Properties:
-            srcmacaddr: string, MAC address of sender
-            srcipaddr: string, Source IPv6 address
-            srcipmask: string, Mask applied to source IPv6 address
-            dstipaddr: string, Destination IPv6 address
-            dstipmask: string, Mask applied to destination IPv6 address
-            srcipfrom: string, Start of range of source IP address
-            srcipto: string, End of range of source IP address
-            dstipfrom: string, Start of range of destination IP address
-            dstipto: string, End of range of destination IP address
-            type: string, ICMPv6 type
-            code: string, ICMPv6 code
-            comment: string, text with max. 256 characters
-            state: string, comma separated list of NEW,ESTABLISHED,RELATED,
-                   INVALID or NONE
-            ipset: The name of an IPSet managed outside of libvirt
-            ipsetflags: flags for the IPSet; requires ipset attribute
+
+        srcmacaddr: string, MAC address of sender
+        srcipaddr: string, Source IPv6 address
+        srcipmask: string, Mask applied to source IPv6 address
+        dstipaddr: string, Destination IPv6 address
+        dstipmask: string, Mask applied to destination IPv6 address
+        srcipfrom: string, Start of range of source IP address
+        srcipto: string, End of range of source IP address
+        dstipfrom: string, Start of range of destination IP address
+        dstipto: string, End of range of destination IP address
+        type: string, ICMPv6 type
+        code: string, ICMPv6 code
+        comment: string, text with max. 256 characters
+        state: string, comma separated list of NEW,ESTABLISHED,RELATED,INVALID or NONE
+        ipset: The name of an IPSet managed outside of libvirt
+        ipsetflags: flags for the IPSet; requires ipset attribute
         """
 
         __slots__ = ('srcmacaddr', 'srcipaddr', 'srcipmask', 'dstipaddr',

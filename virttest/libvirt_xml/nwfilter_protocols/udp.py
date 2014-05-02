@@ -60,28 +60,24 @@ class Udp(base.TypedDeviceBase):
         Udp attribute XML class
 
         Properties:
-            srcmacaddr: string, MAC address of sender
-            srcipaddr: string, Source IP address
-            srcipmask: string, Mask applied to source IP address
-            dstipaddr: string, Destination IP address
-            dstipmask: string, Mask applied to destination IP address
-            srcipfrom: string, Start of range of source IP address
-            srcipto: string, End of range of source IP address
-            dstipfrom: string, Start of range of destination IP address
-            dstipto: string, End of range of destination IP address
-            srcportstart: string, Start of range of valid source ports;
-                          requires protocol
-            srcportend: string, End of range of valid source ports;
-                        requires protocol
-            dstportstart: string, Start of range of valid destination ports;
-                          requires protocol
-            dstportend: string, End of range of valid destination ports;
-                        requires protocol
-            comment: string, text with max. 256 characters
-            state: string, comma separated list of NEW,ESTABLISHED,RELATED,
-                   INVALID or NONE
-            ipset: The name of an IPSet managed outside of libvirt
-            ipsetflags: flags for the IPSet; requires ipset attribute
+
+        srcmacaddr: string, MAC address of sender
+        srcipaddr: string, Source IP address
+        srcipmask: string, Mask applied to source IP address
+        dstipaddr: string, Destination IP address
+        dstipmask: string, Mask applied to destination IP address
+        srcipfrom: string, Start of range of source IP address
+        srcipto: string, End of range of source IP address
+        dstipfrom: string, Start of range of destination IP address
+        dstipto: string, End of range of destination IP address
+        srcportstart: string, Start of range of valid source ports; requires protocol
+        srcportend: string, End of range of valid source ports; requires protocol
+        dstportstart: string, Start of range of valid destination ports; requires protocol
+        dstportend: string, End of range of valid destination ports; requires protocol
+        comment: string, text with max. 256 characters
+        state: string, comma separated list of NEW,ESTABLISHED,RELATED, INVALID or NONE
+        ipset: The name of an IPSet managed outside of libvirt
+        ipsetflags: flags for the IPSet; requires ipset attribute
         """
 
         __slots__ = ('srcmacaddr', 'srcipaddr', 'srcipmask', 'dstipaddr',

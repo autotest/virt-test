@@ -14,7 +14,8 @@ class Arp(base.TypedDeviceBase):
     Create new Arp xml instances
 
     Properties:
-        attrs: libvirt_xml.nwfilter_protocols.Arp.Attr instance
+
+    attrs: libvirt_xml.nwfilter_protocols.Arp.Attr instance
     """
 
     __slots__ = ('attrs',)
@@ -59,22 +60,21 @@ class Arp(base.TypedDeviceBase):
         """
         Arp attribute XML class
 
-
         Properties:
-            srcmacaddr: string, MAC address of sender
-            srcmacmask: string, Mask applied to MAC address of sender
-            dstmacaddr: string, MAC address of destination
-            dstmacaddr: string, Mask applied to MAC address of destination
-            hwtype: string, Hardware type
-            protocoltype: string, Protocol type
-            opcode: string, Opcode
-            arpsrcmacaddr: string, Source MAC address in ARP/RARP packet
-            arpdstmacaddr: string, Destination MAC address in ARP/RARP packet
-            arpsrcipaddr: string, Source IP address in ARP/RARP packet
-            arpdstipaddr: string, Destination IP address in ARP/RARP packet
-            comment: string, text with max. 256 characters
-            gratuitous: string, boolean indicating whether to check for
-                        gratuitous ARP packet
+
+        srcmacaddr: string, MAC address of sender
+        srcmacmask: string, Mask applied to MAC address of sender
+        dstmacaddr: string, MAC address of destination
+        dstmacaddr: string, Mask applied to MAC address of destination
+        hwtype: string, Hardware type
+        protocoltype: string, Protocol type
+        opcode: string, Opcode
+        arpsrcmacaddr: string, Source MAC address in ARP/RARP packet
+        arpdstmacaddr: string, Destination MAC address in ARP/RARP packet
+        arpsrcipaddr: string, Source IP address in ARP/RARP packet
+        arpdstipaddr: string, Destination IP address in ARP/RARP packet
+        comment: string, text with max. 256 characters
+        gratuitous: string, boolean indicating whether to check for gratuitous ARP packet
         """
 
         __slots__ = ('srcmacaddr', 'srcmacmask', 'dstmacaddr', 'dstmacmask',

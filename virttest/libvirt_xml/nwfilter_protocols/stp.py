@@ -60,31 +60,32 @@ class Stp(base.TypedDeviceBase):
         Stp attribute XML class
 
         Properties:
-            srcmacaddr: string, MAC address of sender
-            srcmacmask: string, Mask applied to MAC address of sender
-            type: string, Bridge Protocol Data Unit (BPDU) type
-            flags: string, BPDU flag
-            root_priority: string, Root priority (range start)
-            root_priority_hi: string, Root priority range end
-            root_address: string, Root MAC address
-            root_address_mask: string, BPDU sender MAC address
-            root_cost: string, Root path cost (range start)
-            root_cost_hi: string, Root path cost range end
-            sender_priority: string, Sender priority (range start)
-            sender_priority_hi: string, Sender priority range end
-            sender_address: string, BPDU sender MAC address
-            sender_address_mask: string, BPDU sender MAC address mask
-            port: string, Port identifier (range start)
-            port_hi: string, Port identifier range end
-            msg_age: string, Message age timer (range start)
-            msg_age_hi: string, Message age timer range end
-            max_age: string, Maximum age timer (range start)
-            max_age_hi: string, Maximum age timer range end
-            hello_time: string, Hello time timer (range start)
-            hello_time_hi: string, Hello time timer range end
-            forward_delay: string, Forward delay (range start)
-            forward_delay_hi: string, Forward delay range end
-            comment: string, text with max. 256 characters
+
+        srcmacaddr: string, MAC address of sender
+        srcmacmask: string, Mask applied to MAC address of sender
+        type: string, Bridge Protocol Data Unit (BPDU) type
+        flags: string, BPDU flag
+        root_priority: string, Root priority (range start)
+        root_priority_hi: string, Root priority range end
+        root_address: string, Root MAC address
+        root_address_mask: string, BPDU sender MAC address
+        root_cost: string, Root path cost (range start)
+        root_cost_hi: string, Root path cost range end
+        sender_priority: string, Sender priority (range start)
+        sender_priority_hi: string, Sender priority range end
+        sender_address: string, BPDU sender MAC address
+        sender_address_mask: string, BPDU sender MAC address mask
+        port: string, Port identifier (range start)
+        port_hi: string, Port identifier range end
+        msg_age: string, Message age timer (range start)
+        msg_age_hi: string, Message age timer range end
+        max_age: string, Maximum age timer (range start)
+        max_age_hi: string, Maximum age timer range end
+        hello_time: string, Hello time timer (range start)
+        hello_time_hi: string, Hello time timer range end
+        forward_delay: string, Forward delay (range start)
+        forward_delay_hi: string, Forward delay range end
+        comment: string, text with max. 256 characters
         """
 
         __slots__ = ('srcmacaddr', 'srcmacmask', 'type', 'flags',

@@ -128,9 +128,10 @@ class Disk(base.TypedDeviceBase):
         Disk source device XML class
 
         Properties:
-            attrs: Dictionary of attributes, qualifying the disk type
-            seclabels: list of libvirt_xml.devices.seclabel.Seclabel instances
-            hosts: list of dictionaries describing network host properties
+
+        attrs: Dictionary of attributes, qualifying the disk type
+        seclabels: list of libvirt_xml.devices.seclabel.Seclabel instances
+        hosts: list of dictionaries describing network host properties
         """
 
         __slots__ = ('attrs', 'seclabels', 'hosts',)
@@ -196,12 +197,13 @@ class Disk(base.TypedDeviceBase):
         IOTune device XML class
 
         Properties:
-            total_bytes_sec: str(int)
-            read_bytes_sec: str(int)
-            write_bytes_sec: str(int)
-            total_iops_sec: str(int)
-            read_iops_sec: str(int)
-            write_iops_sec: str(int)
+
+        total_bytes_sec: str(int)
+        read_bytes_sec: str(int)
+        write_bytes_sec: str(int)
+        total_iops_sec: str(int)
+        read_iops_sec: str(int)
+        write_iops_sec: str(int)
         """
 
         __slots__ = ('total_bytes_sec', 'read_bytes_sec', 'write_bytes_sec',

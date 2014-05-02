@@ -14,7 +14,8 @@ class Ip(base.TypedDeviceBase):
     Create new Ip xml instances
 
     Properties:
-        attrs: libvirt_xml.nwfilter_protocols.Ip.Attr instance
+
+    attrs: libvirt_xml.nwfilter_protocols.Ip.Attr instance
     """
 
     __slots__ = ('attrs',)
@@ -59,26 +60,22 @@ class Ip(base.TypedDeviceBase):
         """
         Ip attribute XML class
 
-
         Properties:
-            srcmacaddr: string, MAC address of sender
-            srcmacmask: string, Mask applied to MAC address of sender
-            dstmacaddr: string, MAC address of destination
-            dstmacaddr: string, Mask applied to MAC address of destination
-            srcipaddr: string, Source IP address
-            srcipmask: string, Mask applied to source IP address
-            dstipaddr: string, Destination IP address
-            dstipmask: string, Mask applied to destination IP address
-            ip_protocol: string, Layer 4 protocol identifier
-            srcportstart: string, Start of range of valid source ports;
-                          requires protocol
-            srcportend: string, End of range of valid source ports;
-                        requires protocol
-            dstportstart: string, Start of range of valid destination ports;
-                          requires protocol
-            dstportend: string, End of range of valid destination ports;
-                        requires protocol
-            comment: string, text with max. 256 characters
+
+        srcmacaddr: string, MAC address of sender
+        srcmacmask: string, Mask applied to MAC address of sender
+        dstmacaddr: string, MAC address of destination
+        dstmacaddr: string, Mask applied to MAC address of destination
+        srcipaddr: string, Source IP address
+        srcipmask: string, Mask applied to source IP address
+        dstipaddr: string, Destination IP address
+        dstipmask: string, Mask applied to destination IP address
+        ip_protocol: string, Layer 4 protocol identifier
+        srcportstart: string, Start of range of valid source ports; requires protocol
+        srcportend: string, End of range of valid source ports; requires protocol
+        dstportstart: string, Start of range of valid destination ports; requires protocol
+        dstportend: string, End of range of valid destination ports; requires protocol
+        comment: string, text with max. 256 characters
         """
 
         __slots__ = ('srcmacaddr', 'srcmacmask', 'dstmacaddr', 'dstmacmask',
