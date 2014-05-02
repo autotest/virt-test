@@ -60,13 +60,14 @@ class Vlan(base.TypedDeviceBase):
         Vlan attribute XML class
 
         Properties:
-            srcmacaddr: string, MAC address of sender
-            srcmacmask: string, Mask applied to MAC address of sender
-            dstmacaddr: string, MAC address of destination
-            dstmacaddr: string, Mask applied to MAC address of destination
-            vlanid: string, VLAN ID
-            encap_protocol: string, Encapsulated layer 3 protocol ID
-            comment: string, text with max. 256 characters
+
+        srcmacaddr: string, MAC address of sender
+        srcmacmask: string, Mask applied to MAC address of sender
+        dstmacaddr: string, MAC address of destination
+        dstmacaddr: string, Mask applied to MAC address of destination
+        vlanid: string, VLAN ID
+        encap_protocol: string, Encapsulated layer 3 protocol ID
+        comment: string, text with max. 256 characters
         """
 
         __slots__ = ('srcmacaddr', 'srcmacmask', 'dstmacaddr', 'dstmacmask',

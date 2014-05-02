@@ -579,10 +579,9 @@ class VMXML(VMXMLBase):
         Set primary serial's features of vm_name.
 
         :param vm_name: Name of defined vm to set primary serial.
-        :param dev_type: the type of serial:pty,file...
+        :param dev_type: the type of ``serial:pty,file...``
         :param port: the port of serial
         :param path: the path of serial, it is not necessary for pty
-        # TODO: More features
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         xmltreefile = vmxml.__dict_get__('xml')

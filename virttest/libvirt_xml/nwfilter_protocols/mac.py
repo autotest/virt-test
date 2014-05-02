@@ -60,12 +60,13 @@ class Mac(base.TypedDeviceBase):
         Mac attribute XML class
 
         Properties:
-            srcmacaddr: string, MAC address of sender
-            srcmacmask: string, Mask applied to MAC address of sender
-            dstmacaddr: string, MAC address of destination
-            dstmacaddr: string, Mask applied to MAC address of destination
-            protocolid: string, Layer 3 protocol ID
-            comment: string, text with max. 256 characters
+
+        srcmacaddr: string, MAC address of sender
+        srcmacmask: string, Mask applied to MAC address of sender
+        dstmacaddr: string, MAC address of destination
+        dstmacaddr: string, Mask applied to MAC address of destination
+        protocolid: string, Layer 3 protocol ID
+        comment: string, text with max. 256 characters
         """
 
         __slots__ = ('srcmacaddr', 'srcmacmask', 'dstmacaddr', 'dstmacmask',

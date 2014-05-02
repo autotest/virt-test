@@ -304,10 +304,10 @@ _log_file_dir = "/tmp"
 
 def log_line(filename, line):
     """
-    Write a line to a file.  '\n' is appended to the line.
+    Write a line to a file.
 
     :param filename: Path of file to write to, either absolute or relative to
-            the dir set by set_log_file_dir().
+                     the dir set by set_log_file_dir().
     :param line: Line to write.
     """
     global _open_log_files, _log_file_dir
