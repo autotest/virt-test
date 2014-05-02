@@ -321,6 +321,7 @@ class _CreateImages(threading.Thread):
 def process_images(image_func, test, params, vm_process_status=None):
     """
     Wrapper which chooses the best way to process images.
+
     :param image_func: Process function
     :param test: An Autotest test object.
     :param params: A dict containing all VM and image parameters.
