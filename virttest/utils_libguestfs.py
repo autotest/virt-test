@@ -1034,8 +1034,8 @@ class GuestfishPersistent(Guestfish):
         """
         is-fifo - test if FIFO (named pipe)
 
-        This returns "true" if and only if there is a FIFO (named pipe) with the
-        given "path" name.
+        This returns "true" if and only if there is a FIFO (named pipe) with
+        the given "path" name.
         """
         cmd = "is-fifo %s" % path
 
@@ -1048,8 +1048,8 @@ class GuestfishPersistent(Guestfish):
         """
         is-fifo-opts - test if FIFO (named pipe)
 
-        This returns "true" if and only if there is a FIFO (named pipe) with the
-        given "path" name.
+        This returns "true" if and only if there is a FIFO (named pipe) with
+        the given "path" name.
 
         An alias of command is-fifo
         """
@@ -1351,7 +1351,8 @@ class GuestfishPersistent(Guestfish):
         """
         canonical-device-name - return canonical device name
 
-        This utility function is useful when displaying device names to the user.
+        This utility function is useful when displaying device names to
+        the user.
         """
         return self.inner_cmd("canonical-device-name %s" % device)
 
@@ -1359,8 +1360,8 @@ class GuestfishPersistent(Guestfish):
         """
         device-index - convert device to index
 
-        This function takes a device name (eg. "/dev/sdb") and returns the index
-        of the device in the list of devices
+        This function takes a device name (eg. "/dev/sdb") and returns the
+        index of the device in the list of devices
         """
         return self.inner_cmd("device-index %s" % device)
 
@@ -1404,6 +1405,94 @@ class GuestfishPersistent(Guestfish):
         This returns the number of whole block devices that were added
         """
         return self.inner_cmd("nr-devices")
+
+    def scrub_device(self, device):
+        """
+        scrub-device - scrub (securely wipe) a device
+
+        This command writes patterns over "device" to make data retrieval more
+        difficult
+        """
+        return self.inner_cmd("scrub-device %s" % device)
+
+    def scrub_file(self, file):
+        """
+        scrub-file - scrub (securely wipe) a file
+
+        This command writes patterns over a file to make data retrieval more
+        difficult
+        """
+        return self.inner_cmd("scrub-file %s" % file)
+
+    def scrub_freespace(self, dir):
+        """
+        scrub-freespace - scrub (securely wipe) free space
+
+        This command creates the directory "dir" and then fills it with files
+        until the filesystem is full,and scrubs the files as for "scrub_file",
+        and deletes them. The intention is to scrub any free space on the
+        partition containing "dir"
+        """
+        return self.inner_cmd("scrub-freespace %s" % dir)
+
+    def md_create(self, name, device, missingbitmap=None, nrdevices=None,
+                  spare=None, chunk=None, level=None):
+        """
+        md-create - create a Linux md (RAID) device
+
+        Create a Linux md (RAID) device named "name" on the devices in the list
+        "devices".
+        """
+        cmd = "md-create %s %s" % (name, device)
+
+        if missingbitmap:
+            cmd += " missingbitmap:%s" % missingbitmap
+        if nrdevices:
+            cmd += " nrdevices:%s" % nrdevices
+        if spare:
+            cmd += " spare:%s" % spare
+        if chunk:
+            cmd += " chunk:%s" % chunk
+        if level:
+            cmd += " level:%s" % level
+
+        return self.inner_cmd(cmd)
+
+    def list_md_devices(self):
+        """
+        list-md-devices - list Linux md (RAID) devices
+
+        List all Linux md devices.
+        """
+        return self.inner_cmd("list-md-devices")
+
+    def md_stop(self, md):
+        """
+        md-stop - stop a Linux md (RAID) device
+
+        This command deactivates the MD array named "md".
+        The device is stopped, but it is not destroyed or zeroed.
+        """
+        return self.inner_cmd("md-stop %s" % md)
+
+    def md_stat(self, md):
+        """
+        md-stat - get underlying devices from an MD device
+
+        This call returns a list of the underlying devices which make up the
+        single software RAID array device "md".
+        """
+        return self.inner_cmd("md-stat %s" % md)
+
+    def md_detail(self, md):
+        """
+        md-detail - obtain metadata for an MD device
+
+        This command exposes the output of 'mdadm -DY <md>'. The following
+        fields are usually present in the returned hash. Other fields may also
+        be present.
+        """
+        return self.inner_cmd("md-detail %s" % md)
 
     def pvcreate(self, physvols):
         """
@@ -1502,7 +1591,7 @@ class GuestfishPersistent(Guestfish):
         """
         vfs-type - get the Linux VFS type corresponding to a mounted device
 
-        Gets the filesystem type corresponding to the filesystem on "mountable".
+        Gets the filesystem type corresponding to the filesystem on "mountable"
         """
         return self.inner_cmd("vfs-type %s" % (mountable))
 
