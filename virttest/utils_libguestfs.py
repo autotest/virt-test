@@ -837,6 +837,51 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("lstatlist %s %s" % (path, names))
 
+    def umask(self, mask):
+        """
+        umask - set file mode creation mask (umask)
+
+        This function sets the mask used for creating new files and device nodes
+        to "mask & 0777".
+        """
+        return self.inner_cmd("umask %s" % mask)
+
+    def get_umask(self):
+        """
+        get-umask - get the current umask
+
+        Return the current umask. By default the umask is 022 unless it has been
+        set by calling "umask".
+        """
+        return self.inner_cmd("get-umask")
+
+    def mkdir_mode(self, path, mode):
+        """
+        mkdir-mode - create a directory with a particular mode
+
+        This command creates a directory, setting the initial permissions of the
+        directory to "mode".
+        """
+        return self.inner_cmd("mkdir-mode %s %s" % (path, mode))
+
+    def mknod(self, mode, devmajor, devminor, path):
+        """
+        mknod - make block, character or FIFO devices
+
+        This call creates block or character special devices, or named pipes
+        (FIFOs).
+        """
+        return self.inner_cmd("mknod %s %s %s %s" % (mode, devmajor, devminor, path))
+
+    def rm_rf(self, path):
+        """
+        rm-rf - remove a file or directory recursively
+
+        Remove the file or directory "path", recursively removing the contents
+        if its a directory. This is like the "rm -rf" shell command.
+        """
+        return self.inner_cmd("rm-rf %s" % path)
+
     def copy_out(self, remote, localdir):
         """
         copy-out - copy remote files or directories out of an image
