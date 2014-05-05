@@ -1983,7 +1983,9 @@ def normalize_data_size(value_str, order_magnitude="M", factor="1024"):
     order_magnitude_index = _get_magnitude_index(magnitude_list,
                                                  " %s" % order_magnitude)
 
-    if magnitude_index < 0 or order_magnitude_index < 0:
+    if data == 0:
+        return 0
+    elif magnitude_index < 0 or order_magnitude_index < 0:
         logging.error("Unknown input order of magnitude. Please check your"
                       "value '%s' and desired order of magnitude"
                       " '%s'." % (value_str, order_magnitude))
