@@ -26,6 +26,9 @@ import logging
 import urlparse
 import re
 import weakref
+import time
+import select
+import utils_misc
 from autotest.client import utils
 from autotest.client import os_dep
 from autotest.client.shared import error
@@ -211,6 +214,120 @@ class VirshSession(aexpect.ShellSession):
         if debug:
             logging.debug(result)
         return result
+
+    def read_until_output_matches(self, patterns, filter_func=lambda x: x,
+                                  timeout=60, internal_timeout=None,
+                                  print_func=None, match_func=None):
+        """
+        Read from child using read_nonblocking until a pattern matches.
+
+        Read using read_nonblocking until a match is found using match_patterns,
+        or until timeout expires. Before attempting to search for a match, the
+        data is filtered using the filter_func function provided.
+
+        :param patterns: List of strings (regular expression patterns)
+        :param filter_func: Function to apply to the data read from the child before
+                attempting to match it against the patterns (should take and
+                return a string)
+        :param timeout: The duration (in seconds) to wait until a match is
+                found
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
+                (should take a string parameter)
+        :param match_func: Function to compare the output and patterns.
+        :return: Tuple containing the match index and the data read so far
+        :raise ExpectTimeoutError: Raised if timeout expires
+        :raise ExpectProcessTerminatedError: Raised if the child process
+                terminates while waiting for output
+        :raise ExpectError: Raised if an unknown error occurs
+        """
+        if not match_func:
+            match_func = self.match_patterns
+        fd = self._get_fd("expect")
+        o = ""
+        end_time = time.time() + timeout
+        while True:
+            try:
+                r, w, x = select.select([fd], [], [],
+                                        max(0, end_time - time.time()))
+            except (select.error, TypeError):
+                break
+            if not r:
+                raise aexpect.ExpectTimeoutError(patterns, o)
+            # Read data from child
+            data = self.read_nonblocking(internal_timeout,
+                                         end_time - time.time())
+            if not data:
+                break
+            # Print it if necessary
+            if print_func:
+                for line in data.splitlines():
+                    print_func(line)
+            # Look for patterns
+            o += data
+
+            out = ''
+            match = match_func(filter_func(o), patterns)
+            if match is not None:
+                output = o.splitlines()
+                # Find the second match in output reverse list, only return
+                # the content between the last match and the second last match.
+                # read_nonblocking might include output of last command or help
+                # info when session initiated,
+                # e.g.
+                # When use VirshPersistent initiate a virsh session, an list
+                # command is send in to test libvirtd status, and the first
+                # command output will be like:
+                # Welcome to virsh, the virtualization interactive terminal.
+                #
+                # Type:  'help' for help with commands
+                #       'quit' to quit
+                #
+                # virsh #  Id    Name                           State
+                #----------------------------------------------------
+                #
+                # virsh #
+                # the session help info is included, and the exact output
+                # should be the content start after first virsh # prompt.
+                # The list command did no harm here with help info included,
+                # but sometime other commands get list command output included,
+                # e.g.
+                #  Running virsh command: net-list --all
+                #  Sending command: net-list --all
+                #  Id    Name                           State
+                #  ----------------------------------------------------
+                #
+                #  virsh #  Name            State      Autostart     Persistent
+                #  ----------------------------------------------------------
+                #  default              active     yes           yes
+                #
+                #  virsh #
+                # The list command output is mixed in the net-list command
+                # output, this will fail to extract network name if use set
+                # number 2 in list of output splitlines like in function
+                # virsh.net_state_dict.
+                for i in reversed(range(len(output)-1)):
+                    if match_func(output[i].strip(), patterns) is not None:
+                        if re.split(patterns[match], output[i])[-1]:
+                            output[i] = re.split(patterns[match],
+                                                 output[i])[-1]
+                            output_slice = output[i:]
+                        else:
+                            output_slice = output[i+1:]
+                        for j in range(len(output_slice)-1):
+                            output_slice[j] = output_slice[j] + '\n'
+                        for k in range(len(output_slice)):
+                            out += output_slice[k]
+                        return match, out
+                return match, o
+
+        # Check if the child has terminated
+        if utils_misc.wait_for(lambda: not self.is_alive(), 5, 0, 0.1):
+            raise aexpect.ExpectProcessTerminatedError(patterns,
+                                                       self.get_status(), o)
+        else:
+            # This shouldn't happen
+            raise aexpect.ExpectError(patterns, o)
 
 
 # Work around for inconsistent builtin closure local reference problem
