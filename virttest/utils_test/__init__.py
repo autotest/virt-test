@@ -1625,6 +1625,18 @@ class RemoteDiskManager(object):
             raise error.TestError("Get VG %s space failed:%s" % (vgname,
                                                                  output))
 
+    def occupy_space(self, disk_type, need_size, path=None, vgname=None,
+                     timeout=60):
+        """
+        Create an image or volume to occupy the space of destination path
+        """
+        free = self.get_free_space(disk_type, path, vgname)
+        logging.debug("Allowed space on remote path:%sGB", free)
+        occupied_size = free - need_size / 2
+        occupied_path = os.path.join(os.path.dirname(path), "occupied")
+        return self.create_image(disk_type, occupied_path, occupied_size,
+                                 vgname, "occupied", False, timeout)
+
     def iscsi_login_setup(self, host, target_name, is_login=True):
         """
         Login or logout to a target on remote host.
@@ -1687,7 +1699,7 @@ class RemoteDiskManager(object):
         return True
 
     def create_image(self, disk_type, path=None, size=10, vgname=None,
-                     lvname=None, sparse=True):
+                     lvname=None, sparse=True, timeout=60):
         """
         Create an image for target path.
         """
@@ -1707,7 +1719,8 @@ class RemoteDiskManager(object):
                 cmd = "lvcreate -L %sG %s --name %s" % (size, vgname, lvname)
             path = "/dev/%s/%s" % (vgname, lvname)
 
-        result = self.runner.run(cmd, ignore_status=True)
+        result = self.runner.run(cmd, ignore_status=True, timeout=timeout)
+        logging.debug(result)
         if result.exit_status:
             raise error.TestFail("Create image '%s' on remote host failed."
                                  % path)

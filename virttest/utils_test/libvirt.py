@@ -1025,8 +1025,8 @@ def create_local_disk(disk_type, path=None, size=10,
         cmd = "qemu-img create %s %sG" % (path, size)
     else:
         cmd = "lvcreate -V %sG %s --name %s --size 1M" % (size,
-                                                         vgname,
-                                                         lvname)
+                                                          vgname,
+                                                          lvname)
         path = "/dev/%s/%s" % (vgname, lvname)
     result = utils.run(cmd, ignore_status=True)
     if result.exit_status:
