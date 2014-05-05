@@ -10,7 +10,6 @@ import traceback
 import signal
 import optparse
 import logging
-import virttest.defaults
 
 
 class StreamProxy(object):
@@ -184,6 +183,7 @@ class VirtTestRunParser(optparse.OptionParser):
     def __init__(self):
         optparse.OptionParser.__init__(self, usage='Usage: %prog [options]')
         from virttest import data_dir
+        import virttest.defaults
         os_info = virttest.defaults.get_default_guest_os_info()
         self.default_guest_os = os_info['variant']
 
@@ -573,6 +573,7 @@ class VirtTestApp(object):
                 # TODO: this is x86-specific, instead we can get the default
                 # arch from qemu binary and run on all supported machine types
                 if self.options.arch is None and self.options.guest_os is None:
+                    import virttest.defaults
                     self.cartesian_parser.only_filter(virttest.defaults.DEFAULT_MACHINE_TYPE)
             else:
                 self.cartesian_parser.only_filter(self.options.machine_type)
