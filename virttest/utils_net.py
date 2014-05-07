@@ -16,6 +16,7 @@ import propcan
 import utils_misc
 import arch
 import aexpect
+import netlink
 from versionable_class import factory
 
 CTYPES_SUPPORT = True
@@ -304,6 +305,20 @@ class DbNoLockError(NetError):
         return "Attempt made to access database with improper locking"
 
 
+class DelLinkError(NetError):
+
+    def __init__(self, ifname, details=None):
+        NetError.__init__(self, ifname, details)
+        self.ifname = ifname
+        self.details = details
+
+    def __str__(self):
+        e_msg = "Cannot delete interface %s" % self.ifname
+        if self.details is not None:
+            e_msg += ": %s" % self.details
+        return e_msg
+
+
 def warp_init_del(func):
     def new_func(*args, **argkw):
         globals()["sock"] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -501,6 +516,41 @@ class Interface(object):
         else:
             return False
 
+    def dellink(self):
+        '''
+        Delete the interface. Equivalent to 'ip link delete NAME'.
+        '''
+        # create socket
+        sock = socket.socket(socket.AF_NETLINK,
+                             socket.SOCK_RAW,
+                             netlink.NETLINK_ROUTE)
+
+        # Get the interface index
+        interface_index = self.get_index()
+
+        # send data to socket
+        sock.send(netlink.netlink_pack(msgtype=netlink.RTM_DELLINK,
+                  flags=netlink.NLM_F_REQUEST| netlink.NLM_F_ACK,
+                  seq=1, pid=0,
+                  data=struct.pack('BxHiII', netlink.AF_PACKET,
+                                   0, interface_index, 0, 0)))
+
+        # receive data from socket
+        try:
+            while True:
+                data_recv = sock.recv(1024)
+                for msgtype, flags, mseq, pid, data in netlink.netlink_unpack(data_recv):
+                    if msgtype == netlink.NLMSG_ERROR:
+                        (err_no,) = struct.unpack("i", data[:4])
+                        if err_no == 0:
+                            return 0
+                        else:
+                            raise DelLinkError(self.name, os.strerror(-err_no))
+                    else:
+                        raise DelLinkError(self.name, "unexpected error")
+        finally:
+            sock.close()
+             
 
 class Macvtap(Interface):
 
