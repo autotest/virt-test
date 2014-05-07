@@ -24,3 +24,9 @@ script:
     - inspekt lint
     - inspekt style
     - ./tools/build_docs.py
+
+notifications:
+  irc:
+    channels: "irc.oftc.net#virt-test"
+    template:
+      - "%{repository}@%{branch}: %{message} (%{build_url})"
