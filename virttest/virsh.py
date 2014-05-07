@@ -2664,20 +2664,27 @@ def snapshot_list(name, options=None, **dargs):
     return ret
 
 
-def snapshot_dumpxml(name, snapshot, options=None, **dargs):
+def snapshot_dumpxml(name, snapshot, options=None, to_file=None, **dargs):
     """
     Get dumpxml of snapshot
 
     :param name: name of domain
     :param snapshot: name of snapshot
+    :param options: options of snapshot_list
+    :param to_file: optional file to write XML output to
     :param dargs: standardized virsh function API keywords
     :return: standard output from command
     """
     cmd = "snapshot-dumpxml %s %s" % (name, snapshot)
     if options is not None:
         cmd += " %s" % options
+    result = command(cmd, **dargs)
+    if to_file is not None:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
 
-    return command(cmd, **dargs)
+    return result
 
 
 def snapshot_info(name, snapshot, **dargs):
