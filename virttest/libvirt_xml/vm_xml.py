@@ -549,6 +549,35 @@ class VMXML(VMXMLBase):
         return found
 
     @staticmethod
+    def check_disk_type(vm_name, disk_src, disk_type, virsh_instance=base.virsh):
+        """
+        Check if disk type is correct in VM
+
+        :param vm_name: Domain name.
+        :param disk_src: Domain disk source path
+        :return: True/False
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        if not vmxml.get_disk_count(vm_name, virsh_instance=virsh_instance):
+            raise xcepts.LibvirtXMLError("No disk in domain %s." % vm_name)
+        disks = vmxml.get_disk_source(vm_name, virsh_instance=virsh_instance)
+
+        found = False
+        try:
+            for disk in disks:
+                disk_dev = ""
+                if disk_type == "file":
+                    disk_dev = disk.find('source').get('file')
+                elif disk_type == "block":
+                    disk_dev = disk.find('source').get('dev')
+                if disk_src == disk_dev:
+                    found = True
+        except AttributeError:
+            logging.debug("No '%s' type disk." % disk_type)
+
+        return found
+
+    @staticmethod
     def get_numa_params(vm_name, virsh_instance=base.virsh):
         """
         Return VM's numa setting from XML definition
