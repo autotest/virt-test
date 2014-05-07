@@ -2,20 +2,39 @@
 """
 Library used to provide the appropriate data dir for virt test.
 """
+import inspect
 import os
 import sys
 import tempfile
 import glob
-import logging
 import shutil
 
 _ROOT_PATH = os.path.join(sys.modules[__name__].__file__, "..", "..")
 ROOT_DIR = os.path.abspath(_ROOT_PATH)
+BASE_BACKEND_DIR = os.path.join(ROOT_DIR, 'backends')
 DATA_DIR = os.path.join(ROOT_DIR, 'shared', 'data')
 DEPS_DIR = os.path.join(ROOT_DIR, 'shared', 'deps')
 DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'shared', 'downloads')
+TEST_PROVIDERS_DIR = os.path.join(ROOT_DIR, 'test-providers.d')
+TEST_PROVIDERS_DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'test-providers.d',
+                                           'downloads')
 TMP_DIR = os.path.join(ROOT_DIR, 'tmp')
 BACKING_DATA_DIR = None
+
+
+class MissingDepsDirError(Exception):
+    pass
+
+
+class UnknownBackendError(Exception):
+
+    def __init__(self, backend):
+        self.backend = backend
+
+    def __str__(self):
+        return ("Virt Backend %s is not currently supported by virt-test. "
+                "Check for typos and the list of supported backends" %
+                self.backend)
 
 
 class SubdirList(list):
@@ -139,8 +158,51 @@ def get_data_dir():
     return DATA_DIR
 
 
-def get_deps_dir():
-    return DEPS_DIR
+def get_backend_dir(backend_type):
+    if backend_type not in os.listdir(BASE_BACKEND_DIR):
+        raise UnknownBackendError(backend_type)
+    return os.path.join(BASE_BACKEND_DIR, backend_type)
+
+
+def get_backend_cfg_path(backend_type, cfg_basename):
+    return os.path.join(BASE_BACKEND_DIR, backend_type, 'cfg', cfg_basename)
+
+
+def get_deps_dir(target=None):
+    """
+    For a given test provider, report the appropriate deps dir.
+
+    The little inspect trick is used to avoid callers having to do
+    sys.modules[] tricks themselves.
+
+    :param target: File we want in deps folder. Will return the path to the
+                   target if set and available. Or will only return the path
+                   to dep folder.
+    """
+    # Get the frame that called this function
+    frame = inspect.stack()[1]
+    # This is the module that called the function
+    module = inspect.getmodule(frame[0])
+    # With the module path, we can keep searching with a parent dir with 'deps'
+    # in it, which should be the correct deps directory.
+    path = os.path.dirname(module.__file__)
+    nesting_limit = 10
+    for index in xrange(nesting_limit):
+        files = os.listdir(path)
+        if 'deps' in files:
+            deps = os.path.join(path, 'deps')
+            if target:
+                if target in os.listdir(deps):
+                    return os.path.join(deps, target)
+            else:
+                return deps
+        if '.git' in os.listdir(path):
+            raise MissingDepsDirError("Could not find specified deps dir for "
+                                      "git repo %s" % path)
+        path = os.path.dirname(path)
+    raise MissingDepsDirError("Could not find specified deps dir after "
+                              "looking %s parent directories" %
+                              nesting_limit)
 
 
 def get_tmp_dir():
@@ -153,9 +215,31 @@ def get_download_dir():
     return DOWNLOAD_DIR
 
 
+def get_test_providers_dir():
+    """
+    Return the base test providers dir (at the moment, test-providers.d).
+    """
+    if not os.path.isdir(TEST_PROVIDERS_DOWNLOAD_DIR):
+        os.makedirs(TEST_PROVIDERS_DOWNLOAD_DIR)
+    return TEST_PROVIDERS_DIR
+
+
+def get_test_provider_dir(provider):
+    """
+    Return a specific test providers dir, inside the base dir.
+    """
+    provider_dir = os.path.join(TEST_PROVIDERS_DOWNLOAD_DIR, provider)
+    if not provider_dir:
+        os.makedirs(provider_dir)
+    return provider_dir
+
+
 def clean_tmp_files():
     if os.path.isdir(TMP_DIR):
-        shutil.rmtree(TMP_DIR, ignore_errors=True)
+        hidden_paths = glob.glob(os.path.join(TMP_DIR, ".??*"))
+        paths = glob.glob(os.path.join(TMP_DIR, "*"))
+        for path in paths + hidden_paths:
+            shutil.rmtree(path, ignore_errors=True)
 
 
 if __name__ == '__main__':
@@ -164,3 +248,4 @@ if __name__ == '__main__':
     print "data dir:         " + DATA_DIR
     print "deps dir:         " + DEPS_DIR
     print "backing data dir: " + BACKING_DATA_DIR
+    print "test providers dir: " + TEST_PROVIDERS_DIR

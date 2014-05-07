@@ -5,7 +5,7 @@ http://libvirt.org/formatdomain.html
 
 import logging
 from autotest.client.shared import error
-from virttest import virsh, xml_utils
+from virttest import xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
 from virttest.libvirt_xml.devices import librarian
 
@@ -81,6 +81,18 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: returns VMXMLDevices instance for all devices
             set: Define all devices from VMXMLDevices instance
             del: remove all devices
+        cputune: VMCPUTune
+            get: return VMCPUTune instance for the domain.
+            set: Define cputune tag from a VMCPUTune instance.
+            del: remove cputune tag
+        current_vcpu: string, 'current' attribute of vcpu tag
+            get: return a string for 'current' attribute of vcpu
+            set: change 'current' attribute of vcpu
+            del: remove 'current' attribute of vcpu
+        placement: string, 'placement' attribute of vcpu tag
+            get: return a string for 'placement' attribute of vcpu
+            set: change 'placement' attribute of vcpu
+            del: remove 'placement' attribute of vcpu
         emulatorpin: string, cpuset value (see man virsh: cpulist)
             get: return text value of cputune/emulatorpin attributes
             set: set cputune/emulatorpin attributes from string
@@ -90,8 +102,8 @@ class VMXMLBase(base.LibvirtXMLBase):
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = ('hypervisor_type', 'vm_name', 'uuid', 'vcpu', 'max_mem',
                  'current_mem', 'numa', 'devices', 'seclabel',
-                 'cputune', 'emulatorpin', 'cpuset', 'placement',
-                 'current_vcpu')
+                 'cputune', 'placement', 'current_vcpu', 'os', 'os_type',
+                 'os_arch', 'os_init')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -141,22 +153,39 @@ class VMXMLBase(base.LibvirtXMLBase):
                                 forbidden=None,
                                 parent_xpath='/',
                                 tag_name='currentMemory')
+        accessors.XMLElementText(property_name="os",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='os')
+        accessors.XMLElementText(property_name="os_type",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/os',
+                                 tag_name='type')
+        accessors.XMLAttribute(property_name="os_arch",
+                               libvirtxml=self,
+                               forbidden=None,
+                               parent_xpath='/os',
+                               tag_name='type',
+                               attribute='arch')
+        accessors.XMLElementText(property_name="os_init",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/os',
+                                 tag_name='init')
         accessors.XMLElementDict(property_name="numa",
                                  libvirtxml=self,
                                  forbidden=None,
                                  parent_xpath='numatune',
                                  tag_name='memory')
-        accessors.XMLElementText(property_name="cputune",
+        accessors.XMLElementNest(property_name='cputune',
                                  libvirtxml=self,
-                                 forbidden=None,
                                  parent_xpath='/',
-                                 tag_name='cputune')
-        accessors.XMLAttribute(property_name="emulatorpin",
-                               libvirtxml=self,
-                               forbidden=None,
-                               parent_xpath='/cputune',
-                               tag_name='emulatorpin',
-                               attribute='cpuset')
+                                 tag_name='cputune',
+                                 subclass=VMCPUTune,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def get_devices(self, device_type=None):
@@ -187,7 +216,9 @@ class VMXMLBase(base.LibvirtXMLBase):
                                          "subclass not a %s"
                                          % (str(value), str(value_type)))
         # Start with clean slate
-        self.del_devices()
+        exist_dev = self.xmltreefile.find('devices')
+        if exist_dev is not None:
+            self.del_devices()
         if len(value) > 0:
             devices_element = xml_utils.ElementTree.SubElement(
                 self.xmltreefile.getroot(), 'devices')
@@ -292,7 +323,7 @@ class VMXML(VMXMLBase):
         self.xml = u"<domain type='%s'></domain>" % hypervisor_type
 
     @staticmethod  # static method (no self) needed b/c calls VMXML.__new__
-    def new_from_dumpxml(vm_name, options="", virsh_instance=virsh):
+    def new_from_dumpxml(vm_name, options="", virsh_instance=base.virsh):
         """
         Return new VMXML instance from virsh dumpxml command
 
@@ -307,7 +338,7 @@ class VMXML(VMXMLBase):
         return vmxml
 
     @staticmethod
-    def new_from_inactive_dumpxml(vm_name, options="", virsh_instance=virsh):
+    def new_from_inactive_dumpxml(vm_name, options="", virsh_instance=base.virsh):
         """
         Return new VMXML instance of inactive domain from virsh dumpxml command
 
@@ -350,7 +381,8 @@ class VMXML(VMXMLBase):
             backup = None
 
         if not self.undefine(options):
-            raise xcepts.LibvirtXMLError("Failed to undefine %s.", self.vm_name)
+            raise xcepts.LibvirtXMLError("Failed to undefine %s."
+                                         % self.vm_name)
         if not self.define():
             if backup:
                 backup.define()
@@ -455,13 +487,15 @@ class VMXML(VMXMLBase):
         return disks
 
     @staticmethod
-    def get_disk_source(vm_name, virsh_instance=base.virsh):
+    def get_disk_source(vm_name, option="", virsh_instance=base.virsh):
         """
         Get block device  of a defined VM's disks.
 
         :param vm_name: Name of defined vm.
+        :param option: extra option.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        vmxml = VMXML.new_from_dumpxml(vm_name, option,
+                                       virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
         return disks.values()
 
@@ -488,6 +522,31 @@ class VMXML(VMXMLBase):
         if disks is not None:
             return len(disks)
         return 0
+
+    @staticmethod
+    def check_disk_exist(vm_name, disk_src, virsh_instance=base.virsh):
+        """
+        Check if given disk exist in VM.
+
+        :param vm_name: Domain name.
+        :param disk_src: Domian disk source path or darget dev.
+        :return: True/False
+        """
+        found = False
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        if not vmxml.get_disk_count(vm_name, virsh_instance=virsh_instance):
+            raise xcepts.LibvirtXMLError("No disk in domain %s." % vm_name)
+        blk_list = vmxml.get_disk_blk(vm_name, virsh_instance=virsh_instance)
+        disk_list = vmxml.get_disk_source(vm_name, virsh_instance=virsh_instance)
+        try:
+            file_list = []
+            for disk in disk_list:
+                file_list.append(disk.find('source').get('file'))
+        except AttributeError:
+            logging.debug("No 'file' type disk.")
+        if disk_src in file_list + blk_list:
+            found = True
+        return found
 
     @staticmethod
     def get_numa_params(vm_name, virsh_instance=base.virsh):
@@ -520,10 +579,9 @@ class VMXML(VMXMLBase):
         Set primary serial's features of vm_name.
 
         :param vm_name: Name of defined vm to set primary serial.
-        :param dev_type: the type of serial:pty,file...
+        :param dev_type: the type of ``serial:pty,file...``
         :param port: the port of serial
         :param path: the path of serial, it is not necessary for pty
-        # TODO: More features
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         xmltreefile = vmxml.__dict_get__('xml')
@@ -580,6 +638,29 @@ class VMXML(VMXMLBase):
                                name='org.qemu.guest_agent.0')
             vmxml.devices = vmxml.devices.append(channel)
             vmxml.define()
+
+    @staticmethod
+    def remove_agent_channel(vm_name):
+        """
+        Delete channel for guest agent
+
+        :param vm_name: Name of defined vm to remove agent channel
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+
+        try:
+            exist = vmxml.__dict_get__('xml').find('devices').findall('channel')
+            for ec in exist:
+                if ec.find('target').get('name') == "org.qemu.guest_agent.0":
+                    channel = vmxml.get_device_class('channel')(type_name='unix')
+                    channel.add_source(mode='bind',
+                                       path=ec.find('source').get('path'))
+                    channel.add_target(type='virtio',
+                                       name=ec.find('target').get('name'))
+                    vmxml.del_device(channel)
+            vmxml.define()
+        except AttributeError:
+            raise xcepts.LibvirtXMLError("Fail to remove agent channel!")
 
     def get_iface_all(self):
         """
@@ -722,7 +803,7 @@ class VMXML(VMXMLBase):
         """
         Add a device into VMXML.
 
-        :param value: instalce of device in libvirt_xml/devices/
+        :param value: instance of device in libvirt_xml/devices/
         """
         devices = self.get_devices()
         for device in devices:
@@ -730,6 +811,24 @@ class VMXML(VMXMLBase):
                 logging.debug("Device %s is already in VM %s.", value, self)
                 return
         devices.append(value)
+        self.set_devices(devices)
+
+    def del_device(self, value):
+        """
+        Remove a device from VMXML
+
+        :param value: instance of device in libvirt_xml/devices/
+        """
+        devices = self.get_devices()
+        not_found = True
+        for device in devices:
+            if device == value:
+                not_found = False
+                devices.remove(device)
+                break
+        if not_found:
+            logging.debug("Device %s does not exist in VM %s." % self)
+            return
         self.set_devices(devices)
 
     @staticmethod
@@ -747,6 +846,19 @@ class VMXML(VMXMLBase):
         vmxml.devices = devices
         vmxml.define()
 
+    def add_hostdev(self, source_address, mode='subsystem',
+                    type='pci',
+                    managed='yes'):
+        """
+        Add a hostdev device to guest.
+        """
+        dev = self.get_device_class('hostdev')()
+        dev.mode = mode
+        dev.type = type
+        dev.managed = managed
+        dev.source_address = source_address
+        self.add_device(dev)
+
 
 class VMCPUXML(VMXML):
 
@@ -757,7 +869,7 @@ class VMCPUXML(VMXML):
     # Must copy these here or there will be descriptor problems
     __slots__ = ('model', 'vendor', 'feature_list',)
 
-    def __init__(self, virsh_instance=virsh, vm_name='', mode='host-model'):
+    def __init__(self, virsh_instance=base.virsh, vm_name='', mode='host-model'):
         """
         Create new VMCPU XML instance
         """
@@ -860,3 +972,163 @@ class VMCPUXML(VMXML):
         xmltreefile = self.__dict_get__('xml')
         cpu_node = xmltreefile.find('/cpu')
         xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
+
+
+class VMClockXML(VMXML):
+
+    """
+    Higher-level manipulations related to VM's XML(Clock)
+    """
+
+    # Must copy these here or there will be descriptor problems
+    __slots__ = ('offset', 'timezone', 'adjustment', 'timers')
+
+    def __init__(self, virsh_instance=base.virsh, offset="utc"):
+        """
+        Create new VMClock XML instance
+        """
+        # The set action is for test.
+        accessors.XMLAttribute(property_name="offset",
+                               libvirtxml=self,
+                               forbidden=[],
+                               parent_xpath='/',
+                               tag_name='clock',
+                               attribute='offset')
+        accessors.XMLAttribute(property_name="timezone",
+                               libvirtxml=self,
+                               forbidden=[],
+                               parent_xpath='/',
+                               tag_name='clock',
+                               attribute='timezone')
+        accessors.XMLAttribute(property_name="adjustment",
+                               libvirtxml=self,
+                               forbidden=[],
+                               parent_xpath='/',
+                               tag_name='clock',
+                               attribute='adjustment')
+        accessors.XMLElementList(property_name="timers",
+                                 libvirtxml=self,
+                                 forbidden=[],
+                                 parent_xpath="/clock",
+                                 marshal_from=self.marshal_from_timer,
+                                 marshal_to=self.marshal_to_timer)
+        super(VMClockXML, self).__init__(virsh_instance=virsh_instance)
+        # Set default offset for clock
+        self.offset = offset
+
+    def from_dumpxml(self, vm_name, virsh_instance=base.virsh):
+        """Helper to load xml from domain."""
+        self.xml = VMXML.new_from_dumpxml(vm_name,
+                                          virsh_instance=virsh_instance).xml
+
+    # Sub-element of clock
+    class Timer(VMXML):
+
+        """Timer element of clock"""
+
+        __slots__ = ('name', 'present')
+
+        def __init__(self, virsh_instance=base.virsh, timer_name="tsc"):
+            """
+            Create new Timer XML instance
+            """
+            # The set action is for test.
+            accessors.XMLAttribute(property_name="name",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock',
+                                   tag_name='timer',
+                                   attribute='name')
+            accessors.XMLAttribute(property_name="present",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock',
+                                   tag_name='timer',
+                                   attribute='present')
+            super(VMClockXML.Timer, self).__init__(virsh_instance=virsh_instance)
+            # name is mandatory for timer
+            self.name = timer_name
+
+        def update(self, attr_dict):
+            for attr, value in attr_dict.items():
+                setattr(self, attr, value)
+
+    @staticmethod
+    def marshal_from_timer(item, index, libvirtxml):
+        """Convert a Timer instance into tag + attributes"""
+        del index
+        del libvirtxml
+        timer = item.xmltreefile.find("clock/timer")
+        try:
+            return (timer.tag, dict(timer.items()))
+        except AttributeError:  # Didn't find timer
+            raise xcepts.LibvirtXMLError("Expected a list of timer "
+                                         "instances, not a %s" % str(item))
+
+    @staticmethod
+    def marshal_to_timer(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes to a Timer instance"""
+        del index
+        if tag == 'timer':
+            newone = VMClockXML.Timer(virsh_instance=libvirtxml.virsh)
+            newone.update(attr_dict)
+            return newone
+        else:
+            return None
+
+
+class VMCPUTune(base.LibvirtXMLBase):
+
+    """
+    CPU tuning tag XML class
+
+    Elements:
+        vcpupins:             list of dict - vcpu, cpuset
+        emulatorpin:          attribute    - cpuset
+        shares:               int
+        period:               int
+        quota:                int
+        emulator_period:      int
+        emulator_quota:       int
+    """
+
+    __slots__ = ('vcpupins', 'emulatorpin', 'shares', 'period', 'quota',
+                 'emulator_period', 'emulator_quota')
+
+    def __init__(self, virsh_instance=base.virsh):
+        accessors.XMLElementList('vcpupins', self, parent_xpath='/',
+                                 marshal_from=self.marshal_from_vcpupins,
+                                 marshal_to=self.marshal_to_vcpupins)
+        accessors.XMLAttribute('emulatorpin', self, parent_xpath='/',
+                               tag_name='emulatorpin', attribute='cpuset')
+        for slot in self.__all_slots__:
+            if slot in ('shares', 'period', 'quota', 'emulator_period',
+                        'emulator_quota'):
+                accessors.XMLElementInt(slot, self, parent_xpath='/',
+                                        tag_name=slot)
+        super(self.__class__, self).__init__(virsh_instance=virsh_instance)
+        self.xml = '<cputune/>'
+
+    @staticmethod
+    def marshal_from_vcpupins(item, index, libvirtxml):
+        """
+        Convert a dict to vcpupin tag and attributes.
+        """
+        del index
+        del libvirtxml
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of host "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('vcpupin', dict(item))
+
+    @staticmethod
+    def marshal_to_vcpupins(tag, attr_dict, index, libvirtxml):
+        """
+        Convert a vcpupin tag and attributes to a dict.
+        """
+        del index
+        del libvirtxml
+        if tag != 'vcpupin':
+            return None
+        return dict(attr_dict)

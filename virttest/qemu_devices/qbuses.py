@@ -20,17 +20,24 @@ class QSparseBus(object):
 
     """
     Universal bus representation object.
+
     It creates an abstraction of the way how buses works in qemu. Additionally
     it can store incorrect records (out-of-range addr, multiple devs, ...).
     Everything with bad* prefix means it concerns the bad records (badbus).
+
     You can insert and remove device to certain address, address ranges or let
     the bus assign first free address. The order of addr_spec does matter since
     the last item is incremented first.
+
     There are 3 different address representation used:
-    stor_addr = stored address representation '$first-$second-...-$ZZZ'
-    addr = internal address representation [$first, $second, ..., $ZZZ]
-    device_addr = qemu address stored into separate device params (bus, port)
-                  device{$param1:$first, $param2:$second, ..., $paramZZZ, $ZZZ}
+
+    stor_addr
+        stored address representation '$first-$second-...-$ZZZ'
+    addr
+        internal address representation [$first, $second, ..., $ZZZ]
+    device_addr
+        qemu address stored into separate device params (bus, port)
+        device{$param1:$first, $param2:$second, ..., $paramZZZ, $ZZZ}
 
     :note: When you insert a device, it's properties might be updated (addr,..)
     """
@@ -231,6 +238,7 @@ class QSparseBus(object):
     def get_free_slot(self, addr_pattern):
         """
         Finds unoccupied address
+
         :param addr_pattern: Address pattern (full qualified or with Nones)
         :return: First free address when found, (free or reserved for this dev)
                  None when no free address is found, (all occupied)
@@ -248,7 +256,7 @@ class QSparseBus(object):
             if self._addr2stor(last_addr) not in self.bus:
                 return last_addr
             if (use_reserved and
-               self.bus[self._addr2stor(last_addr)] == "reserved"):
+                    self.bus[self._addr2stor(last_addr)] == "reserved"):
                 return last_addr
             last_addr = self._increment_addr(addr_pattern, last_addr)
         return None     # No free matching address found
@@ -260,7 +268,7 @@ class QSparseBus(object):
         :return: True in case ids are correct, False when not
         """
         if (device.get_param(self.bus_item) and
-           device.get_param(self.bus_item) != self.busid):
+                device.get_param(self.bus_item) != self.busid):
             return False
         else:
             return True
@@ -301,6 +309,7 @@ class QSparseBus(object):
     def insert(self, device, strict_mode=False):
         """
         Insert device into this bus representation.
+
         :param device: qdevices.QBaseDevice device
         :param strict_mode: Use strict mode (set optional params)
         :return: list of added devices on success,
@@ -771,8 +780,6 @@ class QBusUnitBus(QDenseBus):
 class QAHCIBus(QBusUnitBus):
 
     """ AHCI bus (ich9-ahci, ahci) """
-    # TODO: Search for 'ide' and 'ahci' buses when strict_mode not specified
-    # since qemu doesn't differentiate between those buses.
 
     def __init__(self, busid, aobject=None):
         """ 6xbus, 2xunit """

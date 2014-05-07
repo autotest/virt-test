@@ -9,6 +9,7 @@ import string
 import random
 import socket
 import os
+import stat
 import signal
 import re
 import logging
@@ -19,6 +20,7 @@ import inspect
 import tarfile
 import shutil
 import getpass
+import ctypes
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
@@ -45,9 +47,11 @@ import traceback
 
 def log_last_traceback(msg=None, log=logging.error):
     """
-    @warning: This function is being moved into autotest and your code should
-              use autotest.client.shared.base_utils function instead.
     Writes last traceback into specified log.
+
+    :warning: This function is being moved into autotest and your code should
+              use autotest.client.shared.base_utils function instead.
+
     :param msg: Override the default message. ["Original traceback"]
     :param log: Where to log the traceback [logging.error]
     """
@@ -69,8 +73,8 @@ def aton(sr):
     Transform a string to a number(include float and int). If the string is
     not in the form of number, just return false.
 
-    @str: string to transfrom
-    Return: float, int or False for failed transform
+    :param sr: string to transfrom
+    :return: float, int or False for failed transform
     """
     try:
         return int(sr)
@@ -86,11 +90,11 @@ def find_substring(string, pattern1, pattern2=None):
     Return the match of pattern1 in string. Or return the match of pattern2
     if pattern is not matched.
 
-    @string: string
-    @pattern1: first pattern want to match in string, must set.
-    @pattern2: second pattern, it will be used if pattern1 not match, optional.
+    :param string: string
+    :param pattern1: first pattern want to match in string, must set.
+    :param pattern2: second pattern, it will be used if pattern1 not match, optional.
 
-    Return: Match substing or None
+    :return: Match substing or None
     """
     if not pattern1:
         logging.debug("pattern1: get empty string.")
@@ -206,6 +210,14 @@ def kill_process_tree(pid, sig=signal.SIGKILL):
     safe_kill(pid, signal.SIGCONT)
 
 
+def get_open_fds(pid):
+    return len(os.listdir('/proc/%s/fd' % pid))
+
+
+def get_virt_test_open_fds():
+    return get_open_fds(os.getpid())
+
+
 def process_or_children_is_defunct(ppid):
     """Verify if any processes from PPID is defunct.
 
@@ -227,6 +239,7 @@ def process_or_children_is_defunct(ppid):
     return defunct
 
 # The following are utility functions related to ports.
+
 
 def is_port_free(port, address):
     """
@@ -269,7 +282,7 @@ def find_free_ports(start_port, end_port, count, address="localhost"):
     """
     Return count of host free ports in the range [start_port, end_port].
 
-    @count: Initial number of ports known to be free in the range.
+    :param count: Initial number of ports known to be free in the range.
     :param start_port: First port that will be checked.
     :param end_port: Port immediately after the last one that will be checked.
     """
@@ -291,10 +304,10 @@ _log_file_dir = "/tmp"
 
 def log_line(filename, line):
     """
-    Write a line to a file.  '\n' is appended to the line.
+    Write a line to a file.
 
     :param filename: Path of file to write to, either absolute or relative to
-            the dir set by set_log_file_dir().
+                     the dir set by set_log_file_dir().
     :param line: Line to write.
     """
     global _open_log_files, _log_file_dir
@@ -426,10 +439,10 @@ def format_str_for_message(sr):
 
 def wait_for(func, timeout, first=0.0, step=1.0, text=None):
     """
+    Wait until func() evaluates to True.
+
     If func() evaluates to True before timeout expires, return the
     value of func(). Otherwise return None.
-
-    @brief: Wait until func() evaluates to True.
 
     :param timeout: Timeout in seconds
     :param first: Time to sleep before first attempt
@@ -521,7 +534,7 @@ def run_tests(parser, job):
         dependencies_satisfied = True
         for dep in param_dict.get("dep"):
             for test_name in status_dict.keys():
-                if not dep in test_name:
+                if dep not in test_name:
                     continue
                 # So the only really non-fatal state is WARN,
                 # All the others make it not safe to proceed with dependency
@@ -697,7 +710,7 @@ class VirtLoggingConfig(logging_config.LoggingConfig):
                                                          verbose=verbose)
 
 
-def umount(src, mount_point, fstype, verbose=True, fstype_mtab=None):
+def umount(src, mount_point, fstype, verbose=False, fstype_mtab=None):
     """
     Umount the src mounted in mount_point.
 
@@ -713,7 +726,7 @@ def umount(src, mount_point, fstype, verbose=True, fstype_mtab=None):
     if is_mounted(src, mount_point, fstype, None, verbose, fstype_mtab):
         umount_cmd = "umount %s" % mount_point
         try:
-            utils.system(umount_cmd, verbose)
+            utils.system(umount_cmd, verbose=verbose)
             return True
         except error.CmdError:
             return False
@@ -722,7 +735,7 @@ def umount(src, mount_point, fstype, verbose=True, fstype_mtab=None):
         return True
 
 
-def mount(src, mount_point, fstype, perm=None, verbose=True, fstype_mtab=None):
+def mount(src, mount_point, fstype, perm=None, verbose=False, fstype_mtab=None):
     """
     Mount the src into mount_point of the host.
 
@@ -738,23 +751,19 @@ def mount(src, mount_point, fstype, perm=None, verbose=True, fstype_mtab=None):
     if fstype_mtab is None:
         fstype_mtab = fstype
 
-    umount(src, mount_point, fstype, verbose, fstype_mtab)
-
     if is_mounted(src, mount_point, fstype, perm, verbose, fstype_mtab):
         logging.debug("%s is already mounted in %s with %s",
                       src, mount_point, perm)
         return True
-
     mount_cmd = "mount -t %s %s %s -o %s" % (fstype, src, mount_point, perm)
     try:
         utils.system(mount_cmd, verbose=verbose)
     except error.CmdError:
         return False
-
     return is_mounted(src, mount_point, fstype, perm, verbose, fstype_mtab)
 
 
-def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
+def is_mounted(src, mount_point, fstype, perm=None, verbose=False,
                fstype_mtab=None):
     """
     Check mount status from /etc/mtab
@@ -767,6 +776,8 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
     :type fstype: string
     :param perm: mount permission
     :type perm: string
+    :param verbose: if display mtab content
+    :type verbose: Boolean
     :param fstype_mtab: file system type in mtab could be different
     :type fstype_mtab: str
     :return: if the src is mounted as expect
@@ -777,6 +788,10 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
     if fstype_mtab is None:
         fstype_mtab = fstype
 
+    # Version 4 nfs displays 'nfs4' in mtab
+    if fstype == "nfs":
+        fstype_mtab = "nfs\d?"
+
     mount_point = os.path.realpath(mount_point)
     if fstype not in ['nfs', 'smbfs', 'glusterfs']:
         if src:
@@ -785,13 +800,14 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=True,
             # Allow no passed src(None or "")
             src = ""
     mount_string = "%s %s %s %s" % (src, mount_point, fstype_mtab, perm)
-    if mount_string.strip() in file("/etc/mtab").read():
-        logging.debug("%s is successfully mounted", src)
+    logging.debug("Searching '%s' in mtab...", mount_string)
+    if verbose:
+        logging.debug("/etc/mtab contents:\n%s", file("/etc/mtab").read())
+    if re.findall(mount_string.strip(), file("/etc/mtab").read()):
+        logging.debug("%s is mounted.", src)
         return True
     else:
-        if verbose:
-            logging.error("Can't find mounted NFS share - /etc/mtab"
-                          " contents \n%s", file("/etc/mtab").read())
+        logging.debug("%s is not mounted.", src)
         return False
 
 
@@ -885,31 +901,6 @@ def install_host_kernel(job, params):
                            {'software_version_kernel': k_version})
 
 
-def install_cpuflags_util_on_vm(test, vm, dst_dir, extra_flags=None):
-    """
-    Install stress to vm.
-
-    :param vm: virtual machine.
-    :param dst_dir: Installation path.
-    :param extra_flags: Extraflags for gcc compiler.
-    """
-    if not extra_flags:
-        extra_flags = ""
-
-    cpuflags_src = os.path.join(test.virtdir, "deps", "test_cpu_flags")
-    cpuflags_dst = os.path.join(dst_dir, "test_cpu_flags")
-    session = vm.wait_for_login()
-    session.cmd("rm -rf %s" %
-                (cpuflags_dst))
-    session.cmd("sync")
-    vm.copy_files_to(cpuflags_src, dst_dir)
-    session.cmd("sync")
-    session.cmd("cd %s; make EXTRA_FLAGS='%s';" %
-               (cpuflags_dst, extra_flags))
-    session.cmd("sync")
-    session.close()
-
-
 def install_disktest_on_vm(test, vm, src_dir, dst_dir):
     """
     Install stress to vm.
@@ -927,7 +918,7 @@ def install_disktest_on_vm(test, vm, src_dir, dst_dir):
     vm.copy_files_to(disktest_src, disktest_dst)
     session.cmd("sync")
     session.cmd("cd %s; make;" %
-               (os.path.join(disktest_dst, "src")))
+                (os.path.join(disktest_dst, "src")))
     session.cmd("sync")
     session.close()
 
@@ -1051,11 +1042,11 @@ def create_x509_dir(path, cacert_subj, server_subj, passphrase,
 
     :param path: defines path to directory which will be created
     :param cacert_subj: ca-cert.pem subject
-    :param server_key.csr subject
-    :param passphrase - passphrase to ca-key.pem
-    :param secure = False - defines if the server-key.pem will use a passphrase
-    :param bits = 1024: bit length of keys
-    :param days = 1095: cert expiration
+    :param server_key.csr: subject
+    :param passphrase: passphrase to ca-key.pem
+    :param secure: defines if the server-key.pem will use a passphrase
+    :param bits: bit length of keys
+    :param days: cert expiration
 
     :raise ValueError: openssl not found or rc != 0
     :raise OSError: if os.makedirs() fails
@@ -1160,15 +1151,18 @@ def get_pid_cpu(pid):
     return list(set([_.strip() for _ in cpu_pid.splitlines()]))
 
 
-def get_node_count():
-    """
-    Get the number of nodes of current host.
+# Utility functions for numa node pinning
 
-    :return: the number of nodes
-    :rtype: string
+
+def get_node_cpus(i=0):
+    """
+    Get cpu ids of one node
+
+    :return: the cpu lists
+    :rtype: list
     """
     cmd = utils.run("numactl --hardware")
-    return int(re.findall("available: (\d+) nodes", cmd.stdout)[0])
+    return re.findall("node %s cpus: (.*)" % i, cmd.stdout)[0].split()
 
 
 def cpu_str_to_list(origin_str):
@@ -1208,38 +1202,50 @@ class NumaInfo(object):
     of the node.
     """
 
-    def __init__(self):
+    def __init__(self, all_nodes_path=None, online_nodes_path=None):
+        """
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/possible. Useful for unittesting.
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/online. Useful for unittesting.
+        """
         self.numa_sys_path = "/sys/devices/system/node"
-        self.all_nodes = self.get_all_nodes()
-        self.online_nodes = self.get_online_nodes()
+        self.all_nodes = self.get_all_nodes(all_nodes_path)
+        self.online_nodes = self.get_online_nodes(online_nodes_path)
         self.nodes = {}
         self.distances = {}
         for node_id in self.online_nodes:
             self.nodes[node_id] = NumaNode(node_id + 1)
             self.distances[node_id] = self.get_node_distance(node_id)
 
-    def get_all_nodes(self):
+    def get_all_nodes(self, all_nodes_path=None):
         """
         Get all node ids in host.
 
         :return: All node ids in host
         :rtype: list
         """
-        all_nodes = get_path(self.numa_sys_path, "possible")
+        if all_nodes_path is None:
+            all_nodes = get_path(self.numa_sys_path, "possible")
+        else:
+            all_nodes = all_nodes_path
         all_nodes_file = open(all_nodes, "r")
         nodes_info = all_nodes_file.read()
         all_nodes_file.close()
 
         return cpu_str_to_list(nodes_info)
 
-    def get_online_nodes(self):
+    def get_online_nodes(self, online_nodes_path=None):
         """
         Get node ids online in host
 
         :return: The ids of node which is online
         :rtype: list
         """
-        online_nodes = get_path(self.numa_sys_path, "online")
+        if online_nodes_path is None:
+            online_nodes = get_path(self.numa_sys_path, "online")
+        else:
+            online_nodes = online_nodes_path
         online_nodes_file = open(online_nodes, "r")
         nodes_info = online_nodes_file.read()
         online_nodes_file.close()
@@ -1256,10 +1262,12 @@ class NumaInfo(object):
         :rtype: list
         """
         cmd = utils.run("numactl --hardware")
-        node_distances = cmd.stdout.split("node distances:")[-1].strip()
-        node_distance = node_distances.splitlines()[node_id + 1]
-        if "%s:" % node_id not in node_distance:
-            logging.warn("Get wrong unexpect information from numctl")
+        try:
+            node_distances = cmd.stdout.split("node distances:")[-1].strip()
+            node_distance = re.findall("%s:" % node_id, node_distances)[0]
+            node_distance = node_distance.split(":")[-1]
+        except Exception:
+            logging.warn("Get unexpect information from numctl")
             numa_sys_path = self.numa_sys_path
             distance_path = get_path(numa_sys_path,
                                      "node%s/distance" % node_id)
@@ -1270,8 +1278,6 @@ class NumaInfo(object):
             node_distance_file = open(distance_path, 'r')
             node_distance = node_distance_file.read()
             node_distance_file.close()
-        else:
-            node_distance = node_distance.split(":")[-1]
 
         return node_distance.strip().split()
 
@@ -1301,17 +1307,31 @@ class NumaNode(object):
     Numa node to control processes and shared memory.
     """
 
-    def __init__(self, i=-1):
-        self.num = get_node_count()
+    def __init__(self, i=-1, all_nodes_path=None, online_nodes_path=None):
+        """
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/possible. Useful for unittesting.
+        :param all_nodes_path: Alternative path to
+                /sys/devices/system/node/online. Useful for unittesting.
+        """
+        self.extra_cpus = []
         if i < 0:
-            self.cpus = self.get_node_cpus(int(self.num) + i).split()
-            self.node_id = self.num + i
+            host_numa_info = NumaInfo(all_nodes_path, online_nodes_path)
+            available_nodes = host_numa_info.nodes.keys()
+            self.cpus = self.get_node_cpus(available_nodes[-1]).split()
+            if len(available_nodes) > 1:
+                self.extra_cpus = self.get_node_cpus(
+                    available_nodes[-2]).split()
+            self.node_id = available_nodes[-1]
         else:
             self.cpus = self.get_node_cpus(i - 1).split()
+            self.extra_cpus = self.get_node_cpus(i).split()
             self.node_id = i - 1
         self.dict = {}
         for i in self.cpus:
-            self.dict[i] = "free"
+            self.dict[i] = []
+        for i in self.extra_cpus:
+            self.dict[i] = []
 
     def get_node_cpus(self, i):
         """
@@ -1358,13 +1378,17 @@ class NumaNode(object):
 
         return cpus
 
-    def free_cpu(self, i):
+    def free_cpu(self, i, thread=None):
         """
         Release pin of one node.
 
         :param i: Index of the node.
+        :param thread: Thread ID, remove all threads if thread ID isn't set
         """
-        self.dict[i] = "free"
+        if not thread:
+            self.dict[i] = []
+        else:
+            self.dict[i].remove(thread)
 
     def _flush_pin(self):
         """
@@ -1373,21 +1397,31 @@ class NumaNode(object):
         cmd = utils.run("ps -eLf | awk '{print $4}'")
         all_pids = cmd.stdout
         for i in self.cpus:
-            if self.dict[i] != "free" and self.dict[i] not in all_pids:
-                self.free_cpu(i)
+            for j in self.dict[i]:
+                if str(j) not in all_pids:
+                    self.free_cpu(i, j)
 
     @error.context_aware
-    def pin_cpu(self, process):
+    def pin_cpu(self, process, cpu=None, extra=False):
         """
         Pin one process to a single cpu.
 
         :param process: Process ID.
+        :param cpu: CPU ID, pin thread to free CPU if cpu ID isn't set
         """
         self._flush_pin()
-        error.context("Pinning process %s to the CPU" % process)
-        for i in self.cpus:
-            if self.dict[i] == "free":
-                self.dict[i] = str(process)
+        if cpu:
+            error.context("Pinning process %s to the CPU(%s)" % (process, cpu))
+        else:
+            error.context("Pinning process %s to the available CPU" % (process))
+
+        cpus = self.cpus
+        if extra:
+            cpus = self.extra_cpus
+
+        for i in cpus:
+            if (cpu is not None and cpu == i) or (cpu is None and not self.dict[i]):
+                self.dict[i].append(process)
                 cmd = "taskset -p %s %s" % (hex(2 ** int(i)), process)
                 logging.debug("NumaNode (%s): " % i + cmd)
                 utils.run(cmd)
@@ -1472,8 +1506,8 @@ def kvm_flags_to_stresstests(flags):
     """
     Covert [cpu flags] to [tests]
 
-    @param cpuflags: list of cpuflags
-    @return: Return tests like string.
+    :param cpuflags: list of cpuflags
+    :return: Return tests like string.
     """
     tests = set([])
     for f in flags:
@@ -1497,7 +1531,7 @@ def get_cpu_flags(cpu_info=""):
     if not cpu_flag_lists:
         return []
     cpu_flags = cpu_flag_lists[0]
-    return cpu_flags.strip().split('\s+')
+    return re.split("\s+", cpu_flags.strip())
 
 
 def get_cpu_vendor(cpu_info="", verbose=True):
@@ -1640,43 +1674,97 @@ def get_qemu_cpu_models(qemu_binary):
     return extract_qemu_cpu_models(result.stdout)
 
 
+def _get_backend_dir(params):
+    """
+    Get the appropriate backend directory. Example: backends/qemu.
+    """
+    return os.path.join(data_dir.get_root_dir(), 'backends',
+                        params.get("vm_type"))
+
+
 def get_qemu_binary(params):
     """
     Get the path to the qemu binary currently in use.
     """
     # Update LD_LIBRARY_PATH for built libraries (libspice-server)
-    qemu_binary_path = get_path(os.path.join(data_dir.get_root_dir(),
-                                             params.get("vm_type")),
+    qemu_binary_path = get_path(_get_backend_dir(params),
                                 params.get("qemu_binary", "qemu"))
 
-    library_path = os.path.join(
-        data_dir.get_root_dir(), params.get('vm_type'), 'install_root', 'lib')
-    if os.path.isdir(library_path):
-        library_path = os.path.abspath(library_path)
-        qemu_binary = "LD_LIBRARY_PATH=%s %s" % (
-            library_path, qemu_binary_path)
+    if not os.path.isfile(qemu_binary_path):
+        logging.debug('Could not find params qemu in %s, searching the '
+                      'host PATH for one to use', qemu_binary_path)
+        try:
+            qemu_binary = find_command('qemu-kvm')
+            logging.debug('Found %s', qemu_binary)
+        except ValueError:
+            qemu_binary = find_command('kvm')
+            logging.debug('Found %s', qemu_binary)
     else:
-        qemu_binary = qemu_binary_path
+        library_path = os.path.join(_get_backend_dir(params), 'install_root', 'lib')
+        if os.path.isdir(library_path):
+            library_path = os.path.abspath(library_path)
+            qemu_binary = ("LD_LIBRARY_PATH=%s %s" %
+                           (library_path, qemu_binary_path))
+        else:
+            qemu_binary = qemu_binary_path
 
     return qemu_binary
+
+
+def get_qemu_dst_binary(params):
+    """
+    Get the path to the qemu dst binary currently in use.
+    """
+    qemu_dst_binary = params.get("qemu_dst_binary", None)
+    if qemu_dst_binary is None:
+        return qemu_dst_binary
+
+    qemu_binary_path = get_path(_get_backend_dir(params), qemu_dst_binary)
+
+    # Update LD_LIBRARY_PATH for built libraries (libspice-server)
+    library_path = os.path.join(_get_backend_dir(params), 'install_root', 'lib')
+    if os.path.isdir(library_path):
+        library_path = os.path.abspath(library_path)
+        qemu_dst_binary = ("LD_LIBRARY_PATH=%s %s" %
+                           (library_path, qemu_binary_path))
+    else:
+        qemu_dst_binary = qemu_binary_path
+
+    return qemu_dst_binary
 
 
 def get_qemu_img_binary(params):
     """
     Get the path to the qemu-img binary currently in use.
     """
-    return get_path(os.path.join(data_dir.get_root_dir(),
-                                 params.get("vm_type")),
-                    params.get("qemu_img_binary", "qemu"))
+    qemu_img_binary_path = get_path(_get_backend_dir(params),
+                                    params.get("qemu_img_binary", "qemu-img"))
+    if not os.path.isfile(qemu_img_binary_path):
+        logging.debug('Could not find params qemu-img in %s, searching the '
+                      'host PATH for one to use', qemu_img_binary_path)
+        qemu_img_binary = find_command('qemu-img')
+        logging.debug('Found %s', qemu_img_binary)
+    else:
+        qemu_img_binary = qemu_img_binary_path
+
+    return qemu_img_binary
 
 
 def get_qemu_io_binary(params):
     """
-    Get the path to the qemu-img binary currently in use.
+    Get the path to the qemu-io binary currently in use.
     """
-    return get_path(os.path.join(data_dir.get_root_dir(),
-                                 params.get("vm_type")),
-                    params.get("qemu_io_binary", "qemu"))
+    qemu_io_binary_path = get_path(_get_backend_dir(params),
+                                   params.get("qemu_io_binary", "qemu-io"))
+    if not os.path.isfile(qemu_io_binary_path):
+        logging.debug('Could not find params qemu-io in %s, searching the '
+                      'host PATH for one to use', qemu_io_binary_path)
+        qemu_io_binary = find_command('qemu-io')
+        logging.debug('Found %s', qemu_io_binary)
+    else:
+        qemu_io_binary = qemu_io_binary_path
+
+    return qemu_io_binary
 
 
 def get_qemu_best_cpu_model(params):
@@ -1895,7 +1983,9 @@ def normalize_data_size(value_str, order_magnitude="M", factor="1024"):
     order_magnitude_index = _get_magnitude_index(magnitude_list,
                                                  " %s" % order_magnitude)
 
-    if magnitude_index < 0 or order_magnitude_index < 0:
+    if data == 0:
+        return 0
+    elif magnitude_index < 0 or order_magnitude_index < 0:
         logging.error("Unknown input order of magnitude. Please check your"
                       "value '%s' and desired order of magnitude"
                       " '%s'." % (value_str, order_magnitude))
@@ -1935,13 +2025,12 @@ def selinux_enforcing():
 
 def get_winutils_vol(session, label="WIN_UTILS"):
     """
-    Return Volum ID of winutils CDROM;ISO file should be create via command:
-    mkisofs -V $label -o winutils.iso
+    Return Volume ID of winutils CDROM ISO file should be create via command
+    ``mkisofs -V $label -o winutils.iso``.
 
-    @parm session: session Object
-    @parm label:volum ID of WIN_UTILS.iso
-
-    :return: volum ID
+    :param session: session Object
+    :param label: volume ID of WIN_UTILS.iso
+    :return: volume ID
     """
     cmd = "wmic logicaldisk where (VolumeName='%s') get DeviceID" % label
     output = session.cmd(cmd, timeout=120)
@@ -1972,7 +2061,7 @@ def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
             if len(match_list) == 2:
                 key = match_list[0]
                 value = match_list[1]
-                if not key in option_dict:
+                if key not in option_dict:
                     option_dict[key] = value
                 else:
                     logging.debug("key %s in option_dict", key)
@@ -1985,20 +2074,27 @@ def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
 def get_image_info(image_file):
     """
     Get image information and put it into a dict. Image information like this:
-    *******************************
-    image: /path/vm1_6.3.img
-    file format: raw
-    virtual size: 10G (10737418240 bytes)
-    disk size: 888M
-    ....
-    ....
-    *******************************
+
+    ::
+
+        *******************************
+        image: /path/vm1_6.3.img
+        file format: raw
+        virtual size: 10G (10737418240 bytes)
+        disk size: 888M
+        ....
+        ....
+        *******************************
+
     And the image info dict will be like this
-    image_info_dict = { 'format':'raw',
-                        'vsize' : '10737418240'
-                        'dsize' : '931135488'
-                      }
-    TODO: Add more information to dict
+
+    ::
+
+        image_info_dict = {'format':'raw',
+                           'vsize' : '10737418240'
+                           'dsize' : '931135488'}
+
+    :todo: Add more information to `image_info_dict`.
     """
     try:
         cmd = "qemu-img info %s" % image_file
@@ -2057,3 +2153,252 @@ def get_test_entrypoint_func(name, module):
 
     else:
         raise ValueError("Missing test entry point")
+
+
+class KSMError(Exception):
+
+    """
+    Base exception for KSM setup
+    """
+    pass
+
+
+class KSMNotSupportedError(KSMError):
+
+    """
+    Thrown when host does not support KSM.
+    """
+    pass
+
+
+class KSMTunedError(KSMError):
+
+    """
+    Thrown when KSMTuned Error happen.
+    """
+    pass
+
+
+class KSMTunedNotSupportedError(KSMTunedError):
+
+    """
+    Thrown when host does not support KSMTune.
+    """
+    pass
+
+
+class KSMController(object):
+
+    """KSM Manager"""
+
+    def __init__(self):
+        """
+        Preparations for ksm.
+        """
+        _KSM_PATH = "/sys/kernel/mm/ksm/"
+        self.ksm_path = _KSM_PATH
+        self.ksm_params = {}
+
+        # Default control way is files on host
+        # But it will be ksmctl command on older ksm version
+        self.interface = "sysfs"
+        if os.path.isdir(self.ksm_path):
+            _KSM_PARAMS = os.listdir(_KSM_PATH)
+            for param in _KSM_PARAMS:
+                self.ksm_params[param] = _KSM_PATH + param
+            self.interface = "sysfs"
+            if not os.path.isfile(self.ksm_params["run"]):
+                raise KSMNotSupportedError
+        else:
+            try:
+                os_dep.command("ksmctl")
+            except ValueError:
+                raise KSMNotSupportedError
+            _KSM_PARAMS = ["run", "pages_to_scan", "sleep_millisecs"]
+            # No _KSM_PATH needed here
+            for param in _KSM_PARAMS:
+                self.ksm_params[param] = None
+            self.interface = "ksmctl"
+
+    def is_module_loaded(self):
+        """Check whether ksm module has been loaded."""
+        if utils.system("lsmod |grep ksm", ignore_status=True):
+            return False
+        return True
+
+    def load_ksm_module(self):
+        """Try to load ksm module."""
+        utils.system("modprobe ksm")
+
+    def unload_ksm_module(self):
+        """Try to unload ksm module."""
+        utils.system("modprobe -r ksm")
+
+    def get_ksmtuned_pid(self):
+        """
+        Return ksmtuned process id(0 means not running).
+        """
+        try:
+            os_dep.command("ksmtuned")
+        except ValueError:
+            raise KSMTunedNotSupportedError
+
+        process_id = utils.system_output("ps -C ksmtuned -o pid=",
+                                         ignore_status=True)
+        if process_id:
+            return int(re.findall("\d+", process_id)[0])
+        return 0
+
+    def start_ksmtuned(self):
+        """Start ksmtuned service"""
+        if self.get_ksmtuned_pid() == 0:
+            utils.system("ksmtuned")
+
+    def stop_ksmtuned(self):
+        """Stop ksmtuned service"""
+        pid = self.get_ksmtuned_pid()
+        if pid:
+            utils.system("kill -1 %s" % pid)
+
+    def restart_ksmtuned(self):
+        """Restart ksmtuned service"""
+        self.stop_ksmtuned()
+        self.start_ksmtuned()
+
+    def start_ksm(self, pages_to_scan=None, sleep_ms=None):
+        """
+        Start ksm function.
+        """
+        if not self.is_ksm_running():
+            feature_args = {'run': 1}
+            if self.interface == "ksmctl":
+                if pages_to_scan is None:
+                    pages_to_scan = 5000
+                if sleep_ms is None:
+                    sleep_ms = 50
+                feature_args["pages_to_scan"] = pages_to_scan
+                feature_args["sleep_millisecs"] = sleep_ms
+            self.set_ksm_feature(feature_args)
+
+    def stop_ksm(self):
+        """
+        Stop ksm function.
+        """
+        if self.is_ksm_running():
+            return self.set_ksm_feature({"run": 0})
+
+    def restart_ksm(self, pages_to_scan=None, sleep_ms=None):
+        """Restart ksm service"""
+        self.stop_ksm()
+        self.start_ksm(pages_to_scan, sleep_ms)
+
+    def is_ksm_running(self):
+        """
+        Verify whether ksm is running.
+        """
+        if self.interface == "sysfs":
+            running = utils.system_output("cat %s" % self.ksm_params["run"])
+        else:
+            output = utils.system_output("ksmctl info")
+            try:
+                running = re.findall("\d+", output)[0]
+            except IndexError:
+                raise KSMError
+        if running != '0':
+            return True
+        return False
+
+    def get_writable_features(self):
+        """Get writable features for setting"""
+        writable_features = []
+        if self.interface == "sysfs":
+            # Get writable parameters
+            for key, value in self.ksm_params.items():
+                if stat.S_IMODE(os.stat(value).st_mode) & stat.S_IWRITE:
+                    writable_features.append(key)
+        else:
+            for key in self.ksm_params.keys():
+                writable_features.append(key)
+        return writable_features
+
+    def set_ksm_feature(self, feature_args):
+        """
+        Set ksm features.
+
+        :param feature_args: a dict include features and their's value.
+        """
+        for key in feature_args.keys():
+            if key not in self.get_writable_features():
+                logging.error("Do not support setting of '%s'.", key)
+                raise KSMError
+        if self.interface == "sysfs":
+            # Get writable parameters
+            for key, value in feature_args.items():
+                utils.system("echo %s > %s" % (value, self.ksm_params[key]))
+        else:
+            if "run" in feature_args.keys() and feature_args["run"] == 0:
+                utils.system("ksmctl stop")
+            else:
+                # For ksmctl both pages_to_scan and sleep_ms should have value
+                # So start it anyway if run is 1
+                # Default is original value if feature is not in change list.
+                if "pages_to_scan" not in feature_args.keys():
+                    pts = self.get_ksm_feature("pages_to_scan")
+                else:
+                    pts = feature_args["pages_to_scan"]
+                if "sleep_millisecs" not in feature_args.keys():
+                    ms = self.get_ksm_feature("sleep_millisecs")
+                else:
+                    ms = feature_args["sleep_millisecs"]
+                utils.system("ksmctl start %s %s" % (pts, ms))
+
+    def get_ksm_feature(self, feature):
+        """
+        Get ksm feature's value.
+        """
+        if feature in self.ksm_params.keys():
+            feature = self.ksm_params[feature]
+
+        if self.interface == "sysfs":
+            return utils.system_output("cat %s" % feature).strip()
+        else:
+            output = utils.system_output("ksmctl info")
+            _KSM_PARAMS = ["run", "pages_to_scan", "sleep_millisecs"]
+            ksminfos = re.findall("\d+", output)
+            if len(ksminfos) != 3:
+                raise KSMError
+            try:
+                return ksminfos[_KSM_PARAMS.index(feature)]
+            except ValueError:
+                raise KSMError
+
+
+def monotonic_time():
+    """
+    Get monotonic time
+    """
+    def monotonic_time_os():
+        """
+        Get monotonic time using ctypes
+        """
+        class struct_timespec(ctypes.Structure):
+            _fields_ = [('tv_sec', ctypes.c_long), ('tv_nsec', ctypes.c_long)]
+
+        lib = ctypes.CDLL("librt.so.1", use_errno=True)
+        clock_gettime = lib.clock_gettime
+        clock_gettime.argtypes = [ctypes.c_int, ctypes.POINTER(struct_timespec)]
+
+        timespec = struct_timespec()
+        # CLOCK_MONOTONIC_RAW == 4
+        if not clock_gettime(4, ctypes.pointer(timespec)) == 0:
+            errno = ctypes.get_errno()
+            raise OSError(errno, os.strerror(errno))
+
+        return timespec.tv_sec + timespec.tv_nsec * 10 ** -9
+
+    monotonic_attribute = getattr(time, "monotonic", None)
+    if callable(monotonic_attribute):
+        # Introduced in Python 3.3
+        return time.monotonic()
+    else:
+        return monotonic_time_os()

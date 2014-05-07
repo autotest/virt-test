@@ -542,7 +542,7 @@ class KojiInstaller(BaseInstaller):
             if pkg.subpackages:
                 # make sure we do not include the debuginfo package if
                 # already specified in the list of subpackages
-                if not debuginfo_pkg_name in pkg.subpackages:
+                if debuginfo_pkg_name not in pkg.subpackages:
                     pkg.subpackages.append(debuginfo_pkg_name)
 
             pkg_with_debug_text = pkg.to_text()

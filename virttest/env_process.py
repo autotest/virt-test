@@ -39,13 +39,18 @@ except ImportError:
 _screendump_thread = None
 _screendump_thread_termination_event = None
 
+_vm_register_thread = None
+_vm_register_thread_termination_event = None
 
-def preprocess_image(test, params, image_name):
+
+def preprocess_image(test, params, image_name, vm_process_status=None):
     """
     Preprocess a single QEMU image according to the instructions in params.
 
     :param test: Autotest test object.
     :param params: A dict containing image preprocessing parameters.
+    :param vm_process_status: This is needed in postprocess_image. Add it here
+                              only for keep it work with process_images()
     :note: Currently this function just creates an image if requested.
     """
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
@@ -113,9 +118,9 @@ def preprocess_vm(test, params, env, name):
                 if vm.needs_restart(name=name,
                                     params=params,
                                     basedir=test.bindir):
+                    vm.devices = None
                     start_vm = True
-                    old_vm.destroy(gracefully=gracefully_kill,
-                                   free_mac_addresses=False)
+                    old_vm.destroy(gracefully=gracefully_kill)
                     update_virtnet = True
 
     if start_vm:
@@ -139,18 +144,13 @@ def preprocess_vm(test, params, env, name):
                 vm.create(migration_mode=params.get("migration_mode"),
                           migration_fd=params.get("migration_fd"),
                           migration_exec_cmd=params.get("migration_exec_cmd_dst"))
-            # Update mac and IP info for assigned device
-            # NeedFix: Can we find another way to get guest ip?
-            if params.get("mac_changeable") == "yes":
-                utils_net.update_mac_ip_address(vm, params)
     elif not vm.is_alive():    # VM is dead and won't be started, update params
         vm.devices = None
         vm.params = params
     else:       # VM is alive and we don't care
         if params.get("kill_vm_before_test") == "yes":
             # Destroy the VM if kill_vm_before_test = "yes".
-            old_vm.destroy(gracefully=gracefully_kill,
-                           free_mac_addresses=False)
+            old_vm.destroy(gracefully=gracefully_kill)
         else:
             # VM is alive and we just need to open the serial console
             vm.create_serial_console()
@@ -167,24 +167,52 @@ def preprocess_vm(test, params, env, name):
         vm.pause()
 
 
-def postprocess_image(test, params, image_name):
+def postprocess_image(test, params, image_name, vm_process_status=None):
     """
     Postprocess a single QEMU image according to the instructions in params.
 
     :param test: An Autotest test object.
     :param params: A dict containing image postprocessing parameters.
+    :param vm_process_status: (optional) vm process status like running, dead
+                              or None for no vm exist.
     """
     clone_master = params.get("clone_master", None)
     base_dir = data_dir.get_data_dir()
     image = qemu_storage.QemuImg(params, base_dir, image_name)
-    if params.get("check_image") == "yes":
+
+    check_image_flag = params.get("check_image") == "yes"
+    if vm_process_status == "running" and check_image_flag:
+        if params.get("skip_image_check_during_running") == "yes":
+            logging.debug("Guest is still running, skip the image check.")
+            check_image_flag = False
+        else:
+            image_info_output = image.info()
+            image_info = {}
+            for image_info_item in image_info_output.splitlines():
+                option = image_info_item.split(":")
+                if len(option) == 2:
+                    image_info[option[0].strip()] = option[1].strip()
+            if ("lazy refcounts" in image_info
+                    and image_info["lazy refcounts"] == "true"):
+                logging.debug("Should not check image while guest is alive"
+                              " when the image is create with lazy refcounts."
+                              " Skip the image check.")
+                check_image_flag = False
+
+    if check_image_flag:
         try:
             if clone_master is None:
                 image.check_image(params, base_dir)
             elif clone_master == "yes":
                 if image_name in params.get("master_images_clone").split():
                     image.check_image(params, base_dir)
-            if params.get("restore_image", "no") == "yes":
+            # Allow test to overwrite any pre-testing  automatic backup
+            # with a new backup. i.e. assume pre-existing image/backup
+            # would not be usable after this test succeeds. The best
+            # example for this is when 'unattended_install' is run.
+            if params.get("backup_image", "no") == "yes":
+                image.backup_image(params, base_dir, "backup", True)
+            elif params.get("restore_image", "no") == "yes":
                 image.backup_image(params, base_dir, "restore", True)
         except Exception, e:
             if params.get("restore_image_on_check_error", "no") == "yes":
@@ -193,7 +221,11 @@ def postprocess_image(test, params, image_name):
                 cl_images = params.get("master_images_clone", "")
                 if image_name in cl_images.split():
                     image.remove()
-            raise e
+            if (params.get("skip_cluster_leak_warn") == "yes"
+                    and "Leaked clusters" in e.message):
+                logging.warn(e.message)
+            else:
+                raise e
     if params.get("restore_image_after_testing", "no") == "yes":
         image.backup_image(params, base_dir, "restore", True)
     if params.get("remove_image") == "yes":
@@ -219,41 +251,18 @@ def postprocess_vm(test, params, env, name):
         return
 
     # Close all SSH sessions that might be active to this VM
-    for s in vm.remote_sessions:
+    for s in vm.remote_sessions[:]:
         try:
             s.close()
             vm.remote_sessions.remove(s)
         except Exception:
             pass
 
-    # Encode an HTML 5 compatible video from the screenshots produced
-    screendump_dir = os.path.join(test.debugdir, "screendumps_%s" % vm.name)
-    if (params.get("encode_video_files", "yes") == "yes" and
-            glob.glob("%s/*" % screendump_dir)):
-        try:
-            video = video_maker.GstPythonVideoMaker()
-            if (video.has_element('vp8enc') and video.has_element('webmmux')):
-                video_file = os.path.join(test.debugdir, "%s-%s.webm" %
-                                          (vm.name, test.iteration))
-            else:
-                video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
-                                          (vm.name, test.iteration))
-            logging.debug("Encoding video file %s", video_file)
-            video.start(screendump_dir, video_file)
-
-        except Exception, detail:
-            logging.info(
-                "Video creation failed for vm %s: %s", vm.name, detail)
-
     if params.get("kill_vm") == "yes":
         kill_vm_timeout = float(params.get("kill_vm_timeout", 0))
         if kill_vm_timeout:
             utils_misc.wait_for(vm.is_dead, kill_vm_timeout, 0, 1)
         vm.destroy(gracefully=params.get("kill_vm_gracefully") == "yes")
-    else:
-        # Close the serial console session, as it'll help
-        # keeping the number of filedescriptors used by virt-test honest.
-        vm.cleanup_serial_console()
 
 
 def process_command(test, params, env, command, command_timeout,
@@ -288,7 +297,8 @@ class _CreateImages(threading.Thread):
     in self.exc_info
     """
 
-    def __init__(self, image_func, test, images, params, exit_event):
+    def __init__(self, image_func, test, images, params, exit_event,
+                 vm_process_status):
         threading.Thread.__init__(self)
         self.image_func = image_func
         self.test = test
@@ -296,31 +306,39 @@ class _CreateImages(threading.Thread):
         self.params = params
         self.exit_event = exit_event
         self.exc_info = None
+        self.vm_process_status = vm_process_status
 
     def run(self):
         try:
             _process_images_serial(self.image_func, self.test, self.images,
-                                   self.params, self.exit_event)
+                                   self.params, self.exit_event,
+                                   self.vm_process_status)
         except Exception:
             self.exc_info = sys.exc_info()
             self.exit_event.set()
 
 
-def process_images(image_func, test, params):
+def process_images(image_func, test, params, vm_process_status=None):
     """
     Wrapper which chooses the best way to process images.
+
     :param image_func: Process function
     :param test: An Autotest test object.
     :param params: A dict containing all VM and image parameters.
+    :param vm_process_status: (optional) vm process status like running, dead
+                              or None for no vm exist.
     """
     images = params.objects("images")
     if len(images) > 20:    # Lets do it in parallel
-        _process_images_parallel(image_func, test, params)
+        _process_images_parallel(image_func, test, params,
+                                 vm_process_status=vm_process_status)
     else:
-        _process_images_serial(image_func, test, images, params)
+        _process_images_serial(image_func, test, images, params,
+                               vm_process_status=vm_process_status)
 
 
-def _process_images_serial(image_func, test, images, params, exit_event=None):
+def _process_images_serial(image_func, test, images, params, exit_event=None,
+                           vm_process_status=None):
     """
     Original process_image function, which allows custom set of images
     :param image_func: Process function
@@ -328,21 +346,25 @@ def _process_images_serial(image_func, test, images, params, exit_event=None):
     :param images: List of images (usually params.objects("images"))
     :param params: A dict containing all VM and image parameters.
     :param exit_event: (optional) exit event which interrupts the processing
+    :param vm_process_status: (optional) vm process status like running, dead
+                              or None for no vm exist.
     """
     for image_name in images:
         image_params = params.object_params(image_name)
-        image_func(test, image_params, image_name)
+        image_func(test, image_params, image_name, vm_process_status)
         if exit_event and exit_event.is_set():
             logging.error("Received exit_event, stop processing of images.")
             break
 
 
-def _process_images_parallel(image_func, test, params):
+def _process_images_parallel(image_func, test, params, vm_process_status=None):
     """
     The same as _process_images but in parallel.
     :param image_func: Process function
     :param test: An Autotest test object.
     :param params: A dict containing all VM and image parameters.
+    :param vm_process_status: (optional) vm process status like running, dead
+                              or None for no vm exist.
     """
     images = params.objects("images")
     no_threads = min(len(images) / 5,
@@ -352,7 +374,7 @@ def _process_images_parallel(image_func, test, params):
     for i in xrange(no_threads):
         imgs = images[i::no_threads]
         threads.append(_CreateImages(image_func, test, imgs, params,
-                                     exit_event))
+                                     exit_event, vm_process_status))
         threads[-1].start()
     finished = False
     while not finished:
@@ -397,11 +419,17 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
                 vm_params = params.object_params(vm_name)
                 vm = env.get_vm(vm_name)
                 unpause_vm = False
+                if vm is None or vm.is_dead():
+                    vm_process_status = 'dead'
+                else:
+                    vm_process_status = 'running'
                 if vm is not None and vm.is_alive() and not vm.is_paused():
                     vm.pause()
                     unpause_vm = True
+                    vm_params['skip_cluster_leak_warn'] = "yes"
                 try:
-                    process_images(image_func, test, vm_params)
+                    process_images(image_func, test, vm_params,
+                                   vm_process_status)
                 finally:
                     if unpause_vm:
                         vm.resume()
@@ -488,7 +516,7 @@ def preprocess(test, params, env):
         vm = env[key]
         if not isinstance(vm, virt_vm.BaseVM):
             continue
-        if not vm.name in requested_vms:
+        if vm.name not in requested_vms:
             vm.destroy()
             del env[key]
 
@@ -639,7 +667,7 @@ def preprocess(test, params, env):
         for vm_name in params.get("vms").split():
             vm = env.get_vm(vm_name)
             if vm:
-                vm.destroy(free_mac_addresses=False)
+                vm.destroy()
                 env.unregister_vm(vm_name)
 
             vm_params = params.object_params(vm_name)
@@ -659,6 +687,15 @@ def preprocess(test, params, env):
                                               name='ScreenDump',
                                               args=(test, params, env))
         _screendump_thread.start()
+
+    # Start the register query thread
+    if params.get("store_vm_register") == "yes":
+        global _vm_register_thread, _vm_register_thread_termination_event
+        _vm_register_thread_termination_event = threading.Event()
+        _vm_register_thread = threading.Thread(target=_store_vm_register,
+                                               name='VmRegister',
+                                               args=(test, params, env))
+        _vm_register_thread.start()
 
     return params
 
@@ -689,6 +726,28 @@ def postprocess(test, params, env):
         _screendump_thread_termination_event.set()
         _screendump_thread.join(10)
         _screendump_thread = None
+
+    # Encode an HTML 5 compatible video from the screenshots produced
+
+    dirs = re.findall("(screendump\S*_[0-9]+)", str(os.listdir(test.debugdir)))
+    for dir in dirs:
+        screendump_dir = os.path.join(test.debugdir, dir)
+        if (params.get("encode_video_files", "yes") == "yes" and
+                glob.glob("%s/*" % screendump_dir)):
+            try:
+                video = video_maker.GstPythonVideoMaker()
+                if (video.has_element('vp8enc') and video.has_element('webmmux')):
+                    video_file = os.path.join(test.debugdir, "%s-%s.webm" %
+                                              (screendump_dir, test.iteration))
+                else:
+                    video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
+                                              (screendump_dir, test.iteration))
+                logging.debug("Encoding video file %s", video_file)
+                video.start(screendump_dir, video_file)
+
+            except Exception, detail:
+                logging.info(
+                    "Video creation failed for %s: %s", screendump_dir, detail)
 
     # Warn about corrupt PPM files
     for f in glob.glob(os.path.join(test.debugdir, "*.ppm")):
@@ -722,6 +781,13 @@ def postprocess(test, params, env):
         for f in (glob.glob(os.path.join(test.debugdir, '*.ogg')) +
                   glob.glob(os.path.join(test.debugdir, '*.webm'))):
             os.unlink(f)
+
+    # Terminate the register query thread
+    global _vm_register_thread, _vm_register_thread_termination_event
+    if _vm_register_thread is not None:
+        _vm_register_thread_termination_event.set()
+        _vm_register_thread.join()
+        _vm_register_thread = None
 
     # Kill all unresponsive VMs
     if params.get("kill_unresponsive_vms") == "yes":
@@ -767,6 +833,9 @@ def postprocess(test, params, env):
                     m.close()
                 except Exception:
                     pass
+        # Close the serial console session, as it'll help
+        # keeping the number of filedescriptors used by virt-test honest.
+        vm.cleanup_serial_console()
 
     if params.get("setup_hugepages") == "yes":
         try:
@@ -884,12 +953,13 @@ def _take_screendumps(test, params, env):
 
     while True:
         for vm in env.get_all_vms():
-            if vm not in counter.keys():
-                counter[vm] = 0
-            if vm not in inactivity.keys():
-                inactivity[vm] = time.time()
+            if vm.instance not in counter.keys():
+                counter[vm.instance] = 0
+            if vm.instance not in inactivity.keys():
+                inactivity[vm.instance] = time.time()
             if not vm.is_alive():
                 continue
+            vm_pid = vm.get_pid()
             try:
                 vm.screendump(filename=temp_filename, debug=False)
             except qemu_monitor.MonitorError, e:
@@ -906,17 +976,19 @@ def _take_screendumps(test, params, env):
                 os.unlink(temp_filename)
                 continue
             screendump_dir = os.path.join(test.debugdir,
-                                          "screendumps_%s" % vm.name)
+                                          "screendumps_%s_%s" % (vm.name,
+                                                                 vm_pid))
             try:
                 os.makedirs(screendump_dir)
             except OSError:
                 pass
-            counter[vm] += 1
+            counter[vm.instance] += 1
             screendump_filename = os.path.join(screendump_dir, "%04d.jpg" %
-                                               counter[vm])
+                                               counter[vm.instance])
+            vm.verify_bsod(screendump_filename)
             image_hash = utils.hash_file(temp_filename)
             if image_hash in cache:
-                time_inactive = time.time() - inactivity[vm]
+                time_inactive = time.time() - inactivity[vm.instance]
                 if time_inactive > inactivity_treshold:
                     msg = (
                         "%s screen is inactive for more than %d s (%d min)" %
@@ -928,7 +1000,7 @@ def _take_screendumps(test, params, env):
                         except virt_vm.VMScreenInactiveError:
                             logging.error(msg)
                             # Let's reset the counter
-                            inactivity[vm] = time.time()
+                            inactivity[vm.instance] = time.time()
                             test.background_errors.put(sys.exc_info())
                     elif inactivity_watcher == 'log':
                         logging.debug(msg)
@@ -937,7 +1009,7 @@ def _take_screendumps(test, params, env):
                 except OSError:
                     pass
             else:
-                inactivity[vm] = time.time()
+                inactivity[vm.instance] = time.time()
                 try:
                     try:
                         image = PIL.Image.open(temp_filename)
@@ -949,7 +1021,7 @@ def _take_screendumps(test, params, env):
                                         "screendump: %s", vm.name, error_detail)
                         # Decrement the counter as we in fact failed to
                         # produce a converted screendump
-                        counter[vm] -= 1
+                        counter[vm.instance] -= 1
                 except NameError:
                     pass
             os.unlink(temp_filename)
@@ -960,5 +1032,97 @@ def _take_screendumps(test, params, env):
                 break
             _screendump_thread_termination_event.wait(delay)
         else:
+            # Exit event was deleted, exit this thread
+            break
+
+
+def store_vm_register(vm, log_filename, append=False):
+    """
+    Store the register information of vm into a log file
+
+    :param vm: VM object
+    :type vm: vm object
+    :param log_filename: log file name
+    :type log_filename: string
+    :param append: Add the log to the end of the log file or not
+    :type append: bool
+    :return: Store the vm register information to log file or not
+    :rtype: bool
+    """
+    try:
+        output = vm.monitor.info('registers', debug=False)
+        timestamp = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+    except qemu_monitor.MonitorError, e:
+        logging.warn(e)
+        return False
+
+    log_filename = "%s_%s" % (log_filename, timestamp)
+    if append:
+        vr_log = open(log_filename, 'r+')
+        vr_log.seek(0, 2)
+        output += "\n"
+    else:
+        vr_log = open(log_filename, 'w')
+    vr_log.write(output)
+    vr_log.close()
+    return True
+
+
+def _store_vm_register(test, params, env):
+    def report_result(status, results):
+        msg = "%s." % status
+        for vm_name in results.keys():
+            if results[vm_name] > 0:
+                msg += " Used to failed to get register info from guest"
+                msg += " %s for %s times." % (vm_name, results[vm_name])
+
+        if msg != "%s." % status:
+            logging.debug(msg)
+
+    global _vm_register_thread_termination_event
+    delay = float(params.get("vm_register_delay", 5))
+    counter = {}
+    vm_register_error_count = {}
+    while True:
+        for vm in env.get_all_vms():
+            if vm.name not in vm_register_error_count:
+                vm_register_error_count[vm.name] = 0
+
+            if not vm.is_alive():
+                if vm_register_error_count[vm.name] < 1:
+                    logging.warn("%s is not alive. Can not query the "
+                                 "register status" % vm.name)
+                vm_register_error_count[vm.name] += 1
+                continue
+            vm_pid = vm.get_pid()
+            vr_dir = utils_misc.get_path(test.debugdir,
+                                         "vm_register_%s_%s" % (vm.name,
+                                                                vm_pid))
+            try:
+                os.makedirs(vr_dir)
+            except OSError:
+                pass
+
+            if vm not in counter:
+                counter[vm] = 1
+            vr_filename = utils_misc.get_path(vr_dir, "%04d" % counter[vm])
+            stored_log = store_vm_register(vm, vr_filename)
+            if vm_register_error_count[vm.name] >= 1:
+                logging.debug("%s alive now. Used to failed to get register"
+                              " info from guest %s"
+                              " times" % (vm.name,
+                                          vm_register_error_count[vm.name]))
+                vm_register_error_count[vm.name] = 0
+            if stored_log:
+                counter[vm] += 1
+
+        if _vm_register_thread_termination_event is not None:
+            if _vm_register_thread_termination_event.isSet():
+                _vm_register_thread_termination_event = None
+                report_result("Thread quit", vm_register_error_count)
+                break
+            _vm_register_thread_termination_event.wait(delay)
+        else:
+            report_result("Thread quit", vm_register_error_count)
             # Exit event was deleted, exit this thread
             break

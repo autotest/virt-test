@@ -27,7 +27,7 @@ class Machine(object):
         """
         :return: True when Machine is virtual.
         """
-        return not self.vm is None
+        return self.vm is not None
 
     def cmd(self, cmd, timeout=60):
         """
@@ -82,7 +82,7 @@ class Machine(object):
                 iface = self.get_if_vlan_name(iface, vlan)
                 return ping6(iface, dst, count, self.runner)
         elif ipv == "ipv4":
-            return ping4(dst, count, self.runner)
+            return ping4(iface, dst, count, self.runner)
 
     def add_vlan_iface(self, iface, vlan_id):
         """
@@ -92,7 +92,7 @@ class Machine(object):
         :param vlan_id: Id of vlan.
         """
         self.cmd("ip link add link %s name %s-vl%s type vlan id %s" %
-                (iface, iface, vlan_id, vlan_id))
+                 (iface, iface, vlan_id, vlan_id))
 
     def del_vlan_iface(self, iface, vlan_id):
         """
@@ -215,8 +215,11 @@ def ping6(iface, dst_ip, count=1, runner=None):
 
 def ping4(iface, dst_ip, count=1, runner=None):
     """
-    Format command for ipv6.
+    Format command for ipv4.
     """
     if runner is None:
         runner = utils.run
-    return runner("ping  %s -c %s" % (dst_ip, count))
+    ping_cmd = "ping %s -c %s" % (dst_ip, count)
+    if iface is not None:
+        ping_cmd += " -I %s" % iface
+    return runner(ping_cmd)

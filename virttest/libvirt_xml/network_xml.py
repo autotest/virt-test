@@ -4,7 +4,7 @@ http://libvirt.org/formatnetwork.html
 """
 
 import logging
-from virttest import virsh, xml_utils
+from virttest import xml_utils
 from virttest.libvirt_xml import base, xcepts, accessors
 
 
@@ -116,15 +116,20 @@ class PortgroupXML(base.LibvirtXMLBase):
     Accessor methods for PortgroupXML class in NetworkXML.
 
     Properties:
-        name: string, operates on 'name' attribute of portgroup tag
-        default: string of yes or no, operates on 'default' attribute
-                 of portgroup tag
-        virtualport_type: string, operates on 'type' attribute of
-                          virtualport tag in portgroup.
-        bandwidth_inbound: dict, operates on inbound tag in bandwidth
-                           which is child of portgroup.
-        bandwidth_outbound: dict, operates on outbound tag in bandwidth
-                           which is child of portgroup.
+        name:
+            string, operates on 'name' attribute of portgroup tag
+        default:
+            string of yes or no, operates on 'default' attribute of
+            portgroup tag
+        virtualport_type:
+            string, operates on 'type' attribute of virtualport tag in
+            portgroup.
+        bandwidth_inbound:
+            dict, operates on inbound tag in bandwidth which is child
+            of portgroup.
+        bandwidth_outbound:
+            dict, operates on outbound tag in bandwidth which is child
+            of portgroup.
     """
 
     __slots__ = ('name', 'default', 'virtualport_type',
@@ -156,31 +161,60 @@ class NetworkXMLBase(base.LibvirtXMLBase):
     Accessor methods for NetworkXML class.
 
     Properties:
-        name: string, operates on XML name tag
-        uuid: string, operates on uuid tag
-        fwd_mode: string, operates on mode attribute of forward tag
-        mac: string, operates on address attribute of mac tag
-        ip: string operate on ip/dhcp ranges as IPXML instances
-        bridge: dict, operates on bridge attributes
-        bandwidth_inbound: dict, operates on inbound under bandwidth.
-        bandwidth_outbound: dict, operates on outbound under bandwidth.
-        portgroup: PortgroupXML instance to access portgroup tag.
-        defined: virtual boolean, callout to virsh methods
-            get: True if libvirt knows network name
-            set: True defines network, False undefines to libvirt
-            del: Undefines network to libvirt
-        active: virtual boolean, callout to virsh methods
-            get: True if network is active to libvirt
-            set: True activates network, False deactivates to libvirt
-            del: Deactivates network to libvirt
-        autostart: virtual boolean, callout to virsh methods
-            get: True if libvirt autostarts network with same name
-            set: True to set autostart, False to unset to libvirt
-            del: Unset autostart to libvirt
-        persistent: virtual boolean, callout to virsh methods
-            get: True if network was defined, False if only created.
-            set: Same as defined property
-            del: Same as defined property
+        name:
+            string, operates on XML name tag
+        uuid:
+            string, operates on uuid tag
+        fwd_mode:
+            string, operates on mode attribute of forward tag
+        mac:
+            string, operates on address attribute of mac tag
+        ip:
+            string operate on ip/dhcp ranges as IPXML instances
+        bridge:
+            dict, operates on bridge attributes
+        bandwidth_inbound:
+            dict, operates on inbound under bandwidth.
+        bandwidth_outbound:
+            dict, operates on outbound under bandwidth.
+        portgroup:
+            PortgroupXML instance to access portgroup tag.
+
+        defined:
+            virtual boolean, callout to virsh methods
+        get:
+            True if libvirt knows network name
+        set:
+            True defines network, False undefines to libvirt
+        del:
+            Undefines network to libvirt
+
+        active:
+            virtual boolean, callout to virsh methods
+        get:
+            True if network is active to libvirt
+        set:
+            True activates network, False deactivates to libvirt
+        del:
+            Deactivates network to libvirt
+
+        autostart:
+            virtual boolean, callout to virsh methods
+        get:
+            True if libvirt autostarts network with same name
+        set:
+            True to set autostart, False to unset to libvirt
+        del:
+            Unset autostart to libvirt
+
+        persistent:
+            virtual boolean, callout to virsh methods
+        get:
+            True if network was defined, False if only created.
+        set:
+            Same as defined property
+        del:
+            Same as defined property
     """
 
     __slots__ = ('name', 'uuid', 'bridge', 'defined', 'active',
@@ -392,7 +426,7 @@ class NetworkXML(NetworkXMLBase):
         networks = new_netxml.virsh.net_state_dict(**params).keys()
         for net_name in networks:
             new_copy = new_netxml.copy()
-            new_copy.xml = virsh.net_dumpxml(net_name).stdout.strip()
+            new_copy.xml = virsh_instance.net_dumpxml(net_name).stdout.strip()
             result[net_name] = new_copy
         return result
 

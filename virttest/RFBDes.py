@@ -184,7 +184,6 @@ class Des(object):
 
         :param table: Index list.
         :param block: bit list used to get sub list.
-        @
         """
         block_list = []
         for x in table:

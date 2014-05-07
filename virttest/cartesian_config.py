@@ -3,127 +3,131 @@
 """
 Cartesian configuration format file parser.
 
- Filter syntax:
- , means OR
- .. means AND
- . means IMMEDIATELY-FOLLOWED-BY
- (xx=yy) where xx=VARIANTS_name and yy=VARIANT
+Filter syntax:
 
- Example:
- qcow2..(guest_os=Fedora).14, RHEL.6..raw..boot, smp2..qcow2..migrate..ide
- means match all dicts whose names have:
- (qcow2 AND ((guest_os=Fedora) IMMEDIATELY-FOLLOWED-BY 14)) OR
- ((RHEL IMMEDIATELY-FOLLOWED-BY 6) AND raw AND boot) OR
- (smp2 AND qcow2 AND migrate AND ide)
+* ``,`` means ``OR``
+* ``..`` means ``AND``
+* ``.`` means ``IMMEDIATELY-FOLLOWED-BY``
+* ``(xx=yy)`` where ``xx=VARIANT_NAME`` and ``yy=VARIANT_VALUE``
+
+Example:
+
+::
+
+     qcow2..(guest_os=Fedora).14, RHEL.6..raw..boot, smp2..qcow2..migrate..ide
+
+means match all dicts whose names have:
+
+::
+
+    (qcow2 AND ((guest_os=Fedora) IMMEDIATELY-FOLLOWED-BY 14)) OR
+    ((RHEL IMMEDIATELY-FOLLOWED-BY 6) AND raw AND boot) OR
+    (smp2 AND qcow2 AND migrate AND ide)
+
+Note:
+
+* ``qcow2..Fedora.14`` is equivalent to ``Fedora.14..qcow2``.
+* ``qcow2..Fedora.14`` is not equivalent to ``qcow2..14.Fedora``.
+* ``ide, scsi`` is equivalent to ``scsi, ide``.
+
+Filters can be used in 3 ways:
+
+::
+
+    only <filter>
+    no <filter>
+    <filter>:
+
+The last one starts a conditional block.
+
+Formal definition: Regexp come from `python <http://docs.python.org/2/library/re.html>`__.
+They're not deterministic, but more readable for people. Spaces between
+terminals and nonterminals are only for better reading of definitions.
+
+The base of the definitions come verbatim as follows:
 
 
- Note:
- 'qcow2..Fedora.14' is equivalent to 'Fedora.14..qcow2'.
- 'qcow2..Fedora.14' is not equivalent to 'qcow2..14.Fedora'.
- 'ide, scsi' is equivalent to 'scsi, ide'.
+::
 
- Filters can be used in 3 ways:
- only <filter>
- no <filter>
- <filter>:
- The last one starts a conditional block.
+    E = {\\n, #, :, "-", =, +=, <=, ?=, ?+=, ?<=, !, < , del, @, variants, include, only, no, name, value}
+
+    N = {S, DEL, FILTER, FILTER_NAME, FILTER_GROUP, PN_FILTER_GROUP, STAT, VARIANT, VAR-TYPE, VAR-NAME, VAR-NAME-F, VAR, COMMENT, TEXT, DEPS, DEPS-NAME-F, META-DATA, IDENTIFIER}``
 
 
-Formal definition:
+    I = I^n | n in N              // indentation from start of line
+                                  // where n is indentation length.
+    I = I^n+x | n,x in N          // indentation with shift
 
- regexp from python http://docs.python.org/2/library/re.html
- Not deterministic but more readable for people.
- Spaces between terminals and nontermials are only for better
- reading of definitions.
+    start symbol = S
+    end symbol = eps
 
-  E={\n, #, :, "-", =, +=, <=, ?=, ?+=, ?<=, !, < , del, @, variants, include,
-    only, no, name, value}
-  N={S, DEL, FILTER, FILTER_NAME, FILTER_GROUP, PN_FILTER_GROUP,
-    STAT, VARIANT, VAR-TYPE, VAR-NAME, VAR-NAME-F, VAR, COMMENT,
-    TEXT, DEPS, DEPS-NAME-F, META-DATA, IDENTIFIER}
+    S -> I^0+x STATV | eps
 
-  I = I^n | n in N              // indentation from start of line
-                                // where n is indentation length.
-  I = I^n+x | n,x in N          // indentation with shift
-  start symbol = S
-  end symbol = eps
+    I^n    STATV
+    I^n    STATV
 
-  S -> I^0+x STATV | eps
+    I^n STATV -> I^n STATV \\n I^n STATV | I^n STAT | I^n variants VARIANT
+    I^n STAT -> I^n STAT \\n I^n STAT | I^n COMMENT | I^n include INC
+    I^n STAT -> I^n del DEL | I^n FILTER
 
- #
- #I^n    STATV
- #I^n    STATV
- #
+    DEL -> name \\n
 
-  I^n STATV -> I^n STATV \n I^n STATV | I^n STAT | I^n variants VARIANT
+    I^n STAT -> I^n name = VALUE | I^n name += VALUE | I^n name <= VALUE
+    I^n STAT -> I^n name ?= VALUE | I^n name ?+= VALUE | I^n name ?<= VALUE
 
-  I^n STAT -> I^n STAT \n I^n STAT | I^n COMMENT | I^n include INC
-  I^n STAT -> I^n del DEL | I^n FILTER
+    VALUE -> TEXT \\n | 'TEXT' \\n | "TEXT" \\n
 
-  DEL -> name \n
+    COMMENT_BLOCK -> #TEXT | //TEXT
+    COMMENT ->  COMMENT_BLOCK\\n
+    COMMENT ->  COMMENT_BLOCK\\n
 
-  I^n STAT -> I^n name = VALUE | I^n name += VALUE | I^n name <= VALUE
-  I^n STAT -> I^n name ?= VALUE | I^n name ?+= VALUE | I^n name ?<= VALUE
+    TEXT = [^\\n] TEXT            //python format regexp
 
-  VALUE -> TEXT \n | 'TEXT' \n | "TEXT" \n
+    I^n    variants VAR #comments:             add possibility for comment
+    I^n+x       VAR-NAME: DEPS
+    I^n+x+x2        STATV
+    I^n         VAR-NAME:
 
-  COMMENT_BLOCK -> #TEXT | //TEXT
-  COMMENT ->  COMMENT_BLOCK\n
-  COMMENT ->  COMMENT_BLOCK\n
+    IDENTIFIER -> [A-Za-z0-9][A-Za-z0-9_-]*
 
-  TEXT = [^\n] TEXT            //python format regexp
+    VARIANT -> VAR COMMENT_BLOCK\\n I^n+x VAR-NAME
+    VAR -> VAR-TYPE: | VAR-TYPE META-DATA: | :         // Named | unnamed variant
 
- #
- #I^n    variants VAR #comments:             add possibility for comment
- #I^n+x       VAR-NAME: DEPS
- #I^n+x+x2        STATV
- #I^n         VAR-NAME:
- #
+    VAR-TYPE -> IDENTIFIER
 
-  IDENTIFIER -> [A-Za-z0-9][A-Za-z0-9_-]*
+    variants _name_ [xxx] [zzz=yyy] [uuu]:
 
-  VARIANT -> VAR COMMENT_BLOCK\n I^n+x VAR-NAME
-  VAR -> VAR-TYPE: | VAR-TYPE META-DATA: | :         // Named | unnamed variant
+    META-DATA -> [IDENTIFIER] | [IDENTIFIER=TEXT] | META-DATA META-DATA
 
-  VAR-TYPE -> IDENTIFIER
+    I^n VAR-NAME -> I^n VAR-NAME \\n I^n VAR-NAME | I^n VAR-NAME-N \\n I^n+x STATV
+    VAR-NAME-N -> - @VAR-NAME-F: DEPS | - VAR-NAME-F: DEPS
+    VAR-NAME-F -> [a-zA-Z0-9\\._-]+                  // Python regexp
 
- #
- # variants _name_ [xxx] [zzz=yyy] [uuu]:
- #
+    DEPS -> DEPS-NAME-F | DEPS-NAME-F,DEPS
+    DEPS-NAME-F -> [a-zA-Z0-9\\._- ]+                // Python regexp
 
-  META-DATA -> [IDENTIFIER] | [IDENTIFIER=TEXT] | META-DATA META-DATA
+    INC -> name \\n
 
-  I^n VAR-NAME -> I^n VAR-NAME \n I^n VAR-NAME | I^n VAR-NAME-N \n I^n+x STATV
-  VAR-NAME-N -> - @VAR-NAME-F: DEPS | - VAR-NAME-F: DEPS
-  VAR-NAME-F -> [a-zA-Z0-9\._-]+                  // Python regexp
 
-  DEPS -> DEPS-NAME-F | DEPS-NAME-F,DEPS
-  DEPS-NAME-F -> [a-zA-Z0-9\._- ]+                // Python regexp
+    FILTER_GROUP: STAT
+        STAT
 
-  INC -> name \n
+    I^n STAT -> I^n PN_FILTER_GROUP | I^n ! PN_FILTER_GROUP
 
- #
- # FILTER_GROUP: STAT
- #     STAT
- #
-  I^n STAT -> I^n PN_FILTER_GROUP | I^n ! PN_FILTER_GROUP
+    PN_FILTER_GROUP -> FILTER_GROUP: \\n I^n+x STAT
+    PN_FILTER_GROUP -> FILTER_GROUP: STAT \\n I^n+x STAT
 
-  PN_FILTER_GROUP -> FILTER_GROUP: \n I^n+x STAT
-  PN_FILTER_GROUP -> FILTER_GROUP: STAT \n I^n+x STAT
+    only FILTER_GROUP
+    no FILTER_GROUP
 
- #
- # only FILTER_GROUP
- # no FILTER_GROUP
+    FILTER -> only FILTER_GROUP \\n | no FILTER_GROUP \\n
 
-  FILTER -> only FILTER_GROUP \n | no FILTER_GROUP \n
+    FILTER_GROUP -> FILTER_NAME
+    FILTER_GROUP -> FILTER_GROUP..FILTER_GROUP
+    FILTER_GROUP -> FILTER_GROUP,FILTER_GROUP
 
-  FILTER_GROUP -> FILTER_NAME
-  FILTER_GROUP -> FILTER_GROUP..FILTER_GROUP
-  FILTER_GROUP -> FILTER_GROUP,FILTER_GROUP
-
-  FILTER_NAME -> FILTER_NAME.FILTER_NAME
-  FILTER_NAME -> VAR-NAME-F | (VAR-NAME-F=VAR-NAME-F)
-
+    FILTER_NAME -> FILTER_NAME.FILTER_NAME
+    FILTER_NAME -> VAR-NAME-F | (VAR-NAME-F=VAR-NAME-F)
 
 :copyright: Red Hat 2008-2013
 """
@@ -427,7 +431,7 @@ class FileReader(StrReader):
         """
         Initialize the reader.
 
-        @parse filename: The name of the input file.
+        :parse filename: The name of the input file.
         """
         StrReader.__init__(self, open(filename).read())
         self.filename = filename
@@ -900,7 +904,7 @@ class LUpdateFileMap(LOperators):
 
     def apply_to_dict(self, d):
         dest = self.dest
-        if not dest in d:
+        if dest not in d:
             d[dest] = {}
 
         if self.shortname in d[dest]:
@@ -1100,7 +1104,7 @@ class Lexer(object):
         if end_tokens is None:
             end_tokens = [LEndL]
         token = self.generator.next()
-        while not type(token) in end_tokens:
+        while type(token) not in end_tokens:
             yield token
             token = self.generator.next()
         yield token
@@ -1172,8 +1176,8 @@ class Lexer(object):
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']=[%s]" %
-                             ([x.identifier for x in lType],
-                              token.identifier, token),
+                              ([x.identifier for x in lType],
+                               token.identifier, token),
                               self.line, self.filename, self.linenum)
 
     def get_next_check_nw(self, lType):
@@ -1184,8 +1188,8 @@ class Lexer(object):
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']" %
-                             ([x.identifier for x in lType],
-                              token.identifier),
+                              ([x.identifier for x in lType],
+                               token.identifier),
                               self.line, self.filename, self.linenum)
 
     def check_token(self, token, lType):
@@ -1193,8 +1197,8 @@ class Lexer(object):
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']" %
-                             ([x.identifier for x in lType],
-                              token.identifier),
+                              ([x.identifier for x in lType],
+                               token.identifier),
                               self.line, self.filename, self.linenum)
 
 
@@ -1230,7 +1234,7 @@ def parse_filter(lexer, tokens):
     and_filter = []
     con_filter = []
     dots = 1
-    while not typet in [LEndL]:
+    while typet not in [LEndL]:
         if typet in [LIdentifier, LLRBracket]:        # join    identifier
             if typet == LLRBracket:    # (xxx=ttt)
                 _, ident = lexer.check_token(next_nw(tokens),
@@ -1496,7 +1500,7 @@ class Parser(object):
                     if "default" in meta:
                         meta_with_default = True
                     meta_in_expand_defautls = False
-                    if not var_name in self.expand_defaults:
+                    if var_name not in self.expand_defaults:
                         meta_in_expand_defautls = True
                     node4 = Node()
                     while True:
@@ -1575,7 +1579,7 @@ class Parser(object):
                                     meta["default"].remove(wd)
 
                         if (is_default and not already_default and
-                           meta_in_expand_defautls):
+                                meta_in_expand_defautls):
                             node3.default = True
                             already_default = True
 
@@ -1630,7 +1634,7 @@ class Parser(object):
                     var_name = ""
                     meta.clear()
                     # [meta1=xxx] [yyy] [xxx]
-                    while not vtypet in [LColon, LEndL]:
+                    while vtypet not in [LColon, LEndL]:
                         if vtypet == LIdentifier:
                             if var_name != "":
                                 raise ParserError("Syntax ERROR expected"
@@ -1643,14 +1647,14 @@ class Parser(object):
                             typet, _ = lexer.get_next_check_nw([LSet,
                                                                 LRBracket])
                             if typet == LRBracket:  # [xxx]
-                                if not ident in meta:
+                                if ident not in meta:
                                     meta[ident] = []
                                 meta[ident].append(True)
                             elif typet == LSet:  # [xxx = yyyy]
                                 tokens = lexer.get_until_no_white([LRBracket,
-                                                                  LEndL])
+                                                                   LEndL])
                                 if type(tokens[-1]) == LRBracket:
-                                    if not ident in meta:
+                                    if ident not in meta:
                                         meta[ident] = []
                                     meta[ident].append(tokens[:-1])
                                 else:
@@ -1699,7 +1703,7 @@ class Parser(object):
                     path = lexer.rest_line_as_LString()
                     filename = os.path.expanduser(path)
                     if (isinstance(lexer.reader, FileReader) and
-                       not os.path.isabs(filename)):
+                            not os.path.isabs(filename)):
                         filename = os.path.join(
                             os.path.dirname(lexer.filename),
                             filename)
@@ -1775,7 +1779,7 @@ class Parser(object):
                 if obj.requires_action(ctx, ctx_set, labels):
                     # This filter requires action now
                     if type(obj) is OnlyFilter or type(obj) is NoFilter:
-                        if not obj in blocked_filters:
+                        if obj not in blocked_filters:
                             self._debug("    filter did not pass: %r (%s:%s)",
                                         obj.line, filename, linenum)
                             failed_filters.append(t)
@@ -1809,7 +1813,7 @@ class Parser(object):
                        failed_internal_filters):
             all_content = content + node.content
             for t in failed_external_filters + failed_internal_filters:
-                if not t in all_content:
+                if t not in all_content:
                     return True
             for t in failed_external_filters:
                 _, _, external_filter = t
@@ -1819,7 +1823,7 @@ class Parser(object):
                                                   labels):
                     return False
             for t in failed_internal_filters:
-                if not t in node.content:
+                if t not in node.content:
                     return True
 
             for t in failed_internal_filters:
@@ -1882,7 +1886,7 @@ class Parser(object):
 
         # Recurse into children
         count = 0
-        if self.defaults and not node.var_name in self.expand_defaults:
+        if self.defaults and node.var_name not in self.expand_defaults:
             for n in node.children:
                 for d in self.get_dicts(n, ctx, new_content, shortname, dep):
                     count += 1

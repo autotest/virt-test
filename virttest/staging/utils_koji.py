@@ -204,7 +204,7 @@ class KojiClient(object):
 
         :type check_valid: boolean
         :param check_valid: whether to include a check on the configuration
-        :raise:: ValueError
+        :raise: ValueError
         :return: None
         '''
         if check_is_valid:
@@ -248,7 +248,7 @@ class KojiClient(object):
                          'not fatal but indicates an unexpected situation',
                          self.command)
 
-        if not self.command in self.CONFIG_MAP.keys():
+        if self.command not in self.CONFIG_MAP.keys():
             logging.error('Koji command "%s" does not have a configuration '
                           'file associated to it', self.command)
             koji_command_ok = False

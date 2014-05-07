@@ -51,7 +51,7 @@ def find_id_for_screendump(md5sum, data_dir):
     :param md5sum: md5 sum string
     :param dir: Directory that holds the PPM files.
     :return: The file's basename without any preceding path, e.g.
-    '20080101_120000_d41d8cd98f00b204e9800998ecf8427e.ppm'.
+             ``20080101_120000_d41d8cd98f00b204e9800998ecf8427e.ppm``
     """
     try:
         files = os.listdir(data_dir)
@@ -68,8 +68,9 @@ def generate_id_for_screendump(md5sum, data_dir):
     Generate a unique filename using the given MD5 sum.
 
     :return: Only the file basename, without any preceding path. The
-    filename consists of the current date and time, the MD5 sum and a .ppm
-    extension, e.g. '20080101_120000_d41d8cd98f00b204e9800998ecf8427e.ppm'.
+             filename consists of the current date and time, the MD5 sum and a
+             ``.ppm`` extension, e.g.
+             ``20080101_120000_d41d8cd98f00b204e9800998ecf8427e.ppm``.
     """
     filename = time.strftime("%Y%m%d_%H%M%S") + "_" + md5sum + ".ppm"
     return filename
@@ -132,7 +133,7 @@ def image_crop(width, height, data, x1, y1, dx, dy):
     :param dx: Desired width of the cropped region
     :param dy: Desired height of the cropped region
     :return: A 3-tuple containing the width, height and data of the
-    cropped image.
+             cropped image.
     """
     if x1 > width - 1:
         x1 = width - 1
@@ -156,7 +157,7 @@ def image_md5sum(width, height, data):
 
     :param width: PPM file width
     :param height: PPM file height
-    @data: PPM file data
+    :param data: PPM file data
     """
     header = "P6\n%d %d\n255\n" % (width, height)
     hsh = md5eval(header)
@@ -192,7 +193,8 @@ def image_verify_ppm_file(filename):
 
     :param filename: Path of the file being verified.
     :return: True if filename is a valid PPM image file. This function
-    reads only the first few bytes of the file so it should be rather fast.
+             reads only the first few bytes of the file so it should be rather
+             fast.
     """
     try:
         size = os.path.getsize(filename)
@@ -286,13 +288,14 @@ def image_average_hash(image, img_wd=8, img_ht=8):
         image = Image.open(image)
     image = image.resize((img_wd, img_ht), Image.ANTIALIAS).convert('L')
     avg = reduce(lambda x, y: x + y, image.getdata()) / (img_wd * img_ht)
+
     def _hta(i):
         if i < avg:
             return 0
         else:
             return 1
     return reduce(lambda x, (y, z): x | (z << y),
-            enumerate(map(_hta, image.getdata())), 0)
+                  enumerate(map(_hta, image.getdata())), 0)
 
 
 def cal_hamming_distance(h1, h2):
@@ -319,7 +322,12 @@ def img_similar(base_img, comp_img, threshold=10):
     """
     check whether two images are similar by hamming distance
     """
-    if img_ham_distance(base_img, comp_img) < threshold:
+    try:
+        hamming_distance = img_ham_distance(base_img, comp_img)
+    except IOError:
+        return False
+
+    if hamming_distance < threshold:
         return True
     else:
         return False

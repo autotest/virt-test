@@ -120,6 +120,7 @@ class VM(virt_vm.BaseVM):
             self.device_id = []
             self.pci_devices = []
             self.uuid = None
+            self.remote_sessions = []
 
         self.spice_port = 8000
         self.name = name
@@ -970,6 +971,8 @@ class VM(virt_vm.BaseVM):
             try:
                 # Only configurate RHEL5 and below
                 regex = "gettys are handled by"
+                # As of RHEL7 systemd message is displayed
+                regex += "|inittab is no longer used when using systemd"
                 output = session.cmd_output("cat /etc/inittab")
                 if re.search(regex, output):
                     logging.debug("Skip setting inittab for %s", device)
@@ -989,6 +992,19 @@ class VM(virt_vm.BaseVM):
                 session.close()
         logging.debug("Set inittab for %s failed.", device)
         return False
+
+    def cleanup_serial_console(self):
+        """
+        Close serial console and associated log file
+        """
+        if self.serial_console is not None:
+            self.serial_console.close()
+            self.serial_console = None
+        if hasattr(self, "migration_file"):
+            try:
+                os.unlink(self.migration_file)
+            except OSError:
+                pass
 
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None, timeout=5.0,
@@ -1046,7 +1062,9 @@ class VM(virt_vm.BaseVM):
                 if not os.path.exists(iso):
                     raise virt_vm.VMImageMissingError(iso)
                 compare = False
-                if cdrom_params.get("md5sum_1m"):
+                if cdrom_params.get("skip_hash"):
+                    logging.debug("Skipping hash comparison")
+                elif cdrom_params.get("md5sum_1m"):
                     logging.debug("Comparing expected MD5 sum with MD5 sum of "
                                   "first MB of ISO file...")
                     actual_hash = utils.hash_file(iso, 1048576, method="md5")
@@ -1350,8 +1368,8 @@ class VM(virt_vm.BaseVM):
         """
         Return the PID of the parent shell process.
 
-        :note: This works under the assumption that self.process.get_pid()
-        returns the PID of the parent shell process.
+        :note: This works under the assumption that ``self.process.get_pid()``
+            returns the PID of the parent shell process.
         """
         return self.process.get_pid()
 
@@ -1638,6 +1656,26 @@ class VM(virt_vm.BaseVM):
             if details['device'] == "disk":
                 disk_devices[target] = details
         return disk_devices
+
+    def get_first_disk_devices(self):
+        """
+        Get vm's first disk type block devices.
+        """
+        disk = {}
+        options = "--details"
+        result = virsh.domblklist(self.name, options, ignore_status=True,
+                                  uri=self.connect_uri)
+        blklist = result.stdout.strip().splitlines()
+        if result.exit_status != 0:
+            logging.info("Get vm devices failed.")
+        else:
+            blklist = blklist[2:]
+            linesplit = blklist[0].split(None, 4)
+            disk = {'type': linesplit[0],
+                    'device': linesplit[1],
+                    'target': linesplit[2],
+                    'source': linesplit[3]}
+        return disk
 
     def get_max_mem(self):
         """

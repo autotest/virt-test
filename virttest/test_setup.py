@@ -1,5 +1,5 @@
 """
-Library to perform pre/post test setup for KVM autotest.
+Library to perform pre/post test setup for virt test.
 """
 import os
 import logging
@@ -14,6 +14,7 @@ import utils_misc
 try:
     from virttest.staging import utils_memory
 except ImportError:
+    # pylint: disable=E0611
     from autotest.client import utils_memory
 
 
@@ -306,7 +307,7 @@ class HugePageConfig(object):
                                                      zones="DMA32 Normal")
             for size in chunk_info:
                 available_hugepages += int(chunk_info[size] * math.pow(2,
-                                           int(int(size) - chunk_bottom)))
+                                                                       int(int(size) - chunk_bottom)))
 
             available_hugepages = available_hugepages - decreased_pages
             if target_hugepages > available_hugepages:
@@ -385,39 +386,12 @@ class HugePageConfig(object):
             logging.debug("Hugepage memory successfully dealocated")
 
 
-class KSMError(Exception):
-
-    """
-    Base exception for KSM setup
-    """
-    pass
-
-
-class KSMNotSupportedError(KSMError):
-
-    """
-    Thrown when host does not support KSM.
-    """
-    pass
-
-
-class KSMConfigError(KSMError):
-
-    """
-    Thrown when host does not config KSM as expect.
-    """
-    pass
-
-
 class KSMConfig(object):
 
     def __init__(self, params, env):
         """
-
         :param params: Dict like object containing parameters for the test.
         """
-        KSM_PATH = "/sys/kernel/mm/ksm"
-
         self.pages_to_scan = params.get("ksm_pages_to_scan")
         self.sleep_ms = params.get("ksm_sleep_ms")
         self.run = params.get("ksm_run", "1")
@@ -429,120 +403,67 @@ class KSMConfig(object):
             self.run == "0"
 
         # Get KSM module status if there is one
-        # Set the ksm_module_loaded to True in default as we consider it is
-        # compiled into kernel
-        self.ksm_module_loaded = True
-        if self.ksm_module:
-            status = utils.system("lsmod |grep ksm", ignore_status=True)
-            if status != 0:
-                self.ksm_module_loaded = False
+        self.ksmctler = utils_misc.KSMController()
+        self.ksm_module_loaded = self.ksmctler.is_module_loaded()
 
         # load the ksm module for furthur information check
-        if not self.ksm_module_loaded:
-            utils.system("modprobe ksm")
+        if self.ksm_module and not self.ksm_module_loaded:
+            self.ksmctler.load_ksm_module()
 
-        if os.path.isdir(KSM_PATH):
-            self.interface = "sysfs"
-            ksm_cmd = "cat /sys/kernel/mm/ksm/run;"
-            ksm_cmd += " cat /sys/kernel/mm/ksm/pages_to_scan;"
-            ksm_cmd += " cat /sys/kernel/mm/ksm/sleep_millisecs"
-            self.ksm_path = KSM_PATH
-        else:
-            try:
-                os_dep.command("ksmctl")
-            except ValueError:
-                raise KSMNotSupportedError
-            self.interface = "ksmctl"
-            ksm_cmd = "ksmctl info"
-            # For ksmctl both pages_to_scan and sleep_ms should have value
-            # So give some default value when it is not set up in params
-            if self.pages_to_scan is None:
-                self.pages_to_scan = "5000"
-            if self.sleep_ms is None:
-                self.sleep_ms = "50"
+        # For ksmctl both pages_to_scan and sleep_ms should have value
+        # So give some default value when it is not set up in params
+        if self.pages_to_scan is None:
+            self.pages_to_scan = "5000"
+        if self.sleep_ms is None:
+            self.sleep_ms = "50"
 
-        self.ksmtuned_process = 0
         # Check if ksmtuned is running before the test
-        ksmtuned_process = utils.system_output("ps -C ksmtuned -o pid=",
-                                               ignore_status=True)
-        if ksmtuned_process:
-            self.ksmtuned_process = int(re.findall("\d+",
-                                                   ksmtuned_process)[0])
+        self.ksmtuned_process = self.ksmctler.get_ksmtuned_pid()
 
         # As ksmtuned may update KSM config most of the time we should disable
         # it when we test KSM
         self.disable_ksmtuned = params.get("disable_ksmtuned", "yes") == "yes"
 
-        output = utils.system_output(ksm_cmd)
-        self.default_status = re.findall("\d+", output)
-        if len(self.default_status) != 3:
-            raise KSMError("Can not get KSM default setting: %s" % output)
+        self.default_status = []
+        self.default_status.append(self.ksmctler.get_ksm_feature("run"))
+        self.default_status.append(self.ksmctler.get_ksm_feature(
+            "pages_to_scan"))
+        self.default_status.append(self.ksmctler.get_ksm_feature(
+            "sleep_millisecs"))
         self.default_status.append(int(self.ksmtuned_process))
         self.default_status.append(self.ksm_module_loaded)
 
     def setup(self, env):
-        if self.ksmtuned_process != 0 and self.disable_ksmtuned:
-            kill_cmd = "kill -1 %s" % self.ksmtuned_process
-            utils.system(kill_cmd)
+        if self.disable_ksmtuned:
+            self.ksmctler.stop_ksmtuned()
 
         env.data["KSM_default_config"] = self.default_status
-        ksm_cmd = ""
-        if self.interface == "sysfs":
-            if self.run != self.default_status[0]:
-                ksm_cmd += " echo %s > KSM_PATH/run;" % self.run
-            if (self.pages_to_scan
-                    and self.pages_to_scan != self.default_status[1]):
-                ksm_cmd += " echo %s > KSM_PATH" % self.pages_to_scan
-                ksm_cmd += "/pages_to_scan;"
-            if (self.sleep_ms
-                    and self.sleep_ms != self.default_status[2]):
-                ksm_cmd += " echo %s > KSM_PATH" % self.sleep_ms
-                ksm_cmd += "/sleep_millisecs"
-            ksm_cmd = re.sub("KSM_PATH", self.ksm_path, ksm_cmd)
-        elif self.interface == "ksmctl":
-            if self.run == "1":
-                ksm_cmd += "ksmctl start %s %s" % (self.pages_to_scan,
-                                                   self.sleep_ms)
-            else:
-                ksm_cmd += "ksmctl stop"
-
-        utils.system(ksm_cmd)
+        self.ksmctler.set_ksm_feature({"run": self.run,
+                                       "pages_to_scan": self.pages_to_scan,
+                                       "sleep_millisecs": self.sleep_ms})
 
     def cleanup(self, env):
         default_status = env.data.get("KSM_default_config")
 
-        if default_status[3] != 0:
+        # Get original ksm loaded status
+        default_ksm_loaded = default_status.pop()
+        # Remove pid of ksmtuned
+        if default_status.pop() != 0:
             # ksmtuned used to run in host. Start the process
             # and don't need set up the configures.
-            utils.system("ksmtuned")
+            self.ksmctler.start_ksmtuned()
             return
 
         if default_status == self.default_status:
             # Nothing changed
             return
 
-        ksm_cmd = ""
-        if self.interface == "sysfs":
-            if default_status[0] != self.default_status[0]:
-                ksm_cmd += " echo %s > KSM_PATH/run;" % default_status[0]
-            if default_status[1] != self.default_status[1]:
-                ksm_cmd += " echo %s > KSM_PATH" % default_status[1]
-                ksm_cmd += "/pages_to_scan;"
-            if default_status[2] != self.default_status[2]:
-                ksm_cmd += " echo %s > KSM_PATH" % default_status[2]
-                ksm_cmd += "/sleep_millisecs"
-            ksm_cmd = re.sub("KSM_PATH", self.ksm_path, ksm_cmd)
-        elif self.interface == "ksmctl":
-            if default_status[0] == "1":
-                ksm_cmd += "ksmctl start %s %s" % (default_status[1],
-                                                   default_status[2])
-            else:
-                ksm_cmd += "ksmctl stop"
+        self.ksmctler.set_ksm_feature({"run": default_status[0],
+                                       "pages_to_scan": default_status[1],
+                                       "sleep_millisecs": default_status[2]})
 
-        utils.system(ksm_cmd)
-
-        if not default_status[4]:
-            utils.system("modprobe -r ksm")
+        if self.ksm_module and not default_ksm_loaded:
+            self.ksmctler.unload_ksm_module()
 
 
 class PrivateBridgeError(Exception):
@@ -785,6 +706,7 @@ class PciAssignable(object):
         self.name_list = []
         self.devices_requested = 0
         self.pf_vf_info = []
+        self.dev_unbind_drivers = {}
         self.dev_drivers = {}
         self.vf_filter_re = vf_filter_re
         self.pf_filter_re = pf_filter_re
@@ -871,14 +793,14 @@ class PciAssignable(object):
         drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
         if self.device_driver in os.readlink(drv_path):
             error.context("Release device %s to host" % pci_id, logging.info)
-            driver = self.dev_drivers[pci_id]
+            driver = self.dev_unbind_drivers[pci_id]
             cmd = "echo '%s' > %s/new_id" % (vendor_id, driver)
             logging.info("Run command in host: %s" % cmd)
             try:
-                status = os.system(cmd)
-            except Exception, err:
-                logging.error("Command '%s' fail with exception: %s", cmd, err)
-            if status:
+                output = utils.system_output(cmd, timeout=60)
+            except error.CmdError:
+                msg = "Command %s fail with output %s" % (cmd, output)
+                logging.error(msg)
                 return False
 
             stub_path = os.path.join(base_dir,
@@ -886,21 +808,21 @@ class PciAssignable(object):
             cmd = "echo '%s' > %s/unbind" % (pci_id, stub_path)
             logging.info("Run command in host: %s" % cmd)
             try:
-                status = os.system(cmd)
-            except Exception, err:
-                logging.error("Command '%s' fail with exception: %s", cmd, err)
-            if status:
+                output = utils.system_output(cmd, timeout=60)
+            except error.CmdError:
+                msg = "Command %s fail with output %s" % (cmd, output)
+                logging.error(msg)
                 return False
 
+            driver = self.dev_unbind_drivers[pci_id]
             cmd = "echo '%s' > %s/bind" % (pci_id, driver)
             logging.info("Run command in host: %s" % cmd)
             try:
-                status = os.system(cmd)
-            except Exception, err:
-                logging.error("Command '%s' fail with exception: %s", cmd, err)
-            if status:
+                output = utils.system_output(cmd, timeout=60)
+            except error.CmdError:
+                msg = "Command %s fail with output %s" % (cmd, output)
+                logging.error(msg)
                 return False
-
         if self.is_binded_to_stub(pci_id):
             return False
         return True
@@ -935,21 +857,25 @@ class PciAssignable(object):
         :rtype: string
         """
         for pf in self.pf_vf_info:
-            for vf_info in pf.get('vf_ids'):
-                if vf_id == vf_info["vf_id"]:
-                    return pf['ethname'], pf["vf_ids"].index(vf_info)
+            if vf_id in pf.get('vf_ids'):
+                return pf['ethname'], pf["vf_ids"].index(vf_id)
         raise ValueError("Could not find vf id '%s' in '%s'" % (vf_id,
-                                                               self.pf_vf_info))
+                                                                self.pf_vf_info))
 
     def get_pf_vf_info(self):
         """
-        Get pf and vf related information in this host that mattch
-        self.pf_filter_re
+        Get pf and vf related information in this host that match ``self.pf_filter_re``.
+
         for every pf it will create following information:
-            pf_id: The id of the pf device.
-            occupied: Whether the pf device assigned or not
-            vf_ids: Id list of related vf in this pf.
-            ethname: eth device name in host for this pf.
+
+        pf_id:
+            The id of the pf device.
+        occupied:
+            Whether the pf device assigned or not
+        vf_ids:
+            Id list of related vf in this pf.
+        ethname:
+            eth device name in host for this pf.
 
         :return: return a list contains pf vf information.
         :rtype: list of dict
@@ -970,12 +896,9 @@ class PciAssignable(object):
             re_vfn = "(virtfn[0-9])"
             paths = re.findall(re_vfn, txt)
             for path in paths:
-                vf_info = {}
                 f_path = os.path.join(d_link, path)
                 vf_id = os.path.basename(os.path.realpath(f_path))
-                vf_info["vf_id"] = vf_id
-                vf_info["occupied"] = False
-                vf_ids.append(vf_info)
+                vf_ids.append(vf_id)
             pf_info["vf_ids"] = vf_ids
             pf_vf_dict.append(pf_info)
         if_out = utils.system_output("ifconfig -a")
@@ -991,77 +914,23 @@ class PciAssignable(object):
                     pf["ethname"] = eth
         return pf_vf_dict
 
-    def _get_vf_pci_id(self, name=None):
+    def get_vf_devs(self):
         """
-        Get the VF PCI ID from PF set by name.
-        It returns the first free VF, if no name matched.
+        Get all unused VFs PCI IDs.
 
-        :param name: Name of the PCI device.
-        :type name: string
-        :return: pci id of the PF device.
-        :rtype: string
-        """
-        vf_id = None
-        if self.pf_vf_info:
-            if name:
-                for pf in self.pf_vf_info:
-                    if ("ethname" in pf and name == pf["ethname"] and
-                         not pf["occupied"]):
-                        pf_id = pf["pf_id"]
-                        for vf_info in pf["vf_ids"]:
-                            if (not vf_info["occupied"] and
-                                not self.is_binded_to_stub(vf_info["vf_id"])):
-                                vf_info["occupied"] = True
-                                vf_id = vf_info["vf_id"]
-                                break
-                    if vf_id:
-                        break
-            if not vf_id:
-                for pf in self.pf_vf_info:
-                    if not pf["occupied"]:
-                        for vf_info in pf["vf_ids"]:
-                            if (not vf_info["occupied"] and
-                                not self.is_binded_to_stub(vf_info["vf_id"])):
-                                vf_info["occupied"] = True
-                                vf_id = vf_info["vf_id"]
-                                break
-                    if vf_id:
-                        break
-        return vf_id
-
-    def get_vf_devs(self, devices):
-        """
-        Get VFs PCI IDs requested by self.devices.
-        It will try to get VF from PF set by device name.
-
-        :param devices: List of device dict that contain PF VF information.
-        :type devices: List of dict
         :return: List of all available PCI IDs for Virtual Functions.
         :rtype: List of string
         """
         vf_ids = []
-        device_names = []
-        if not devices:
-            devices = self.devices
-        num = 0
-        if self.pf_vf_info:
-            for pf in self.pf_vf_info:
-                if 'ethname' in pf:
-                    device_names.append(pf['ethname'])
-        for device in devices:
-            if device['type'] == 'vf':
-                name = device.get('name', None)
-                if not name:
-                    name = device_names[num % len(device_names)]
-                    num += 1
-                else:
-                    num = device_names.index(name) + 1
-                vf_id = self._get_vf_pci_id(name)
+        for pf in self.pf_vf_info:
+            if pf["occupied"]:
+                continue
+            for vf_id in pf["vf_ids"]:
                 if not self.is_binded_to_stub(vf_id):
                     vf_ids.append(vf_id)
         return vf_ids
 
-    def get_pf_devs(self, devices):
+    def get_pf_devs(self):
         """
         Get PFs PCI IDs requested by self.devices.
         It will try to get PF by device name.
@@ -1069,15 +938,11 @@ class PciAssignable(object):
         Please set unoccupied device name. If not sure, please just do not
         set device name. It will return unused PF list.
 
-        :param devices: List of device dict that contain PF VF information.
-        :type devices: List of dict
         :return: List with all PCI IDs for the physical hardware requested
         :rtype: List of string
         """
         pf_ids = []
-        if not devices:
-            devices = self.devices
-        for device in devices:
+        for device in self.devices:
             if device['type'] == 'pf':
                 name = device.get('name', None)
                 pf_id = self._get_pf_pci_id(name)
@@ -1098,8 +963,8 @@ class PciAssignable(object):
         base_dir = "/sys/bus/pci"
         if not devices:
             devices = self.devices
-        pf_ids = self.get_pf_devs(devices)
-        vf_ids = self.get_vf_devs(devices)
+        pf_ids = self.get_pf_devs()
+        vf_ids = self.get_vf_devs()
         vf_ids.sort()
         dev_ids = []
         if isinstance(devices, dict):
@@ -1118,7 +983,8 @@ class PciAssignable(object):
                 dev_id = pf_ids.pop(0)
             dev_ids.append(dev_id)
             unbind_driver = os.path.realpath(os.path.join(base_dir,
-                                             "devices/%s/driver" % dev_id))
+                                                          "devices/%s/driver" % dev_id))
+            self.dev_unbind_drivers[dev_id] = unbind_driver
         if len(dev_ids) != len(devices):
             logging.error("Did not get enough PCI Device")
         return dev_ids
@@ -1204,7 +1070,7 @@ class PciAssignable(object):
                 if self.auai_path and self.kvm_params[self.auai_path] == "Y":
                     kvm_re_probe = False
         # Try to re probe kvm module with interrupt remapping support
-        if kvm_re_probe and self.auai_path:
+        if kvm_re_probe:
             cmd = "echo Y > %s" % self.auai_path
             error.context("enable PCI passthrough with '%s'" % cmd,
                           logging.info)
@@ -1230,22 +1096,20 @@ class PciAssignable(object):
                               ignore_status=True)
         if status:
             re_probe = True
-        elif not self.check_vfs_count() and self.driver:
-            os.system("modprobe -r %s" % self.driver)
+        elif not self.check_vfs_count():
+            utils.system_output("modprobe -r %s" % self.driver, timeout=60)
             re_probe = True
         else:
             self.setup = None
             return True
 
         # Re-probe driver with proper number of VFs
-        if re_probe and self.driver:
+        if re_probe:
             cmd = "modprobe %s %s" % (self.driver, self.driver_option)
             error.context("Loading the driver '%s' with command '%s'" %
                           (self.driver, cmd), logging.info)
             status = utils.system(cmd, ignore_status=True)
-            # In some host, need sleep 3s after loading the driver.
-            time.sleep(3)
-            dmesg = utils.system_output("dmesg", ignore_status=True)
+            dmesg = utils.system_output("dmesg", timeout=60, ignore_status=True)
             file_name = "host_dmesg_after_load_%s.txt" % self.driver
             logging.info("Log dmesg after loading '%s' to '%s'.", self.driver,
                          file_name)
@@ -1286,7 +1150,7 @@ class PciAssignable(object):
         if status:
             cmd = "modprobe -r %s" % self.driver
             logging.info("Running host command: %s" % cmd)
-            os.system(cmd)
+            utils.system_output(cmd, timeout=60)
             re_probe = True
         else:
             return True
@@ -1331,7 +1195,7 @@ class PciAssignable(object):
                 short_id = pci_id[5:]
                 drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
                 dev_prev_driver = os.path.realpath(os.path.join(drv_path,
-                                                   os.readlink(drv_path)))
+                                                                os.readlink(drv_path)))
                 self.dev_drivers[pci_id] = dev_prev_driver
 
                 # Judge whether the device driver has been binded to stub
@@ -1373,13 +1237,7 @@ class PciAssignable(object):
         """
         try:
             for pci_id in self.dev_drivers:
-                try:
-                    status = self._release_dev(pci_id)
-                except Exception, err:
-                    msg = "Failed to release device %s to host." % pci_id
-                    msg += "Got exception: %s" % err
-                    logging.error(msg)
-                if not status:
+                if not self._release_dev(pci_id):
                     logging.error(
                         "Failed to release device %s to host", pci_id)
                 else:
@@ -1388,6 +1246,6 @@ class PciAssignable(object):
                 self.sr_iov_cleanup()
                 self.devices = []
                 self.devices_requested = 0
-                self.dev_drivers = {}
+                self.dev_unbind_drivers = {}
         except Exception:
             return

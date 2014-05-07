@@ -1,34 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
 	<settings pass="windowsPE">
-		<component name="Microsoft-Windows-International-Core-WinPE"
-			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
-			language="neutral" versionScope="nonSxS"
-			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
-			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-			<SetupUILanguage>
-				<UILanguage>en-us</UILanguage>
-			</SetupUILanguage>
-			<InputLocale>0409:00000409</InputLocale>
-			<SystemLocale>en-us</SystemLocale>
-			<UILanguage>en-us</UILanguage>
-			<UILanguageFallback>en-us</UILanguageFallback>
-			<UserLocale>en-us</UserLocale>
-		</component>
-		<component name="Microsoft-Windows-PnpCustomizationsWinPE"
-			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
-			language="neutral" versionScope="nonSxS"
-			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
-			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-			<DriverPaths>
-				<PathAndCredentials wcm:keyValue="1" wcm:action="add">
-					<Path>KVM_TEST_STORAGE_DRIVER_PATH</Path>
-				</PathAndCredentials>
-				<PathAndCredentials wcm:keyValue="2" wcm:action="add">
-					<Path>KVM_TEST_NETWORK_DRIVER_PATH</Path>
-				</PathAndCredentials>
-			</DriverPaths>
-		</component>
 		<component name="Microsoft-Windows-Setup"
 			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
 			language="neutral" versionScope="nonSxS"
@@ -63,26 +35,58 @@
 				<OSImage>
 					<InstallFrom>
 						<MetaData wcm:action="add">
-							<Key>/IMAGE/NAME</Key>
-              <!--This index depends on your install ISO. Please update to a proper one if install failed. http://technet.microsoft.com/en-us/library/ff716384.aspx -->
-              <!-- use "dism /get-wiminfo /wimfile:D:\sources\install.wim" to know which value should be used.-->
-							<Value>Windows Longhorn SERVERDATACENTER</Value>
+							<Key>/IMAGE/INDEX</Key>
+                                                        <!--This index depends on your install ISO. Please update to a proper one if install failed.-->
+							<Value>3</Value>
 						</MetaData>
 					</InstallFrom>
 					<InstallTo>
 						<DiskID>0</DiskID>
 						<PartitionID>1</PartitionID>
 					</InstallTo>
+					<WillShowUI>OnError</WillShowUI>
 				</OSImage>
 			</ImageInstall>
 			<UserData>
 				<ProductKey>
-		      <!-- Work with Product Keys and Activation http://technet.microsoft.com/en-us/library/hh825195.aspx -->
 					<Key>KVM_TEST_CDKEY</Key>
 					<WillShowUI>OnError</WillShowUI>
 				</ProductKey>
 				<AcceptEula>true</AcceptEula>
+				<FullName>Autotest Mindless Drone</FullName>
+				<Organization>Autotest</Organization>
 			</UserData>
+		</component>
+		<component name="Microsoft-Windows-International-Core-WinPE"
+			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
+			language="neutral" versionScope="nonSxS"
+			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+			<SetupUILanguage>
+				<UILanguage>en-us</UILanguage>
+			</SetupUILanguage>
+			<InputLocale>0409:00000409</InputLocale>
+			<SystemLocale>en-us</SystemLocale>
+			<UILanguage>en-us</UILanguage>
+			<UserLocale>en-us</UserLocale>
+			<UILanguageFallback>en-us</UILanguageFallback>
+		</component>
+		<component name="Microsoft-Windows-PnpCustomizationsWinPE"
+			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
+			language="neutral" versionScope="nonSxS"
+			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+			<DriverPaths>
+				<PathAndCredentials wcm:keyValue="1" wcm:action="add">
+					<Path>KVM_TEST_SCSI_DRIVER_PATH</Path>
+				</PathAndCredentials>
+				<PathAndCredentials wcm:keyValue="2" wcm:action="add">
+					<Path>KVM_TEST_STORAGE_DRIVER_PATH</Path>
+				</PathAndCredentials>
+				<PathAndCredentials wcm:keyValue="3" wcm:action="add">
+					<Path>KVM_TEST_NETWORK_DRIVER_PATH</Path>
+				</PathAndCredentials>
+			</DriverPaths>
 		</component>
 	</settings>
 	<settings pass="specialize">
@@ -101,6 +105,16 @@
 					<Description>UnfilterAdministratorToken</Description>
 					<Order>2</Order>
 					<Path>cmd /c reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v FilterAdministratorToken /t REG_DWORD /d 0 /f</Path>
+				</RunSynchronousCommand>
+				<RunSynchronousCommand wcm:action="add">
+					<Description>SataBootable</Description>
+					<Order>3</Order>
+					<Path>cmd /c reg add HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\Msahci /v Start /t REG_DWORD /d 0 /f</Path>
+				</RunSynchronousCommand>
+				<RunSynchronousCommand wcm:action="add">
+					<Description>SataBootable</Description>
+					<Order>4</Order>
+					<Path>cmd /c reg add HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\IastorV /v Start /t REG_DWORD /d 0 /f</Path>
 				</RunSynchronousCommand>
 			</RunSynchronous>
 		</component>
@@ -122,19 +136,11 @@
 			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 			<UserAccounts>
-      <!-- Enable the Built-in Administrator Account Starts http://technet.microsoft.com/en-us/library/hh825104.aspx -->
 				<AdministratorPassword>
 					<Value>1q2w3eP</Value>
 					<PlainText>true</PlainText>
 				</AdministratorPassword>
 			</UserAccounts>
-			<OOBE>
-				<HideEULAPage>true</HideEULAPage>
-				<NetworkLocation>Work</NetworkLocation>
-				<ProtectYourPC>1</ProtectYourPC>
-				<SkipUserOOBE>true</SkipUserOOBE>
-				<SkipMachineOOBE>true</SkipMachineOOBE>
-			</OOBE>
 			<AutoLogon>
 				<Password>
 					<Value>1q2w3eP</Value>
@@ -143,7 +149,6 @@
 				<Enabled>true</Enabled>
 				<LogonCount>1000</LogonCount>
 				<Username>Administrator</Username>
-      <!-- Enable the Built-in Administrator Account End http://technet.microsoft.com/en-us/library/hh825104.aspx -->
 			</AutoLogon>
 			<FirstLogonCommands>
 				<SynchronousCommand wcm:action="add">
@@ -171,75 +176,63 @@
 					<Order>6</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c E:\autoit3.exe  E:\git\git.au3</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c bcdedit /set {current} bootstatuspolicy ignoreallfailures</CommandLine>
 					<Order>7</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c bcdedit /set {current} USEPLATFORMCLOCK yes</CommandLine>
-          <!-- This is for OS time compensation, https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Virtualization_Host_Configuration_and_Guest_Installation_Guide/chap-Virtualization_Host_Configuration_and_Guest_Installation_Guide-KVM_guest_timing_management.html -->
+					<CommandLine>%WINDIR%\System32\cmd /c E:\autoit3.exe E:\git\git.au3</CommandLine>
 					<Order>8</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c bcdedit /set {current} bootstatuspolicy ignoreallfailures</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c netsh interface ip set address "Local Area Connection" dhcp</CommandLine>
 					<Order>9</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c netsh interface ip set address "Local Area Connection" dhcp</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_BALLOON_INSTALLER</CommandLine>
 					<Order>10</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_BALLOON_INSTALLER</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_QXL_INSTALLER</CommandLine>
 					<Order>11</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_QXL_INSTALLER</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c E:\setuprss.bat</CommandLine>
 					<Order>12</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c E:\setuprss.bat</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c E:\setupsp.bat</CommandLine>
 					<Order>13</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c OCSetup.exe NetFx3 /quiet /norestart /log:C:\install-NetFx3-log.txt</CommandLine>
-          <!-- Enable .Net Framework version 3.X, and write down the log. dism is not supported on this OS, use ocsetup instead -->
+					<CommandLine>%WINDIR%\System32\cmd /c E:\software_install_32.bat</CommandLine>
 					<Order>14</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c E:\setupsp.bat</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c wmic datafile where "filename='finish' and extension='bat'" call copy "c:\\finish.bat" &amp;&amp; c:\finish.bat PROCESS_CHECK</CommandLine>
 					<Order>15</Order>
 				</SynchronousCommand>
-				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c E:\software_install_32.bat</CommandLine>
-					<Order>16</Order>
-				</SynchronousCommand>
-				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c OCSetup.exe MicrosoftWindowsPowerShell /quiet /norestart /log:C:\install-MicrosoftWindowsPowerShell-log.txt</CommandLine>
-          <!-- Enable PowerShell, and write down the log. dism is not supported on this OS, use ocsetup instead -->
-          <!-- Packages for each OS: http://technet.microsoft.com/en-us/library/ff699034.aspx -->
-					<Order>17</Order>
-				</SynchronousCommand>
-				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c reg add HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\Msahci /v Start /t REG_DWORD /d 0 /f</CommandLine>
-					<Order>18</Order>
-				</SynchronousCommand>
-				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c reg add HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\IastorV /v Start /t REG_DWORD /d 0 /f</CommandLine>
-          <!-- these two registry update makes ahci bootable, NT6.0 or NT6.1 needs http://support.microsoft.com/kb/922976 -->
-					<Order>19</Order>
-				</SynchronousCommand>
-				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c reg add "HKCU\Control Panel\Desktop" /v ScreenSaveActive /t REG_DWORD /d 0 /f</CommandLine>
-          <!-- Disable screen saver to let us always can see what happen in guest OS -->
-					<Order>20</Order>
-				</SynchronousCommand>
-				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c A:\finish.bat PROCESS_CHECK</CommandLine>
-          <!-- When modifying cmds, pls keep finish.bat always the last one. -->
-					<Order>21</Order>
-				</SynchronousCommand>
 			</FirstLogonCommands>
+			<OOBE>
+				<HideEULAPage>true</HideEULAPage>
+				<NetworkLocation>Work</NetworkLocation>
+				<ProtectYourPC>1</ProtectYourPC>
+				<SkipUserOOBE>true</SkipUserOOBE>
+				<SkipMachineOOBE>true</SkipMachineOOBE>
+			</OOBE>
+		</component>
+		<component name="Microsoft-Windows-International-Core"
+			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
+			language="neutral" versionScope="nonSxS"
+			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+			<InputLocale>0409:00000409</InputLocale>
+			<SystemLocale>en-us</SystemLocale>
+			<UILanguage>en-us</UILanguage>
+			<UILanguageFallback>en-us</UILanguageFallback>
+			<UserLocale>en-us</UserLocale>
 		</component>
 	</settings>
-	<cpi:offlineImage cpi:source="wim:c:/install.wim#Windows Longhorn SERVERSTANDARD"
+	<cpi:offlineImage
+		cpi:source="wim:d:/os/win2k8/i386/sources/install.wim#Windows Longhorn SERVERSTANDARD"
 		xmlns:cpi="urn:schemas-microsoft-com:cpi" />
 </unattend>

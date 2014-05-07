@@ -9,10 +9,7 @@ from autotest.client import os_dep
 from autotest.client.shared import utils, error
 from virttest import utils_misc
 
-try:
-    from autotest.client.shared import service
-except ImportError:
-    from virttest.staging import service
+from virttest.staging import service
 
 
 def nfs_exported():
@@ -115,7 +112,6 @@ class Exportfs(object):
         Export one directory if it is not in exported list.
 
         :return: Export nfs file system succeed or not
-        "rtype": Boolean
         """
         if self.is_exported():
             if self.need_reexport():
@@ -156,7 +152,7 @@ class Nfs(object):
             self.nfs_setup = True
             os_dep.command("service")
             os_dep.command("exportfs")
-            self.nfs_service = service.SpecificServiceManager("nfs")
+            self.nfs_service = service.Factory.create_service("nfs")
 
             self.export_dir = (params.get("export_dir")
                                or self.mount_src.split(":")[-1])
@@ -168,12 +164,25 @@ class Nfs(object):
 
     def is_mounted(self):
         """
-        Check the NFS is mouunted or not.
+        Check the NFS is mounted or not.
 
         :return: If the src is mounted as expect
         :rtype: Boolean
         """
         return utils_misc.is_mounted(self.mount_src, self.mount_dir, "nfs")
+
+    def mount(self):
+        """
+        Mount source into given mount point.
+        """
+        return utils_misc.mount(self.mount_src, self.mount_dir, "nfs",
+                                perm=self.mount_options)
+
+    def umount(self):
+        """
+        Umount the given mount point.
+        """
+        return utils_misc.umount(self.mount_src, self.mount_dir, "nfs")
 
     def setup(self):
         """
@@ -200,9 +209,7 @@ class Nfs(object):
 
         if not os.path.isdir(self.mount_dir):
             os.makedirs(self.mount_dir)
-
-        utils_misc.mount(self.mount_src, self.mount_dir, "nfs",
-                         perm=self.mount_options)
+        self.mount()
 
     def cleanup(self):
         """
@@ -211,6 +218,6 @@ class Nfs(object):
         Umount NFS from the mount point. If there has some change for exported
         file system in host when setup, also clean up that.
         """
-        utils_misc.umount(self.mount_src, self.mount_dir, "nfs")
+        self.umount()
         if self.nfs_setup and self.unexportfs_in_clean:
             self.exportfs.reset_export()

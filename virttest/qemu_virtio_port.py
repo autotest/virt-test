@@ -218,7 +218,7 @@ class GuestWorker(object):
                                           % guest_script_src).strip()
         script_size_guest = self.session.cmd_output(cmd_guest_size).strip()
         if (script_size != script_size_guest
-            or self.session.cmd_status(cmd_already_compiled_chck)):
+                or self.session.cmd_status(cmd_already_compiled_chck)):
             if self.os_linux:
                 # Disable serial-getty@hvc0.service on systemd-like hosts
                 self.session.cmd_status('systemctl mask '
@@ -332,6 +332,7 @@ class GuestWorker(object):
     def read_nonblocking(self, internal_timeout=None, timeout=None):
         """
         Reads-out all remaining output from GuestWorker.
+
         :param internal_timeout: Time (seconds) to wait before we give up
                                  reading from the child process, or None to
                                  use the default value.
@@ -364,7 +365,7 @@ class GuestWorker(object):
         # in LOOP_NONE mode it might stuck in read/write
         # This command can't fail, can only freze so wait for the correct msg
         match, tmp = self._cmd("virt.exit_threads()", 3, ("^PASS: All threads"
-                               " finished",))
+                                                          " finished",))
         if match is None:
             logging.warn("Workaround the stuck thread on guest")
             # Thread is stuck in read/write
@@ -402,9 +403,8 @@ class GuestWorker(object):
     def cleanup_ports(self):
         """
         Clean state of all ports and set port to default state.
-        Default state:
-           No data on port or in port buffer.
-           Read mode = blocking.
+
+        Default state: No data on port or in port buffer. Read mode = blocking.
         """
         # Check if python is still alive
         match, tmp = self._cmd("is_alive()", 10)
@@ -808,7 +808,7 @@ class ThRecvCheck(Thread):
                                     logging.info("ThRecvCheck %s: "
                                                  "MaxSendIDX = %d",
                                                  self.getName(),
-                                                (self.sendlen - self.sendidx))
+                                                 (self.sendlen - self.sendidx))
                                     raise error.TestFail("ThRecvCheck %s: "
                                                          "incorrect data" %
                                                          self.getName())

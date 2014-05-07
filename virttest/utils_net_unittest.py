@@ -101,6 +101,9 @@ virbr2        8000.525400c0b080    yes        em1
                               'virbr0': ['virbr0-nic', 'virbr2-nic',
                                          'virbr3-nic']})
 
+    def tearDown(self):
+        self.god.unstub_all()
+
 
 class TestVirtIface(unittest.TestCase):
 
@@ -435,7 +438,7 @@ class TestVmNetSubclasses(unittest.TestCase):
             self.assertEqual(len(param_nics), len(virtnet))
             # Test each interface data
             for virtnet_index in xrange(0, len(virtnet)):
-            # index correspondence already established/asserted
+                # index correspondence already established/asserted
                 virtnet_nic = virtnet[virtnet_index]
                 params_nic = param_nics[virtnet_index]
                 self.assert_(issubclass(virtnet_nic.__class__,

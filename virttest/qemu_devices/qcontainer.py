@@ -139,6 +139,23 @@ class DevContainer(object):
                 out.append(device)
         return out
 
+    def get_by_params(self, filt):
+        """
+        Return list of matching devices
+        :param filt: filter {'param': 'value', ...}
+        :type filt: dict
+        """
+        out = []
+        for device in self.__devices:
+            for key, value in filt.iteritems():
+                if key not in device.params:
+                    break
+                if device.params[key] != value:
+                    break
+            else:
+                out.append(device)
+        return out
+
     def __delitem__(self, item):
         """
         Delete specified item from devices list
@@ -359,8 +376,8 @@ class DevContainer(object):
         :param device: Desired device
         :return: Is the desired device supported by current qemu?
         """
-        return bool(re.search(r'name "%s"' % device, self.__device_help,
-                              re.MULTILINE))
+        return bool(re.search(r'name "%s"|alias "%s"' % (device, device),
+                              self.__device_help))
 
     def get_help_text(self):
         """
@@ -427,7 +444,7 @@ class DevContainer(object):
             if _ is not None and _ is not False:
                 return bus
 
-    def insert(self, devices):
+    def insert(self, devices, strict_mode=None):
         """
         Inserts devices into this VM representation
         :param devices: List of qdevices.QBaseDevice devices
@@ -444,7 +461,7 @@ class DevContainer(object):
         added = []
         for device in devices:
             try:
-                added.extend(self._insert(device))
+                added.extend(self._insert(device, strict_mode))
             except DeviceError, details:
                 cleanup()
                 raise DeviceError("%s\nError occurred while inserting device %s"
@@ -452,7 +469,7 @@ class DevContainer(object):
                                   % (details, device, devices))
         return added
 
-    def _insert(self, device):
+    def _insert(self, device, strict_mode=None):
         """
         Inserts device into this VM representation
         :param device: qdevices.QBaseDevice device
@@ -470,6 +487,12 @@ class DevContainer(object):
             for device in added_devices:
                 self.wash_the_device_out(device)
 
+        if strict_mode is None:
+            _strict_mode = self.strict_mode
+        if strict_mode is True:
+            _strict_mode = True
+        else:
+            _strict_mode = False
         added_devices = []
         if device.parent_bus is not None and not isinstance(device.parent_bus,
                                                             (list, tuple)):
@@ -486,7 +509,7 @@ class DevContainer(object):
                 clean(device, added_devices)
                 raise DeviceInsertError(device, err, self)
             bus_returns = []
-            strict_mode = self.strict_mode
+            strict_mode = _strict_mode
             for bus in buses:   # 2
                 if not bus.match_bus(parent_bus, False):
                     # First available bus in qemu is not of the same type as
@@ -609,7 +632,8 @@ class DevContainer(object):
         This function should be used after you verify, that hotplug was
         successful. For each hotplug call, hotplug_verified have to be
         executed in order to mark VM as clear.
-        @warning: If you can't verify, that hotplug was successful, don't
+
+        :warning: If you can't verify, that hotplug was successful, don't
                   use this function! You could screw-up following tests.
         """
         self.set_clean()
@@ -622,7 +646,7 @@ class DevContainer(object):
         :param bus_count: Desired number of buses.
         :return: List of buses, which are missing in range(bus_count)
         """
-        if not "%s" in bus_pattern:
+        if "%s" not in bus_pattern:
             bus_pattern = bus_pattern + "%s"
         missing_buses = [bus_pattern % i for i in xrange(bus_count)]
         for bus in self.__buses:
@@ -638,7 +662,7 @@ class DevContainer(object):
         :return: Name of the next bus (integer is appended and incremented
                  until there is no existing bus).
         """
-        if not "%s" in bus_pattern:
+        if "%s" not in bus_pattern:
             bus_pattern = bus_pattern + "%s"
         buses = []
         for bus in self.__buses:
@@ -650,14 +674,17 @@ class DevContainer(object):
                 return i
             i += 1
 
-    def cmdline(self):
+    def cmdline(self, dynamic=True):
         """
         Creates cmdline arguments for creating all defined devices
         :return: cmdline of all devices (without qemu-cmd itself)
         """
         out = ""
         for device in self.__devices:
-            _out = device.cmdline()
+            if dynamic:
+                _out = device.cmdline()
+            else:
+                _out = device.cmdline_nd()
             if _out:
                 out += " %s" % _out
         if out:
@@ -697,7 +724,7 @@ class DevContainer(object):
                                                    parent_bus={'aobject':
                                                                params.get('pci_bus',
                                                                           'pci.0')},
-                            child_bus=bus))
+                                                   child_bus=bus))
             else:
                 _name = 'lsi53c895a%s' % i
                 bus = qbuses.QSCSIBus("scsi.0", 'SCSI', [8, 16384], atype='lsi53c895a')
@@ -720,8 +747,6 @@ class DevContainer(object):
             :param cmd: If set uses "-M $cmd" to force this machine type
             :return: List of added devices (including default buses)
             """
-            # TODO: Add all supported devices (AHCI, ...) and
-            # verify that PCIE works as pci bus (ranges, etc...)
             logging.warn('Using Q35 machine which is not yet fullytested on '
                          'virt-test. False errors might occur.')
             devices = []
@@ -1097,7 +1122,7 @@ class DevContainer(object):
             if media != 'cdrom':    # ignore only 'disk'
                 media = None
 
-        if not ("[,boot=on|off]" in self.get_help_text()):
+        if "[,boot=on|off]" not in self.get_help_text():
             if boot in ('yes', 'on', True):
                 bootindex = "1"
             boot = None
@@ -1127,8 +1152,8 @@ class DevContainer(object):
         #
         if not use_device:
             if fmt and (fmt == "scsi" or (fmt.startswith('scsi') and
-                                         (scsi_hba == 'lsi53c895a' or
-                                          scsi_hba == 'spapr-vscsi'))):
+                                          (scsi_hba == 'lsi53c895a' or
+                                           scsi_hba == 'spapr-vscsi'))):
                 if not (bus is None and unit is None and port is None):
                     logging.warn("Using scsi interface without -device "
                                  "support; ignoring bus/unit/port. (%s)", name)
@@ -1182,8 +1207,6 @@ class DevContainer(object):
         # Drive
         # -drive fmt or -drive fmt=none -device ...
         #
-        # TODO: Add qdevices.QRHDrive and PCIDrive for hotplug purposes
-        # TODO: Add special parameter to override the drive method
         if self.has_hmp_cmd('__com.redhat_drive_add') and use_device:
             devices.append(qdevices.QRHDrive(name))
         elif self.has_hmp_cmd('drive_add') and use_device:
@@ -1309,6 +1332,7 @@ class DevContainer(object):
                                 image_bootindex=None):
         """
         Wrapper for creating disks and related hbas from autotest image params.
+
         :note: To skip the argument use None, to disable it use False
         :note: Strictly bool options accept "yes", "on" and True ("no"...)
         :note: Options starting with '_' are optional and used only when
@@ -1375,6 +1399,7 @@ class DevContainer(object):
                                 image_bootindex=None):
         """
         Wrapper for creating cdrom and related hbas from autotest image params.
+
         :note: To skip the argument use None, to disable it use False
         :note: Strictly bool options accept "yes", "on" and True ("no"...)
         :note: Options starting with '_' are optional and used only when
@@ -1450,6 +1475,7 @@ class DevContainer(object):
     def pcic_by_params(self, name, params):
         """
         Creates pci controller/switch/... based on params
+
         :param name: Autotest name
         :param params: PCI controller params
         :note: x3130 creates x3130-upstream bus + xio3130-downstream port for

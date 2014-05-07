@@ -14,22 +14,37 @@ class Disk(base.TypedDeviceBase):
     Disk device XML class
 
     Properties:
-        device: string, how exposted to guest
-        rawio: string (yes/no), disk needs rawio capability
-        sgio: string, "filtered" or "unfiltered"
-        snapshot: string, "yes", "no", "internal" or "external"
-        driver: dict, keys: name, type, cache, error_policy, io, ioeventfd,
-                            event_idx, copy_on_read, discard
-        target: dict, keys: dev, bus, tray
-        address: libvirt_xml.devices.Address instance
-        boot: string, boot order number to use if not using boot in os element
-        readonly: bool, True/False
-        transient: bool, True/False
-        share: bool, True/False
-        mirror: bool, read-only, True if block copy started
-        ready: bool, read-only, True if disk ready for pivot
-        iotune: libvirt_xml.devices.Disk.IOTune instance
-        source: libvirt_xml.devices.Disk.DiskSource instance
+        device:
+            string, how exposted to guest
+        rawio:
+            string (yes/no), disk needs rawio capability
+        sgio:
+            string, "filtered" or "unfiltered"
+        snapshot:
+            string, "yes", "no", "internal" or "external"
+        driver:
+            dict, keys: name, type, cache, error_policy, io, ioeventfd,
+            event_idx, copy_on_read, discard
+        target:
+            dict, keys: dev, bus, tray
+        address:
+            libvirt_xml.devices.Address instance
+        boot:
+            string, boot order number to use if not using boot in os element
+        readonly:
+            bool, True/False
+        transient:
+            bool, True/False
+        share:
+            bool, True/False
+        mirror:
+            bool, read-only, True if block copy started
+        ready:
+            bool, read-only, True if disk ready for pivot
+        iotune:
+            libvirt_xml.devices.Disk.IOTune instance
+        source:
+            libvirt_xml.devices.Disk.DiskSource instance
     """
 
     __slots__ = ('device', 'rawio', 'sgio', 'snapshot', 'driver', 'target',
@@ -113,9 +128,10 @@ class Disk(base.TypedDeviceBase):
         Disk source device XML class
 
         Properties:
-            attrs: Dictionary of attributes, qualifying the disk type
-            seclabels: list of libvirt_xml.devices.seclabel.Seclabel instances
-            hosts: list of dictionaries describing network host properties
+
+        attrs: Dictionary of attributes, qualifying the disk type
+        seclabels: list of libvirt_xml.devices.seclabel.Seclabel instances
+        hosts: list of dictionaries describing network host properties
         """
 
         __slots__ = ('attrs', 'seclabels', 'hosts',)
@@ -148,7 +164,7 @@ class Disk(base.TypedDeviceBase):
         def marshal_to_seclabel(tag, attr_dict, index, libvirtxml):
             """Convert a tag + attributes into a Seclabel instance"""
             del index           # not used
-            if tag is not 'seclabel':
+            if tag != 'seclabel':
                 return None     # Don't convert this item
             Seclabel = librarian.get('seclabel')
             newone = Seclabel(virsh_instance=libvirtxml.virsh)
@@ -171,7 +187,7 @@ class Disk(base.TypedDeviceBase):
             """Convert a tag + attributes into a dictionary"""
             del index                    # not used
             del libvirtxml               # not used
-            if tag is not 'host':
+            if tag != 'host':
                 return None              # skip this one
             return dict(attr_dict)       # return copy of dict, not reference
 
@@ -181,12 +197,13 @@ class Disk(base.TypedDeviceBase):
         IOTune device XML class
 
         Properties:
-            total_bytes_sec: str(int)
-            read_bytes_sec: str(int)
-            write_bytes_sec: str(int)
-            total_iops_sec: str(int)
-            read_iops_sec: str(int)
-            write_iops_sec: str(int)
+
+        total_bytes_sec: str(int)
+        read_bytes_sec: str(int)
+        write_bytes_sec: str(int)
+        total_iops_sec: str(int)
+        read_iops_sec: str(int)
+        write_iops_sec: str(int)
         """
 
         __slots__ = ('total_bytes_sec', 'read_bytes_sec', 'write_bytes_sec',

@@ -6,7 +6,7 @@ import os
 import logging
 import tempfile
 from autotest.client.shared import error
-from virttest import virsh, libvirt_storage
+from virttest import libvirt_storage
 from virttest.libvirt_xml import base, xcepts, accessors
 
 
@@ -42,8 +42,8 @@ class SourceXML(base.LibvirtXMLBase):
         accessors.XMLAttribute(property_name='dir_path',
                                libvirtxml=self,
                                parent_xpath='/',
-                               tag_name='directory',
-                               attribute='name')
+                               tag_name='dir',
+                               attribute='path')
         accessors.XMLAttribute(property_name='adp_type',
                                libvirtxml=self,
                                parent_xpath='/',
@@ -79,14 +79,22 @@ class PoolXMLBase(base.LibvirtXMLBase):
     Accessor methods for PoolXML class.
 
     Properties:
-        pool_type: string, pool type
-        name: string, pool name
-        uuid: string, pool uuid
-        capacity: integer, pool total capacity
-        allocation: integer, pool allocated capacity
-        available: integer, pool available capacity
-        source: PoolSourceXML instanc
-        target: string, target path of pool
+        pool_type:
+            string, pool type
+        name:
+            string, pool name
+        uuid:
+            string, pool uuid
+        capacity:
+            integer, pool total capacity
+        allocation:
+            integer, pool allocated capacity
+        available:
+            integer, pool available capacity
+        source:
+            PoolSourceXML instanc
+        target:
+            string, target path of pool
     """
 
     __slots__ = ('pool_type', 'name', 'uuid', 'capacity',
@@ -137,7 +145,7 @@ class PoolXMLBase(base.LibvirtXMLBase):
         sourcexml.xmltreefile = source_root
         return sourcexml
 
-    def del_soruce(self):
+    def del_source(self):
         xmltreefile = self.__dict_get__('xml')
         element = xmltreefile.find('/source')
         if element is not None:
@@ -147,7 +155,7 @@ class PoolXMLBase(base.LibvirtXMLBase):
     def set_source(self, value):
         if not issubclass(type(value), SourceXML):
             raise xcepts.LibvirtXMLError(
-                "Value muse be a SourceXML or subclass")
+                "Value must be a SourceXML or subclass")
         xmltreefile = self.__dict_get__('xml')
         self.del_source()
         root = xmltreefile.getroot()
@@ -254,8 +262,8 @@ class PoolXML(PoolXMLBase):
         backup = poolxml.copy()
         if not pool_ins.delete_pool(name):
             del poolxml
-            raise xcepts.LibvirtXMLError("Error occur while deleting pool: %s",
-                                         name)
+            raise xcepts.LibvirtXMLError("Error occur while deleting pool: %s"
+                                         % name)
         # Alter the XML
         poolxml.name = new_name
         if uuid is None:

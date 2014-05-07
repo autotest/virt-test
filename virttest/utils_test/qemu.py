@@ -83,13 +83,25 @@ def get_numa_status(numa_node_info, qemu_pid, debug=True):
 def pin_vm_threads(vm, node):
     """
     Pin VM threads to single cpu of a numa node
+
     :param vm: VM object
     :param node: NumaNode object
     """
-    for i in vm.vhost_threads:
-        logging.info("pin vhost thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
-    for i in vm.vcpu_threads:
-        logging.info("pin vcpu thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
+    if len(vm.vcpu_threads) + len(vm.vhost_threads) < len(node.cpus):
+        for i in vm.vcpu_threads:
+            logging.info("pin vcpu thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
+        for i in vm.vhost_threads:
+            logging.info("pin vhost thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
+    elif (len(vm.vcpu_threads) <= len(node.cpus) and
+          len(vm.vhost_threads) <= len(node.cpus)):
+        for i in vm.vcpu_threads:
+            logging.info("pin vcpu thread(%s) to cpu(%s)" %
+                         (i, node.pin_cpu(i)))
+        for i in vm.vhost_threads:
+            logging.info("pin vhost thread(%s) to extra cpu(%s)" %
+                         (i, node.pin_cpu(i, extra=True)))
+    else:
+        logging.info("Skip pinning, no enough nodes")
 
 
 def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
@@ -314,6 +326,9 @@ class MultihostMigration(object):
     case is when the guest images are on an NFS server.
 
     Example:
+
+    ::
+
         class TestMultihostMigration(utils_misc.MultihostMigration):
             def __init__(self, test, params, env):
                 super(testMultihostMigration, self).__init__(test, params, env)
@@ -346,8 +361,8 @@ class MultihostMigration(object):
                 mig2.join()
                 mig1.join()
 
-    mig = TestMultihostMigration(test, params, env)
-    mig.run()
+        mig = TestMultihostMigration(test, params, env)
+        mig.run()
     """
 
     def __init__(self, test, params, env, preprocess_env=True):
@@ -525,7 +540,7 @@ class MultihostMigration(object):
         """
         logging.info("Try check vms %s" % (mig_data.vms_name))
         for vm in mig_data.vms_name:
-            if not self.env.get_vm(vm) in mig_data.vms:
+            if self.env.get_vm(vm) not in mig_data.vms:
                 mig_data.vms.append(self.env.get_vm(vm))
         for vm in mig_data.vms:
             logging.info("Check vm %s on host %s" % (vm.name, self.hostid))
@@ -613,9 +628,8 @@ class MultihostMigration(object):
 
         logging.info("Logging into migrated guest after migration...")
         for vm in mig_data.vms:
-            if not self.regain_ip_cmd is None:
-                session_serial = vm.wait_for_serial_login(timeout=
-                                                          self.login_timeout)
+            if self.regain_ip_cmd is not None:
+                session_serial = vm.wait_for_serial_login(timeout=self.login_timeout)
                 # There is sometime happen that system sends some message on
                 # serial console and IP renew command block test. Because
                 # there must be added "sleep" in IP renew command.
@@ -655,20 +669,22 @@ class MultihostMigration(object):
 
         Migration execution progress:
 
-        source host                   |   dest host
-        --------------------------------------------------------
-           prepare guest on both sides of migration
-            - start machine and check if machine works
-            - synchronize transfer data needed for migration
-        --------------------------------------------------------
-        start work on source guests   |   wait for migration
-        --------------------------------------------------------
-                     migrate guest to dest host.
-              wait on finish migration synchronization
-        --------------------------------------------------------
-                                      |   check work on vms
-        --------------------------------------------------------
-                    wait for sync on finish migration
+        ::
+
+            source host                   |   dest host
+            --------------------------------------------------------
+               prepare guest on both sides of migration
+                - start machine and check if machine works
+                - synchronize transfer data needed for migration
+            --------------------------------------------------------
+            start work on source guests   |   wait for migration
+            --------------------------------------------------------
+                         migrate guest to dest host.
+                  wait on finish migration synchronization
+            --------------------------------------------------------
+                                          |   check work on vms
+            --------------------------------------------------------
+                        wait for sync on finish migration
 
         :param vms_name: List of vms.
         :param srchost: src host id.
@@ -751,7 +767,7 @@ class MultihostMigration(object):
                     mig_error = True
                     raise
             finally:
-                if not mig_error and cancel_delay is None:
+                if mig_error and cancel_delay is not None:
                     self._hosts_barrier(self.hosts,
                                         mig_data.mig_id,
                                         'test_finihed',
@@ -1102,7 +1118,7 @@ class MultihostMigrationExec(MultihostMigration):
                     fnam = ("mig_" + utils.generate_random_string(6) +
                             "." + vm_name)
                     fpath = os.path.join(self.test.tmpdir, fnam)
-                    if (not fnam in mig_fnam.values() and
+                    if (fnam not in mig_fnam.values() and
                             not os.path.exists(fnam)):
                         mig_fnam[vm_name] = fpath
                         break

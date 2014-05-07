@@ -1,3 +1,0 @@
-[submodule "tools/codespell"]
-	path = tools/codespell
-	url = git://github.com/lucasdemarchi/codespell.git

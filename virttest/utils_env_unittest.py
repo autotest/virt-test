@@ -163,12 +163,15 @@ class TestEnv(unittest.TestCase):
 
     def test_unregister_syncserver(self):
         """
+        Unregister a sync server.
+
         1) Create an env file.
         2) Create and register 2 SyncListenServers in the env.
-        4) Get one of the SyncListenServers in the env.
-        5) Unregister one of the SyncListenServers.
-        6) Verify that the SyncListenServer unregistered can't be retrieved
-           anymore with get_syncserver().
+        3) Get one of the SyncListenServers in the env.
+        4) Unregister one of the SyncListenServers.
+        5) Verify that the SyncListenServer unregistered can't be retrieved
+           anymore with ``get_syncserver()``.
+
         """
         env = utils_env.Env(filename=self.envfilename)
         sync1 = FakeSyncListenServer(port=333)
@@ -196,7 +199,7 @@ class TestEnv(unittest.TestCase):
             def _update_env(env, key, value):
                 env["changing_dict"][key] = value
 
-            if not "changing_dict" in env:
+            if "changing_dict" not in env:
                 env["changing_dict"] = {}
             while True:
                 key = "%s" % utils_misc.generate_random_string(length=10)

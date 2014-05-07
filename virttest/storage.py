@@ -11,9 +11,9 @@ import shutil
 import re
 from autotest.client import utils
 try:
-    from autotest.client.shared import iscsi
-except ImportError:
     from virttest import iscsi
+except ImportError:
+    from autotest.client.shared import iscsi
 
 import utils_misc
 import virt_vm
@@ -34,8 +34,9 @@ def preprocess_images(bindir, params, env):
 
 
 def preprocess_image_backend(bindir, params, env):
+    enable_gluster = params.get("enable_gluster")
     gluster_image = params.get("gluster_brick")
-    if gluster_image:
+    if enable_gluster and gluster_image:
         return gluster.create_gluster_vol(params)
 
     return True
@@ -102,8 +103,8 @@ def get_image_filename(params, root_dir):
            image_format -- the format of the image (qcow2, raw etc)
     :raise VMDeviceError: When no matching disk found (in indirect method).
     """
-    gluster_image = params.get("gluster_brick")
-    if gluster_image:
+    enable_gluster = params.get("enable_gluster", "no") == "yes"
+    if enable_gluster:
         image_name = params.get("image_name", "image")
         image_format = params.get("image_format", "qcow2")
         return gluster.get_image_filename(params, image_name, image_format)
@@ -461,6 +462,7 @@ class Iscsidev(Rawdev):
         params["iscsi_thread_id"] = self.image_name
         self.iscsidevice = iscsi.Iscsi(params, root_dir=root_dir)
         self.device_id = params.get("device_id")
+        self.iscsi_init_timeout = int(params.get("iscsi_init_timeout", 10))
 
 
 class LVMdev(Rawdev):
@@ -473,9 +475,9 @@ class LVMdev(Rawdev):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images
         """
         super(LVMdev, self).__init__(params, root_dir, tag)
         if params.get("emulational_device", "yes") == "yes":

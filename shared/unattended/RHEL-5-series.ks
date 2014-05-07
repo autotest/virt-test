@@ -44,9 +44,7 @@ redhat-lsb
 sg3_utils
 lsscsi
 libaio-devel
-perl-Time-HiRes
 NetworkManager
-scsi-target-utils
 
 %post
 echo "OS install is completed" > /dev/ttyS0

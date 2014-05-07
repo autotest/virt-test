@@ -74,11 +74,11 @@ class Sample(object):
                     sample_type = line[0:2]
                     tmp = []
                 if "e+" in line[-1]:
-                    tmp.append("%.0f" % float(line[-1]))
+                    tmp.append("%f" % float(line[-1]))
                 elif 'e-' in line[-1]:
-                    tmp.append("%.2f" % float(line[-1]))
+                    tmp.append("%f" % float(line[-1]))
                 elif not (re.findall("[a-zA-Z]", line[-1]) or is_int(line[-1])):
-                    tmp.append("%.2f" % float(line[-1]))
+                    tmp.append("%f" % float(line[-1]))
                 else:
                     tmp.append(line[-1])
 
@@ -110,6 +110,31 @@ class Sample(object):
                         f.append(l.strip())
                 self.files_dict.append(f)
                 fd.close()
+
+            sysinfodir = os.path.join(os.path.dirname(files[0]), "../../sysinfo/")
+            sysinfodir = os.path.realpath(sysinfodir)
+            cpuinfo = commands.getoutput("cat %s/cpuinfo" % sysinfodir)
+            lscpu = commands.getoutput("cat %s/lscpu" % sysinfodir)
+            meminfo = commands.getoutput("cat %s/meminfo" % sysinfodir)
+            lspci = commands.getoutput("cat %s/lspci_-vvnn" % sysinfodir)
+            partitions = commands.getoutput("cat %s/partitions" % sysinfodir)
+            fdisk = commands.getoutput("cat %s/fdisk_-l" % sysinfodir)
+
+            status_path = os.path.join(os.path.dirname(files[0]), "../status")
+            status_file = open(status_path, 'r')
+            content = status_file.readlines()
+            self.testdata = re.findall("localtime=(.*)\t", content[-1])[-1]
+
+            cpunum = len(re.findall("processor\s+: \d", cpuinfo))
+            cpumodel = re.findall("Model name:\s+(.*)", lscpu)
+            socketnum = int(re.findall("Socket\(s\):\s+(\d+)", lscpu)[0])
+            corenum = int(re.findall("Core\(s\) per socket:\s+(\d+)", lscpu)[0]) * socketnum
+            threadnum = int(re.findall("Thread\(s\) per core:\s+(\d+)", lscpu)[0]) * corenum
+            numanodenum = int(re.findall("NUMA node\(s\):\s+(\d+)", lscpu)[0])
+            memnum = float(re.findall("MemTotal:\s+(\d+)", meminfo)[0]) / 1024 / 1024
+            nicnum = len(re.findall("\d+:\d+\.0 Ethernet", lspci))
+            disknum = re.findall("sd\w+\S", partitions)
+            fdiskinfo = re.findall("Disk\s+(/dev/sd.*\s+GiB),", fdisk)
         elif sample_type == 'database':
             jobid = arg
             self.kvmver = get_test_keyval(jobid, "kvm-userspace-ver")
@@ -145,7 +170,16 @@ class Sample(object):
             print "`nrepeat' should be larger than 1!"
             sys.exit(1)
 
-        self.desc = """ - Every Avg line represents the average value based on *%d* repetitions of the same test,
+        self.desc = """<hr>Machine Info:
+o CPUs(%s * %s), Cores(%s), Threads(%s), Sockets(%s),
+o NumaNodes(%s), Memory(%.1fG), NICs(%s)
+o Disks(%s | %s)
+
+Please check sysinfo directory in autotest result to get more details.
+(eg: http://autotest-server.com/results/5057-autotest/host1/sysinfo/)
+<hr>""" % (cpunum, cpumodel, corenum, threadnum, socketnum, numanodenum, memnum, nicnum, fdiskinfo, disknum)
+
+        self.desc += """ - Every Avg line represents the average value based on *%d* repetitions of the same test,
    and the following SD line represents the Standard Deviation between the *%d* repetitions.
  - The Standard deviation is displayed as a percentage of the average.
  - The significance of the differences between the two averages is calculated using unpaired T-test that
@@ -208,7 +242,7 @@ class Sample(object):
                     flag = "+"
                     if float(avg1) > float(avg2):
                         flag = "-"
-                    tmp.append(flag + "%.3f" % (1 - p))
+                    tmp.append(flag + "%f" % (1 - p))
                 tmp = "|".join(tmp)
             ret.append(tmp)
         return ret
@@ -218,18 +252,21 @@ class Sample(object):
         result = "0.0"
         if len(data) == 2 and float(data[0]) != 0:
             result = float(data[1]) / float(data[0]) * 100
-            if result < 1:
+            if result > 100:
                 result = "%.2f%%" % result
             else:
-                result = "%.0f%%" % result
+                result = "%.4f%%" % result
         return result
 
     def _get_augment_rate(self, data):
         """ (num2 - num1) / num1 * 100 """
         result = "+0.0"
         if len(data) == 2 and float(data[0]) != 0:
-            result = "%+.3f%%" % ((float(data[1]) - float(data[0]))
-                                  / float(data[0]) * 100)
+            result = (float(data[1]) - float(data[0])) / float(data[0]) * 100
+            if result > 100:
+                result = "%+.2f%%" % result
+            else:
+                result = "%+.4f%%" % result
         return result
 
     def _get_list_sd(self, data):
@@ -239,7 +276,7 @@ class Sample(object):
         sumSquareX = x1^2 + ... + xn^2
         SD = sqrt([sumSquareX - (n * (avgX ^ 2))] / (n - 1))
         """
-        o_sum = sqsum = 0
+        o_sum = sqsum = 0.0
         n = len(data)
         for i in data:
             o_sum += float(i)
@@ -247,16 +284,14 @@ class Sample(object):
         avg = o_sum / n
         if avg == 0 or n == 1 or sqsum - (n * avg ** 2) <= 0:
             return "0.0"
-        return "%.3f" % (((sqsum - (n * avg ** 2)) / (n - 1)) ** 0.5)
+        return "%f" % (((sqsum - (n * avg ** 2)) / (n - 1)) ** 0.5)
 
     def _get_list_avg(self, data):
         """ Compute the average of list entries """
-        o_sum = 0
+        o_sum = 0.0
         for i in data:
             o_sum += float(i)
-        if is_int(str(data[0])):
-            return "%d" % (o_sum / len(data))
-        return "%.2f" % (o_sum / len(data))
+        return "%f" % (o_sum / len(data))
 
     def _get_list_self(self, data):
         """ Use this to convert sample dicts """
@@ -283,8 +318,8 @@ class Sample(object):
         if avg_update:
             for i in avg_update.split('|'):
                 l = i.split(',')
-                ret[int(l[0])] = "%.2f" % (float(ret[int(l[1])]) /
-                                           float(ret[int(l[2])]))
+                ret[int(l[0])] = "%f" % (float(ret[int(l[1])]) /
+                                         float(ret[int(l[2])]))
         if merge:
             return "|".join(ret)
         return ret
@@ -335,8 +370,18 @@ def display(lists, rates, allpvalues, f, ignore_col, o_sum="Augment Rate",
         out += "<TR ALIGN=CENTER>"
         content = content.split("|")
         for i in range(len(content)):
+            if not is_int(content[i]) and is_float(content[i]):
+                if "+" in content[i] or "-" in content[i]:
+                    if float(content[i]) > 100:
+                        content[i] = "%+.2f" % float(content[i])
+                    else:
+                        content[i] = "%+.4f" % float(content[i])
+                elif float(content[i]) > 100:
+                    content[i] = "%.2f" % float(content[i])
+                else:
+                    content[i] = "%.4f" % float(content[i])
             if n and i >= 2 and i < ignore_col + 2:
-                out += "<TD ROWSPAN=%d WIDTH=1%% >%s</TD>" % (n, content[i])
+                out += "<TD ROWSPAN=%d WIDTH=1%% >%.0f</TD>" % (n, float(content[i]))
             else:
                 out += "<TD WIDTH=1%% >%s</TD>" % content[i]
         out += "</TR>"
@@ -384,8 +429,8 @@ def display(lists, rates, allpvalues, f, ignore_col, o_sum="Augment Rate",
                 else:
                     tee("<TH colspan=3 >%s</TH>" % lists[n][i], f)
         for n in range(len(rates)):
-            if lists[0][i] != rates[n][i] and not re.findall("[a-zA-Z]",
-                                                             rates[n][i]):
+            if lists[0][i] != rates[n][i] and (not re.findall("[a-zA-Z]",
+                                                              rates[n][i]) or "nan" in rates[n][i]):
                 tee_line(prefix2[n] + str_ignore(rates[n][i], True), f)
     if prefix3 and len(allpvalues[-1]) > 0:
         tee_line(prefix3 + str_ignore(allpvalues[category - 1][0]), f)
@@ -451,10 +496,10 @@ def analyze(test, sample_type, arg1, arg2, configfile):
 
     desc = desc % s1.len
 
-    tee("<pre>####1. Description of setup#1\n" + s1.version + "</pre>",
-        test + ".html")
-    tee("<pre>####2. Description of setup#2\n" + s2.version + "</pre>",
-        test + ".html")
+    tee("<pre>####1. Description of setup#1\n" + s1.version + "\n test data:  "
+        + s1.testdata + "</pre>", test + ".html")
+    tee("<pre>####2. Description of setup#2\n" + s2.version + "\n test data:  "
+        + s2.testdata + "</pre>", test + ".html")
     tee("<pre>" + '\n'.join(desc.split('\\n')) + "</pre>", test + ".html")
     tee("<pre>" + s1.desc + "</pre>", test + ".html")
 
@@ -478,6 +523,14 @@ def analyze(test, sample_type, arg1, arg2, configfile):
 def is_int(n):
     try:
         int(n)
+        return True
+    except ValueError:
+        return False
+
+
+def is_float(n):
+    try:
+        float(n)
         return True
     except ValueError:
         return False

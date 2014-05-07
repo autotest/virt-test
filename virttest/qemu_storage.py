@@ -7,6 +7,7 @@ This exports:
 """
 import logging
 import os
+import re
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc
@@ -42,25 +43,34 @@ class QemuImg(storage.QemuImg):
 
         :param params: Dictionary containing the test parameters.
         :param ignore_errors: Whether to ignore errors on the image creation
-                cmd.
+                              cmd.
 
         :note: params should contain:
-               image_name -- the name of the image file, without extension
-               image_format -- the format of the image (qcow2, raw etc)
-               image_cluster_size (optional) -- the cluster size for the image
-               image_size -- the requested size of the image (a string
-                   qemu-img can understand, such as '10G')
-               create_with_dd -- use dd to create the image (raw format only)
-               base_image(optional) -- the base image name when create
-                   snapshot
-               base_format(optional) -- the format of base image
-               encrypted(optional) -- if the image is encrypted, allowed
-               values: on and off. Default is "off"
-               preallocated(optional) -- if preallocation when create image,
-               allowed values: off, metadata. Default is "off"
+
+               image_name
+                   name of the image file, without extension
+               image_format
+                   format of the image (qcow2, raw etc)
+               image_cluster_size (optional)
+                   cluster size for the image
+               image_size
+                   requested size of the image (a string qemu-img can
+                   understand, such as '10G')
+               create_with_dd
+                   use dd to create the image (raw format only)
+               base_image(optional)
+                   the base image name when create snapshot
+               base_format(optional)
+                   the format of base image
+               encrypted(optional)
+                   if the image is encrypted, allowed values: on and off.
+                   Default is "off"
+               preallocated(optional)
+                   if preallocation when create image, allowed values: off,
+                   metadata. Default is "off"
 
         :return: tuple (path to the image created, utils.CmdResult object
-                containing the result of the creation command).
+                 containing the result of the creation command).
         """
         if params.get("create_with_dd") == "yes" and self.image_format == "raw":
             # maps K,M,G,T => (count, bs)
@@ -119,7 +129,7 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " %s" % self.size
 
-        if (params.get("image_backend", "filesystem") != "filesystem"):
+        if (params.get("image_backend", "filesystem") == "filesystem"):
             image_dirname = os.path.dirname(self.image_filename)
             if image_dirname and not os.path.isdir(image_dirname):
                 e_msg = ("Parent directory of the image file %s does "
@@ -153,17 +163,23 @@ class QemuImg(storage.QemuImg):
 
         :param params: dictionary containing the test parameters
         :param root_dir: dir for save the convert image
-        :param cache_mode: the cache mode used to write the output disk image,
-            the valid options are: 'none', 'writeback' (default),
-            'writethrough', 'directsync' and 'unsafe'.
+        :param cache_mode: The cache mode used to write the output disk image.
+                           Valid options are: ``none``, ``writeback``
+                           (default), ``writethrough``, ``directsync`` and
+                           ``unsafe``.
 
         :note: params should contain:
-            convert_image_tag -- the image name of the convert image
-            convert_filename -- the name of the image after convert
-            convert_fmt -- the format after convert
-            compressed -- indicates that target image must be compressed
-            encrypted -- there are two value "off" and "on",
-                default value is "off"
+
+            convert_image_tag
+                the image name of the convert image
+            convert_filename
+                the name of the image after convert
+            convert_fmt
+                the format after convert
+            compressed
+                indicates that target image must be compressed
+            encrypted
+                there are two value "off" and "on", default value is "off"
         """
         convert_image_tag = params["image_convert"]
         convert_image = params["convert_name_%s" % convert_image_tag]
@@ -198,21 +214,27 @@ class QemuImg(storage.QemuImg):
 
     def rebase(self, params, cache_mode=None):
         """
-        Rebase image
+        Rebase image.
 
         :param params: dictionary containing the test parameters
         :param cache_mode: the cache mode used to write the output disk image,
-            the valid options are: 'none', 'writeback' (default),
-            'writethrough', 'directsync' and 'unsafe'.
+                           the valid options are: 'none', 'writeback' (default),
+                           'writethrough', 'directsync' and 'unsafe'.
 
         :note: params should contain:
-            cmd -- qemu-img cmd
-            snapshot_img -- the snapshot name
-            base_img -- base image name
-            base_fmt -- base image format
-            snapshot_fmt -- the snapshot format
-            mode -- there are two value, "safe" and "unsafe",
-                default is "safe"
+
+            cmd
+                qemu-img cmd
+            snapshot_img
+                the snapshot name
+            base_img
+                base image name
+            base_fmt
+                base image format
+            snapshot_fmt
+                the snapshot format
+            mode
+                there are two value, "safe" and "unsafe", default is "safe"
         """
         self.check_option("base_image_filename")
         self.check_option("base_format")
@@ -333,6 +355,17 @@ class QemuImg(storage.QemuImg):
             output = None
         return output
 
+    def get_format(self):
+        """
+        Get the fimage file format.
+        """
+        image_info = self.info()
+        if image_info:
+            image_format = re.findall("file format: (\w+)", image_info)[0]
+        else:
+            image_format = None
+        return image_format
+
     def support_cmd(self, cmd):
         """
         Verifies whether qemu-img supports command cmd.
@@ -341,7 +374,7 @@ class QemuImg(storage.QemuImg):
         """
         supports_cmd = True
 
-        if not cmd in self.help_text:
+        if cmd not in self.help_text:
             logging.error("%s does not support command '%s'", self.image_cmd,
                           cmd)
             supports_cmd = False
@@ -393,7 +426,8 @@ class QemuImg(storage.QemuImg):
         qemu_img_cmd = self.image_cmd
         image_is_checkable = self.image_format in ['qcow2', 'qed']
 
-        if storage.file_exists(params, image_filename) and image_is_checkable:
+        if (storage.file_exists(params, image_filename) or
+                params.get("enable_gluster", "no") == "yes") and image_is_checkable:
             check_img = self.support_cmd("check") and self.support_cmd("info")
             if not check_img:
                 logging.debug("Skipping image check "
@@ -474,8 +508,19 @@ class Iscsidev(storage.Iscsidev):
         """
         Access the iscsi target. And return the local raw device name.
         """
-        self.iscsidevice.login()
-        device_name = self.iscsidevice.get_device_name()
+        if self.iscsidevice.logged_in():
+            logging.warn("Session already present. Don't need to"
+                         " login again")
+        else:
+            self.iscsidevice.login()
+
+        if utils_misc.wait_for(self.iscsidevice.get_device_name,
+                               self.iscsi_init_timeout):
+            device_name = self.iscsidevice.get_device_name()
+        else:
+            raise error.TestError("Can not get iscsi device name in host"
+                                  " in %ss" % self.iscsi_init_timeout)
+
         if self.device_id:
             device_name += self.device_id
         return device_name
@@ -504,9 +549,9 @@ class LVMdev(storage.LVMdev):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images
         """
         super(LVMdev, self).__init__(params, root_dir, tag)
 

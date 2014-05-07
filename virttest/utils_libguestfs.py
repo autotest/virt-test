@@ -5,6 +5,7 @@ libguestfs tools test utility functions.
 import logging
 import signal
 import os
+import re
 
 from autotest.client import os_dep, utils
 from autotest.client.shared import error
@@ -41,9 +42,9 @@ def lgf_cmd_check(cmd):
                        'virt-ls', 'virt-make-fs', 'virt-rescue',
                        'virt-resize', 'virt-sparsify', 'virt-sysprep',
                        'virt-tar', 'virt-tar-in', 'virt-tar-out',
-                       'virt-win-reg']
+                       'virt-win-reg', 'virt-inspector2']
 
-    if not (cmd in libguestfs_cmds):
+    if cmd not in libguestfs_cmds:
         raise LibguestfsCmdError(
             "Command %s is not supported by libguestfs yet." % cmd)
 
@@ -164,7 +165,7 @@ class Guestfish(LibguestfsBase):
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
-                 uri=None, mount_options=None):
+                 uri=None, mount_options=None, run_mode="interactive"):
         """
         Initialize guestfish command with options.
 
@@ -180,19 +181,24 @@ class Guestfish(LibguestfsBase):
         if lgf_cmd_check(guestfs_exec) is None:
             raise LibguestfsCmdError
 
-        if uri:
-            guestfs_exec += " -c '%s'" % uri
+        if run_mode not in ['remote', 'interactive']:
+            raise AssertionError("run_mode should be remote or interactive")
 
-        if disk_img:
-            guestfs_exec += " -a '%s'" % disk_img
-        if libvirt_domain:
-            guestfs_exec += " -d '%s'" % libvirt_domain
-        if ro_mode:
-            guestfs_exec += " --ro"
-        if inspector:
-            guestfs_exec += " -i"
-        if mount_options is not None:
-            guestfs_exec += " --mount %s" % mount_options
+        if run_mode == "remote":
+            guestfs_exec += " --listen"
+        else:
+            if uri:
+                guestfs_exec += " -c '%s'" % uri
+            if disk_img:
+                guestfs_exec += " -a '%s'" % disk_img
+            if libvirt_domain:
+                guestfs_exec += " -d '%s'" % libvirt_domain
+            if ro_mode:
+                guestfs_exec += " --ro"
+            if inspector:
+                guestfs_exec += " -i"
+            if mount_options is not None:
+                guestfs_exec += " --mount %s" % mount_options
 
         super(Guestfish, self).__init__(guestfs_exec)
 
@@ -273,23 +279,102 @@ class GuestfishSession(aexpect.ShellSession):
         return result
 
 
+class GuestfishRemote(object):
+
+    """
+    Remote control of guestfish.
+    """
+
+    # Check output against list of known error-status strings
+    ERROR_REGEX_LIST = ['libguestfs: error:\s*']
+
+    def __init__(self, guestfs_exec=None, a_id=None):
+        """
+        Initialize guestfish session server, or client if id set.
+
+        :param guestfs_cmd: path to guestfish executable
+        :param a_id: guestfish remote id
+        """
+        if a_id is None:
+            try:
+                ret = utils.run(guestfs_exec, ignore_status=False,
+                                verbose=True, timeout=60)
+            except error.CmdError, detail:
+                raise LibguestfsCmdError(detail)
+            self.a_id = re.search("\d+", ret.stdout.strip()).group()
+        else:
+            self.a_id = a_id
+
+    def get_id(self):
+        return self.a_id
+
+    def cmd_status_output(self, cmd, ignore_status=None, verbose=None, timeout=60):
+        """
+        Send a guestfish command and return its exit status and output.
+
+        :param cmd: guestfish command to send(must not contain newline characters)
+        :param timeout: The duration (in seconds) to wait for the prompt to return
+        :return: A tuple (status, output) where status is the exit status
+                 and output is the output of cmd
+        :raise LibguestfsCmdError: Raised if commands execute failed
+        """
+        guestfs_exec = "guestfish --remote=%s " % self.a_id
+        cmd = guestfs_exec + cmd
+        try:
+            ret = utils.run(cmd, ignore_status=ignore_status,
+                            verbose=verbose, timeout=timeout)
+        except error.CmdError, detail:
+            raise LibguestfsCmdError(detail)
+
+        for line in self.ERROR_REGEX_LIST:
+            if re.search(line, ret.stdout.strip()):
+                raise LibguestfsCmdError(detail)
+
+        logging.debug("command: %s", cmd)
+        logging.debug("stdout: %s", ret.stdout.strip())
+
+        return 0, ret.stdout.strip()
+
+    def cmd(self, cmd, ignore_status=False):
+        """Mimic utils.run()"""
+        exit_status, stdout = self.cmd_status_output(cmd)
+        stderr = ''  # no way to retrieve this separately
+        result = utils.CmdResult(cmd, stdout, stderr, exit_status)
+        if not ignore_status and exit_status:
+            raise error.CmdError(cmd, result,
+                                 "Guestfish Command returned non-zero exit status")
+        return result
+
+    def cmd_result(self, cmd, ignore_status=False):
+        """Mimic utils.run()"""
+        exit_status, stdout = self.cmd_status_output(cmd)
+        stderr = ''  # no way to retrieve this separately
+        result = utils.CmdResult(cmd, stdout, stderr, exit_status)
+        if not ignore_status and exit_status:
+            raise error.CmdError(cmd, result,
+                                 "Guestfish Command returned non-zero exit status")
+        return result
+
+
 class GuestfishPersistent(Guestfish):
 
     """
     Execute operations using persistent guestfish session.
     """
 
-    __slots__ = ['session_id']
+    __slots__ = ['session_id', 'run_mode']
 
     # Help detect leftover sessions
     SESSION_COUNTER = 0
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
-                 uri=None, mount_options=None):
+                 uri=None, mount_options=None, run_mode="interactive"):
         super(GuestfishPersistent, self).__init__(disk_img, ro_mode,
                                                   libvirt_domain, inspector,
-                                                  uri, mount_options)
+                                                  uri, mount_options, run_mode)
+        self.__dict_set__('run_mode', run_mode)
+
         if self.get('session_id') is None:
             # set_uri does not call when INITIALIZED = False
             # and no session_id passed to super __init__
@@ -297,36 +382,40 @@ class GuestfishPersistent(Guestfish):
 
         # Check whether guestfish session is prepared.
         guestfs_session = self.open_session()
-        if guestfs_session.cmd_status('is-ready', timeout=60) != 0:
-            logging.debug("Persistent guestfish session is not responding.")
-            raise aexpect.ShellStatusError(self.lgf_exec, 'is-ready')
+        if run_mode != "remote":
+            status, output = guestfs_session.cmd_status_output('is-config', timeout=60)
+            if status != 0:
+                logging.debug("Persistent guestfish session is not responding.")
+                raise aexpect.ShellStatusError(self.lgf_exec, 'is-config')
 
     def close_session(self):
         """
         If a persistent session exists, close it down.
         """
         try:
+            run_mode = self.get('run_mode')
             existing = self.open_session()
             # except clause exits function
             # Try to end session with inner command 'quit'
             try:
                 existing.cmd("quit")
-                # It should jump to exception followed normally
+            # It should jump to exception followed normally
             except aexpect.ShellProcessTerminatedError:
                 self.__class__.SESSION_COUNTER -= 1
                 self.__dict_del__('session_id')
                 return  # guestfish session was closed normally
             # Close with 'quit' did not respond
             # So close with aexpect functions
-            if existing.is_alive():
-                # try nicely first
-                existing.close()
+            if run_mode != "remote":
                 if existing.is_alive():
-                    # Be mean, incase it's hung
-                    existing.close(sig=signal.SIGTERM)
-                # Keep count:
-                self.__class__.SESSION_COUNTER -= 1
-                self.__dict_del__('session_id')
+                    # try nicely first
+                    existing.close()
+                    if existing.is_alive():
+                        # Be mean, incase it's hung
+                        existing.close(sig=signal.SIGTERM)
+                    # Keep count:
+                    self.__class__.SESSION_COUNTER -= 1
+                    self.__dict_del__('session_id')
         except LibguestfsCmdError:
             # Allow other exceptions to be raised
             pass  # session was closed already
@@ -340,7 +429,11 @@ class GuestfishPersistent(Guestfish):
         guestfs_exec = self.__dict_get__('lgf_exec')
         self.close_session()
         # Always create new session
-        new_session = GuestfishSession(guestfs_exec)
+        run_mode = self.get('run_mode')
+        if run_mode == "remote":
+            new_session = GuestfishRemote(guestfs_exec)
+        else:
+            new_session = GuestfishSession(guestfs_exec)
         # Keep count
         self.__class__.SESSION_COUNTER += 1
         session_id = new_session.get_id()
@@ -352,9 +445,13 @@ class GuestfishPersistent(Guestfish):
         """
         try:
             session_id = self.__dict_get__('session_id')
+            run_mode = self.get('run_mode')
             if session_id:
                 try:
-                    return GuestfishSession(a_id=session_id)
+                    if run_mode == "remote":
+                        return GuestfishRemote(a_id=session_id)
+                    else:
+                        return GuestfishSession(a_id=session_id)
                 except aexpect.ShellStatusError:
                     # session was already closed
                     self.__dict_del__('session_id')
@@ -495,7 +592,7 @@ class GuestfishPersistent(Guestfish):
 
         Mount a guest disk at a position in the filesystem.
         """
-        return self.inner_cmd("mount %s %s %s" % (options, device, mountpoint))
+        return self.inner_cmd("mount-options %s %s %s" % (options, device, mountpoint))
 
     def mounts(self):
         """
@@ -513,6 +610,24 @@ class GuestfishPersistent(Guestfish):
         That call returns a list of devices.
         """
         return self.inner_cmd("mountpoints")
+
+    def do_mount(self, mountpoint):
+        """
+        do_mount - Automaticly mount
+
+        Mount a lvm or physical partation to '/'
+        """
+        partition_type = self.params.get("partition_type")
+        if partition_type == "lvm":
+            vg_name = self.params.get("vg_name", "vol_test")
+            lv_name = self.params.get("lv_name", "vol_file")
+            device = "/dev/%s/%s" % (vg_name, lv_name)
+            logging.info("mount lvm partition...%s" % device)
+        elif partition_type == "physical":
+            pv_name = self.params.get("pv_name", "/dev/sdb")
+            device = pv_name + "1"
+            logging.info("mount physical partition...%s" % device)
+        self.mount(device, mountpoint)
 
     def read_file(self, path):
         """
@@ -667,6 +782,106 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("tar-in %s %s" % (tarfile, directory))
 
+    def tar_in_opts(self, tarfile, directory, compress=None):
+        """
+        tar-in-opts - unpack tarfile to directory
+
+        This command uploads and unpacks local file "tarfile"
+        (an *compressed* tar file) into "directory".
+        """
+        if compress:
+            return self.inner_cmd("tar-in-opts %s %s compress:%s" % (tarfile, directory, compress))
+        else:
+            return self.inner_cmd("tar-in-opts %s %s" % (tarfile, directory))
+
+    def file_architecture(self, filename):
+        """
+        file-architecture - detect the architecture of a binary file
+
+        This detects the architecture of the binary "filename", and returns it
+        if known.
+        """
+        return self.inner_cmd("file-architecture %s" % filename)
+
+    def filesize(self, file):
+        """
+        filesize - return the size of the file in bytes
+
+        This command returns the size of "file" in bytes.
+        """
+        return self.inner_cmd("filesize %s" % file)
+
+    def stat(self, path):
+        """
+        stat - get file information
+
+        Returns file information for the given "path".
+        """
+        return self.inner_cmd("stat %s" % path)
+
+    def lstat(self, path):
+        """
+        lstat - get file information for a symbolic link
+
+        Returns file information for the given "path".
+        """
+        return self.inner_cmd("lstat %s" % path)
+
+    def lstatlist(self, path, names):
+        """
+        lstatlist - lstat on multiple files
+
+        This call allows you to perform the "lstat" operation on multiple files,
+        where all files are in the directory "path". "names" is the list of
+        files from this directory.
+        """
+        return self.inner_cmd("lstatlist %s %s" % (path, names))
+
+    def umask(self, mask):
+        """
+        umask - set file mode creation mask (umask)
+
+        This function sets the mask used for creating new files and device nodes
+        to "mask & 0777".
+        """
+        return self.inner_cmd("umask %s" % mask)
+
+    def get_umask(self):
+        """
+        get-umask - get the current umask
+
+        Return the current umask. By default the umask is 022 unless it has been
+        set by calling "umask".
+        """
+        return self.inner_cmd("get-umask")
+
+    def mkdir_mode(self, path, mode):
+        """
+        mkdir-mode - create a directory with a particular mode
+
+        This command creates a directory, setting the initial permissions of the
+        directory to "mode".
+        """
+        return self.inner_cmd("mkdir-mode %s %s" % (path, mode))
+
+    def mknod(self, mode, devmajor, devminor, path):
+        """
+        mknod - make block, character or FIFO devices
+
+        This call creates block or character special devices, or named pipes
+        (FIFOs).
+        """
+        return self.inner_cmd("mknod %s %s %s %s" % (mode, devmajor, devminor, path))
+
+    def rm_rf(self, path):
+        """
+        rm-rf - remove a file or directory recursively
+
+        Remove the file or directory "path", recursively removing the contents
+        if its a directory. This is like the "rm -rf" shell command.
+        """
+        return self.inner_cmd("rm-rf %s" % path)
+
     def copy_out(self, remote, localdir):
         """
         copy-out - copy remote files or directories out of an image
@@ -687,6 +902,51 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("copy-in %s /%s" % (local, remotedir))
 
+    def chmod(self, mode, path):
+        """
+        chmod - change file mode
+
+        Change the mode (permissions) of "path" to "mode". Only numeric modes
+        are supported.
+        """
+        return self.inner_cmd("chmod %s %s" % (mode, path))
+
+    def chown(self, owner, group, path):
+        """
+        chown - change file owner and group
+
+        Change the file owner to "owner" and group to "group".
+        """
+        return self.inner_cmd("chown %s %s %s" % (owner, group, path))
+
+    def lchown(self, owner, group, path):
+        """
+        lchown - change file owner and group
+
+        Change the file owner to "owner" and group to "group". This is like
+        "chown" but if "path" is a symlink then the link itself is changed, not
+        the target.
+        """
+        return self.inner_cmd("lchown %s %s %s" % (owner, group, path))
+
+    def du(self, path):
+        """
+        du - estimate file space usage
+
+        This command runs the "du -s" command to estimate file space usage for
+        "path".
+        """
+        return self.inner_cmd("du %s" % path)
+
+    def file(self, path):
+        """
+        file - determine file type
+
+        This call uses the standard file(1) command to determine the type or
+        contents of the file.
+        """
+        return self.inner_cmd("file %s" % path)
+
     def rm(self, path):
         """
         rm - remove a file
@@ -695,14 +955,230 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("rm %s" % path)
 
-    def is_file(self, path):
+    def is_file(self, path, followsymlinks=None):
         """
         is-file - test if a regular file
 
         This returns "true" if and only if there is a regular file with the
         given "path" name.
         """
-        return self.inner_cmd("is-file %s" % path)
+        cmd = "is-file %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_file_opts(self, path, followsymlinks=None):
+        """
+        is-file_opts - test if a regular file
+
+        This returns "true" if and only if there is a regular file with the
+        given "path" name.
+
+        An alias of command is-file
+        """
+        cmd = "is-file-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_blockdev(self, path, followsymlinks=None):
+        """
+        is-blockdev - test if block device
+
+        This returns "true" if and only if there is a block device with the
+        given "path" name
+        """
+        cmd = "is-blockdev %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_blockdev_opts(self, path, followsymlinks=None):
+        """
+        is-blockdev_opts - test if block device
+
+        This returns "true" if and only if there is a block device with the
+        given "path" name
+
+        An alias of command is-blockdev
+        """
+        cmd = "is-blockdev-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_chardev(self, path, followsymlinks=None):
+        """
+        is-chardev - test if character device
+
+        This returns "true" if and only if there is a character device with the
+        given "path" name.
+        """
+        cmd = "is-chardev %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_chardev_opts(self, path, followsymlinks=None):
+        """
+        is-chardev_opts - test if character device
+
+        This returns "true" if and only if there is a character device with the
+        given "path" name.
+
+        An alias of command is-chardev
+        """
+        cmd = "is-chardev-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_dir(self, path, followsymlinks=None):
+        """
+        is-dir - test if a directory
+
+        This returns "true" if and only if there is a directory with the given
+        "path" name. Note that it returns false for other objects like files.
+        """
+        cmd = "is-dir %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_dir_opts(self, path, followsymlinks=None):
+        """
+        is-dir-opts - test if character device
+
+        This returns "true" if and only if there is a character device with the
+        given "path" name.
+
+        An alias of command is-dir
+        """
+        cmd = "is-dir-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_fifo(self, path, followsymlinks=None):
+        """
+        is-fifo - test if FIFO (named pipe)
+
+        This returns "true" if and only if there is a FIFO (named pipe) with
+        the given "path" name.
+        """
+        cmd = "is-fifo %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_fifo_opts(self, path, followsymlinks=None):
+        """
+        is-fifo-opts - test if FIFO (named pipe)
+
+        This returns "true" if and only if there is a FIFO (named pipe) with
+        the given "path" name.
+
+        An alias of command is-fifo
+        """
+        cmd = "is-fifo-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_lv(self, device):
+        """
+        is-lv - test if device is a logical volume
+
+        This command tests whether "device" is a logical volume, and returns
+        true iff this is the case.
+        """
+        return self.inner_cmd("is-lv %s" % device)
+
+    def is_socket(self, path, followsymlinks=None):
+        """
+        is-socket - test if socket
+
+        This returns "true" if and only if there is a Unix domain socket with
+        the given "path" name.
+        """
+        cmd = "is-socket %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_socket_opts(self, path, followsymlinks=None):
+        """
+        is-socket-opts - test if socket
+
+        This returns "true" if and only if there is a Unix domain socket with
+        the given "path" name.
+
+        An alias of command is-socket
+        """
+        cmd = "is-socket-opts %s" % path
+
+        if followsymlinks:
+            cmd += " followsymlinks:%s" % followsymlinks
+
+        return self.inner_cmd(cmd)
+
+    def is_symlink(self, path):
+        """
+        is-symlink - test if symbolic link
+
+        This returns "true" if and only if there is a symbolic link with the
+        given "path" name.
+        """
+        return self.inner_cmd("is-symlink %s" % path)
+
+    def is_whole_device(self, device):
+        """
+        is-symlink - test if symbolic link
+
+        This returns "true" if and only if "device" refers to a whole block
+        device. That is, not a partition or a logical device.
+        """
+        return self.inner_cmd("is-whole-device %s" % device)
+
+    def is_zero(self, path):
+        """
+        is-zero - test if a file contains all zero bytes
+
+        This returns true iff the file exists and the file is empty or it
+        contains all zero bytes.
+        """
+        return self.inner_cmd("is-zero %s" % path)
+
+    def is_zero_device(self, device):
+        """
+        is-zero-device - test if a device contains all zero bytes
+
+        This returns true iff the device exists and contains all zero bytes.
+        Note that for large devices this can take a long time to run.
+        """
+        return self.inner_cmd("is-zero-device %s" % device)
 
     def cp(self, src, dest):
         """
@@ -742,6 +1218,14 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("checksum %s %s" % (csumtype, path))
 
+    def is_config(self):
+        """
+        is-config - is ready to accept commands
+
+        This returns true if this handle is in the "CONFIG" state
+        """
+        return self.inner_cmd("is-config")
+
     def is_ready(self):
         """
         is-ready - is ready to accept commands
@@ -768,6 +1252,15 @@ class GuestfishPersistent(Guestfish):
         logical volume). The filesystem type is "fstype", for example "ext3".
         """
         return self.inner_cmd("mkfs %s %s" % (fstype, device))
+
+    def mkfs_opts(self, fstype, device, opts):
+        """
+        mkfs-opts - make a filesystem with optional arguments
+
+        This creates a filesystem on "device" (usually a partition or LVM
+        logical volume). The filesystem type is "fstype", for example "ext3".
+        """
+        return self.inner_cmd("mkfs %s %s %s" % (fstype, device, opts))
 
     def part_disk(self, device, parttype):
         """
@@ -882,6 +1375,178 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("blockdev-setrw %s" % device)
 
+    def blockdev_flushbufs(self, device):
+        """
+        blockdev-flushbufs - flush device buffers
+
+        This tells the kernel to flush internal buffers associated with
+        "device".
+        """
+        return self.inner_cmd("blockdev-flushbufs %s" % device)
+
+    def blockdev_rereadpt(self, device):
+        """
+        blockdev-rereadpt - reread partition table
+
+        Reread the partition table on "device".
+        """
+        return self.inner_cmd("blockdev-rereadpt %s" % device)
+
+    def canonical_device_name(self, device):
+        """
+        canonical-device-name - return canonical device name
+
+        This utility function is useful when displaying device names to
+        the user.
+        """
+        return self.inner_cmd("canonical-device-name %s" % device)
+
+    def device_index(self, device):
+        """
+        device-index - convert device to index
+
+        This function takes a device name (eg. "/dev/sdb") and returns the
+        index of the device in the list of devices
+        """
+        return self.inner_cmd("device-index %s" % device)
+
+    def disk_format(self, filename):
+        """
+        disk-format - detect the disk format of a disk image
+
+        Detect and return the format of the disk image called "filename",
+        "filename" can also be a host device, etc
+        """
+        return self.inner_cmd("disk-format %s" % filename)
+
+    def disk_has_backing_file(self, filename):
+        """
+        disk-has-backing-file - return whether disk has a backing file
+
+        Detect and return whether the disk image "filename" has a backing file
+        """
+        return self.inner_cmd("disk-has-backing-file %s" % filename)
+
+    def disk_virtual_size(self, filename):
+        """
+        disk-virtual-size - return virtual size of a disk
+
+        Detect and return the virtual size in bytes of the disk image"
+        """
+        return self.inner_cmd("disk-virtual-size %s" % filename)
+
+    def max_disks(self):
+        """
+        max-disks - maximum number of disks that may be added
+
+        Return the maximum number of disks that may be added to a handle
+        """
+        return self.inner_cmd("max-disks")
+
+    def nr_devices(self):
+        """
+        nr-devices - return number of whole block devices (disks) added
+
+        This returns the number of whole block devices that were added
+        """
+        return self.inner_cmd("nr-devices")
+
+    def scrub_device(self, device):
+        """
+        scrub-device - scrub (securely wipe) a device
+
+        This command writes patterns over "device" to make data retrieval more
+        difficult
+        """
+        return self.inner_cmd("scrub-device %s" % device)
+
+    def scrub_file(self, file):
+        """
+        scrub-file - scrub (securely wipe) a file
+
+        This command writes patterns over a file to make data retrieval more
+        difficult
+        """
+        return self.inner_cmd("scrub-file %s" % file)
+
+    def scrub_freespace(self, dir):
+        """
+        scrub-freespace - scrub (securely wipe) free space
+
+        This command creates the directory "dir" and then fills it with files
+        until the filesystem is full,and scrubs the files as for "scrub_file",
+        and deletes them. The intention is to scrub any free space on the
+        partition containing "dir"
+        """
+        return self.inner_cmd("scrub-freespace %s" % dir)
+
+    def md_create(self, name, device, missingbitmap=None, nrdevices=None,
+                  spare=None, chunk=None, level=None):
+        """
+        md-create - create a Linux md (RAID) device
+
+        Create a Linux md (RAID) device named "name" on the devices in the list
+        "devices".
+        """
+        cmd = "md-create %s %s" % (name, device)
+
+        if missingbitmap:
+            cmd += " missingbitmap:%s" % missingbitmap
+        if nrdevices:
+            cmd += " nrdevices:%s" % nrdevices
+        if spare:
+            cmd += " spare:%s" % spare
+        if chunk:
+            cmd += " chunk:%s" % chunk
+        if level:
+            cmd += " level:%s" % level
+
+        return self.inner_cmd(cmd)
+
+    def list_md_devices(self):
+        """
+        list-md-devices - list Linux md (RAID) devices
+
+        List all Linux md devices.
+        """
+        return self.inner_cmd("list-md-devices")
+
+    def md_stop(self, md):
+        """
+        md-stop - stop a Linux md (RAID) device
+
+        This command deactivates the MD array named "md".
+        The device is stopped, but it is not destroyed or zeroed.
+        """
+        return self.inner_cmd("md-stop %s" % md)
+
+    def md_stat(self, md):
+        """
+        md-stat - get underlying devices from an MD device
+
+        This call returns a list of the underlying devices which make up the
+        single software RAID array device "md".
+        """
+        return self.inner_cmd("md-stat %s" % md)
+
+    def md_detail(self, md):
+        """
+        md-detail - obtain metadata for an MD device
+
+        This command exposes the output of 'mdadm -DY <md>'. The following
+        fields are usually present in the returned hash. Other fields may also
+        be present.
+        """
+        return self.inner_cmd("md-detail %s" % md)
+
+    def pvcreate(self, physvols):
+        """
+        pvcreate - create an LVM physical volume
+
+        This creates an LVM physical volume called "physvols".
+        """
+        return self.inner_cmd("pvcreate %s" % (physvols))
+
     def vgcreate(self, volgroup, physvols):
         """
         vgcreate - create an LVM volume group
@@ -967,8 +1632,54 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("lvs")
 
+    def vfs_type(self, mountable):
+        """
+        vfs-type - get the Linux VFS type corresponding to a mounted device
+
+        Gets the filesystem type corresponding to the filesystem on "mountable"
+        """
+        return self.inner_cmd("vfs-type %s" % (mountable))
+
+    def touch(self, path):
+        """
+        touch - update file timestamps or create a new file
+
+        Touch acts like the touch(1) command. It can be used to update the
+        timestamps on a file, or, if the file does not exist, to create a new
+        zero-length file.
+        """
+        return self.inner_cmd("touch %s" % (path))
+
+    def umount_all(self):
+        """
+        umount-all - unmount all filesystems
+
+        This unmounts all mounted filesystems.
+        Some internal mounts are not unmounted by this call.
+        """
+        return self.inner_cmd("umount-all")
+
+    def ll(self, directory):
+        """
+        ll - list the files in a directory (long format)
+
+        List the files in "directory" (relative to the root directory, there is
+        no cwd) in the format of 'ls -la'.
+        """
+        return self.inner_cmd("ll %s" % (directory))
+
+    def sync(self):
+        """
+        lsync - sync disks, writes are flushed through to the disk image
+
+        This syncs the disk, so that any writes are flushed through to the
+        underlying disk image.
+        """
+        return self.inner_cmd("sync")
 
 # libguestfs module functions follow #####
+
+
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
                            timeoutarg=None, ignore_status=True,
                            debug=False, timeout=60):
@@ -1024,10 +1735,10 @@ def virt_clone_cmd(original, newname=None, autoclone=False, **dargs):
     """
     Clone existing virtual machine images.
 
-    @param original: Name of the original guest to be cloned.
-    @param newname: Name of the new guest virtual machine instance.
-    @param autoclone: Generate a new guest name, and paths for new storage.
-    @param dargs: Standardized function API keywords. There are many
+    :param original: Name of the original guest to be cloned.
+    :param newname: Name of the new guest virtual machine instance.
+    :param autoclone: Generate a new guest name, and paths for new storage.
+    :param dargs: Standardized function API keywords. There are many
                   options not listed, they can be passed in dargs.
     """
     def storage_config(cmd, options):
@@ -1070,8 +1781,8 @@ def virt_sparsify_cmd(indisk, outdisk, compress=False, convert=None,
     """
     Make a virtual machine disk sparse.
 
-    @param indisk: The source disk to be sparsified.
-    @param outdisk: The destination disk.
+    :param indisk: The source disk to be sparsified.
+    :param outdisk: The destination disk.
     """
     cmd = "virt-sparsify"
     if compress is True:
@@ -1092,8 +1803,8 @@ def virt_resize_cmd(indisk, outdisk, **dargs):
     """
     Resize a virtual machine disk.
 
-    @param indisk: The source disk to be resized
-    @param outdisk: The destination disk.
+    :param indisk: The source disk to be resized
+    :param outdisk: The destination disk.
     """
     cmd = "virt-resize"
     ignore_status = dargs.get("ignore_status", True)
@@ -1127,7 +1838,7 @@ def virt_list_partitions_cmd(disk_or_domain, long=False, total=False,
     "virt-list-partitions" is a command line tool to list the partitions
     that are contained in a virtual machine or disk image.
 
-    @param disk_or_domain: a disk or a domain to be mounted
+    :param disk_or_domain: a disk or a domain to be mounted
     """
     cmd = "virt-list-partitions %s" % disk_or_domain
     if long is True:
@@ -1145,11 +1856,11 @@ def guestmount(disk_or_domain, mountpoint, inspector=False,
     guestmount - Mount a guest filesystem on the host using
                  FUSE and libguestfs.
 
-    @param disk_or_domain: a disk or a domain to be mounted
+    :param disk_or_domain: a disk or a domain to be mounted
            If you need to mount a disk, set is_disk to True in dargs
-    @param mountpoint: the mountpoint of filesystems
-    @param inspector: mount all filesystems automatically
-    @param readonly: if mount filesystem with readonly option
+    :param mountpoint: the mountpoint of filesystems
+    :param inspector: mount all filesystems automatically
+    :param readonly: if mount filesystem with readonly option
     """
     def get_special_mountpoint(cmd, options):
         special_mountpoints = options.get("special_mountpoints", [])
@@ -1181,7 +1892,7 @@ def virt_filesystems(disk_or_domain, **dargs):
     virt-filesystems - List filesystems, partitions, block devices,
     LVM in a virtual machine or disk image
 
-    @param disk_or_domain: a disk or a domain to be mounted
+    :param disk_or_domain: a disk or a domain to be mounted
            If you need to mount a disk, set is_disk to True in dargs
     """
     def get_display_type(cmd, options):
@@ -1220,14 +1931,16 @@ def virt_filesystems(disk_or_domain, **dargs):
     cmd = "virt-filesystems"
     # If you need to mount a disk, set is_disk to True
     is_disk = dargs.get("is_disk", False)
+    ignore_status = dargs.get("ignore_status", True)
+    debug = dargs.get("debug", False)
+    timeout = dargs.get("timeout", 60)
+
     if is_disk is True:
         cmd += " -a %s" % disk_or_domain
     else:
         cmd += " -d %s" % disk_or_domain
     cmd = get_display_type(cmd, dargs)
-    return lgf_command(cmd, ignore_status=dargs.get('ignore_status', True),
-                       debug=dargs.get('debug', False),
-                       timeout=dargs.get('timeout', 60))
+    return lgf_command(cmd, ignore_status, debug, timeout)
 
 
 def virt_list_partitions(disk_or_domain, long=False, total=False,
@@ -1237,7 +1950,7 @@ def virt_list_partitions(disk_or_domain, long=False, total=False,
     "virt-list-partitions" is a command line tool to list the partitions
     that are contained in a virtual machine or disk image.
 
-    @param disk_or_domain: a disk or a domain to be mounted
+    :param disk_or_domain: a disk or a domain to be mounted
     """
     cmd = "virt-list-partitions %s" % disk_or_domain
     if long is True:
@@ -1256,7 +1969,7 @@ def virt_list_filesystems(disk_or_domain, format=None, long=False,
     "virt-list-filesystems" is a command line tool to list the filesystems
     that are contained in a virtual machine or disk image.
 
-    @param disk_or_domain: a disk or a domain to be mounted
+    :param disk_or_domain: a disk or a domain to be mounted
     """
     cmd = "virt-list-filesystems %s" % disk_or_domain
     if format is not None:
@@ -1379,4 +2092,46 @@ def virt_copy_out(disk_or_domain, file_path, localdir, is_disk=False,
     else:
         cmd += " -d %s" % disk_or_domain
     cmd += " %s %s" % (file_path, localdir)
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_format(disk, filesystem=None, image_format=None, lvm=None,
+                partition=None, wipe=False, ignore_status=False,
+                debug=False, timeout=60):
+    """
+    Virt-format takes an existing disk file (or it can be a host partition,
+    LV etc), erases all data on it, and formats it as a blank disk.
+    """
+    cmd = "virt-format -a %s" % disk
+    if filesystem is not None:
+        cmd += " --filesystem=%s" % filesystem
+    if image_format is not None:
+        cmd += " --format=%s" % image_format
+    if lvm is not None:
+        cmd += " --lvm=%s" % lvm
+    if partition is not None:
+        cmd += " --partition=%s" % partition
+    if wipe is True:
+        cmd += " --wipe"
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_inspector(disk_or_domain, is_disk=False, ignore_status=True,
+                   debug=False, timeout=30):
+    """
+    virt-inspector2 examines a virtual machine or disk image and tries to
+    determine the version of the operating system and other information
+    about the virtual machine.
+    """
+    # virt-inspector has been replaced by virt-inspector2 in RHEL7
+    # Check it here to choose which one to be used.
+    cmd = lgf_cmd_check("virt-inspector2")
+    if cmd is None:
+        cmd = "virt-inspector"
+
+    # If you need to mount a disk, set is_disk to True
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
     return lgf_command(cmd, ignore_status, debug, timeout)

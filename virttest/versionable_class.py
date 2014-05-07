@@ -206,16 +206,15 @@ class ModuleWrapper(object):
         :return: specific class when name of class starts with managed or
                  normal attribute from wrapped class.
         """
-        if not name in self.wrapped.__dict__:
+        if name not in self.wrapped.__dict__:
             if name.startswith("managed"):
                 cls_name = name.split("_")
                 cls = self.wrapped.__dict__[cls_name[1]]
                 m_cls, _ = Manager(self.wrapped.__name__, self).factory(cls,
                                                                         _class_names=cls_name)
                 return m_cls
-        else:
-            cls = getattr(self.wrapped, name)
-            return cls
+        cls = getattr(self.wrapped, name)
+        return cls
 
 
 class VersionableClass(object):
@@ -261,8 +260,8 @@ class Manager(object):
 
         :param _class: Class which should be prepared.
         :type _class: class.
-        :param *args: Params for _is_right_ver function.
-        :param *kargs: Params for _is_right_ver function.
+        :param args: Params for _is_right_ver function.
+        :params kargs: Params for _is_right_ver function.
         """
         def add_to_structure(cl, new_bases):
             if VersionableClass in cl.__mro__:
@@ -277,7 +276,7 @@ class Manager(object):
         if "_class_names" in kargs:
             _class_names = kargs["_class_names"]
         if (_class.__name__.startswith("managed") and
-           hasattr(_class, "__original_class__")):
+                hasattr(_class, "__original_class__")):
             _class = _class.__original_class__
         new_bases = []
         cls_ver_name = ""
@@ -302,7 +301,7 @@ class Manager(object):
         else:
             for m_cls in _class.__bases__:
                 if (VersionableClass in m_cls.__mro__ or
-                   hasattr(m_cls, "__original_class__")):
+                        hasattr(m_cls, "__original_class__")):
                     cls, cls_vn = self.factory(m_cls, *args, **kargs)
                     new_bases.append(cls)
                     cls_ver_name += cls_vn
@@ -351,8 +350,8 @@ def factory(orig_cls, *args, **kargs):
     Create class with specific version.
 
     :param orig_class: Class from which should be derived good version.
-    :param *args: list of parameters for _ir_right_ver
-    :param *kargs: dict of named parameters for _ir_right_ver
+    :param args: list of parameters for _ir_right_ver
+    :params kargs: dict of named parameters for _ir_right_ver
     :return: params specific class.
     :rtype: class
     """

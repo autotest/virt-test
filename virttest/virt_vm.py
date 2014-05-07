@@ -4,11 +4,13 @@ import glob
 import os
 import re
 import socket
+from autotest.client import utils
 from autotest.client.shared import error
 import utils_misc
 import utils_net
 import remote
 import aexpect
+import traceback
 import ppm_utils
 import data_dir
 
@@ -221,12 +223,13 @@ class VMMACAddressMissingError(VMAddressError):
 
 class VMIPAddressMissingError(VMAddressError):
 
-    def __init__(self, mac):
+    def __init__(self, mac, ip_version="ipv4"):
         VMAddressError.__init__(self, mac)
         self.mac = mac
+        self.ip_version = ip_version
 
     def __str__(self):
-        return "No DHCP lease for MAC %s" % self.mac
+        return "No %s DHCP lease for MAC %s" % (self.ip_version, self.mac)
 
 
 class VMUnknownNetTypeError(VMError):
@@ -501,14 +504,6 @@ class BaseVM(object):
     def __init__(self, name, params):
         self.name = name
         self.params = params
-        #
-        # Assuming all low-level hypervisors will have a serial (like) console
-        # connection to the guest. libvirt also supports serial (like) consoles
-        # (virDomainOpenConsole). subclasses should set this to an object that
-        # is or behaves like aexpect.ShellSession.
-        #
-        self.serial_console = None
-        self.remote_sessions = []
         # Create instance if not already set
         if not hasattr(self, 'instance'):
             self._generate_unique_id()
@@ -572,6 +567,7 @@ class BaseVM(object):
             need_restart = (self.make_create_command() !=
                             self.make_create_command(name, params, basedir))
         except Exception:
+            logging.error(traceback.format_exc())
             need_restart = True
         if need_restart:
             logging.debug(
@@ -635,6 +631,7 @@ class BaseVM(object):
                 be verified (using arping)
         """
         nic = self.virtnet[index]
+        self.ip_version = self.params.get("ip_version", "ipv4").lower()
         # TODO: Determine port redirection in use w/o checking nettype
         if nic.nettype not in ['bridge', 'macvtap']:
             hostname = socket.gethostname()
@@ -645,45 +642,64 @@ class BaseVM(object):
         # else TODO: Look up mac from existing qemu-kvm process
         if not nic.has_key('mac'):
             raise VMMACAddressMissingError(index)
+        if self.ip_version == "ipv4":
+            # Get the IP address from arp cache, try upper and lower case
+            arp_ip = self.address_cache.get(nic.mac.upper())
+            if not arp_ip:
+                arp_ip = self.address_cache.get(nic.mac.lower())
 
-        # Get the IP address from arp cache, try upper and lower case
-        arp_ip = self.address_cache.get(nic.mac.upper())
-        if not arp_ip:
-            arp_ip = self.address_cache.get(nic.mac.lower())
+            if not arp_ip and os.geteuid() != 0:
+                # For non-root, tcpdump won't work for finding IP address,
+                # try arp
+                ip_map = utils_net.parse_arp()
+                arp_ip = ip_map.get(nic.mac.lower())
+                if arp_ip:
+                    self.address_cache[nic.mac.lower()] = arp_ip
 
-        if not arp_ip and os.geteuid() != 0:
-            # For non-root, tcpdump won't work for finding IP address, try arp
-            ip_map = utils_net.parse_arp()
-            arp_ip = ip_map.get(nic.mac.lower())
-            if arp_ip:
-                self.address_cache[nic.mac.lower()] = arp_ip
+            if not arp_ip:
+                raise VMIPAddressMissingError(nic.mac)
 
-        if not arp_ip:
-            raise VMIPAddressMissingError(nic.mac)
+            # Make sure the IP address is assigned to one or more macs
+            # for this guest
+            macs = self.virtnet.mac_list()
 
-        # Make sure the IP address is assigned to one or more macs
-        # for this guest
-        macs = self.virtnet.mac_list()
+            # SR-IOV cards may not be in same subnet with the card used by
+            # host by default, so arp checks won't work. Therefore, do not
+            # raise VMAddressVerificationError when SR-IOV is used.
+            nic_params = self.params.object_params(nic.nic_name)
+            pci_assignable = nic_params.get("pci_assignable") != "no"
 
-        # SR-IOV card may not in same subnet with the card used by host by
-        # default. So arp check cannot work.
-        # At this situation verify_ip_address_ownership will raise
-        # VMAddressVerificationError even IP and mac match.
-        # So do not raise VMAddressVerificationError when SR-IOV used.
-        nic_params = self.params.object_params(nic.nic_name)
-        ignore_ip_address_verify = nic_params.get("pci_assignable") != "no"
+            if not utils_net.verify_ip_address_ownership(arp_ip, macs):
+                if pci_assignable:
+                    msg = "Could not verify DHCP lease: %s-> %s." % (nic.mac,
+                                                                     arp_ip)
+                    msg += (" Maybe %s is not in the same subnet "
+                            "as the host (SR-IOV in use)" % arp_ip)
+                    logging.error(msg)
+                else:
+                    raise VMAddressVerificationError(nic.mac, arp_ip)
 
-        if not utils_net.verify_ip_address_ownership(arp_ip, macs):
-            if ignore_ip_address_verify:
-                msg = "Could not verify DHCP lease: %s --> %s." % (nic.mac,
-                                                                   arp_ip)
-                msg += " Maybe %s is not in same subnet with host." % arp_ip
-                logging.error(msg)
+            logging.debug('Found/Verified IP %s for VM %s NIC %s',
+                          arp_ip, self.name, str(index))
+            return arp_ip
+
+        elif self.ip_version == "ipv6":
+            # Try to get and return IPV6 address
+            if self.params.get('using_linklocal') == "yes":
+                ipv6_addr = utils_net.ipv6_from_mac_addr(nic.mac)
+            # Using global address
             else:
-                raise VMAddressVerificationError(nic.mac, arp_ip)
-        logging.debug('Found/Verified IP %s for VM %s NIC %s' % (
-            arp_ip, self.name, str(index)))
-        return arp_ip
+                mac_key = "%s_6" % nic.mac
+                ipv6_addr = self.address_cache.get(mac_key.lower())
+            if not ipv6_addr:
+                raise VMIPAddressMissingError(nic.mac)
+            # Check whether the ipv6 address is reachable
+            utils_net.refresh_neigh_table(nic.netdst, ipv6_addr)
+            if not utils_misc.wait_for(lambda: utils_net.neigh_reachable(
+                                       ipv6_addr, nic.netdst),
+                                       30, 0, 1, "Wait neighbour reachable"):
+                raise VMAddressVerificationError(nic.mac, ipv6_addr)
+            return ipv6_addr
 
     def fill_addrs(self, addrs):
         """
@@ -691,10 +707,13 @@ class BaseVM(object):
         structure addrs.
 
         :param addrs: Dict of interfaces and address
-                        {"if_name":{"mac":['addrs',],
-                                    "ipv4":['addrs',],
-                                    "ipv6":['addrs',]},
-                          ...}
+
+        ::
+
+            {"if_name":{"mac":['addrs',],
+                        "ipv4":['addrs',],
+                        "ipv6":['addrs',]},
+              ...}
         """
         for virtnet in self.virtnet:
             for iface_name, iface in addrs.iteritems():
@@ -732,9 +751,12 @@ class BaseVM(object):
         self.virtnet.free_mac_address(nic_index_or_name)
 
     @error.context_aware
-    def wait_for_get_address(self, nic_index_or_name, timeout=30, internal_timeout=1):
+    def wait_for_get_address(self, nic_index_or_name, timeout=30,
+                             internal_timeout=1, ip_version='ipv4'):
         """
         Wait for a nic to acquire an IP address, then return it.
+        For ipv6 linklocal address, we can generate it by nic mac,
+        so we can ignore this case
         """
         # Don't let VMIPAddressMissingError/VMAddressVerificationError through
         def _get_address():
@@ -742,8 +764,39 @@ class BaseVM(object):
                 return self.get_address(nic_index_or_name)
             except (VMIPAddressMissingError, VMAddressVerificationError):
                 return False
+
         if not utils_misc.wait_for(_get_address, timeout, internal_timeout):
-            raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
+            if self.is_dead():
+                raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
+            try:
+                s_session = None
+                # for windows guest make sure your guest supports
+                # login by serial_console
+                s_session = self.wait_for_serial_login()
+                nic_mac = self.get_mac_address(nic_index_or_name)
+                os_type = self.params.get("os_type")
+                try:
+                    utils_net.renew_guest_ip(s_session, nic_mac,
+                                             os_type, ip_version)
+                    return self.get_address(nic_index_or_name)
+                except (VMIPAddressMissingError, VMAddressVerificationError):
+                    try:
+                        nic_address = utils_net.get_guest_ip_addr(s_session,
+                                                                  nic_mac,
+                                                                  os_type,
+                                                                  ip_version)
+                        if nic_address:
+                            mac_key = nic_mac
+                            if ip_version == "ipv6":
+                                mac_key = "%s_6" % nic_mac
+                            self.address_cache[mac_key.lower()] = nic_address
+                            return nic_address
+                    except Exception, err:
+                        logging.debug("Can not get guest address, '%s'" % err)
+                        raise VMIPAddressMissingError(nic_mac)
+            finally:
+                if s_session:
+                    s_session.close()
         return self.get_address(nic_index_or_name)
 
     # Adding/setup networking devices methods split between 'add_*' for
@@ -753,10 +806,7 @@ class BaseVM(object):
         """
         Add new or setup existing NIC with optional model type and mac address
 
-        :param **params: Additional NIC parameters to set.
-        :param nic_name: Name for device
-        :param mac: Optional MAC address, None to randomly generate.
-        :param ip: Optional IP address to register in address_cache
+        :param params: Dict with additional NIC parameters to set.
         :return: Dict with new NIC's info.
         """
         if not params.has_key('nic_name'):
@@ -814,28 +864,21 @@ class BaseVM(object):
             match = re.search(panic_re, data, re.DOTALL | re.MULTILINE | re.I)
             if match is not None:
                 raise VMDeadKernelCrashError(match.group(0))
-        #For windows guest
-        if (self.params.get("check_guest_bsod", "no") == 'yes' and
+
+    def verify_bsod(self, scrdump_file):
+        # For windows guest
+        if (os.path.exists(scrdump_file) and
+                self.params.get("check_guest_bsod", "no") == 'yes' and
                 ppm_utils.Image is not None):
-            try:
-                scrdump_file = os.path.join("/tmp", "scrdump-img.ppm")
-                ref_img_path = self.params.get("bsod_reference_img", "")
-                bsod_base_dir = os.path.join(data_dir.get_deps_dir(),
-                                             "bsod_img")
-                ref_img = utils_misc.get_path(bsod_base_dir, ref_img_path)
-                try:
-                    self.screendump(filename=scrdump_file, debug=False)
-                except Exception, err:
-                    logging.warn("Cannot catch guest screendump, %s" % err)
-                    pass
-                if (os.path.exists(scrdump_file) and
-                        ppm_utils.have_similar_img(scrdump_file, ref_img)):
-                    err_msg = "Windows Guest appears to have suffered a BSOD,"
-                    err_msg += " please check test video."
-                    raise VMDeadKernelCrashError(err_msg)
-            finally:
-                if os.path.exists(scrdump_file):
-                    os.unlink(scrdump_file)
+            ref_img_path = self.params.get("bsod_reference_img", "")
+            bsod_base_dir = os.path.join(data_dir.get_root_dir(),
+                                         "shared", "deps",
+                                         "bsod_img")
+            ref_img = utils_misc.get_path(bsod_base_dir, ref_img_path)
+            if ppm_utils.have_similar_img(scrdump_file, ref_img):
+                err_msg = "Windows Guest appears to have suffered a BSOD,"
+                err_msg += " please check %s against %s." % (scrdump_file, ref_img)
+                raise VMDeadKernelCrashError(err_msg)
 
     def verify_illegal_instruction(self):
         """
@@ -899,13 +942,19 @@ class BaseVM(object):
         prompt = self.params.get("shell_prompt", "[\#\$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         client = self.params.get("shell_client")
-        address = self.get_address(nic_index)
+        ip_version = self.params.get("ip_version", "ipv4").lower()
+        neigh_attach_if = ""
+        address = self.wait_for_get_address(nic_index, timeout=360,
+                                            ip_version=ip_version)
+        if address and address.lower().startswith("fe80"):
+            neigh_attach_if = utils_net.get_neigh_attch_interface(address)
         port = self.get_port(int(self.params.get("shell_port")))
         log_filename = ("session-%s-%s.log" %
                         (self.name, utils_misc.generate_random_string(4)))
         session = remote.remote_login(client, address, port, username,
                                       password, prompt, linesep,
-                                      log_filename, timeout)
+                                      log_filename, timeout,
+                                      interface=neigh_attach_if)
         session.set_status_test_command(self.params.get("status_test_command",
                                                         ""))
         self.remote_sessions.append(session)
@@ -917,6 +966,56 @@ class BaseVM(object):
         Alias for login() for backward compatibility.
         """
         return self.login(nic_index, timeout, username, password)
+
+    @error.context_aware
+    def commander(self, nic_index=0, timeout=LOGIN_TIMEOUT,
+                  username=None, password=None, commander_path=None):
+        """
+        Log into the guest via SSH/Telnet/Netcat.
+        If timeout expires while waiting for output from the guest (e.g. a
+        password prompt or a shell prompt) -- fail.
+
+        :param nic_index: The index of the NIC to connect to.
+        :param timeout: Time (seconds) before giving up logging into the
+                guest.
+        :param commaner_path: Path where will be commader placed.
+        :return: A ShellSession object.
+        """
+        if commander_path is None:
+            commander_path = "/tmp"
+        error.context("logging into '%s'" % self.name)
+        if not username:
+            username = self.params.get("username", "")
+        if not password:
+            password = self.params.get("password", "")
+        prompt = "^\s*#"
+        linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
+        client = self.params.get("shell_client")
+        address = self.get_address(nic_index)
+        port = self.get_port(int(self.params.get("shell_port")))
+        log_filename = None
+
+        import remote_commander as rc
+        path = os.path.dirname(rc.__file__)
+
+        f_path = " ".join((os.path.join(path, _) for _ in
+                           ("remote_runner.py", "remote_interface.py",
+                            "messenger.py")))
+        self.copy_files_to(f_path, commander_path)
+
+        # start remote commander
+        cmd = remote.remote_commander(client, address, port, username,
+                                      password, prompt, linesep, log_filename,
+                                      timeout, commander_path)
+        self.remote_sessions.append(cmd)
+        return cmd
+
+    def remote_commander(self, nic_index=0, timeout=LOGIN_TIMEOUT,
+                         username=None, password=None):
+        """
+        Alias for commander() for backward compatibility.
+        """
+        return self.commander(nic_index, timeout, username, password)
 
     def wait_for_login(self, nic_index=0, timeout=LOGIN_WAIT_TIMEOUT,
                        internal_timeout=LOGIN_TIMEOUT,
@@ -980,13 +1079,16 @@ class BaseVM(object):
             password = self.params.get("password", "")
         client = self.params.get("file_transfer_client")
         address = self.get_address(nic_index)
+        neigh_attach_if = ""
+        if address.lower().startswith("fe80"):
+            neigh_attach_if = utils_net.get_neigh_attch_interface(address)
         port = self.get_port(int(self.params.get("file_transfer_port")))
         log_filename = ("transfer-%s-to-%s-%s.log" %
                         (self.name, address,
                          utils_misc.generate_random_string(4)))
         remote.copy_files_to(address, client, username, password, port,
                              host_path, guest_path, limit, log_filename,
-                             verbose, timeout)
+                             verbose, timeout, interface=neigh_attach_if)
         utils_misc.close_log_file(log_filename)
 
     @error.context_aware
@@ -1011,13 +1113,16 @@ class BaseVM(object):
             password = self.params.get("password", "")
         client = self.params.get("file_transfer_client")
         address = self.get_address(nic_index)
+        neigh_attach_if = ""
+        if address.lower().startswith("fe80"):
+            neigh_attach_if = utils_net.get_neigh_attch_interface(address)
         port = self.get_port(int(self.params.get("file_transfer_port")))
         log_filename = ("transfer-%s-from-%s-%s.log" %
                         (self.name, address,
                          utils_misc.generate_random_string(4)))
         remote.copy_files_from(address, client, username, password, port,
                                guest_path, host_path, limit, log_filename,
-                               verbose, timeout)
+                               verbose, timeout, interface=neigh_attach_if)
         utils_misc.close_log_file(log_filename)
 
     def create_serial_console(self):
@@ -1033,14 +1138,7 @@ class BaseVM(object):
         """
         Close serial console and associated log file
         """
-        if self.serial_console is not None:
-            self.serial_console.close()
-            self.serial_console = None
-        if hasattr(self, "migration_file"):
-            try:
-                os.unlink(self.migration_file)
-            except OSError:
-                pass
+        raise NotImplementedError
 
     @error.context_aware
     def serial_login(self, timeout=LOGIN_TIMEOUT,
@@ -1063,7 +1161,8 @@ class BaseVM(object):
         status_test_command = self.params.get("status_test_command", "")
 
         # Some times need recreate the serial_console.
-        if not os.path.exists(self.serial_console.inpipe_filename):
+        if not (self.serial_console and
+                os.path.exists(self.serial_console.inpipe_filename)):
             self.create_serial_console()
 
         self.serial_console.set_linesep(linesep)
@@ -1273,7 +1372,7 @@ class BaseVM(object):
                 differ.
         :param clean: If True, delete the saved state files (relevant only if
                 stable_check is also True).
-        @save_path: The path for state files.
+        :param save_path: The path for state files.
         :param dest_host: Destination host (defaults to 'localhost').
         :param remote_port: Port to use for remote migration.
         """

@@ -211,7 +211,27 @@ class BRIpError(NetError):
     def __str__(self):
         return ("Bridge %s doesn't have an IP address assigned. It's"
                 " impossible to start dnsmasq for this bridge." %
-               (self.brname))
+                (self.brname))
+
+
+class VMIPV6NeighNotFoundError(NetError):
+
+    def __init__(self, ipv6_address):
+        NetError.__init__(self, ipv6_address)
+        self.ipv6_address = ipv6_address
+
+    def __str__(self):
+        return "No IPV6 neighbours with address %s" % self.ipv6_address
+
+
+class VMIPV6AdressError(NetError):
+
+    def __init__(self, error_info):
+        NetError.__init__(self, error_info)
+        self.error_info = error_info
+
+    def __str__(self):
+        return "%s, check your test env supports IPV6" % self.error_info
 
 
 class HwAddrSetError(NetError):
@@ -233,6 +253,19 @@ class HwAddrGetError(NetError):
 
     def __str__(self):
         return "Can not get mac of interface %s" % self.ifname
+
+
+class IPAddrGetError(NetError):
+
+    def __init__(self, mac_addr, details=None):
+        NetError.__init__(self, mac_addr)
+        self.mac_addr = mac_addr
+        self.details = details
+
+    def __str__(self):
+        details_msg = "Get guest nic ['%s'] IP address error" % self.mac_addr
+        details_msg += "error info: %s" % self.details
+        return details_msg
 
 
 class HwOperstarteGetError(NetError):
@@ -503,7 +536,7 @@ class Macvtap(Interface):
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
         if not os.path.exists(path):
             self.ip_link_ctl(["link", "add", "link", device, "name",
-                             self.tapname, "type", "macvtap", "mode", mode])
+                              self.tapname, "type", "macvtap", "mode", mode])
 
     def delete(self):
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
@@ -651,6 +684,15 @@ class Bridge(object):
     def list_br(self):
         return self.get_structure().keys()
 
+    def list_iface(self):
+        """
+        Return all interfaces used by bridge.
+        """
+        interface_list = []
+        for value in self.get_structure().values():
+            interface_list += value
+        return list(set(interface_list))
+
     def port_to_br(self, port_name):
         """
         Return bridge which contain port.
@@ -696,6 +738,22 @@ class Bridge(object):
             self._br_ioctl(arch.SIOCBRDELIF, brname, ifname)
         except IOError, details:
             raise BRDelIfError(ifname, brname, details)
+
+    def add_bridge(self, brname):
+        """
+        Add a bridge in host
+        """
+        ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+        fcntl.ioctl(ctrl_sock, arch.SIOCBRADDBR, brname)
+        ctrl_sock.close()
+
+    def del_bridge(self, brname):
+        """
+        Delete a bridge in host
+        """
+        ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+        fcntl.ioctl(ctrl_sock, arch.SIOCBRDELBR, brname)
+        ctrl_sock.close()
 
 
 def __init_openvswitch(func):
@@ -903,6 +961,21 @@ def get_net_if_addrs(if_name, runner=None):
             "mac": re.findall("link/ether (.+?) ", result, re.MULTILINE)}
 
 
+def get_net_if_addrs_win(session, mac_addr):
+    """
+    Try to get windows guest nic address by serial session
+
+    :param session: serial sesssion
+    :param mac_addr:  guest nic mac address
+    :return: List ip addresses of network interface.
+    """
+    ip_address = get_windows_nic_attribute(session, "macaddress",
+                                           mac_addr, "IPAddress",
+                                           global_switch="nicconfig")
+    return {"ipv4": re.findall('(\d+.\d+.\d+.\d+)"', ip_address),
+            "ipv6": re.findall('(fe80.*?)"', ip_address)}
+
+
 def get_net_if_and_addrs(runner=None):
     """
     :return: Dict of interfaces and their addresses {"ifname": addrs}.
@@ -912,6 +985,70 @@ def get_net_if_and_addrs(runner=None):
     for iface in ifs:
         ret[iface] = get_net_if_addrs(iface, runner)
     return ret
+
+
+def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4",
+                      linklocal=False):
+    """
+    Get guest ip addresses by serial session
+
+    :param session: serial session
+    :param mac_addr: nic mac address of the nic that you want get
+    :param os_type: guest os type, windows or linux
+    :param ip_version: guest ip version, ipv4 or ipv6
+    :param linklocal: Wether ip address is local or remote
+    :return: ip addresses of network interface.
+    """
+    if ip_version == "ipv6" and linklocal:
+        return ipv6_from_mac_addr(mac_addr)
+    try:
+        if os_type == "linux":
+            nic_ifname = get_linux_ifname(session, mac_addr)
+            info_cmd = "ifconfig -a; ethtool -S %s" % nic_ifname
+            nic_address = get_net_if_addrs(nic_ifname, session.cmd)
+        elif os_type == "windows":
+            info_cmd = "ipconfig /all"
+            nic_address = get_net_if_addrs_win(session, mac_addr)
+        else:
+            info_cmd = ""
+            raise IPAddrGetError(mac_addr, "Unknown os type")
+
+        if ip_version == "ipv4":
+            return nic_address["ipv4"][-1]
+        else:
+            global_address = [x for x in nic_address["ipv6"]
+                              if not x.lower().startswith("fe80")]
+            if global_address:
+                return global_address[0]
+    except Exception, err:
+        logging.debug(session.cmd_output(info_cmd))
+        raise IPAddrGetError(mac_addr, err)
+
+
+def renew_guest_ip(session, mac_addr, os_type="linux", ip_version="ipv4"):
+    """
+    Renew guest ip by serial session
+
+    :param session: serial session
+    :param mac_addr: nic mac address of the nic that you want renew
+    :param os_type: guest os type, windows or linux
+    :param ip_version: guest ip version, ipv4 or ipv6
+    """
+    if os_type == "linux":
+        nic_ifname = get_linux_ifname(session, mac_addr)
+        renew_cmd = "ifconfig %s up; " % nic_ifname
+        renew_cmd += "pidof dhclient && killall dhclient; "
+        if ip_version == "ipv6":
+            renew_cmd += "dhclient -6 %s &" % nic_ifname
+        else:
+            renew_cmd += "dhclient %s &" % nic_ifname
+    elif os_type == "windows":
+        nic_connectionid = get_windows_nic_attribute(session,
+                                                     "macaddress", mac_addr,
+                                                     "netconnectionid")
+        renew_cmd = 'ipconfig /renew "%s"' % nic_connectionid
+
+    session.cmd_output_safe(renew_cmd)
 
 
 def set_net_if_ip(if_name, ip_addr, runner=None):
@@ -962,7 +1099,76 @@ def ipv6_from_mac_addr(mac_addr):
     """
     mp = mac_addr.split(":")
     mp[0] = ("%x") % (int(mp[0], 16) ^ 0x2)
-    return "fe80::%s%s:%sff:fe%s:%s%s" % tuple(mp)
+    mac_address = "fe80::%s%s:%sff:fe%s:%s%s" % tuple(mp)
+    return ":".join(map(lambda x: x.lstrip("0"), mac_address.split(":")))
+
+
+def refresh_neigh_table(interface_name=None, neigh_address="ff02::1"):
+    """
+    Refresh host neighbours table, if interface_name is assigned only refresh
+    neighbours of this interface, else refresh the all the neighbours.
+    """
+    if isinstance(interface_name, list):
+        interfaces = interface_name
+    elif isinstance(interface_name, str):
+        interfaces = interface_name.split()
+    else:
+        interfaces = filter(lambda x: "-" not in x, get_net_if())
+        interfaces.remove("lo")
+
+    for interface in interfaces:
+        refresh_cmd = "ping6 -c 2 -I %s %s > /dev/null" % (interface,
+                                                           neigh_address)
+        utils.system(refresh_cmd, ignore_status=True)
+
+
+def get_neighbours_info(neigh_address="", interface_name=None):
+    """
+    Get the neighbours infomation
+    """
+    refresh_neigh_table(interface_name, neigh_address)
+    cmd = "ip -6 neigh show nud reachable"
+    if neigh_address:
+        cmd += " %s" % neigh_address
+    output = utils.system_output(cmd)
+    if not output:
+        raise VMIPV6NeighNotFoundError(neigh_address)
+    all_neigh = {}
+    neigh_info = {}
+    for line in output.splitlines():
+        neigh_address = line.split()[0]
+        neigh_info["address"] = neigh_address
+        neigh_info["attach_if"] = line.split()[2]
+        neigh_mac = line.split()[4]
+        neigh_info["mac"] = neigh_mac
+        all_neigh[neigh_mac] = neigh_info
+        all_neigh[neigh_address] = neigh_info
+    return all_neigh
+
+
+def neigh_reachable(neigh_address, attach_if=None):
+    """
+    Check the neighbour is reachable
+    """
+    try:
+        get_neighbours_info(neigh_address, attach_if)
+    except VMIPV6NeighNotFoundError:
+        return False
+    return True
+
+
+def get_neigh_attch_interface(neigh_address):
+    """
+    Get the interface wihch can reach the neigh_address
+    """
+    return get_neighbours_info(neigh_address)[neigh_address]["attach_if"]
+
+
+def get_neigh_mac(neigh_address):
+    """
+    Get neighbour mac by his address
+    """
+    return get_neighbours_info(neigh_address)[neigh_address]["mac"]
 
 
 def check_add_dnsmasq_to_br(br_name, tmpdir):
@@ -1017,7 +1223,7 @@ def find_bridge_manager(br_name, ovs=None):
     # find ifname in standard linux bridge.
     if br_name in __bridge.list_br():
         return __bridge
-    elif not ovs is None and br_name in ovs.list_br():
+    elif ovs is not None and br_name in ovs.list_br():
         return ovs
     else:
         return None
@@ -1062,12 +1268,12 @@ def change_iface_bridge(ifname, new_bridge, ovs=None):
 
     if type(ifname) is str:
         (br_manager_old, br_old) = find_current_bridge(ifname, ovs)
-        if not br_manager_old is None:
+        if br_manager_old is not None:
             br_manager_old.del_port(br_old, ifname)
         br_manager_new.add_port(new_bridge, ifname)
     elif issubclass(type(ifname), VirtIface):
         br_manager_old = find_bridge_manager(ifname.netdst, ovs)
-        if not br_manager_old is None:
+        if br_manager_old is not None:
             br_manager_old.del_port(ifname.netdst, ifname.ifname)
         br_manager_new.add_port(new_bridge, ifname.ifname)
         ifname.netdst = new_bridge
@@ -1176,7 +1382,7 @@ def bring_up_ifname(ifname):
 
 def bring_down_ifname(ifname):
     """
-    Bring up an interface
+    Bring down an interface
 
     :param ifname: Name of the interface
     """
@@ -1194,7 +1400,7 @@ def if_set_macaddress(ifname, mac):
     Set the mac address for an interface
 
     :param ifname: Name of the interface
-    @mac: Mac address
+    :param mac: Mac address
     """
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
 
@@ -1566,6 +1772,7 @@ class ParamsNet(VMNet):
     # __init__ must not presume clean state, it should behave
     # assuming there is existing properties/data on the instance
     # and take steps to preserve or update it as appropriate.
+
     def __init__(self, params, vm_name):
         self.subclass_pre_init(params, vm_name)
         # use temporary list to initialize
@@ -1644,6 +1851,7 @@ class DbNet(VMNet):
     # __init__ must not presume clean state, it should behave
     # assuming there is existing properties/data on the instance
     # and take steps to preserve or update it as appropriate.
+
     def __init__(self, params, vm_name, db_filename, db_key):
         self.subclass_pre_init(params, vm_name)
         self.db_key = db_key
@@ -2027,12 +2235,26 @@ def get_host_ip_address(params):
     return host_ip
 
 
+def get_correspond_ip(remote_ip):
+    """
+    Get local ip address which is used to contact remote ip.
+
+    :param remote_ip: Remote ip
+    :return: Local corespond IP.
+    """
+    result = utils.run("ip route get %s" % (remote_ip)).stdout
+    local_ip = re.search("src (.+)", result)
+    if local_ip is not None:
+        local_ip = local_ip.groups()[0]
+    return local_ip
+
+
 def get_linux_ifname(session, mac_address=""):
     """
     Get the interface name through the mac address.
 
     :param session: session to the virtual machine
-    @mac_address: the macaddress of nic
+    :param mac_address: the macaddress of nic
 
     :raise error.TestError in case it was not possible to determine the
             interface name.
@@ -2078,7 +2300,7 @@ def restart_guest_network(session, nic_name=None):
     Restart guest's network via serial console.
 
     :param session: session to virtual machine
-    @nic_name: nic card name in guest to restart
+    :param nic_name: nic card name in guest to restart
     """
     if_list = []
     if not nic_name:
@@ -2139,7 +2361,8 @@ def update_mac_ip_address(vm, params, timeout=None):
         vm.virtnet.set_mac_address(vlan, mac)
 
 
-def get_windows_nic_attribute(session, key, value, target, timeout=240):
+def get_windows_nic_attribute(session, key, value, target, timeout=240,
+                              global_switch="nic"):
     """
     Get the windows nic attribute using wmic. All the support key you can
     using wmic to have a check.
@@ -2150,10 +2373,11 @@ def get_windows_nic_attribute(session, key, value, target, timeout=240):
     :param target: which nic attribute you want to get.
 
     """
-    cmd = 'wmic nic where %s="%s" get %s' % (key, value, target)
+    cmd = 'wmic %s where %s="%s" get %s' % (global_switch, key, value, target)
     o = session.cmd(cmd, timeout=timeout).strip()
     if not o:
-        raise error.TestError("Get guest nic attribute %s failed!" % target)
+        err_msg = "Get guest %s attribute %s failed!" % (global_switch, target)
+        raise error.TestError(err_msg)
     return o.splitlines()[-1]
 
 
@@ -2237,3 +2461,15 @@ def restart_windows_guest_network_by_devcon(session, netdevid, timeout=240):
 
     set_guest_network_status_by_devcon(session, 'disable', netdevid)
     set_guest_network_status_by_devcon(session, 'enable', netdevid)
+
+
+def get_host_iface():
+    """
+    List the nic interface in host.
+    :return: a list of the interfaces in host
+    :rtype: list
+    """
+    proc_net_file = open(PROCFS_NET_PATH, 'r')
+    host_iface_info = proc_net_file.read()
+    proc_net_file.close()
+    return [_.strip() for _ in re.findall("(.*):", host_iface_info)]

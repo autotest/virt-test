@@ -77,7 +77,7 @@ class QtreeNode(object):
         self.children.append(child)
 
     def replace_child(self, oldchild, newchild):
-        if not oldchild in self.children:
+        if oldchild not in self.children:
             raise ValueError('child %s not in children %s' % (oldchild,
                                                               self.children))
         self.add_child(newchild)
@@ -94,7 +94,7 @@ class QtreeNode(object):
     def set_qtree_prop(self, prop, value):
         if prop in self.qtree:
             raise ValueError("Property %s = %s, not rewriting with %s" % (prop,
-                             self.qtree.get(prop), value))
+                                                                          self.qtree.get(prop), value))
         self.update_qtree_prop(prop, value)
 
     def update_qtree_prop(self, prop, value):
@@ -191,7 +191,7 @@ class QtreeDisk(QtreeDev):
     def set_block_prop(self, prop, value):
         if prop in self.block:
             raise ValueError("Property %s = %s, not rewriting with %s" % (prop,
-                             self.block.get(prop), value))
+                                                                          self.block.get(prop), value))
         self.update_block_prop(prop, value)
 
     def update_block_prop(self, prop, value):
@@ -336,7 +336,7 @@ class QtreeContainer(object):
                     line = line.split(' ', 1)
                     # HOOK: mmio can have multiple values
                     if line[0] == 'mmio':
-                        if not 'mmio' in current.qtree:
+                        if 'mmio' not in current.qtree:
                             current.set_qtree_prop('mmio', [])
                         current.qtree['mmio'].append(line[1])
                         line = None
@@ -384,9 +384,10 @@ class QtreeDisksContainer(object):
     def parse_info_block(self, info):
         """
         Extracts all information about self.disks and fills them in.
-        :param info: output of 'info block' command
-        :return: (self.disks defined in qtree but not in info block,
-                  self.disks defined in block info but not in qtree)
+
+        :param info: output of ``info block`` command
+        :return: ``self.disks`` defined in qtree but not in ``info block``,
+                 ``self.disks`` defined in ``block info`` but not in qtree
         """
         additional = 0
         missing = 0
@@ -423,10 +424,11 @@ class QtreeDisksContainer(object):
     def check_guests_proc_scsi(self, info):
         """
         Check info from guest's /proc/scsi/scsi file with qtree/block info
+
         :note: Not tested disks are of different type (virtio_blk, ...)
         :param info: contents of guest's /proc/scsi/scsi file
-        :return: (#disks missing in guest os, #disks missing in qtree,
-                  #not tested disks from qtree, #not tested disks from guest)
+        :return: Number of disks missing in guest os, disks missing in qtree,
+                 disks not tested from qtree, disks not tested from guest)
         """
         # Check only channel, id and lun for now
         additional = 0

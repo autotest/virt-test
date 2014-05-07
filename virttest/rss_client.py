@@ -287,27 +287,36 @@ class FileUploadClient(FileTransferClient):
     def upload(self, src_pattern, dst_path, timeout=600):
         """
         Send files or directory trees to the server.
+
         The semantics of src_pattern and dst_path are similar to those of scp.
         For example, the following are OK:
+
+        ::
+
             src_pattern='/tmp/foo.txt', dst_path='C:\\'
                 (uploads a single file)
             src_pattern='/usr/', dst_path='C:\\Windows\\'
                 (uploads a directory tree recursively)
             src_pattern='/usr/*', dst_path='C:\\Windows\\'
                 (uploads all files and directory trees under /usr/)
+
         The following is not OK:
+
+        ::
+
             src_pattern='/tmp/foo.txt', dst_path='C:\\Windows\\*'
                 (wildcards are only allowed in src_pattern)
 
         :param src_pattern: A path or wildcard pattern specifying the files or
-                directories to send to the server
+                            directories to send to the server
         :param dst_path: A path in the server's filesystem where the files will
-                be saved
+                         be saved
         :param timeout: Time duration in seconds to wait for the transfer to
-                complete
+                        complete
         :raise FileTransferTimeoutError: Raised if timeout expires
         :raise FileTransferServerError: Raised if something goes wrong and the
-                server sends an informative error message to the client
+                                        server sends an informative error
+                                        message to the client
         :note: Other exceptions can be raised.
         """
         end_time = time.time() + timeout
@@ -375,27 +384,36 @@ class FileDownloadClient(FileTransferClient):
         """
         Receive files or directory trees from the server.
         The semantics of src_pattern and dst_path are similar to those of scp.
+
         For example, the following are OK:
+
+        ::
+
             src_pattern='C:\\foo.txt', dst_path='/tmp'
                 (downloads a single file)
             src_pattern='C:\\Windows', dst_path='/tmp'
                 (downloads a directory tree recursively)
             src_pattern='C:\\Windows\\*', dst_path='/tmp'
                 (downloads all files and directory trees under C:\\Windows)
+
         The following is not OK:
+
+        ::
+
             src_pattern='C:\\Windows', dst_path='/tmp/*'
                 (wildcards are only allowed in src_pattern)
 
         :param src_pattern: A path or wildcard pattern specifying the files or
-                directories, in the server's filesystem, that will be sent to
-                the client
+                            directories, in the server's filesystem, that will
+                            be sent to the client
         :param dst_path: A path in the local filesystem where the files will
-                be saved
+                         be saved
         :param timeout: Time duration in seconds to wait for the transfer to
-                complete
+                        complete
         :raise FileTransferTimeoutError: Raised if timeout expires
         :raise FileTransferServerError: Raised if something goes wrong and the
-                server sends an informative error message to the client
+                                        server sends an informative error
+                                        message to the client
         :note: Other exceptions can be raised.
         """
         dst_path = os.path.abspath(dst_path)

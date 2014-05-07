@@ -22,9 +22,12 @@
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 			<DriverPaths>
 				<PathAndCredentials wcm:keyValue="1" wcm:action="add">
-					<Path>KVM_TEST_STORAGE_DRIVER_PATH</Path>
+					<Path>KVM_TEST_SCSI_DRIVER_PATH</Path>
 				</PathAndCredentials>
 				<PathAndCredentials wcm:keyValue="2" wcm:action="add">
+					<Path>KVM_TEST_STORAGE_DRIVER_PATH</Path>
+				</PathAndCredentials>
+				<PathAndCredentials wcm:keyValue="3" wcm:action="add">
 					<Path>KVM_TEST_NETWORK_DRIVER_PATH</Path>
 				</PathAndCredentials>
 			</DriverPaths>
@@ -61,14 +64,6 @@
 			</DiskConfiguration>
 			<ImageInstall>
 				<OSImage>
-					<InstallFrom>
-						<MetaData wcm:action="add">
-							<Key>/IMAGE/NAME</Key>
-              <!--This index depends on your install ISO. Please update to a proper one if install failed. http://technet.microsoft.com/en-us/library/ff716384.aspx -->
-              <!-- use "dism /get-wiminfo /wimfile:D:\sources\install.wim" to know which value should be used.-->
-							<Value>Windows 8 Enterprise</Value>
-						</MetaData>
-					</InstallFrom>
 					<InstallTo>
 						<DiskID>0</DiskID>
 						<PartitionID>1</PartitionID>
@@ -77,7 +72,6 @@
 			</ImageInstall>
 			<UserData>
 				<ProductKey>
-		      <!-- Work with Product Keys and Activation http://technet.microsoft.com/en-us/library/hh825195.aspx -->
 					<Key>KVM_TEST_CDKEY</Key>
 					<WillShowUI>OnError</WillShowUI>
 				</ProductKey>
@@ -122,7 +116,6 @@
 			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
 			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 			<UserAccounts>
-      <!-- Enable the Built-in Administrator Account Starts http://technet.microsoft.com/en-us/library/hh825104.aspx -->
 				<AdministratorPassword>
 					<Value>1q2w3eP</Value>
 					<PlainText>true</PlainText>
@@ -143,7 +136,6 @@
 				<Enabled>true</Enabled>
 				<LogonCount>1000</LogonCount>
 				<Username>Administrator</Username>
-      <!-- Enable the Built-in Administrator Account End http://technet.microsoft.com/en-us/library/hh825104.aspx -->
 			</AutoLogon>
 			<FirstLogonCommands>
 				<SynchronousCommand wcm:action="add">
@@ -176,7 +168,6 @@
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
 					<CommandLine>%WINDIR%\System32\cmd /c bcdedit /set {current} USEPLATFORMCLOCK yes</CommandLine>
-          <!-- This is for OS time compensation, https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Virtualization_Host_Configuration_and_Guest_Installation_Guide/chap-Virtualization_Host_Configuration_and_Guest_Installation_Guide-KVM_guest_timing_management.html -->
 					<Order>8</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
@@ -184,60 +175,40 @@
 					<Order>9</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c netsh interface ip set address "Local Area Connection" dhcp</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c E:\setuprss.bat</CommandLine>
 					<Order>10</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_BALLOON_INSTALLER</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c netsh interface ip set address "Local Area Connection" dhcp</CommandLine>
 					<Order>11</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_QXL_INSTALLER</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_BALLOON_INSTALLER</CommandLine>
 					<Order>12</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c E:\setuprss.bat</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_QXL_INSTALLER</CommandLine>
 					<Order>13</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c Dism /online /enable-feature /norestart /featurename:NetFx3 /All /LimitAccess /logpath:C:\install-NetFx3-log.txt</CommandLine>
-          <!-- Enable .Net Framework version 3.X, and write down the log -->
+					<CommandLine>%WINDIR%\System32\cmd /c E:\setuprss.bat</CommandLine>
 					<Order>14</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c E:\setupsp.bat</CommandLine>
-					<Order>15</Order>
+				        <CommandLine>%WINDIR%\System32\Dism /online /enable-feature /featurename:NetFx3 /All /Source:D:\sources\sxs /LimitAccess</CommandLine>
+				        <Order>15</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c E:\software_install_32.bat</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c E:\setupsp.bat</CommandLine>
 					<Order>16</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c Dism /online /enable-feature /norestart /featurename:NetFx3 /All /Source:D:\sources\sxs /LimitAccess /logpath:C:\install-NetFx3-log.txt</CommandLine>
-          <!-- Enable PowerShell, and write down the log -->
-          <!-- Packages for each OS: http://technet.microsoft.com/en-us/library/ff699034.aspx -->
+					<CommandLine>%WINDIR%\System32\cmd /c E:\software_install_32.bat</CommandLine>
 					<Order>17</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c echo "NT6.2 or later can boot from AHCI without modify anything, keep this line to make cmd num on all Win OS same"</CommandLine>
-					<!-- <CommandLine>%WINDIR%\System32\cmd /c reg add HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\Msahci /v Start /t REG_DWORD /d 0 /f</CommandLine> -->
+					<CommandLine>%WINDIR%\System32\cmd /c wmic datafile where "filename='finish' and extension='bat'" call copy "c:\\finish.bat" &amp;&amp; c:\finish.bat PROCESS_CHECK</CommandLine>
 					<Order>18</Order>
-				</SynchronousCommand>
-				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c echo "NT6.2 or later can boot from AHCI without modify anything, keep this line to make cmd num on all Win OS same"</CommandLine>
-					<!-- <CommandLine>%WINDIR%\System32\cmd /c reg add HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\IastorV /v Start /t REG_DWORD /d 0 /f</CommandLine> -->
-          <!-- these two registry update makes ahci bootable, NT6.0 or NT6.1 needs http://support.microsoft.com/kb/922976 -->
-					<Order>19</Order>
-				</SynchronousCommand>
-				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c reg add "HKCU\Control Panel\Desktop" /v ScreenSaveActive /t REG_DWORD /d 0 /f</CommandLine>
-          <!-- Disable screen saver to let us always can see what happen in guest OS -->
-					<Order>20</Order>
-				</SynchronousCommand>
-				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c A:\finish.bat PROCESS_CHECK</CommandLine>
-          <!-- When modifying cmds, pls keep finish.bat always the last one. -->
-					<Order>21</Order>
 				</SynchronousCommand>
 			</FirstLogonCommands>
 		</component>

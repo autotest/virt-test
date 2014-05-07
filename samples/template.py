@@ -1,4 +1,8 @@
+# :difficulty: simple
+# Put this file into $test_provider/tests directory and use
+# ./run -t $type --tests="template" to execute it.
 import logging
+
 
 def run(test, params, env):
     """

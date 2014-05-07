@@ -45,3 +45,9 @@ from virttest.libvirt_xml.network_xml import RangeList, IPXML, NetworkXML
 from virttest.libvirt_xml.vm_xml import VMXML
 
 from virttest.libvirt_xml.pool_xml import SourceXML, PoolXML
+
+from virttest.libvirt_xml.vol_xml import VolXML
+
+from virttest.libvirt_xml.nwfilter_xml import NwfilterXML
+
+from virttest.libvirt_xml.sysinfo_xml import SysinfoXML

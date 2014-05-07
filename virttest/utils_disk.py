@@ -18,6 +18,92 @@ from autotest.client.shared import error
 DEBUG = False
 
 
+def copytree(src, dst, overwrite=True, ignore=''):
+    """
+    Copy dirs from source to target.
+
+    :param src: source directory
+    :param dst: destination directory
+    :param overwrite: overwrite file if exist or not
+    :param ignore: files want to ignore
+    """
+    ignore = glob.glob(os.path.join(src, ignore))
+    for root, dirs, files in os.walk(src):
+        dst_dir = root.replace(src, dst)
+        if not os.path.exists(dst_dir):
+            os.makedirs(dst_dir)
+        for _ in files:
+            if _ in ignore:
+                continue
+            src_file = os.path.join(root, _)
+            dst_file = os.path.join(dst_dir, _)
+            if os.path.exists(dst_file):
+                if overwrite:
+                    os.remove(dst_file)
+                else:
+                    continue
+            shutil.copy(src_file, dst_dir)
+
+
+def is_mount(src, dst):
+    """
+    Check is src or dst mounted.
+
+    :param src: source device or directory, if None will skip to check
+    :param dst: mountpoint, if None will skip to check
+
+    :return: if mounted mountpoint or device, else return False
+    """
+    if dst and os.path.ismount(dst):
+        return dst
+    if src and (src in str(open('/proc/mounts', 'r')) or
+                src in utils.system_output('losetup -a')):
+        return src
+    return False
+
+
+def mount(src, dst, fstype=None, options=None, verbose=False):
+    """
+    Mount src under dst if it's really mounted, then remout with options.
+
+    :param src: source device or directory, if None will skip to check
+    :param dst: mountpoint, if None will skip to check
+    :param fstype: filesystem type need to mount
+
+    :return: if mounted return True else return False
+    """
+    options = (options and [options] or [''])[0]
+    if is_mount(src, dst):
+        if 'remount' not in options:
+            options = 'remount,%s' % options
+    cmd = ['mount']
+    if fstype:
+        cmd.extend(['-t', fstype])
+    if options:
+        cmd.extend(['-o', options])
+    cmd.extend([src, dst])
+    cmd = ' '.join(cmd)
+    return utils.system(cmd, verbose=verbose) == 0
+
+
+def umount(src, dst, verbose=False):
+    """
+    Umount src from dst, if src really mounted under dst.
+
+    :param src: source device or directory, if None will skip to check
+    :param dst: mountpoint, if None will skip to check
+
+    :return: if unmounted return True else return False
+    """
+    mounted = is_mount(src, dst)
+    if mounted:
+        fuser_cmd = "fuser -km %s" % mounted
+        utils.system(fuser_cmd, ignore_status=True, verbose=True)
+        umount_cmd = "umount %s" % mounted
+        return utils.system(umount_cmd, ignore_status=True, verbose=True) == 0
+    return True
+
+
 @error.context_aware
 def cleanup(folder):
     """
@@ -27,9 +113,7 @@ def cleanup(folder):
     :param folder: Directory to be cleaned up.
     """
     error.context("cleaning up unattended install directory %s" % folder)
-    if os.path.ismount(folder):
-        utils.run('fuser -k %s' % folder, ignore_status=True, verbose=DEBUG)
-        utils.run('umount %s' % folder, verbose=DEBUG)
+    umount(None, folder)
     if os.path.isdir(folder):
         shutil.rmtree(folder)
 
@@ -44,12 +128,7 @@ def clean_old_image(image):
     """
     error.context("cleaning up old leftover image %s" % image)
     if os.path.exists(image):
-        mtab = open('/etc/mtab', 'r')
-        mtab_contents = mtab.read()
-        mtab.close()
-        if image in mtab_contents:
-            utils.run('fuser -k %s' % image, ignore_status=True, verbose=DEBUG)
-            utils.run('umount %s' % image, verbose=DEBUG)
+        umount(image, None)
         os.remove(image)
 
 
@@ -202,10 +281,49 @@ class CdromDisk(Disk):
 
     def __init__(self, path, tmpdir):
         self.mount = tempfile.mkdtemp(prefix='cdrom_virttest_', dir=tmpdir)
+        self.tmpdir = tmpdir
         self.path = path
         clean_old_image(path)
         if not os.path.isdir(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
+
+    def _copy_virtio_drivers(self, virtio_floppy, cdrom_virtio):
+        """
+        Copy the virtio drivers from floppy and cdrom to install cdrom.
+
+        1) Mount the floppy and cdrom containing the virtio drivers
+        2) Copy its contents to the root of the install cdrom
+        """
+        pwd = os.getcwd()
+        mnt_pnt = tempfile.mkdtemp(prefix='cdrom_virtio_', dir=self.tmpdir)
+        mount(cdrom_virtio, mnt_pnt, options='loop,ro', verbose=DEBUG)
+        try:
+            copytree(mnt_pnt, self.mount, ignore='*.vfd')
+            cmd = 'mcopy -s -o -n -i %s ::/* %s' % (virtio_floppy, self.mount)
+            utils.run(cmd, verbose=DEBUG)
+        finally:
+            os.chdir(pwd)
+            umount(None, mnt_pnt, verbose=DEBUG)
+            os.rmdir(mnt_pnt)
+
+    def setup_virtio_win2008(self, virtio_floppy, cdrom_virtio):
+        """
+        Setup the install cdrom with the virtio storage drivers, win2008 style.
+
+        Win2008, Vista and 7 require people to point out the path to the drivers
+        on the unattended file, so we just need to copy the drivers to the
+        extra cdrom disk. Important to note that it's possible to specify
+        drivers from a CDROM, so the floppy driver copy is optional.
+        Process:
+
+        1) Copy the virtio drivers on the virtio floppy to the install cdrom,
+           if there is one available
+        """
+        if os.path.isfile(virtio_floppy):
+            self._copy_virtio_drivers(virtio_floppy, cdrom_virtio)
+        else:
+            logging.debug(
+                "No virtio floppy present, not needed for this OS anyway")
 
     @error.context_aware
     def close(self):
@@ -335,7 +453,7 @@ class GuestFSModiDisk(object):
         """
         read file from the guest disk, return the content of the file
 
-        @Param file_name: the file you want to read.
+        :param file_name: the file you want to read.
         """
 
         try:
@@ -351,14 +469,14 @@ class GuestFSModiDisk(object):
 
     def write_to_image_file(self, file_name, content, w_append=False):
         """
-        wirte content to the file on the guest disk.
-        when using this method all the original content will be overriding.
-        if you don't hope your original data be override make:
-        'w_append=True'
+        Write content to the file on the guest disk.
 
-        @Param  file_name: the file you want to write
-        @Param  content: the content you want to write.
-        @Param  w_append append the content or override
+        When using this method all the original content will be overriding.
+        if you don't hope your original data be override set ``w_append=True``.
+
+        :param file_name: the file you want to write
+        :param content: the content you want to write.
+        :param w_append: append the content or override
         """
 
         try:
@@ -379,9 +497,9 @@ class GuestFSModiDisk(object):
         replace file content matchs in the file with rep_con.
         suport using Regular expression
 
-        @Param  file_name: the file you want to replace
-        @Param  find_con: the orign content you want to replace.
-        @Param  rep_con: the replace content you want.
+        :param file_name: the file you want to replace
+        :param find_con: the orign content you want to replace.
+        :param rep_con: the replace content you want.
         """
 
         try:

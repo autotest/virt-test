@@ -6,6 +6,7 @@ import logging
 import common
 from autotest.client import utils
 
+
 class bogusVirshFailureException(unittest.TestCase.failureException):
 
     def __init__(self, *args, **dargs):
@@ -17,6 +18,7 @@ class bogusVirshFailureException(unittest.TestCase.failureException):
                " method, with args: '%s' and dargs: '%s'"
                % (self.virsh_args, self.virsh_dargs))
         return msg
+
 
 def FakeVirshFactory(preserve=None):
     """
@@ -39,9 +41,9 @@ def FakeVirshFactory(preserve=None):
     for symbol in dir(virsh):
         # Get names of just closure functions by Virsh class
         if symbol in virsh.NOCLOSE + preserve:
-            continue;
+            continue
         if isinstance(getattr(fake_virsh, symbol), virsh.VirshClosure):
-            xcpt = lambda *args, **dargs:raise_bogusVirshFailureException()
+            xcpt = lambda *args, **dargs: raise_bogusVirshFailureException()
             # fake_virsh is a propcan, can't use setattr.
             fake_virsh.__super_set__(symbol, xcpt)
     return fake_virsh
@@ -193,7 +195,9 @@ class ConstructorsTest(ModuleLoad):
             vp.close_session()  # Make sure session gets cleaned up
 
     def TestVirshClosure(self):
-        vc = self.virsh.VirshClosure(None, {})
+        class MyDict(dict):
+            pass
+        vc = self.virsh.VirshClosure(None, MyDict())
         del vc  # keep pylint happy
 
 

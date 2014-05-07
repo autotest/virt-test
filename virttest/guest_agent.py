@@ -165,6 +165,7 @@ class QemuAgent(Monitor):
             if get_supported_cmds:
                 self._get_supported_cmds()
 
+        # pylint: disable=E0712
         except VAgentError, e:
             self._close_sock()
             if suppress_exceptions:
@@ -383,8 +384,7 @@ class QemuAgent(Monitor):
     def cmd(self, cmd, args=None, timeout=CMD_TIMEOUT, debug=True,
             success_resp=True):
         """
-        Send a guest agent command and return the response if success_resp is
-        True.
+        Send a guest agent command and return the response if success_resp.
 
         :param cmd: Command to send
         :param args: A dict containing command arguments, or None
@@ -398,8 +398,6 @@ class QemuAgent(Monitor):
         :raise VAgentSocketError: Raised if a socket error occurs
         :raise VAgentProtocolError: Raised if no response is received
         :raise VAgentCmdError: Raised if the response is an error message
-                               (the exception's args are (cmd, args, data)
-                                where data is the error data)
         """
         self._log_command(cmd, debug)
         # Send command
@@ -518,22 +516,24 @@ class QemuAgent(Monitor):
         package via guest agent interface. If it's not available, the suspend
         operation will be performed by manually writing to a sysfs file.
 
-        NOTE: 1) For the best results it's strongly recommended to have the
-                 pm-utils package installed in the guest.
-              2) The 'ram' and 'hybrid' mode require QEMU to support the
-                 'system_wakeup' command.  Thus, it's *required* to query QEMU
-                 for the presence of the 'system_wakeup' command before issuing
-                 guest agent command.
+        Notes:
 
-        :param mode: Specify suspend mode, could be one of 'disk', 'ram',
-                     'hybrid'.
+        #. For the best results it's strongly recommended to have the
+           ``pm-utils`` package installed in the guest.
+        #. The ``ram`` and 'hybrid' mode require QEMU to support the
+           ``system_wakeup`` command.  Thus, it's *required* to query QEMU
+           for the presence of the ``system_wakeup`` command before issuing
+           guest agent command.
+
+        :param mode: Specify suspend mode, could be one of ``disk``, ``ram``,
+                     ``hybrid``.
         :return: True if shutdown cmd is sent successfully, False if
-                 'suspend' is unsupported.
+                 ``suspend`` is unsupported.
         :raise VAgentSuspendUnknownModeError: Raise if mode is not supported.
         """
         error.context("Suspend guest '%s' to '%s'" % (self.vm.name, mode))
 
-        if not mode in [self.SUSPEND_MODE_DISK, self.SUSPEND_MODE_RAM,
+        if mode not in [self.SUSPEND_MODE_DISK, self.SUSPEND_MODE_RAM,
                         self.SUSPEND_MODE_HYBRID]:
             raise VAgentSuspendUnknownModeError("Not supported suspend"
                                                 " mode '%s'" % mode)
@@ -591,6 +591,7 @@ class QemuAgent(Monitor):
             if check_status:
                 try:
                     self.verify_fsfreeze_status(self.FSFREEZE_STATUS_FROZEN)
+                # pylint: disable=E0712
                 except VAgentFreezeStatusError:
                     # When the status is incorrect, reset fsfreeze status to
                     # 'thawed'.
@@ -619,6 +620,7 @@ class QemuAgent(Monitor):
             if check_status:
                 try:
                     self.verify_fsfreeze_status(self.FSFREEZE_STATUS_THAWED)
+                # pylint: disable=E0712
                 except VAgentFreezeStatusError:
                     # When the status is incorrect, reset fsfreeze status to
                     # 'thawed'.

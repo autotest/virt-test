@@ -126,7 +126,7 @@ def _import_autotest_modules():
         sys.exit(1)
 
 
-def _find_default_qemu_paths(options_qemu=None):
+def _find_default_qemu_paths(options_qemu=None, options_dst_qemu=None):
     qemu_bin_path = None
     from virttest import utils_misc
 
@@ -141,6 +141,14 @@ def _find_default_qemu_paths(options_qemu=None):
         except ValueError:
             qemu_bin_path = utils_misc.find_command('kvm')
 
+    if options_dst_qemu is not None:
+        if not os.path.isfile(options_dst_qemu):
+            raise RuntimeError("Invalid dst qemu binary provided (%s)" %
+                               options_dst_qemu)
+        qemu_dst_bin_path = options_dst_qemu
+    else:
+        qemu_dst_bin_path = None
+
     qemu_dirname = os.path.dirname(qemu_bin_path)
     qemu_img_path = os.path.join(qemu_dirname, 'qemu-img')
     qemu_io_path = os.path.join(qemu_dirname, 'qemu-io')
@@ -151,7 +159,7 @@ def _find_default_qemu_paths(options_qemu=None):
     if not os.path.exists(qemu_io_path):
         qemu_io_path = utils_misc.find_command('qemu-io')
 
-    return [qemu_bin_path, qemu_img_path, qemu_io_path]
+    return [qemu_bin_path, qemu_img_path, qemu_io_path, qemu_dst_bin_path]
 
 
 SUPPORTED_LOG_LEVELS = [
@@ -167,12 +175,17 @@ SUPPORTED_DISK_BUSES = ['ide', 'scsi', 'virtio_blk', 'virtio_scsi', 'lsi_scsi',
 
 SUPPORTED_NIC_MODELS = ["virtio_net", "e1000", "rtl8139", "spapr-vlan"]
 
+SUPPORTED_NET_TYPES = ["bridge", "user", "none"]
+
 
 class VirtTestRunParser(optparse.OptionParser):
 
     def __init__(self):
         optparse.OptionParser.__init__(self, usage='Usage: %prog [options]')
         from virttest import data_dir
+        import virttest.defaults
+        os_info = virttest.defaults.get_default_guest_os_info()
+        self.default_guest_os = os_info['variant']
 
         try:
             qemu_bin_path = _find_default_qemu_paths()[0]
@@ -183,6 +196,27 @@ class VirtTestRunParser(optparse.OptionParser):
             nettype_default = 'bridge'
         else:
             nettype_default = 'user'
+
+        debug = optparse.OptionGroup(self, 'Debug Options')
+        debug.add_option("-v", "--verbose", action="store_true",
+                         dest="verbose", help=("Exhibit test "
+                                               "messages in the console "
+                                               "(used for debugging)"))
+        debug.add_option("--console-level", action="store",
+                         dest="console_level",
+                         default="debug",
+                         help=("Log level of test messages in the console. Only valid "
+                               "with --verbose. "
+                               "Supported levels: " +
+                               ", ".join(SUPPORTED_LOG_LEVELS) +
+                               ". Default: %default"))
+        debug.add_option("--show-open-fd", action="store_true",
+                         dest="show_open_fd", help=("Show how many "
+                                                    "open fds at the end of "
+                                                    "each test "
+                                                    "(used for debugging)"))
+
+        self.add_option_group(debug)
 
         general = optparse.OptionGroup(self, 'General Options')
         general.add_option("-b", "--bootstrap", action="store_true",
@@ -198,18 +232,12 @@ class VirtTestRunParser(optparse.OptionParser):
                                                        "config file editing "
                                                        "will be lost). "
                                                        "Requires -t to be set"))
-        general.add_option("-v", "--verbose", action="store_true",
-                           dest="verbose", help=("Exhibit test "
-                                                 "messages in the console "
-                                                 "(used for debugging)"))
-        general.add_option("--console-level", action="store",
-                           dest="console_level",
-                           default="debug",
-                           help=("Log level of test messages in the console. Only valid "
-                                 "with --verbose. "
-                                 "Supported levels: " +
-                                 ", ".join(SUPPORTED_LOG_LEVELS) +
-                                 ". Default: %default"))
+        general.add_option("--update-providers", action="store_true",
+                           default=False,
+                           dest="update_providers", help=("Forces test "
+                                                          "providers to be "
+                                                          "updated (git repos "
+                                                          "will be pulled)"))
         general.add_option("-t", "--type", action="store", dest="type",
                            help="Choose test type (%s)" %
                            ", ".join(SUPPORTED_TEST_TYPES))
@@ -237,7 +265,7 @@ class VirtTestRunParser(optparse.OptionParser):
                            default=None,
                            help=("Select the guest OS to be used. "
                                  "If -c is provided, this will be ignored. "
-                                 "Default: %s" % DEFAULT_GUEST_OS))
+                                 "Default: %s" % self.default_guest_os))
         general.add_option("--arch", action="store", dest="arch",
                            default=None,
                            help=("Architecture under test. "
@@ -247,9 +275,9 @@ class VirtTestRunParser(optparse.OptionParser):
             "--machine-type", action="store", dest="machine_type",
             default=None,
             help=("Machine type under test. "
-                          "If -c is provided, this will be ignored. "
-                          "Default: all for the chosen guests, %s if "
-                          "--guest-os not given." % DEFAULT_MACHINE_TYPE))
+                  "If -c is provided, this will be ignored. "
+                  "Default: all for the chosen guests, %s if "
+                  "--guest-os not given." % virttest.defaults.DEFAULT_MACHINE_TYPE))
         general.add_option("--tests", action="store", dest="tests",
                            default="",
                            help=('List of space separated tests to be '
@@ -316,6 +344,14 @@ class VirtTestRunParser(optparse.OptionParser):
                               "If -c is provided and this flag is omitted, "
                               "no attempt to set the qemu binaries will be made. "
                               "Default path: %s" % qemu_bin_path))
+        qemu.add_option("--qemu-dst-bin", action="store", dest="dst_qemu",
+                        default=None,
+                        help=("Path to a custom qemu binary to be tested for "
+                              "the destination of a migration, overrides "
+                              "--qemu-bin. "
+                              "If -c is provided and this flag is omitted, "
+                              "no attempt to set the qemu binaries will be made. "
+                              "Default path: %s" % qemu_bin_path))
         qemu.add_option("--use-malloc-perturb", action="store",
                         dest="malloc_perturb", default="yes",
                         help=("Use MALLOC_PERTURB_ env variable set to 1 "
@@ -324,10 +360,10 @@ class VirtTestRunParser(optparse.OptionParser):
         qemu.add_option("--accel", action="store", dest="accel", default="kvm",
                         help=("Accelerator used to run qemu (kvm or tcg). "
                               "Default: kvm"))
+        help_msg = "QEMU network option (%s). " % ", ".join(SUPPORTED_NET_TYPES)
+        help_msg += "Default: %default"
         qemu.add_option("--nettype", action="store", dest="nettype",
-                        default=nettype_default,
-                        help=("QEMU network option (bridge, user or none). "
-                              "Default: %default"))
+                        default=nettype_default, help=help_msg)
         qemu.add_option("--netdst", action="store", dest="netdst",
                         default="virbr0",
                         help=("Bridge name to be used "
@@ -386,7 +422,9 @@ def variant_only_file(filename):
     """
     from virttest import data_dir
     result = []
-    fullpath = os.path.realpath(os.path.join(data_dir.get_root_dir(), filename))
+    if not os.path.isabs(filename):
+        fullpath = os.path.realpath(os.path.join(data_dir.get_root_dir(),
+                                                 filename))
     for line in open(fullpath).readlines():
         line = line.strip()
         if line.startswith('#') or len(line) < 3:
@@ -395,10 +433,8 @@ def variant_only_file(filename):
     return ", ".join(result)
 
 
-DEFAULT_MACHINE_TYPE = "i440fx"
-DEFAULT_GUEST_OS = "JeOS.19"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
-LIBVIRT_DEFAULT_SET = variant_only_file('libvirt/cfg/default_tests')
+LIBVIRT_DEFAULT_SET = variant_only_file('backends/libvirt/cfg/default_tests')
 LVSB_DEFAULT_SET = ("lvsb_date")
 OVS_DEFAULT_SET = ("load_module, ovs_basic")
 LIBVIRT_INSTALL = "unattended_install.import.import.default_install.aio_native"
@@ -451,11 +487,15 @@ class VirtTestApp(object):
             logging.info("Config provided and no --qemu-bin set. Not trying "
                          "to automatically set qemu bin.")
         else:
-            (qemu_bin_path, qemu_img_path,
-             qemu_io_path) = _find_default_qemu_paths(self.options.qemu)
+            (qemu_bin_path, qemu_img_path, qemu_io_path,
+             qemu_dst_bin_path) = _find_default_qemu_paths(self.options.qemu,
+                                                           self.options.dst_qemu)
             self.cartesian_parser.assign("qemu_binary", qemu_bin_path)
             self.cartesian_parser.assign("qemu_img_binary", qemu_img_path)
             self.cartesian_parser.assign("qemu_io_binary", qemu_io_path)
+            if qemu_dst_bin_path is not None:
+                self.cartesian_parser.assign("qemu_dst_binary",
+                                             qemu_dst_bin_path)
 
     def _process_qemu_img(self):
         """
@@ -466,7 +506,8 @@ class VirtTestApp(object):
                          "to automatically set qemu bin.")
         else:
             (_, qemu_img_path,
-             _) = _find_default_qemu_paths(self.options.qemu)
+             _, _) = _find_default_qemu_paths(self.options.qemu,
+                                              self.options.dst_qemu)
             self.cartesian_parser.assign("qemu_img_binary", qemu_img_path)
 
     def _process_qemu_accel(self):
@@ -477,6 +518,11 @@ class VirtTestApp(object):
             self.cartesian_parser.assign("disable_kvm", "yes")
 
     def _process_bridge_mode(self):
+        if self.options.nettype not in SUPPORTED_NET_TYPES:
+            _restore_stdout()
+            print("Invalid --nettype option '%s'. Valid options are: (%s)" %
+                  (self.options.nettype, ", ".join(SUPPORTED_NET_TYPES)))
+            sys.exit(1)
         if self.options.nettype == 'bridge':
             if os.getuid() != 0:
                 _restore_stdout()
@@ -527,7 +573,8 @@ class VirtTestApp(object):
                 # TODO: this is x86-specific, instead we can get the default
                 # arch from qemu binary and run on all supported machine types
                 if self.options.arch is None and self.options.guest_os is None:
-                    self.cartesian_parser.only_filter(DEFAULT_MACHINE_TYPE)
+                    import virttest.defaults
+                    self.cartesian_parser.only_filter(virttest.defaults.DEFAULT_MACHINE_TYPE)
             else:
                 self.cartesian_parser.only_filter(self.options.machine_type)
         else:
@@ -572,11 +619,11 @@ class VirtTestApp(object):
         if not self.options.config:
             if self.options.nettype == "bridge":
                 if self.options.vhost == "on":
-                    self.cartesian_parser.assign("netdev_extra_params",
-                                                 '",vhost=on"')
+                    self.cartesian_parser.assign("vhost", "on")
                 elif self.options.vhost == "force":
                     self.cartesian_parser.assign("netdev_extra_params",
                                                  '",vhostforce=on"')
+                    self.cartesian_parser.assign("vhost", "on")
             else:
                 if self.options.vhost in ["on", "force"]:
                     _restore_stdout()
@@ -632,7 +679,7 @@ class VirtTestApp(object):
                       self.options.guest_os)
                 sys.exit(1)
             self.cartesian_parser.only_filter(
-                self.options.guest_os or DEFAULT_GUEST_OS)
+                self.options.guest_os or self.option_parser.default_guest_os)
         else:
             logging.info("Config provided, ignoring --guest-os option")
 
@@ -685,12 +732,14 @@ class VirtTestApp(object):
             logging.info("Config provided, ignoring --tests option")
 
     def _process_restart_vm(self):
-        if not self.options.keep_guest_running:
-            self.cartesian_parser.assign("kill_vm", "yes")
+        if not self.options.config:
+            if not self.options.keep_guest_running:
+                self.cartesian_parser.assign("kill_vm", "yes")
 
     def _process_restore_image_between_tests(self):
-        if not self.options.keep_image_between_tests:
-            self.cartesian_parser.assign("restore_image", "yes")
+        if not self.options.config:
+            if not self.options.keep_image_between_tests:
+                self.cartesian_parser.assign("restore_image", "yes")
 
     def _process_mem(self):
         self.cartesian_parser.assign("mem", self.options.mem)
@@ -757,7 +806,7 @@ class VirtTestApp(object):
             _restore_stdout()
             logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),
                                               verbose=True)
-            test_dir = os.path.join(data_dir.get_root_dir(), self.options.type)
+            test_dir = data_dir.get_backend_dir(self.options.type)
             shared_dir = os.path.join(data_dir.get_root_dir(), "shared")
             bootstrap.create_config_files(test_dir, shared_dir,
                                           interactive=False,
@@ -788,19 +837,28 @@ class VirtTestApp(object):
             elif self.options.type == "v2v":
                 default_userspace_paths = ["/usr/bin/virt-v2v"]
 
-            test_dir = os.path.join(data_dir.get_root_dir(), self.options.type)
+            if not self.options.config:
+                download_image = not self.options.no_downloads
+                keep_image = not self.options.keep_image
+            else:
+                download_image = False
+                keep_image = False
+
+            test_dir = data_dir.get_backend_dir(self.options.type)
             bootstrap.bootstrap(test_name=self.options.type, test_dir=test_dir,
                                 base_dir=data_dir.get_data_dir(),
                                 default_userspace_paths=default_userspace_paths,
                                 check_modules=check_modules,
                                 online_docs_url=online_docs_url,
                                 interactive=interactive,
-                                download_image=(not self.options.no_downloads),
+                                download_image=download_image,
                                 selinux=self.options.selinux_setup,
-                                restore_image=(not self.options.keep_image),
-                                verbose=self.options.verbose)
+                                restore_image=keep_image,
+                                verbose=self.options.verbose,
+                                update_providers=self.options.update_providers,
+                                guest_os=(self.options.guest_os or
+                                          self.option_parser.default_guest_os))
             sys.exit(0)
-
 
         if self.options.type:
             if self.options.type not in SUPPORTED_TEST_TYPES:
@@ -841,8 +899,7 @@ class VirtTestApp(object):
             cfg = os.path.abspath(self.options.config)
 
         if not self.options.config:
-            cfg = os.path.join(data_dir.get_root_dir(), self.options.type,
-                               "cfg", "tests.cfg")
+            cfg = data_dir.get_backend_cfg_path(self.options.type, 'tests.cfg')
 
         self.cartesian_parser.parse_file(cfg)
         if self.options.type != 'lvsb':
@@ -892,7 +949,8 @@ class VirtTestApp(object):
                       "names correctly, and double "
                       "check that tests show "
                       "in --list-tests for guest '%s'" %
-                      (self.options.guest_os or DEFAULT_GUEST_OS))
+                      (self.options.guest_os or
+                       self.option_parser.default_guest_os))
                 sys.exit(1)
 
             if self.options.config:
