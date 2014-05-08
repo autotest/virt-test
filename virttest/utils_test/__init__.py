@@ -1479,7 +1479,8 @@ class HostStress(object):
         # Run stress tool on host.
         from autotest.client import common
         autotest_client_dir = os.path.dirname(common.__file__)
-        autotest_local_path = os.path.join(autotest_client_dir, "autotest")
+        autotest_local_path = os.path.join(autotest_client_dir,
+                                           "autotest-local")
         args = [autotest_local_path, self.control_path, '--verbose']
         self.host_stress_process = subprocess.Popen(args)
 
