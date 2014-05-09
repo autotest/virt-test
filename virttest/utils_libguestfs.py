@@ -1189,6 +1189,24 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("cp %s %s" % (src, dest))
 
+    def file(self, path):
+        """
+        file - determine file type
+
+        This call uses the standard file(1) command to determine the type or
+        contents of the file
+        """
+        return self.inner_cmd("file %s" % path)
+
+    def exists(self, path):
+        """
+        exists - test if file or directory exists
+
+        This returns "true" if and only if there is a file, directory (or
+        anything) with the given "path" name
+        """
+        return self.inner_cmd("exists %s" % path)
+
     def part_init(self, device, parttype):
         """
         part-init - create an empty partition table
@@ -1208,6 +1226,70 @@ class GuestfishPersistent(Guestfish):
         """
         cmd = "part-add %s %s %s %s" % (device, prlogex, startsect, endsect)
         return self.inner_cmd(cmd)
+
+    def part_del(self, device, partnum):
+        """
+        part-del device partnum
+
+        This command deletes the partition numbered "partnum" on "device".
+
+        Note that in the case of MBR partitioning, deleting an extended
+        partition also deletes any logical partitions it contains.
+        """
+        return self.inner_cmd("part_del %s %s" % (device, partnum))
+
+    def part_set_bootable(self, device, partnum, bootable):
+        """
+        part-set-bootable device partnum bootable
+
+        This sets the bootable flag on partition numbered "partnum" on device
+        "device". Note that partitions are numbered from 1.
+        """
+        return self.inner_cmd("part-set-bootable %s %s %s" % (device, partnum, boottable))
+
+    def part_set_mbr_id(self, device, partnum, idbyte):
+        """
+        part-set-mbr-id - set the MBR type byte (ID byte) of a partition
+
+        Sets the MBR type byte (also known as the ID byte) of the numbered
+        partition "partnum" to "idbyte". Note that the type bytes quoted in
+        most documentation are in fact hexadecimal numbers, but usually documented
+        without any leading "0x" which might be confusing.
+        """
+        return self.inner_cmd("part-set-mbr-id %s %s %s" % (device, partnum, idbyte))
+
+    def part_set_name(self, device, partnum, name):
+        """
+        part-set-name - set partition name
+
+        This sets the partition name on partition numbered "partnum" on device
+        "device". Note that partitions are numbered from 1.
+        """
+        return self.inner_cmd("part-set-name %s %s %s" % (device, partnum, name))
+
+    def part_to_dev(self, partition):
+        """
+        part-to-dev - convert partition name to device name
+
+        This function takes a partition name (eg. "/dev/sdb1") and removes the
+        partition number, returning the device name (eg. "/dev/sdb").
+
+        The named partition must exist, for example as a string returned from
+        "list_partitions".
+        """
+        return self.inner_cmd("part-to-dev %s" % partition)
+
+    def part_to_partnum(self, partition):
+        """
+        part-to-partnum - convert partition name to partition number
+
+        This function takes a partition name (eg. "/dev/sdb1") and returns the
+        partition number (eg. 1).
+
+        The named partition must exist, for example as a string returned from
+        "list_partitions".
+        """
+        return self.inner_cmd("part_to_partnum %s" % partition)
 
     def checksum(self, csumtype, path):
         """
