@@ -1013,7 +1013,8 @@ class DevContainer(object):
                                    strict_mode=None, media=None, imgfmt=None,
                                    pci_addr=None, scsi_hba=None, x_data_plane=None,
                                    blk_extra_params=None, scsi=None,
-                                   pci_bus='pci.0', drv_extra_params=None):
+                                   pci_bus='pci.0', drv_extra_params=None,
+                                   num_queues=None):
         """
         Creates related devices by variables
         :note: To skip the argument use None, to disable it use False
@@ -1047,9 +1048,10 @@ class DevContainer(object):
         :param imgfmt: image format (qcow2, raw, ...)
         :param pci_addr: drive pci address ($int)
         :param scsi_hba: Custom scsi HBA
+        :param num_queues: performace option for virtio-scsi-pci
         """
         def define_hbas(qtype, atype, bus, unit, port, qbus, addr_spec=None,
-                        pci_bus='pci.0'):
+                        pci_bus='pci.0', num_queues=None):
             """
             Helper for creating HBAs of certain type.
             """
@@ -1070,17 +1072,18 @@ class DevContainer(object):
                 for bus_name in self.list_missing_named_buses(
                         _hba, qtype, bus + 1):
                     _bus_name = bus_name.rsplit('.')[0]
+                    bus_params = {'id': _bus_name, 'driver': atype}
+                    if num_queues is not None and int(num_queues) > 1:
+                        bus_params['num_queues'] = num_queues
                     if addr_spec:
-                        dev = qdevices.QDevice(params={'id': _bus_name,
-                                                       'driver': atype},
+                        dev = qdevices.QDevice(params=bus_params,
                                                parent_bus={'aobject': pci_bus},
                                                child_bus=qbus(busid=bus_name,
                                                               bus_type=qtype,
                                                               addr_spec=addr_spec,
                                                               atype=atype))
                     else:
-                        dev = qdevices.QDevice(params={'id': _bus_name,
-                                                       'driver': atype},
+                        dev = qdevices.QDevice(params=bus_params,
                                                parent_bus={'aobject': pci_bus},
                                                child_bus=qbus(busid=bus_name))
                     devices.append(dev)
@@ -1179,13 +1182,16 @@ class DevContainer(object):
         elif fmt.startswith('scsi-'):
             if not scsi_hba:
                 scsi_hba = "virtio-scsi-pci"
+            if scsi_hba != "virtio-scsi-pci":
+                num_queues = None
             addr_spec = None
             if scsi_hba == 'lsi53c895a' or scsi_hba == 'spapr-vscsi':
                 addr_spec = [8, 16384]
             elif scsi_hba == 'virtio-scsi-pci':
                 addr_spec = [256, 16384]
             _, bus, dev_parent = define_hbas('SCSI', scsi_hba, bus, unit, port,
-                                             qbuses.QSCSIBus, addr_spec)
+                                             qbuses.QSCSIBus, addr_spec,
+                                             num_queues=num_queues)
             devices.extend(_)
         elif fmt in ('usb1', 'usb2', 'usb3'):
             if bus:
@@ -1392,7 +1398,8 @@ class DevContainer(object):
                                                    "blk_extra_params"),
                                                image_params.get("virtio-blk-pci_scsi"),
                                                image_params.get('pci_bus', 'pci.0'),
-                                               image_params.get("drv_extra_params"))
+                                               image_params.get("drv_extra_params"),
+                                               image_params.get("num_queues"))
 
     def cdroms_define_by_params(self, name, image_params, media=None,
                                 index=None, image_boot=None,
