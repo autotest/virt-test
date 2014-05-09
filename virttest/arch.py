@@ -29,6 +29,14 @@ if ARCH == "ppc64":
     IFF_VNET_HDR = 0x4000
     # From linux/include/linux/if.h
     IFF_UP = 0x1
+    # From linux/netlink.h
+    NETLINK_ROUTE = 0
+    NLM_F_REQUEST = 1
+    NLM_F_ACK = 4
+    RTM_DELLINK = 17
+    NLMSG_ERROR = 2
+    # From linux/socket.h
+    AF_PACKET = 17
 else:
     # From include/linux/sockios.h
     SIOCSIFHWADDR = 0x8924
@@ -55,6 +63,14 @@ else:
     IFF_VNET_HDR = 0x4000
     # From linux/include/linux/if.h
     IFF_UP = 0x1
+    # From linux/netlink.h
+    NETLINK_ROUTE = 0
+    NLM_F_REQUEST = 1
+    NLM_F_ACK = 4
+    RTM_DELLINK = 17
+    NLMSG_ERROR = 2
+    # From linux/socket.h
+    AF_PACKET = 17
 
 
 def get_kvm_module_list():

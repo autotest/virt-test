@@ -304,6 +304,20 @@ class DbNoLockError(NetError):
         return "Attempt made to access database with improper locking"
 
 
+class DelLinkError(NetError):
+
+    def __init__(self, ifname, details=None):
+        NetError.__init__(self, ifname, details)
+        self.ifname = ifname
+        self.details = details
+
+    def __str__(self):
+        e_msg = "Cannot delete interface %s" % self.ifname
+        if self.details is not None:
+            e_msg += ": %s" % self.details
+        return e_msg
+
+
 def warp_init_del(func):
     def new_func(*args, **argkw):
         globals()["sock"] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -500,6 +514,71 @@ class Interface(object):
             return True
         else:
             return False
+
+    def __netlink_pack(self, msgtype, flags, seq, pid, data):
+        '''
+        Pack with Netlink message header and data
+        into Netlink package
+        :msgtype:  Message types: e.g. RTM_DELLINK
+        :flags: Flag bits
+        :seq: The sequence number of the message
+        :pid: Process ID
+        :data:  data
+        :return: return the package
+        '''
+        return struct.pack('IHHII', 16 + len(data),
+                           msgtype, flags, seq, pid) + data
+
+    def __netlink_unpack(self, data):
+        '''
+        Unpack the data from kernel
+        '''
+        out = []
+        while data:
+            length, msgtype, flags, seq, pid = struct.unpack('IHHII',
+                                                             data[:16])
+            if len(data) < length:
+                raise RuntimeError("Buffer overrun!")
+            out.append((msgtype, flags, seq, pid, data[16:length]))
+            data = data[length:]
+
+        return out
+
+    def dellink(self):
+        '''
+        Delete the interface. Equivalent to 'ip link delete NAME'.
+        '''
+        # create socket
+        sock = socket.socket(socket.AF_NETLINK,
+                             socket.SOCK_RAW,
+                             arch.NETLINK_ROUTE)
+
+        # Get the interface index
+        interface_index = self.get_index()
+
+        # send data to socket
+        sock.send(self.__netlink_pack(msgtype=arch.RTM_DELLINK,
+                                      flags=arch.NLM_F_REQUEST | arch.NLM_F_ACK,
+                                      seq=1, pid=0,
+                                      data=struct.pack('BxHiII', arch.AF_PACKET,
+                                                       0, interface_index, 0, 0)))
+
+        # receive data from socket
+        try:
+            while True:
+                data_recv = sock.recv(1024)
+                for msgtype, flags, mseq, pid, data in \
+                        self.__netlink_unpack(data_recv):
+                    if msgtype == arch.NLMSG_ERROR:
+                        (err_no,) = struct.unpack("i", data[:4])
+                        if err_no == 0:
+                            return 0
+                        else:
+                            raise DelLinkError(self.name, os.strerror(-err_no))
+                    else:
+                        raise DelLinkError(self.name, "unexpected error")
+        finally:
+            sock.close()
 
 
 class Macvtap(Interface):
