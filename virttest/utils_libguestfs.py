@@ -1189,6 +1189,24 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("cp %s %s" % (src, dest))
 
+    def file(self, path):
+        """
+        file - determine file type
+
+        This call uses the standard file(1) command to determine the type or
+        contents of the file
+        """
+        return self.inner_cmd("file %s" % path)
+
+    def exists(self, path):
+        """
+        exists - test if file or directory exists
+
+        This returns "true" if and only if there is a file, directory (or
+        anything) with the given "path" name
+        """
+        return self.inner_cmd("exists %s" % path)
+
     def part_init(self, device, parttype):
         """
         part-init - create an empty partition table
