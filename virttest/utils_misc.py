@@ -2089,6 +2089,10 @@ def get_image_info(image_file):
         virtual size: 10G (10737418240 bytes)
         disk size: 888M
         ....
+        image: /path/vm2_6.3.img
+        file format: raw
+        virtual size: 1.0M (1024000 bytes)
+        disk size: 196M
         ....
         *******************************
 
@@ -2111,11 +2115,17 @@ def get_image_info(image_file):
                 if line.find("format") != -1:
                     image_info_dict['format'] = line.split(':')[-1].strip()
                 elif line.find("virtual size") != -1:
-                    vsize = line.split(":")[-1].strip().split(" ")[0]
-                    image_info_dict['vsize'] = int(float(normalize_data_size(vsize, "B")))
+                    # Use the value in (xxxxxx bytes) since it's the more
+                    # realistic value. For a "1000k" disk, qemu-img will
+                    # show 1.0M and 1024000 bytes. The 1.0M will translate
+                    # into 1048576 bytes which isn't necessarily correct
+                    vsize = line.split("(")[-1].strip().split(" ")[0]
+                    image_info_dict['vsize'] = int(vsize)
                 elif line.find("disk size") != -1:
                     dsize = line.split(':')[-1].strip()
-                    image_info_dict['dsize'] = int(float(normalize_data_size(dsize, "B")))
+                    image_info_dict['dsize'] = int(float(
+                        normalize_data_size(dsize, order_magnitude="B",
+                                            factor=1024)))
         return image_info_dict
     except (KeyError, IndexError, error.CmdError), detail:
         raise error.TestError("Fail to get information of %s:\n%s" %
