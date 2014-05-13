@@ -1461,7 +1461,9 @@ class HostStress(object):
                 self.check_cmd = ""
                 self.stop_cmd = ""
 
-        self.params = params
+        self.params = {}
+        if params:
+            self.params = params
         self.timeout = 60
         self.stress_type = stress_type
         self.host_stress_process = None
