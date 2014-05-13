@@ -317,12 +317,13 @@ class NetperfClient(Netperf):
         netperf_cmd = "%s %s -H %s %s " % (cmd_prefix, self.netperf_path,
                                            server_address, test_option)
         logging.debug("Start netperf with cmd: '%s'" % netperf_cmd)
-        (status, output) = self.session.cmd_status_output(netperf_cmd,
-                                                          timeout=timeout)
-        if status:
-            raise NetperfTestError("Run netperf error. %s" % output)
+        try:
+            output = self.session.cmd_output_safe(netperf_cmd, timeout=timeout)
+        except ShellError, err:
+            raise NetperfTestError("Run netperf error. %s" % str(err))
         self.result = output
         return self.result
+
 
     def bg_start(self, server_address, test_option="", session_num=1,
                  cmd_prefix=""):
