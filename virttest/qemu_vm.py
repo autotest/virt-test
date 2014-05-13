@@ -517,7 +517,7 @@ class VM(virt_vm.BaseVM):
 
         def add_smp(devices):
             smp_str = " -smp %d" % self.cpuinfo.smp
-            smp_pattern = "smp n\[,maxcpus=cpus\].*"
+            smp_pattern = "smp .*n\[,maxcpus=cpus\].*"
             if devices.has_option(smp_pattern):
                 smp_str += ",maxcpus=%d" % self.cpuinfo.maxcpus
             smp_str += ",cores=%d" % self.cpuinfo.cores
