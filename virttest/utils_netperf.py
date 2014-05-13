@@ -85,7 +85,7 @@ class NetperfPackage(remote.Remote_Package):
                 self.pack_suffix = ".tar.gz"
                 self.decomp_cmd = "tar zxvf"
             self.netperf_dir = os.path.join(self.remote_path,
-                                  self.netperf_file.rstrip(self.pack_suffix))
+                                            self.netperf_file.rstrip(self.pack_suffix))
 
         if self.pack_suffix:
             self.netserver_path = os.path.join(self.netperf_dir,
@@ -96,7 +96,7 @@ class NetperfPackage(remote.Remote_Package):
             self.netserver_path = os.path.join(self.netperf_base_dir,
                                                self.netperf_file)
             self.netperf_path = os.path.join(self.netperf_base_dir,
-                                                 self.netperf_file)
+                                             self.netperf_file)
 
         logging.debug("Create remote session")
         self.session = remote.remote_login(self.client, self.address,
@@ -138,7 +138,7 @@ class NetperfPackage(remote.Remote_Package):
             logging.debug("Download URL file to local path")
             tmp_dir = data_dir.get_download_dir()
             self.netperf_source = utils.unmap_url_cache(tmp_dir, netperf_source,
-                                                       self.md5sum)
+                                                        self.md5sum)
         else:
             self.netperf_source = netperf_source
         return self.netperf_source
@@ -168,7 +168,6 @@ class NetperfPackage(remote.Remote_Package):
         return (self.netserver_path, self.netperf_path)
 
 
-
 class Netperf(object):
 
     def __init__(self, address, netperf_path, md5sum="", netperf_source="",
@@ -196,10 +195,10 @@ class Netperf(object):
             self.linesep = "\n"
 
         self.package = NetperfPackage(address, netperf_path, md5sum,
-                                             netperf_source, client, port, username,
-                                             password)
+                                      netperf_source, client, port, username,
+                                      password)
         self.netserver_path, self.netperf_path = self.package.install(install,
-                                                               compile_option)
+                                                                      compile_option)
         logging.debug("Create remote session")
         self.session = remote.remote_login(client, address, port, username,
                                            password, self.prompt,
@@ -281,7 +280,6 @@ class NetperfServer(Netperf):
         super(NetperfServer, self).stop("netserver")
 
 
-
 class NetperfClient(Netperf):
 
     def __init__(self, address, netperf_path, md5sum="", netperf_source="",
@@ -317,10 +315,10 @@ class NetperfClient(Netperf):
         netperf_cmd = "%s %s -H %s %s " % (cmd_prefix, self.netperf_path,
                                            server_address, test_option)
         logging.debug("Start netperf with cmd: '%s'" % netperf_cmd)
-        (status, output) = self.session.cmd_status_output(netperf_cmd,
-                                                          timeout=timeout)
-        if status:
-            raise NetperfTestError("Run netperf error. %s" % output)
+        try:
+            output = self.session.cmd_output_safe(netperf_cmd, timeout=timeout)
+        except aexpect.ShellError, err:
+            raise NetperfTestError("Run netperf error. %s" % str(err))
         self.result = output
         return self.result
 
@@ -340,7 +338,7 @@ class NetperfClient(Netperf):
                                                         server_address,
                                                         test_option)
             logging.info("Start %s sessions netperf background with cmd: '%s'" %
-                          (session_num, netperf_cmd))
+                         (session_num, netperf_cmd))
             for num in xrange(int(session_num)):
                 self.session.cmd_output_safe(netperf_cmd)
             return
@@ -358,4 +356,3 @@ class NetperfClient(Netperf):
 
     def stop(self):
         super(NetperfClient, self).stop("netperf")
-
