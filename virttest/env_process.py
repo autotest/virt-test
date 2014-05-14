@@ -569,13 +569,15 @@ def preprocess(test, params, env):
     logging.debug("KVM userspace version: %s" % kvm_userspace_version)
     test.write_test_keyval({"kvm_userspace_version": kvm_userspace_version})
 
+    libvirtd_inst = utils_libvirtd.Libvirtd()
+
     if params.get("setup_hugepages") == "yes":
         h = test_setup.HugePageConfig(params)
         suggest_mem = h.setup()
         if suggest_mem is not None:
             params['mem'] = suggest_mem
         if params.get("vm_type") == "libvirt":
-            utils_libvirtd.libvirtd_restart()
+            libvirtd_inst.restart()
 
     if params.get("setup_thp") == "yes":
         thp = test_setup.TransparentHugePageConfig(test, params)
@@ -584,6 +586,19 @@ def preprocess(test, params, env):
     if params.get("setup_ksm") == "yes":
         ksm = test_setup.KSMConfig(params, env)
         ksm.setup(env)
+
+    if params.get("vm_type") == "libvirt":
+        if params.get("setup_libvirt_polkit") == "yes":
+            pol = test_setup.LibvirtPolkitConfig(params)
+            try:
+                pol.setup()
+            except test_setup.PolkitWriteLibvirtdConfigError, e:
+                logging.error("e")
+            except test_setup.PolkitRulesSetupError, e:
+                logging.error("e")
+            except Exception, e:
+                logging.error("Unexpected error:" % e)
+            libvirtd_inst.restart()
 
     # Execute any pre_commands
     if params.get("pre_command"):
@@ -837,12 +852,14 @@ def postprocess(test, params, env):
         # keeping the number of filedescriptors used by virt-test honest.
         vm.cleanup_serial_console()
 
+    libvirtd_inst = utils_libvirtd.Libvirtd()
+
     if params.get("setup_hugepages") == "yes":
         try:
             h = test_setup.HugePageConfig(params)
             h.cleanup()
             if params.get("vm_type") == "libvirt":
-                utils_libvirtd.libvirtd_restart()
+                libvirtd_inst.restart()
         except Exception, details:
             err += "\nHP cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
@@ -862,6 +879,20 @@ def postprocess(test, params, env):
         except Exception, details:
             err += "\nKSM cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
+
+    if params.get("vm_type") == "libvirt":
+        if params.get("setup_libvirt_polkit") == "yes":
+            try:
+                pol = test_setup.LibvirtPolkitConfig(params)
+                pol.cleanup()
+                libvirtd_inst.restart()
+            except test_setup.PolkitConfigCleanupError, e:
+                err += "\nPolkit cleanup: %s" % str(e).replace('\\n', '\n  ')
+                logging.error(e)
+            except Exception, details:
+                err += "\nPolkit cleanup: %s" % str(details
+                                                    ).replace('\\n', '\n  ')
+                logging.error("Unexpected error: %s" % details)
 
     # Execute any post_commands
     if params.get("post_command"):

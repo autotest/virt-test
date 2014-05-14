@@ -7,6 +7,7 @@ import time
 import re
 import random
 import math
+import shutil
 from autotest.client.shared import error, utils
 from autotest.client import os_dep
 import utils_misc
@@ -46,6 +47,38 @@ class THPKhugepagedError(THPError):
 
     """
     Thrown when khugepaged is not behaving as expected.
+    """
+    pass
+
+
+class PolkitConfigError(Exception):
+
+    """
+    Base exception for Polkit Config setup.
+    """
+    pass
+
+
+class PolkitRulesSetupError(PolkitConfigError):
+
+    """
+    Thrown when setup polkit rules is not behaving as expected.
+    """
+    pass
+
+
+class PolkitWriteLibvirtdConfigError(PolkitConfigError):
+
+    """
+    Thrown when setup libvirtd config file is not behaving as expected.
+    """
+    pass
+
+
+class PolkitConfigCleanupError(PolkitConfigError):
+
+    """
+    Thrown when polkit config cleanup is not behaving as expected.
     """
     pass
 
@@ -1249,3 +1282,196 @@ class PciAssignable(object):
                 self.dev_unbind_drivers = {}
         except Exception:
             return
+
+
+class LibvirtPolkitConfig(object):
+
+    """
+    Enable polkit access driver for libvirtd and set polkit rules.
+
+    For setting JavaScript polkit rule, using template of rule to satisify
+    libvirt ACL API testing need, just replace keys in template.
+
+    Create a non-privileged user 'testacl' for test if given
+    'unprivileged_user' contains 'EXAMPLE', and delete the user at cleanup.
+
+    Multiple rules could be add into one config file while action_id string
+    is offered space seperated.
+
+    e.g.
+    action_id = "org.libvirt.api.domain.start org.libvirt.api.domain.write"
+
+    then 2 actions "org.libvirt.api.domain.start" and
+    "org.libvirt.api.domain.write" specified, which could be used to generate
+    2 rules in one config file.
+    """
+
+    def __init__(self, params):
+        """
+        :param params: Dict like object containing parameters for the test.
+        """
+        self.libvirtd_path = "/etc/libvirt/libvirtd.conf"
+        self.libvirtd_backup_path = "/etc/libvirt/libvirtd.conf.virttest.backup"
+        self.polkit_rules_path = "/etc/polkit-1/rules.d/"
+        self.polkit_rules_path += "500-libvirt-acl-virttest.rules"
+
+        if params.get("action_id"):
+            self.action_id = params.get("action_id").split()
+        else:
+            self.action_id = []
+        self.user = params.get("unprivileged_user")
+        if params.get("action_lookup"):
+            # The action_lookup string should be seperated by space and
+            # each seperated string should have ':' which represent key:value
+            # for later use.
+            self.attr = params.get("action_lookup").split()
+        else:
+            self.attr = []
+
+    def file_replace_append(self, fpath, pat, repl):
+        """
+        Replace pattern in file with replacement str if pattern found in file,
+        else append the replacement str to file.
+
+        :param fpath: string, the file path
+        :param pat: string, the pattern string
+        :param repl: string, the string to replace
+        """
+        try:
+            with open(fpath) as f:
+                if not any(re.search(pat, line) for line in f):
+                    with open(fpath, 'a') as f:
+                        f.write(repl + '\n')
+                        return
+                else:
+                    out_fpath = fpath + ".tmp"
+                    out = open(out_fpath, "w")
+                    with open(fpath) as f:
+                        for line in f:
+                            if re.search(pat, line):
+                                out.write(repl + '\n')
+                            else:
+                                out.write(line)
+                        out.close()
+                        os.rename(out_fpath, fpath)
+        except Exception:
+            raise PolkitWriteLibvirtdConfigError("Failed to update file '%s'."
+                                                 % fpath)
+
+    def _setup_libvirtd(self):
+        """
+        Config libvirtd
+        """
+        # Backup libvirtd.conf
+        shutil.copy(self.libvirtd_path, self.libvirtd_backup_path)
+
+        # Set the API access control scheme
+        access_str = "access_drivers = [ \"polkit\" ]"
+        access_pat = "^ *access_drivers"
+        self.file_replace_append(self.libvirtd_path, access_pat, access_str)
+
+        # Set UNIX socket access controls
+        sock_rw_str = "unix_sock_rw_perms = \"0777\""
+        sock_rw_pat = "^ *unix_sock_rw_perms"
+        self.file_replace_append(self.libvirtd_path, sock_rw_pat, sock_rw_str)
+
+        # Set authentication mechanism
+        auth_unix_str = "auth_unix_rw = \"none\""
+        auth_unix_pat = "^ *auth_unix_rw"
+        self.file_replace_append(self.libvirtd_path, auth_unix_pat,
+                                 auth_unix_str)
+
+    def _set_polkit_conf(self):
+        """
+        Set polkit libvirt ACL rule config file
+        """
+        # polkit template string
+        template = "polkit.addRule(function(action, subject) {\n"
+        template += "RULE"
+        template += "});"
+
+        # polkit rule template string
+        rule = "    if (action.id == 'ACTION_ID'"
+        rule += " && subject.user == 'USERNAME') {\n"
+        rule += "HANDLE"
+        rule += "    }\n"
+
+        handle = "        if (ACTION_LOOKUP) {\n"
+        handle += "            return polkit.Result.YES;\n"
+        handle += "        } else {\n"
+        handle += "            return polkit.Result.NO;\n"
+        handle += "        }\n"
+
+        action_str = "action.lookup('ATTR') == 'VAL'"
+
+        try:
+            # replace keys except 'ACTION_ID', these keys will remain same
+            # as in different rules
+            rule_tmp = rule.replace('USERNAME', self.user)
+
+            # replace HANDLE part in rule
+            action_opt = []
+            if self.attr:
+                for i in range(len(self.attr)):
+                    attr_tmp = self.attr[i].split(':')
+                    action_tmp = action_str.replace('ATTR', attr_tmp[0])
+                    action_tmp = action_tmp.replace('VAL', attr_tmp[1])
+                    action_opt.append(action_tmp)
+                    if i > 0:
+                        action_opt[i] = " && " + action_opt[i]
+
+                action_tmp = ""
+                for i in range(len(action_opt)):
+                    action_tmp += action_opt[i]
+
+                # replace ACTION_LOOKUP with string from self.attr
+                handle_tmp = handle.replace('ACTION_LOOKUP', action_tmp)
+                rule_tmp = rule_tmp.replace('HANDLE', handle_tmp)
+            else:
+                rule_tmp = rule_tmp.replace('HANDLE', "    ")
+
+            # replace 'ACTION_ID' in loop and generate rules
+            rules = ""
+            for i in range(len(self.action_id)):
+                rules += rule_tmp.replace('ACTION_ID', self.action_id[i])
+
+            # repalce 'RULE' with rules in polkit template string
+            self.template = template.replace('RULE', rules)
+            logging.debug("The polkit config rule is:\n%s" % self.template)
+
+            # write the config file
+            utils.open_write_close(self.polkit_rules_path, self.template)
+        except Exception:
+            raise PolkitRulesSetupError("Set polkit rules file failed")
+
+    def setup(self):
+        """
+        Enable polkit libvirt access driver and setup polkit ACL rules.
+        """
+        self._setup_libvirtd()
+        # Use 'testacl' if unprivileged_user in cfg contains string 'EXAMPLE',
+        # and if user 'testacl' is not exist on host, create it for test.
+        if self.user.count('EXAMPLE'):
+            cmd = "id testacl"
+            if utils.system(cmd, ignore_status=True):
+                logging.debug("Create new user 'testacl' on host.")
+                cmd = "useradd testacl"
+                utils.system(cmd, ignore_status=True)
+            self.user = 'testacl'
+        self._set_polkit_conf()
+
+    def cleanup(self):
+        """
+        Cleanup polkit config
+        """
+        try:
+            if os.path.exists(self.polkit_rules_path):
+                os.unlink(self.polkit_rules_path)
+            if os.path.exists(self.libvirtd_backup_path):
+                os.rename(self.libvirtd_backup_path, self.libvirtd_path)
+            if self.user.count('EXAMPLE'):
+                logging.debug("Delete the created user 'testacl'.")
+                cmd = "userdel -r testacl"
+                utils.system(cmd, ignore_status=True)
+        except Exception:
+            raise PolkitConfigCleanupError("Failed to cleanup polkit config.")
