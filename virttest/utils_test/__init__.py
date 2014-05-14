@@ -1380,7 +1380,7 @@ class VMStress(object):
             raise StressError("Stress %s is not supported now." % stress_type)
 
         _parameters_filter(stress_type)
-        self.stress_arg = self.params.get("stress_args", "")
+        self.stress_args = self.params.get("stress_args", "")
 
     def get_session(self):
         try:
@@ -1396,8 +1396,8 @@ class VMStress(object):
         """
         session = self.get_session()
         command = run_autotest(self.vm, session, self.control_path,
-                               None, None,
-                               self.params, copy_only=True)
+                               None, None, self.params, copy_only=True,
+                               control_args=self.stress_args)
         session.cmd("%s &" % command)
         logging.info("Command: %s", command)
         running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
@@ -1471,7 +1471,7 @@ class HostStress(object):
             raise StressError("Stress %s is not supported now." % stress_type)
 
         _parameters_filter(stress_type)
-        self.stress_arg = self.params.get("stress_args", "")
+        self.stress_args = self.params.get("stress_args", "")
 
     @error.context_aware
     def load_stress_tool(self):
@@ -1483,7 +1483,8 @@ class HostStress(object):
         autotest_client_dir = os.path.dirname(common.__file__)
         autotest_local_path = os.path.join(autotest_client_dir,
                                            "autotest-local")
-        args = [autotest_local_path, self.control_path, '--verbose']
+        args = [autotest_local_path, '--args=%s' % self.stress_args,
+                self.control_path, '--verbose']
         self.host_stress_process = subprocess.Popen(args)
 
         running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
