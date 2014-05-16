@@ -1221,7 +1221,7 @@ def restore(path, options="", **dargs):
     return command("restore %s %s" % (path, options), **dargs)
 
 
-def start(name, **dargs):
+def start(name, options="", **dargs):
     """
     True on successful start of (previously defined) inactive domain.
 
@@ -1229,7 +1229,7 @@ def start(name, **dargs):
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object.
     """
-    return command("start %s" % name, **dargs)
+    return command("start %s %s" % (name, options), **dargs)
 
 
 def shutdown(name, options="", **dargs):
