@@ -1612,6 +1612,85 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("md-detail %s" % md)
 
+    def sfdisk(self, device, cyls, heads, sectors, lines):
+        """
+        sfdisk - create partitions on a block device
+
+        This is a direct interface to the sfdisk(8) program for creating
+        partitions on block devices.
+
+        *This function is deprecated.* In new code, use the "part-add" call
+        instead.
+
+        Deprecated functions will not be removed from the API, but the fact
+        that they are deprecated indicates that there are problems with correct
+        use of these functions.
+        """
+        return self.inner_cmd("sfdisk %s %s %s %s %s"
+                              % (device, cyls, heads, sectors, lines))
+
+    def sfdisk_l(self, device):
+        """
+        sfdisk-l - display the partition table
+
+        This displays the partition table on "device", in the human-readable
+        output of the sfdisk(8) command. It is not intended to be parsed.
+
+        *This function is deprecated.* In new code, use the "part-list" call
+        instead.
+        """
+        return self.inner_cmd("sfdisk-l %s" % device)
+
+    def sfdiskM(self, device, lines):
+        """
+        sfdiskM - create partitions on a block device
+
+        This is a simplified interface to the "sfdisk" command, where partition
+        sizes are specified in megabytes only (rounded to the nearest cylinder)
+        and you don't need to specify the cyls, heads and sectors parameters
+        which were rarely if ever used anyway.
+
+        *This function is deprecated.* In new code, use the "part-add" call
+        instead.
+        """
+        return self.inner_cmd("sfdiskM %s %s" % (device, lines))
+
+    def sfdisk_N(self, device, partnum, cyls, heads, sectors, line):
+        """
+        sfdisk-N - modify a single partition on a block device
+
+        This runs sfdisk(8) option to modify just the single partition "n"
+        (note: "n" counts from 1).
+
+        For other parameters, see "sfdisk". You should usually pass 0 for the
+        cyls/heads/sectors parameters.
+
+        *This function is deprecated.* In new code, use the "part-add" call
+        instead.
+        """
+        return self.inner_cmd("sfdisk-N %s %s %s %s %s %s"
+                              % (device, partnum, cyls, heads, sectors, line))
+
+    def sfdisk_disk_geometry(self, device):
+        """
+        sfdisk-disk-geometry - display the disk geometry from the partition
+        table
+
+        This displays the disk geometry of "device" read from the partition
+        table. Especially in the case where the underlying block device has
+        been resized, this can be different from the kernel's idea of the
+        geometry
+        """
+        return self.inner_cmd("sfdisk-disk-geometry %s" % device)
+
+    def sfdisk_kernel_geometry(self, device):
+        """
+        sfdisk-kernel-geometry - display the kernel geometry
+
+        This displays the kernel's idea of the geometry of "device".
+        """
+        return self.inner_cmd("sfdisk-kernel-geometry %s" % device)
+
     def pvcreate(self, physvols):
         """
         pvcreate - create an LVM physical volume
