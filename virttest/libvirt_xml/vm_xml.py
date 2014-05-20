@@ -442,6 +442,24 @@ class VMXML(VMXMLBase):
         return vm
 
     @staticmethod
+    def set_pm_suspend(vm_name, mem="yes", disk="yes", virsh_instance=base.virsh):
+        """
+        Add/set pm suspend Support
+
+        :params vm_name: Name of defined vm
+        :params mem: Enable suspend to memory
+        :params disk: Enable suspend to disk
+        """
+        # Build a instance of class VMPM.
+        pm = VMPM()
+        pm.mem_enabled = mem
+        pm.disk_enabled = disk
+        # Set pm to the new instance.
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        vmxml.pm = pm
+        vmxml.sync()
+
+    @staticmethod
     def set_vm_vcpus(vm_name, value, current=None, virsh_instance=base.virsh):
         """
         Convenience method for updating 'vcpu' and 'current' attribute property
