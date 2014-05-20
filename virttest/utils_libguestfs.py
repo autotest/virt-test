@@ -855,6 +855,14 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("get-umask")
 
+    def mkdir(self, path):
+        """
+        mkdir - create a directory
+
+        Create a directory named "path".
+        """
+        return self.inner_cmd("mkdir %s" % path)
+
     def mkdir_mode(self, path, mode):
         """
         mkdir-mode - create a directory with a particular mode
@@ -1198,6 +1206,33 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("exists %s" % path)
 
+    def cp_a(self, src, dest):
+        """
+        cp-a - copy a file or directory recursively
+
+        This copies a file or directory from "src" to "dest" recursively using
+        the "cp -a" command.
+        """
+        return self.inner_cmd("cp-a %s %s" % (src, dest))
+
+    def equal(self, file1, file2):
+        """
+        equal - test if two files have equal contents
+
+        This compares the two files "file1" and "file2" and returns true if
+        their content is exactly equal, or false otherwise.
+        """
+        return self.inner_cmd("equal %s %s" % (file1, file2))
+
+    def download(self, remotefilename, filename):
+        """
+        download - download a file to the local machine
+
+        Download file "remotefilename" and save it as "filename" on the local
+        machine.
+        """
+        return self.inner_cmd("download %s %s" % (remotefilename, filename))
+
     def part_init(self, device, parttype):
         """
         part-init - create an empty partition table
@@ -1290,6 +1325,28 @@ class GuestfishPersistent(Guestfish):
         "path".
         """
         return self.inner_cmd("checksum %s %s" % (csumtype, path))
+
+    def checksum_device(self, csumtype, device):
+        """
+        checksum-device - compute MD5, SHAx or CRC checksum of the contents of a
+        device
+
+        This call computes the MD5, SHAx or CRC checksum of the contents of the
+        device named "device". For the types of checksums supported see the
+        "checksum" command.
+        """
+        return self.inner_cmd("checksum-device %s %s" % (csumtype, device))
+
+    def checksums_out(self, csumtype, directory, sumsfile):
+        """
+        checksums-out - compute MD5, SHAx or CRC checksum of files in a
+        directory
+
+        This command computes the checksums of all regular files in "directory"
+        and then emits a list of those checksums to the local output file
+        "sumsfile".
+        """
+        return self.inner_cmd("checksums-out %s %s %s" % (csumtype, directory, sumsfile))
 
     def is_config(self):
         """
