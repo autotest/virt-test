@@ -524,6 +524,47 @@ class VMXML(VMXMLBase):
         return 0
 
     @staticmethod
+    def get_disk_slots(vm_name, virsh_instance=base.virsh):
+        """
+        Get pci slots of virtio disks.
+
+        :param vm_name: Domain name.
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        disk_list = vmxml.get_disk_source(vm_name, virsh_instance=virsh_instance)
+
+        try:
+            slot_dict = {}
+            for disk in disk_list:
+                if 'virtio' == disk.find('target').get('bus'):
+                    slot_dict[disk.find('target').get('dev')] = disk.find('address').get('slot')
+        except AttributeError:
+            logging.debug("No such disk")
+
+        return slot_dict
+
+    @staticmethod
+    def get_disk_type(vm_name, disk_target, virsh_instance=base.virsh):
+        """
+        Get disk type for a given target dev.
+
+        :param vm_name: Domain name.
+        :param disk_target: Domain disk target dev.
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        disk_list = vmxml.get_disk_source(vm_name, virsh_instance=virsh_instance)
+
+        try:
+            disk_type = None
+            for disk in disk_list:
+                if disk_target == disk.find('target').get('dev'):
+                    disk_type = disk.find('driver').get('type')
+        except AttributeError:
+            logging.debug("No 'type' found.")
+
+        return disk_type
+
+    @staticmethod
     def check_disk_exist(vm_name, disk_src, virsh_instance=base.virsh):
         """
         Check if given disk exist in VM.
