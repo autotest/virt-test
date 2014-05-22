@@ -1784,6 +1784,55 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("lvs")
 
+    def lvs_full(self):
+        """
+        lvs-full - list the LVM logical volumes (LVs)
+
+        List all the logical volumes detected. This is the equivalent of the
+        lvs(8) command. The "full" version includes all fields.
+        """
+        return self.inner_cmd("lvs-full")
+
+    def lvm_clear_filter(self):
+        """
+        lvm-clear-filter - clear LVM device filter
+
+        This undoes the effect of "lvm_set_filter". LVM will be able to see
+        every block device.
+        This command also clears the LVM cache and performs a volume group scan.
+        """
+        return self.inner_cmd("lvm-clear-filter")
+
+    def lvm_remove_all(self):
+        """
+        lvm-remove-all - remove all LVM LVs, VGs and PVs
+
+        This command removes all LVM logical volumes, volume groups and physical
+        volumes.
+        """
+        return self.inner_cmd("lvm-remove-all")
+
+    def lvm_set_filter(self, device):
+        """
+        lvm-set-filter - set LVM device filter
+
+        This sets the LVM device filter so that LVM will only be able to "see"
+        the block devices in the list "devices", and will ignore all other
+        attached block devices.
+        """
+        return self.inner_cmd("lvm-set-filter %s" % device)
+
+    def lvresize_free(self, lv, percent):
+        """
+        lvresize-free - expand an LV to fill free space
+
+        This expands an existing logical volume "lv" so that it fills "pc"% of
+        the remaining free space in the volume group. Commonly you would call
+        this with pc = 100 which expands the logical volume as much as possible,
+        using all remaining free space in the volume group.
+        """
+        return self.inner_cmd("lvresize-free %s %s" % (lv, percent))
+
     def vfs_type(self, mountable):
         """
         vfs-type - get the Linux VFS type corresponding to a mounted device
