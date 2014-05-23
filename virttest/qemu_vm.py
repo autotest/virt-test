@@ -2018,7 +2018,7 @@ class VM(virt_vm.BaseVM):
             host_ports = utils_misc.find_free_ports(
                 5000, 6000, len(redir_names))
 
-            old_redirs = None
+            old_redirs = {}
             if self.redirs:
                 old_redirs = self.redirs
 
