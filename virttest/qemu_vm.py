@@ -3174,6 +3174,8 @@ class VM(virt_vm.BaseVM):
             os.close(fd_src)
 
         clone = self.clone()
+        if self.params.get('qemu_dst_binary', None) is not None:
+            clone.params['qemu_binary'] = utils_misc.get_qemu_dst_binary(self.params)
         if env:
             env.register_vm("%s_clone" % clone.name, clone)
         if (local and not (migration_exec_cmd_src
@@ -3183,8 +3185,6 @@ class VM(virt_vm.BaseVM):
                 # Pause the dest vm after creation
                 extra_params = clone.params.get("extra_params", "") + " -S"
                 clone.params["extra_params"] = extra_params
-            if self.params.get('qemu_dst_binary', None) is not None:
-                clone.params['qemu_binary'] = utils_misc.get_qemu_dst_binary(self.params)
 
             clone.create(migration_mode=protocol, mac_source=self,
                          migration_fd=fd_dst,
