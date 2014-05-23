@@ -25,6 +25,7 @@ import data_dir
 import utils_net
 import utils_disk
 import nfs
+import virsh
 from autotest.client import local_host
 
 
@@ -467,6 +468,16 @@ def preprocess(test, params, env):
     address = params.get('ovirt_node_address')
     username = params.get('ovirt_node_user')
     password = params.get('ovirt_node_password')
+
+    if params.get("vm_type") == 'libvirt':
+        connect_uri = params.get('connect_uri')
+        if connect_uri == "default":
+            connect_uri = virsh.canonical_uri()
+        # Set the LIBVIRT_DEFAULT_URI to make virsh command
+        # work on connect_uri as default behavior.
+        os.environ['LIBVIRT_DEFAULT_URI'] = connect_uri
+        # Set a AUTOTEST_VM_SUFFIX to manage libvirt vm in env.
+        os.environ['AUTOTEST_VM_SUFFIX'] = "_%s" % connect_uri
 
     setup_pb = False
     for nic in params.get('nics', "").split():

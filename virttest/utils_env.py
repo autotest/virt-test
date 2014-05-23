@@ -197,8 +197,15 @@ class Env(UserDict.IterableUserDict):
         Return a list of all VM objects in this Env object.
         """
         vm_list = []
+        suffix = ""
+        try:
+            suffix = os.environ['AUTOTEST_VM_SUFFIX']
+        except KeyError:
+            pass
         for key in self.data.keys():
             if key and key.startswith("vm__"):
+                if suffix and (not key.endswith(suffix)):
+                    continue
                 vm_list.append(self.data[key])
         return vm_list
 
@@ -230,7 +237,12 @@ class Env(UserDict.IterableUserDict):
 
         :param name: VM name.
         """
-        return self.data.get("vm__%s" % name)
+        suffix = ""
+        try:
+            suffix = os.environ["AUTOTEST_VM_SUFFIX"]
+        except KeyError:
+            pass
+        return self.data.get("vm__%s%s" % (name, suffix))
 
     def create_vm(self, vm_type, target, name, params, bindir):
         """
@@ -250,7 +262,12 @@ class Env(UserDict.IterableUserDict):
         :param name: VM name.
         :param vm: VM object.
         """
-        self.data["vm__%s" % name] = vm
+        # If vm is libvirt guest, we need to tell the difference
+        # between different connect_uri.
+        suffix = ""
+        if vm.params.get("vm_type") == "libvirt":
+            suffix = os.environ['AUTOTEST_VM_SUFFIX']
+        self.data["vm__%s%s" % (name, suffix)] = vm
 
     @lock_safe
     def unregister_vm(self, name):
@@ -259,7 +276,14 @@ class Env(UserDict.IterableUserDict):
 
         :param name: VM name.
         """
-        del self.data["vm__%s" % name]
+        # If vm is libvirt guest, we need to tell the difference
+        # between different connect_uri.
+        suffix = ""
+        try:
+            suffix = os.environ["AUTOTEST_VM_SUFFIX"]
+        except KeyError:
+            pass
+        del self.data["vm__%s%s" % (name, suffix)]
 
     @lock_safe
     def register_syncserver(self, port, server):
