@@ -888,6 +888,32 @@ class VMXML(VMXMLBase):
         dev.source_address = source_address
         self.add_device(dev)
 
+    @staticmethod
+    def get_blkio_params(vm_name, options="", virsh_instance=base.virsh):
+        """
+        Return VM's block I/O setting from XML definition
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, options=options,
+                                       virsh_instance=virsh_instance)
+        xmltreefile = vmxml.__dict_get__('xml')
+        blkio_params = {}
+        try:
+            blkio = xmltreefile.find('blkiotune')
+            try:
+                blkio_params['weight'] = blkio.find('weight').text
+            except AttributeError:
+                logging.error("Can't find <weight> element")
+        except AttributeError:
+            logging.error("Can't find <blkiotune> element")
+
+        if blkio and blkio.find('device'):
+            blkio_params['device_weights_path'] = \
+                blkio.find('device').find('path').text
+            blkio_params['device_weights_weight'] = \
+                blkio.find('device').find('weight').text
+
+        return blkio_params
+
 
 class VMCPUXML(VMXML):
 
