@@ -3816,3 +3816,22 @@ def vol_upload(name, dfile, options="", **dargs):
     """
     cmd = "vol-upload %s %s %s" % (name, dfile, options)
     return command(cmd, **dargs)
+
+
+def blkiotune(name, weight=None, device_weights=None, options=None, **dargs):
+    """
+    Set or get a domain's blkio parameters
+    :param name: name of domain
+    :param options: options may be live, config and current
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "blkiotune %s" % name
+    if options:
+        cmd += " --%s" % options
+    if weight:
+        cmd += " --weight %s" % weight
+    if device_weights:
+        cmd += " --device-weights %s" % device_weights
+
+    return command(cmd, **dargs)
