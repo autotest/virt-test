@@ -1338,22 +1338,22 @@ class LibvirtPolkitConfig(object):
         :param repl: string, the string to replace
         """
         try:
-            with open(fpath) as f:
-                if not any(re.search(pat, line) for line in f):
-                    with open(fpath, 'a') as f:
-                        f.write(repl + '\n')
-                        return
-                else:
-                    out_fpath = fpath + ".tmp"
-                    out = open(out_fpath, "w")
-                    with open(fpath) as f:
-                        for line in f:
-                            if re.search(pat, line):
-                                out.write(repl + '\n')
-                            else:
-                                out.write(line)
-                        out.close()
-                        os.rename(out_fpath, fpath)
+            lines = open(fpath).readlines()
+            if not any(re.search(pat, line) for line in lines):
+                f = open(fpath, 'a')
+                f.write(repl + '\n')
+                f.close()
+                return
+            else:
+                out_fpath = fpath + ".tmp"
+                out = open(out_fpath, "w")
+                for line in lines:
+                    if re.search(pat, line):
+                        out.write(repl + '\n')
+                    else:
+                        out.write(line)
+                out.close()
+                os.rename(out_fpath, fpath)
         except Exception:
             raise PolkitWriteLibvirtdConfigError("Failed to update file '%s'."
                                                  % fpath)
