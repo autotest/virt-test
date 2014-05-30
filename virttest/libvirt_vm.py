@@ -138,6 +138,18 @@ class VM(virt_vm.BaseVM):
         logging.info("Libvirt VM '%s', driver '%s', uri '%s'",
                      self.name, self.driver_type, self.connect_uri)
 
+    def is_lxc(self):
+        """
+        Return True if VM is linux container.
+        """
+        return (self.connect_uri and self.connect_uri.count("lxc"))
+
+    def is_qemu(self):
+        """
+        Return True if VM is a qemu guest.
+        """
+        return (self.connect_uri and self.connect_uri.count("qemu"))
+
     def verify_alive(self):
         """
         Make sure the VM is alive.
