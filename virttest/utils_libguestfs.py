@@ -1756,6 +1756,63 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("pvcreate %s" % (physvols))
 
+    def pvs(self):
+        """
+        pvs - list the LVM physical volumes (PVs)
+
+        List all the physical volumes detected. This is the equivalent of the
+        pvs(8) command.
+        """
+        return self.inner_cmd("pvs")
+
+    def pvs_full(self):
+        """
+        pvs-full - list the LVM physical volumes (PVs)
+
+        List all the physical volumes detected. This is the equivalent of the
+        pvs(8) command. The "full" version includes all fields.
+        """
+        return self.inner_cmd("pvs-full")
+
+    def pvresize(self, device):
+        """
+        pvresize - resize an LVM physical volume
+
+        This resizes (expands or shrinks) an existing LVM physical volume to
+        match the new size of the underlying device
+        """
+        return self.inner_cmd("pvresize %s" % device)
+
+    def pvresize_size(self, device, size):
+        """
+        pvresize-size - resize an LVM physical volume (with size)
+
+        This command is the same as "pvresize" except that it allows you to
+        specify the new size (in bytes) explicitly.
+        """
+        return self.inner_cmd("pvresize %s %s" % (device, size))
+
+    def pvremove(self, device):
+        """
+        pvremove - remove an LVM physical volume
+
+        This wipes a physical volume "device" so that LVM will no longer
+        recognise it.
+
+        The implementation uses the "pvremove" command which refuses to wipe
+        physical volumes that contain any volume groups, so you have to remove
+        those first.
+        """
+        return self.inner_cmd("pvremove %s" % device)
+
+    def pvuuid(self, device):
+        """
+        pvuuid - get the UUID of a physical volume
+
+        This command returns the UUID of the LVM PV "device".
+        """
+        return self.inner_cmd("pvuuid %s" % device)
+
     def vgcreate(self, volgroup, physvols):
         """
         vgcreate - create an LVM volume group
@@ -1772,6 +1829,15 @@ class GuestfishPersistent(Guestfish):
         List all the volumes groups detected.
         """
         return self.inner_cmd("vgs")
+
+    def vgs_full(self):
+        """
+        vgs-full - list the LVM volume groups (VGs)
+
+        List all the volumes groups detected. This is the equivalent of the
+        vgs(8) command. The "full" version includes all fields.
+        """
+        return self.inner_cmd("vgs-full")
 
     def vgrename(self, volgroup, newvolgroup):
         """
@@ -1889,6 +1955,14 @@ class GuestfishPersistent(Guestfish):
         using all remaining free space in the volume group.
         """
         return self.inner_cmd("lvresize-free %s %s" % (lv, percent))
+
+    def lvrename(self, logvol, newlogvol):
+        """
+        lvrename - rename an LVM logical volume
+
+        Rename a logical volume "logvol" with the new name "newlogvol"
+        """
+        return self.inner_cmd("lvrename %s %s" % (logvol, newlogvol))
 
     def vfs_type(self, mountable):
         """
