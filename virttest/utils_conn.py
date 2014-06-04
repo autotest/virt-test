@@ -591,7 +591,9 @@ class TCPConnection(ConnectionBase):
 
     Some specific varaibles for TCPConnection class.
     """
-    __slots__ = ('tcp_port', 'remote_syslibvirtd', 'remote_libvirtdconf')
+    __slots__ = ('tcp_port', 'remote_syslibvirtd',
+                 'remote_libvirtdconf', 'sasl_allowed_users',
+                 'auth_tcp', 'listen_addr')
 
     def __init__(self, *args, **dargs):
         """
@@ -605,6 +607,9 @@ class TCPConnection(ConnectionBase):
         """
         init_dict = dict(*args, **dargs)
         init_dict['tcp_port'] = init_dict.get('tcp_port', '16509')
+        init_dict['auth_tcp'] = init_dict.get('auth_tcp', 'none')
+        init_dict['listen_addr'] = init_dict.get('listen_addr')
+        init_dict['sasl_allowed_users'] = init_dict.get('sasl_allowed_users')
         super(TCPConnection, self).__init__(init_dict)
 
         self.remote_syslibvirtd = remote.RemoteFile(
@@ -664,6 +669,10 @@ class TCPConnection(ConnectionBase):
         server_user = self.server_user
         server_pwd = self.server_pwd
         tcp_port = self.tcp_port
+        auth_tcp = self.auth_tcp
+        # require a list data type
+        sasl_allowed_users = self.sasl_allowed_users
+        listen_addr = self.listen_addr
 
         # edit the /etc/sysconfig/libvirtd to add --listen args in libvirtd
         pattern2repl = {r".*LIBVIRTD_ARGS\s*=\s*\"\s*--listen\s*\".*":
@@ -671,11 +680,19 @@ class TCPConnection(ConnectionBase):
         self.remote_syslibvirtd.sub_else_add(pattern2repl)
 
         # edit the /etc/libvirt/libvirtd.conf
-        # listen_tcp=1, tcp_port=$tcp_port, auth_tcp="none"
+        # listen_tcp=1, tcp_port=$tcp_port, auth_tcp=$auth_tcp
         pattern2repl = {r".*listen_tls\s*=.*": 'listen_tls=0',
                         r".*listen_tcp\s*=.*": 'listen_tcp=1',
                         r".*tcp_port\s*=.*": 'tcp_port="%s"' % (tcp_port),
-                        r'.*auth_tcp\s*=.*': 'auth_tcp="none"'}
+                        r".*auth_tcp\s*=.*": 'auth_tcp="%s"' % (auth_tcp)}
+        # a whitelist of allowed SASL usernames, it's a list.
+        # If the list is an empty, no client can connect
+        if sasl_allowed_users:
+            pattern2repl[r".*sasl_allowed_username_list\s*=.*"] = \
+                'sasl_allowed_username_list=%s' % (sasl_allowed_users)
+        if listen_addr:
+            pattern2repl[r".*listen_addr\s*=.*"] = \
+                'listen_addr=%s' % (listen_addr)
         self.remote_libvirtdconf.sub_else_add(pattern2repl)
 
         # restart libvirtd service on server
