@@ -55,6 +55,13 @@ def _update_address_cache(env, line):
         matches = re.findall(r"\w*:\w*:\w*:\w*:\w*:\w*", line)
         if matches and env["address_cache"].get("last_seen"):
             mac_address = matches[0].lower()
+
+            # Sometimes a MAC gets two IP Addresses, avoid the last one
+            # because it's Offer, not ACK.
+            if env["address_cache"].get(mac_address):
+                if env["address_cache"].get(mac_address) !=\
+                   env["address_cache"].get("last_seen"):
+                    return
             last_time = env["address_cache"].get("time_%s" % mac_address, 0)
             last_ip = env["address_cache"].get("last_seen")
             cached_ip = env["address_cache"].get(mac_address)
