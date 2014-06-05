@@ -31,13 +31,14 @@ def normalize_connect_uri(connect_uri):
     :param connect_uri: Cartesian Params setting
     :return: Normalized connect_uri
     """
-    if connect_uri == 'default':
-        return None
-    else:  # Validate and canonicalize uri early to catch problems
+    if connect_uri == "default":
+        result = virsh.canonical_uri()
+    else:
         result = virsh.canonical_uri(uri=connect_uri)
-        if not result:
-            raise ValueError("Normalizing connect_uri %s failed" % connect_uri)
-        return result
+
+    if not result:
+        raise ValueError("Normalizing connect_uri '%s' failed" % connect_uri)
+    return result
 
 
 def complete_uri(ip_address):
@@ -130,15 +131,24 @@ class VM(virt_vm.BaseVM):
         self.vnclisten = "0.0.0.0"
         self.connect_uri = normalize_connect_uri(params.get("connect_uri",
                                                             "default"))
-        if self.connect_uri:
-            self.driver_type = virsh.driver(uri=self.connect_uri)
-        else:
-            self.driver_type = 'qemu'
+        self.driver_type = virsh.driver(uri=self.connect_uri)
         self.params['driver_type_' + self.name] = self.driver_type
         # virtnet init depends on vm_type/driver_type being set w/in params
         super(VM, self).__init__(name, params)
         logging.info("Libvirt VM '%s', driver '%s', uri '%s'",
                      self.name, self.driver_type, self.connect_uri)
+
+    def is_lxc(self):
+        """
+        Return True if VM is linux container.
+        """
+        return (self.connect_uri and self.connect_uri.count("lxc"))
+
+    def is_qemu(self):
+        """
+        Return True if VM is a qemu guest.
+        """
+        return (self.connect_uri and self.connect_uri.count("qemu"))
 
     def verify_alive(self):
         """
@@ -998,6 +1008,8 @@ class VM(virt_vm.BaseVM):
         Close serial console and associated log file
         """
         if self.serial_console is not None:
+            if self.is_lxc():
+                self.serial_console.sendline("^]")
             self.serial_console.close()
             self.serial_console = None
         if hasattr(self, "migration_file"):
@@ -1005,6 +1017,36 @@ class VM(virt_vm.BaseVM):
                 os.unlink(self.migration_file)
             except OSError:
                 pass
+
+    def wait_for_login(self, nic_index=0, timeout=None,
+                       internal_timeout=None,
+                       serial=False, restart_network=False,
+                       username=None, password=None):
+        """
+        Override the wait_for_login method of virt_vm to support other
+        guest in libvirt.
+
+        If connect_uri is lxc related, we call wait_for_serial_login()
+        directly, without attampting login it via network.
+
+        Other connect_uri, call virt_vm.wait_for_login().
+        """
+        # Set the default value of parameters if user did not use it.
+        if not timeout:
+            timeout = super(VM, self).LOGIN_WAIT_TIMEOUT
+
+        if not internal_timeout:
+            internal_timeout = super(VM, self).LOGIN_TIMEOUT
+
+        if self.is_lxc():
+            return self.wait_for_serial_login(timeout, internal_timeout,
+                                              restart_network,
+                                              username, password)
+
+        return super(VM, self).wait_for_login(nic_index, timeout,
+                                              internal_timeout,
+                                              serial, restart_network,
+                                              username, password)
 
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None, timeout=5.0,
@@ -1254,7 +1296,8 @@ class VM(virt_vm.BaseVM):
             # Is it already dead?
             if self.is_alive():
                 logging.debug("Destroying VM")
-                if gracefully and self.params.get("shutdown_command"):
+                if (not self.is_lxc() and gracefully and
+                        self.params.get("shutdown_command")):
                     # Try to destroy with shell command
                     logging.debug("Trying to shutdown VM with shell command")
                     try:
