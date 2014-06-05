@@ -1855,6 +1855,60 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("vgremove %s" % vgname)
 
+    def vgscan(self):
+        """
+        vgscan - rescan for LVM physical volumes, volume groups and logical
+        volumes
+
+        This rescans all block devices and rebuilds the list of LVM physical
+        volumes, volume groups and logical volumes.
+        """
+        return self.inner_cmd("vgscan")
+
+    def vguuid(self, vgname):
+        """
+        vguuid - get the UUID of a volume group
+
+        This command returns the UUID of the LVM VG named "vgname"
+        """
+        return self.inner_cmd("vguuid %s" % vgname)
+
+    def vg_activate(self, activate, volgroups):
+        """
+        vg-activate - activate or deactivate some volume groups
+
+        This command activates or (if "activate" is false) deactivates all
+        logical volumes in the listed volume groups "volgroups"
+        """
+        return self.inner_cmd("vg-activate %s %s" % (activate, volgroups))
+
+    def vg_activate_all(self, activate):
+        """
+        vg-activate-all - activate or deactivate all volume groups
+
+        This command activates or (if "activate" is false) deactivates all
+        logical volumes in all volume groups.
+        """
+        return self.inner_cmd("vg-activate-all %s" % activate)
+
+    def vglvuuids(self, vgname):
+        """
+        vglvuuids - get the LV UUIDs of all LVs in the volume group
+
+        Given a VG called "vgname", this returns the UUIDs of all the logical
+        volumes created in this volume group.
+        """
+        return self.inner_cmd("vglvuuids %s" % vgname)
+
+    def vgpvuuids(self, vgname):
+        """
+        vgpvuuids - get the PV UUIDs containing the volume group
+
+        Given a VG called "vgname", this returns the UUIDs of all the physical
+        volumes that this volume group resides on.
+        """
+        return self.inner_cmd("vgpvuuids %s" % vgname)
+
     def lvcreate(self, logvol, volgroup, mbytes):
         """
         lvcreate - create an LVM logical volume
