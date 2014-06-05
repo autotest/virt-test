@@ -188,10 +188,15 @@ def postprocess_image(test, params, image_name, vm_process_status=None):
         else:
             image_info_output = image.info()
             image_info = {}
-            for image_info_item in image_info_output.splitlines():
-                option = image_info_item.split(":")
-                if len(option) == 2:
-                    image_info[option[0].strip()] = option[1].strip()
+            if image_info_output is not None:
+                for image_info_item in image_info_output.splitlines():
+                    option = image_info_item.split(":")
+                    if len(option) == 2:
+                        image_info[option[0].strip()] = option[1].strip()
+            else:
+                logging.debug("Can not find matched image for selected guest "
+                              "os, skip the image check.")
+                check_image_flag = False
             if ("lazy refcounts" in image_info
                     and image_info["lazy refcounts"] == "true"):
                 logging.debug("Should not check image while guest is alive"
