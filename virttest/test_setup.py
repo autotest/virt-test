@@ -8,6 +8,7 @@ import re
 import random
 import math
 import shutil
+from virttest.staging import service
 from autotest.client.shared import error, utils
 from autotest.client import os_dep
 import utils_misc
@@ -1314,6 +1315,7 @@ class LibvirtPolkitConfig(object):
         self.libvirtd_backup_path = "/etc/libvirt/libvirtd.conf.virttest.backup"
         self.polkit_rules_path = "/etc/polkit-1/rules.d/"
         self.polkit_rules_path += "500-libvirt-acl-virttest.rules"
+        self.polkitd = service.Factory.create_service("polkit")
 
         if params.get("action_id"):
             self.action_id = params.get("action_id").split()
@@ -1459,6 +1461,9 @@ class LibvirtPolkitConfig(object):
                 utils.system(cmd, ignore_status=True)
             self.user = 'testacl'
         self._set_polkit_conf()
+        # Polkit rule will take about 1 second to take effect after change.
+        # Restart polkit daemon will force it immidiately.
+        self.polkitd.restart()
 
     def cleanup(self):
         """
