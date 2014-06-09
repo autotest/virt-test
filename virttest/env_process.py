@@ -93,6 +93,15 @@ def preprocess_vm(test, params, env, name):
         vm = env.create_vm(vm_type, target, name, params, test.bindir)
     old_vm = copy.copy(vm)
 
+    if vm_type == 'libvirt':
+        if not vm.exists() and params.get("type") != "unattended_install":
+            error_msg = "Test VM %s does not exist." % name
+            if name == params.get("main_vm"):
+                error_msg += " You may need --install option to create the guest."
+                raise error.TestError(error_msg)
+            else:
+                raise error.TestNAError(error_msg)
+
     remove_vm = False
     if params.get("force_remove_vm") == "yes":
         remove_vm = True
