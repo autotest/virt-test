@@ -1002,12 +1002,14 @@ def get_net_if(runner=None, state=None):
                          physical interface and virtual interface
     :return: List of network interfaces.
     """
+    cmd = "ip link"
     if runner is None:
         runner = local_runner
+        result = runner(cmd)
+    else:
+        result = runner(cmd).stdout
     if state is None:
         state = ".*"
-    cmd = "ip link"
-    result = runner(cmd)
     return re.findall(r"^\d+: (\S+?)[@:].*state %s.*$" % (state),
                       result,
                       re.MULTILINE)
@@ -1041,10 +1043,12 @@ def get_net_if_addrs(if_name, runner=None):
     :param if_name: Name of interface.
     :return: List ip addresses of network interface.
     """
+    cmd = "ip addr show %s" % (if_name)
     if runner is None:
         runner = local_runner
-    cmd = "ip addr show %s" % (if_name)
-    result = runner(cmd)
+        result = runner(cmd)
+    else:
+        result = runner(cmd).stdout
     return {"ipv4": re.findall("inet (.+?)/..?", result, re.MULTILINE),
             "ipv6": re.findall("inet6 (.+?)/...?", result, re.MULTILINE),
             "mac": re.findall("link/ether (.+?) ", result, re.MULTILINE)}
