@@ -23,7 +23,7 @@ import getpass
 import ctypes
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
-from autotest.client.shared import git
+from autotest.client.shared import git, base_job
 import data_dir
 try:
     from staging import utils_koji
@@ -571,8 +571,9 @@ def run_tests(parser, job):
                                                  tag=test_tag,
                                                  iterations=test_iterations)
 
-        if not current_status:
+        if not base_job.JOB_STATUSES[current_status]:
             failed = True
+
         status_dict[param_dict.get("name")] = current_status
 
     return not failed
