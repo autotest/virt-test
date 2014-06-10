@@ -689,7 +689,8 @@ def preprocess(test, params, env):
         _screendump_thread.start()
 
     # Start the register query thread
-    if params.get("store_vm_register") == "yes":
+    if params.get("store_vm_register") == "yes" and\
+       params.get("vm_type") == "qemu":
         global _vm_register_thread, _vm_register_thread_termination_event
         _vm_register_thread_termination_event = threading.Event()
         _vm_register_thread = threading.Thread(target=_store_vm_register,
