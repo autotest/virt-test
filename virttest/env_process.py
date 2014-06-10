@@ -25,6 +25,7 @@ import data_dir
 import utils_net
 import utils_disk
 import nfs
+import libvirt_vm
 from autotest.client import local_host
 
 
@@ -482,6 +483,7 @@ def preprocess(test, params, env):
     address = params.get('ovirt_node_address')
     username = params.get('ovirt_node_user')
     password = params.get('ovirt_node_password')
+    vm_type = params.get('vm_type')
 
     setup_pb = False
     for nic in params.get('nics', "").split():
@@ -536,7 +538,7 @@ def preprocess(test, params, env):
             del env[key]
 
     if (params.get("auto_cpu_model") == "yes" and
-            params.get("vm_type") == "qemu"):
+            vm_type == "qemu"):
         if not env.get("cpu_model"):
             env["cpu_model"] = utils_misc.get_qemu_best_cpu_model(params)
         params["cpu_model"] = env.get("cpu_model")
@@ -591,7 +593,7 @@ def preprocess(test, params, env):
         suggest_mem = h.setup()
         if suggest_mem is not None:
             params['mem'] = suggest_mem
-        if params.get("vm_type") == "libvirt":
+        if vm_type == "libvirt":
             libvirtd_inst.restart()
 
     if params.get("setup_thp") == "yes":
@@ -602,7 +604,7 @@ def preprocess(test, params, env):
         ksm = test_setup.KSMConfig(params, env)
         ksm.setup(env)
 
-    if params.get("vm_type") == "libvirt":
+    if vm_type == "libvirt":
         if params.get("setup_libvirt_polkit") == "yes":
             pol = test_setup.LibvirtPolkitConfig(params)
             try:
@@ -614,6 +616,13 @@ def preprocess(test, params, env):
             except Exception, e:
                 logging.error("Unexpected error:" % e)
             libvirtd_inst.restart()
+
+    if vm_type == "libvirt":
+        connect_uri = params.get("connect_uri")
+        connect_uri = libvirt_vm.normalize_connect_uri(connect_uri)
+        # Set the LIBVIRT_DEFAULT_URI to make virsh command
+        # work on connect_uri as default behavior.
+        os.environ['LIBVIRT_DEFAULT_URI'] = connect_uri
 
     # Execute any pre_commands
     if params.get("pre_command"):
@@ -869,12 +878,13 @@ def postprocess(test, params, env):
         vm.cleanup_serial_console()
 
     libvirtd_inst = utils_libvirtd.Libvirtd()
+    vm_type = params.get("vm_type")
 
     if params.get("setup_hugepages") == "yes":
         try:
             h = test_setup.HugePageConfig(params)
             h.cleanup()
-            if params.get("vm_type") == "libvirt":
+            if vm_type == "libvirt":
                 libvirtd_inst.restart()
         except Exception, details:
             err += "\nHP cleanup: %s" % str(details).replace('\\n', '\n  ')
@@ -896,7 +906,7 @@ def postprocess(test, params, env):
             err += "\nKSM cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
 
-    if params.get("vm_type") == "libvirt":
+    if vm_type == "libvirt":
         if params.get("setup_libvirt_polkit") == "yes":
             try:
                 pol = test_setup.LibvirtPolkitConfig(params)
