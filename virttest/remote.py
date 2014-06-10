@@ -905,7 +905,12 @@ class RemoteFile(object):
         backup_file.close()
 
         # Get file from remote.
-        self._pull_file()
+        try:
+            self._pull_file()
+        except SCPTransferFailedError:
+            # Remote file doesn't exist, create empty file on local
+            self._write_local("")
+
         # Save a backup.
         shutil.copy(self.local_path, self.backup_path)
 
