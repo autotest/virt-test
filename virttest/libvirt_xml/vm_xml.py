@@ -524,7 +524,7 @@ class VMXML(VMXMLBase):
         return 0
 
     @staticmethod
-    def get_disk_slots(vm_name, virsh_instance=base.virsh):
+    def get_virtio_disk_slots(vm_name, virsh_instance=base.virsh):
         """
         Get pci slots of virtio disks.
 
