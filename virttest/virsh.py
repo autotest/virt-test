@@ -680,17 +680,42 @@ def domname(dom_id_or_uuid, **dargs):
     return command("domname --domain %s" % dom_id_or_uuid, **dargs)
 
 
-def qemu_monitor_command(name, cmd, **dargs):
+def qemu_monitor_command(name, cmd, options="", **dargs):
     """
     This helps to execute the qemu monitor command through virsh command.
 
     :param name: Name of monitor domain
     :param cmd: monitor command to execute
+    :param options: extra options
     :param dargs: standardized virsh function API keywords
     """
+    cmd_str = "qemu-monitor-command %s %s --cmd \'%s\'" % (name, options, cmd)
+    return command(cmd_str, **dargs)
 
-    cmd_qemu_monitor = "qemu-monitor-command %s --hmp \'%s\'" % (name, cmd)
-    return command(cmd_qemu_monitor, **dargs)
+
+def qemu_agent_command(name, cmd, options="", **dargs):
+    """
+    This helps to execute the qemu agent command through virsh command.
+
+    :param name: Name of monitor domain
+    :param cmd: agent command to execute
+    :param options: extra options
+    :param dargs: standardized virsh function API keywords
+    """
+    cmd_str = "qemu-agent-command %s %s --cmd \'%s\'" % (name, options, cmd)
+    return command(cmd_str, **dargs)
+
+
+def qemu_attach(pid, extra="", **dargs):
+    """
+    This helps to execute the qemu-attach command through virsh command.
+
+    :param pid: pid of qemu process
+    :param extra: extra options
+    :param dargs: standardized virsh function API keywords
+    """
+    cmd_str = "qemu-attach --pid %s %s" % (pid, extra)
+    return command(cmd_str, **dargs)
 
 
 def setvcpus(name, count, extra="", **dargs):

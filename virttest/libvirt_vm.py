@@ -1403,7 +1403,7 @@ class VM(virt_vm.BaseVM):
 
         :return: list of PID of vcpus of a VM.
         """
-        output = virsh.qemu_monitor_command(self.name, "info cpus",
+        output = virsh.qemu_monitor_command(self.name, "info cpus", "--hmp",
                                             uri=self.connect_uri)
         vcpu_pids = re.findall(r'thread_id=(\d+)', output.stdout)
         return vcpu_pids
