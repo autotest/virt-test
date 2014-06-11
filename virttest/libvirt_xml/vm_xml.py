@@ -555,6 +555,7 @@ class VMXML(VMXMLBase):
 
         :param vm_name: Domain name.
         :param disk_src: Domain disk source path
+        :param disk_type: Domain disk type
         :return: True/False
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
@@ -576,6 +577,61 @@ class VMXML(VMXMLBase):
             logging.debug("No '%s' type disk." % disk_type)
 
         return found
+
+    @staticmethod
+    def get_disk_serial(vm_name, disk_target, virsh_instance=base.virsh):
+        """
+        Get disk serial in VM
+
+        :param vm_name: Domain name.
+        :param disk_target: Domain disk target
+        :return: disk serial
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        if not vmxml.get_disk_count(vm_name, virsh_instance=virsh_instance):
+            raise xcepts.LibvirtXMLError("No disk in domain %s." % vm_name)
+        try:
+            disk = vmxml.get_disk_all()[disk_target]
+        except KeyError:
+            raise xcepts.LibvirtXMLError("Wrong disk target:%s." % disk_target)
+        serial = ""
+        try:
+            serial = disk.find("serial").text
+        except AttributeError:
+            logging.debug("No serial assigned.")
+
+        return serial
+
+    @staticmethod
+    def get_disk_address(vm_name, disk_target, virsh_instance=base.virsh):
+        """
+        Get disk address in VM
+
+        :param vm_name: Domain name.
+        :param disk_target: Domain disk target
+        :return: disk address
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        if not vmxml.get_disk_count(vm_name, virsh_instance=virsh_instance):
+            raise xcepts.LibvirtXMLError("No disk in domain %s." % vm_name)
+        try:
+            disk = vmxml.get_disk_all()[disk_target]
+        except KeyError:
+            raise xcepts.LibvirtXMLError("Wrong disk target:%s." % disk_target)
+        address_str = ""
+        try:
+            address = disk.find("address")
+            add_type = address.get("type")
+            add_domain = address.get("domain")
+            add_bus = address.get("bus")
+            add_slot = address.get("slot")
+            add_func = address.get("function")
+            address_str = ("%s:%s.%s.%s.%s"
+                           % (add_type, add_domain, add_bus,
+                              add_slot, add_func))
+        except AttributeError, e:
+            raise xcepts.LibvirtXMLError("Get wrong attribute: %s" % str(e))
+        return address_str
 
     @staticmethod
     def get_numa_params(vm_name, virsh_instance=base.virsh):
