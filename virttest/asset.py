@@ -114,6 +114,7 @@ def download_test_provider(provider, update=False):
         pubkey = provider_info.get('pubkey')
         download_dst = data_dir.get_test_provider_dir(provider)
         repo_downloaded = os.path.isdir(os.path.join(download_dst, '.git'))
+        original_dir = os.getcwd()
         if not repo_downloaded or update:
             download_dst = git.get_repo(uri=uri, branch=branch, commit=ref,
                                         destination_dir=download_dst)
@@ -125,6 +126,7 @@ def download_test_provider(provider, update=False):
             utils.run('git pull origin %s' % branch)
         os.chdir(download_dst)
         utils.system('git log -1')
+        os.chdir(original_dir)
 
 
 def download_all_test_providers(update=False):
