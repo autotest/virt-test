@@ -21,21 +21,21 @@ Install dependencies
 
 Install the p7zip file archiver so you can uncompress the JeOS [4] image.
 
-Red Hat based:
+Red Hat based::
 
 # yum install p7zip
 
-Debian based:
+Debian based::
 
 # apt-get install p7zip-full
 
 Install the autotest-framework package, to provide the needed autotest libs.
 
-Red Hat based:
+Red Hat based::
 
 # yum install autotest-framework
 
-Debian based (needs to enable repo, see [3]):
+Debian based (needs to enable repo, see [3])::
 
 # apt-get install autotest
 
@@ -45,15 +45,15 @@ and generating VM videos, that requires python-gstreamer.
 
 For such cases, it is best that you refer to the more complete documentation:
 
-https://github.com/autotest/virt-test/wiki/InstallPrerequesitePackages
+http://virt-test.readthedocs.org/en/latest/basic/InstallPrerequesitePackages.html
 
-https://github.com/autotest/virt-test/wiki/InstallPrerequesitePackagesDebian
+http://virt-test.readthedocs.org/en/latest/basic/InstallPrerequesitePackagesDebian.html
 
 
 Execute the bootstrap script
 ------------------------
 
-Let's say you're interested in the qemu tests:
+Let's say you're interested in the qemu tests::
 
 ./run -t qemu --bootstrap
 
@@ -65,7 +65,7 @@ Execute the runner script
 
 You can execute the main runner script, called run. The script offers you
 some options, all explained in the script help. A really really simple execution
-of the script for qemu tests is:
+of the script for qemu tests is::
 
 ./run -t qemu
 
@@ -78,15 +78,15 @@ automatically.
 Writing your first test
 -----------------------
 
-https://github.com/autotest/virt-test/wiki/WritingSimpleTests
+http://virt-test.readthedocs.org/en/latest/basic/WritingSimpleTests.html
 
 Is your tutorial to write your first test. Alternatively, you
 can copy the simple template test we have under the samples
 directory to the appropriate test directory, and start hacking
 from there. Example: You want to create a qemu specific test
-for the jelly functionality. You have to do:
+for the jelly functionality. You have to do::
 
-cp samples/template.py qemu/tests/jelly.py
+$ cp samples/template.py qemu/tests/jelly.py
 
 And then edit the template file accordingly.
 
@@ -104,7 +104,8 @@ plans to package the libs to more distributions.
 Actual documentation website
 ----------------------------
 
-https://github.com/autotest/virt-test/wiki
+http://virt-test.readthedocs.org/en/latest/index.html
+
 
 Description
 -----------
@@ -155,6 +156,9 @@ your checked out copy to upstream's master by running::
 $ git checkout master
 $ git pull
 
+You can also update your tests (both qemu, libvirt and others) by doing::
+
+$ ./run -t qemu --bootstrap --update-providers
 
 And then, reset you configuration. If you're going to run qemu tests, run::
 
