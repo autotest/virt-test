@@ -101,11 +101,6 @@ plans to package the libs to more distributions.
 
 [4] JeOS: Minimal guest OS image (x86_64)
 
-Actual documentation website
-----------------------------
-
-http://virt-test.readthedocs.org/en/latest/index.html
-
 
 Description
 -----------
@@ -166,3 +161,36 @@ $ ./run -t qemu --update-config
 
 If you're still having problems after these basic troubleshoot steps,
 please contact us!
+
+
+Documentation
+-------------
+
+Virt Test comes with in tree documentation, that can be built with ``sphinx``.
+A publicly available build of the latest master branch documentation and
+releases can be seen on `read the docs <https://readthedocs.org/>`__:
+
+http://virt-test.readthedocs.org/en/latest/index.html
+
+If you want to build the documentation, here are the instructions:
+
+1) Make sure you have the package ``python-sphinx`` installed. For Fedora::
+
+    $ sudo yum install python-sphinx
+
+2) For Ubuntu/Debian::
+
+    $ sudo apt-get install python-sphinx
+
+3) Optionally, you can install the read the docs theme, that will make your
+   in-tree documentation to look just like in the online version::
+
+    $ sudo pip install sphinx_rtd_theme
+
+4) Build the docs::
+
+    $ make -C documentation html
+
+5) Once done, point your browser to::
+
+    $ [your-browser] docs/build/html/index.html
