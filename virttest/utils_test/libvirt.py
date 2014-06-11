@@ -291,7 +291,7 @@ def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
     _nfs = nfs.Nfs(nfs_params)
     # Set selinux to permissive that the file in nfs
     # can be used freely
-    if utils_misc.selinux_enforcing():
+    if utils_selinux.is_enforcing():
         sv_status = utils_selinux.get_status()
         utils_selinux.set_status("permissive")
     if is_setup:
@@ -330,7 +330,7 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
     _iscsi = iscsi.Iscsi(iscsi_params)
     if is_setup:
         sv_status = None
-        if utils_misc.selinux_enforcing():
+        if utils_selinux.is_enforcing():
             sv_status = utils_selinux.get_status()
             utils_selinux.set_status("permissive")
         _iscsi.export_target()
