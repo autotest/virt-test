@@ -25,6 +25,7 @@ from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
 import data_dir
+import utils_selinux
 try:
     from staging import utils_koji
 except ImportError:
@@ -2016,11 +2017,15 @@ def verify_running_as_root():
 
 def selinux_enforcing():
     """
+    Deprecated function
+
     Returns True if SELinux is in enforcing mode, False if permissive/disabled
+
+    Alias to utils_selinux.is_enforcing()
     """
-    cmdresult = utils.run('getenforce', ignore_status=True, verbose=False)
-    mobj = re.search('Enforcing', cmdresult.stdout)
-    return mobj is not None
+    logging.warning("This function was deprecated, Please use "
+                    "utils_selinux.is_enforcing().")
+    return utils_selinux.is_enforcing()
 
 
 def get_winutils_vol(session, label="WIN_UTILS"):
