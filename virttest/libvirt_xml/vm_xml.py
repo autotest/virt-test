@@ -435,6 +435,38 @@ class VMXML(VMXMLBase):
         return vm
 
     @staticmethod
+    def set_pm_suspend(vm_name, s3=True, s4=True, virsh_instance=base.virsh):
+        """
+        Add/set pm suspend Support
+
+        :params vm_name: Name of defined vm
+        :params s3: Enable suspend to memory
+        :params s4: Enable suspend to disk
+        """
+        enabled_v = {True: "yes", False: "no"}
+        mem_enabled = enabled_v[s3]
+        disk_enabled = enabled_v[s4]
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        xmltreefile = vmxml.__dict_get__('xml')
+        pm = xmltreefile.find('pm')
+        if not pm:
+            pm = xml_utils.ElementTree.SubElement(xmltreefile.getroot(), 'pm')
+        try:
+            suspend_to_mem = pm.find('suspend-to-mem')
+            suspend_to_mem.set('enabled', mem_enabled)
+        except AttributeError:
+            xml_utils.ElementTree.SubElement(pm, 'suspend-to-mem', {'enabled': mem_enabled})
+        try:
+            suspend_to_disk = pm.find('suspend-to-disk')
+            suspend_to_disk.set('enabled', disk_enabled)
+        except AttributeError:
+            xml_utils.ElementTree.SubElement(pm, 'suspend-to-disk', {'enabled': disk_enabled})
+
+        xmltreefile.write()
+        vmxml.undefine()
+        vmxml.define()
+
+    @staticmethod
     def set_vm_vcpus(vm_name, value, current=None, virsh_instance=base.virsh):
         """
         Convenience method for updating 'vcpu' and 'current' attribute property
