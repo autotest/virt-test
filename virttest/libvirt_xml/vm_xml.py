@@ -103,7 +103,7 @@ class VMXMLBase(base.LibvirtXMLBase):
     __slots__ = ('hypervisor_type', 'vm_name', 'uuid', 'vcpu', 'max_mem',
                  'current_mem', 'numa', 'devices', 'seclabel',
                  'cputune', 'placement', 'current_vcpu', 'os', 'os_type',
-                 'os_arch', 'os_init')
+                 'os_arch', 'os_init', 'pm')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -184,6 +184,13 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  parent_xpath='/',
                                  tag_name='cputune',
                                  subclass=VMCPUTune,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
+        accessors.XMLElementNest(property_name='pm',
+                                 libvirtxml=self,
+                                 parent_xpath='/',
+                                 tag_name='pm',
+                                 subclass=VMPM,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
@@ -433,6 +440,24 @@ class VMXML(VMXMLBase):
         # Keep names uniform
         vm.name = new_name
         return vm
+
+    @staticmethod
+    def set_pm_suspend(vm_name, mem="yes", disk="yes", virsh_instance=base.virsh):
+        """
+        Add/set pm suspend Support
+
+        :params vm_name: Name of defined vm
+        :params mem: Enable suspend to memory
+        :params disk: Enable suspend to disk
+        """
+        # Build a instance of class VMPM.
+        pm = VMPM()
+        pm.mem_enabled = mem
+        pm.disk_enabled = disk
+        # Set pm to the new instance.
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        vmxml.pm = pm
+        vmxml.sync()
 
     @staticmethod
     def set_vm_vcpus(vm_name, value, current=None, virsh_instance=base.virsh):
@@ -1217,3 +1242,24 @@ class VMCPUTune(base.LibvirtXMLBase):
         if tag != 'vcpupin':
             return None
         return dict(attr_dict)
+
+
+class VMPM(base.LibvirtXMLBase):
+
+    """
+    VM power management tag XML class
+
+    Elements:
+        suspend-to-disk:        attribute    - enabled
+        suspend-to-mem:         attribute    - enabled
+    """
+
+    __slots__ = ('disk_enabled', 'mem_enabled')
+
+    def __init__(self, virsh_instance=base.virsh):
+        accessors.XMLAttribute('disk_enabled', self, parent_xpath='/',
+                               tag_name='suspend-to-disk', attribute='enabled')
+        accessors.XMLAttribute('mem_enabled', self, parent_xpath='/',
+                               tag_name='suspend-to-mem', attribute='enabled')
+        super(self.__class__, self).__init__(virsh_instance=virsh_instance)
+        self.xml = '<pm/>'
