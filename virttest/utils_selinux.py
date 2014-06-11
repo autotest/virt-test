@@ -133,6 +133,20 @@ def is_not_disabled():
     return not is_disabled()
 
 
+def is_enforcing():
+    """
+    Return true if the selinux is enforcing.
+    """
+    return (get_status() == "enforcing")
+
+
+def is_permissive():
+    """
+    Return true if the selinux is permissive.
+    """
+    return (get_status() == "permissive")
+
+
 def get_context_from_str(context):
     """
     Get the context in a context.

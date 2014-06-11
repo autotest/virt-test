@@ -22,6 +22,7 @@ import virsh
 import libvirt_xml
 import data_dir
 import xml_utils
+import utils_selinux
 
 
 def normalize_connect_uri(connect_uri):
@@ -1212,7 +1213,7 @@ class VM(virt_vm.BaseVM):
                                      "instead." % details.result_obj)
                             raise error.TestNAError(e_msg)
                 if stderr.count('failed to launch bridge helper'):
-                    if utils_misc.selinux_enforcing():
+                    if utils_selinux.is_enforcing():
                         raise error.TestNAError("SELinux is enabled and "
                                                 "preventing the bridge "
                                                 "helper from accessing "
