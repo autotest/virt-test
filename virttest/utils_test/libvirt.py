@@ -962,3 +962,42 @@ def check_iface(iface_name, checkpoint, extra=""):
     except Exception, detail:
         raise error.TestFail("Interface check failed: %s" % detail)
     return check_pass
+
+
+def attach_cdrom(vm_name, media=""):
+    """
+    Attach a CDROM disk to a domain.
+    """
+    if not media:
+        tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
+        media = os.path.join(tmpdir, "cdrom.iso")
+        utils.run("qemu-img create %s %s" % (media, "1M"))
+    option = "--type cdrom --sourcetype file --driver qemu --config"
+    result = virsh.attach_disk(vm_name, media, 'hdc', option, debug=True)
+    if result.exit_status != 0:
+        raise error.TestFail("Attach CDROM failed")
+    return media
+
+
+def eject_cdrom(vm_name):
+    """
+    Eject the CDROM by virsh attach-device command.
+    """
+    tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
+    eject_xml = os.path.join(tmpdir, "eject_cdrom.xml")
+    disk_class = vm_xml.VMXML.get_device_class('disk')
+    disk = disk_class(type_name='file')
+    disk.device = "cdrom"
+    disk.driver = dict(name='qemu')
+    disk.target = dict(bus='ide', dev='hdc')
+    disk.xmltreefile.write()
+    shutil.copyfile(disk.xml, eject_xml)
+    logging.debug("Eject CDROM by XML: %s", open(eject_xml).read())
+    # Run command tiwce to make sure cdrom tray open first #BZ892289
+    # Open tray
+    virsh.attach_device(domainarg=vm_name, filearg=eject_xml, debug=True)
+    # Eject cdrom
+    result = virsh.attach_device(domainarg=vm_name, filearg=eject_xml,
+                                 debug=True)
+    if result.exit_status != 0:
+        raise error.TestFail("Eject CDROM failed")
