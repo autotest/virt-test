@@ -22,11 +22,23 @@ class Disk(base.TypedDeviceBase):
             string, "filtered" or "unfiltered"
         snapshot:
             string, "yes", "no", "internal" or "external"
+        wwn:
+            string.
+        serial:
+            string.
+        vendor:
+            string.
+        product:
+            string.
         driver:
             dict, keys: name, type, cache, error_policy, io, ioeventfd,
             event_idx, copy_on_read, discard
         target:
             dict, keys: dev, bus, tray
+        blockio:
+            dict, keys: logical_block_size, physical_block_size
+        geometry:
+            dict, keys: cyls, heads, secs, trans
         address:
             libvirt_xml.devices.Address instance
         boot:
@@ -49,7 +61,8 @@ class Disk(base.TypedDeviceBase):
 
     __slots__ = ('device', 'rawio', 'sgio', 'snapshot', 'driver', 'target',
                  'address', 'boot', 'readonly', 'transient', 'share',
-                 'mirror', 'ready', 'iotune', 'source')
+                 'mirror', 'ready', 'iotune', 'source', 'blockio', 'geometry',
+                 'wwn', 'serial', 'vendor', 'product')
 
     def __init__(self, type_name='file', virsh_instance=base.base.virsh):
         accessors.XMLAttribute('device', self, parent_xpath='/',
@@ -60,10 +73,22 @@ class Disk(base.TypedDeviceBase):
                                tag_name='disk', attribute='sgio')
         accessors.XMLAttribute('snapshot', self, parent_xpath='/',
                                tag_name='disk', attribute='snapshot')
+        accessors.XMLElementText('wwn', self, parent_xpath='/',
+                                 tag_name='wwn')
+        accessors.XMLElementText('serial', self, parent_xpath='/',
+                                 tag_name='serial')
+        accessors.XMLElementText('vendor', self, parent_xpath='/',
+                                 tag_name='vendor')
+        accessors.XMLElementText('product', self, parent_xpath='/',
+                                 tag_name='product')
         accessors.XMLElementDict('driver', self, parent_xpath='/',
                                  tag_name='driver')
         accessors.XMLElementDict('target', self, parent_xpath='/',
                                  tag_name='target')
+        accessors.XMLElementDict('blockio', self, parent_xpath='/',
+                                 tag_name='blockio')
+        accessors.XMLElementDict('geometry', self, parent_xpath='/',
+                                 tag_name='geometry')
         accessors.XMLElementNest('address', self, parent_xpath='/',
                                  tag_name='address', subclass=self.Address,
                                  subclass_dargs={'type_name': 'drive',

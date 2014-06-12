@@ -11,7 +11,8 @@ from virttest.libvirt_xml.devices import base
 class Interface(base.TypedDeviceBase):
 
     __slots__ = ('source', 'mac_address', 'bandwidth_inbound',
-                 'bandwidth_outbound', 'portgroup', 'model')
+                 'bandwidth_outbound', 'portgroup', 'model',
+                 'driver')
 
     def __init__(self, type_name, virsh_instance=base.base.virsh):
         super(Interface, self).__init__(device_tag='interface',
@@ -22,6 +23,11 @@ class Interface(base.TypedDeviceBase):
                                  forbidden=None,
                                  parent_xpath='/',
                                  tag_name='source')
+        accessors.XMLElementDict(property_name="driver",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='driver')
         accessors.XMLAttribute(property_name="mac_address",
                                libvirtxml=self,
                                forbidden=None,
