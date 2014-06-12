@@ -36,6 +36,8 @@ from virttest import gluster
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
+from virttest.libvirt_xml import xcepts
+from virttest.libvirt_xml.devices import disk
 from __init__ import ping
 try:
     from autotest.client import lv_utils
@@ -962,3 +964,135 @@ def check_iface(iface_name, checkpoint, extra=""):
     except Exception, detail:
         raise error.TestFail("Interface check failed: %s" % detail)
     return check_pass
+
+
+def create_disk_xml(params):
+    """
+    Create a disk configuration file.
+    """
+    # Create attributes dict for disk's address element
+    type_name = params.get("type_name", "file")
+    source_file = params.get("source_file")
+    target_dev = params.get("target_dev", "vdb")
+    target_bus = params.get("target_bus", "virtio")
+    diskxml = disk.Disk(type_name)
+    diskxml.device = params.get("device_type", "disk")
+    diskxml.source = diskxml.new_disk_source(attrs={'file': source_file})
+    diskxml.target = {'dev': target_dev, 'bus': target_bus}
+    logging.debug("Disk XML:\n%s", str(diskxml))
+    return diskxml.xml
+
+
+def attach_additional_device(vm_name, targetdev, disk_path, params):
+    """
+    Create a disk with disksize, then attach it to given vm.
+
+    :param vm_name: Libvirt VM name.
+    :param disk_path: path of attached disk
+    :param targetdev: target of disk device
+    :param params: dict include necessary configurations of device
+    """
+    logging.info("Attaching disk...")
+
+    # Update params for source file
+    params['source_file'] = disk_path
+    params['target_dev'] = targetdev
+
+    # Create a file of device
+    xmlfile = create_disk_xml(params)
+
+    # To confirm attached device do not exist.
+    virsh.detach_disk(vm_name, targetdev, extra="--config")
+
+    return virsh.attach_device(domain_opt=vm_name, file_opt=xmlfile,
+                               flagstr="--config", debug=True)
+
+
+def device_exists(vm, target_dev):
+    """
+    Check if given target device exists on vm.
+    """
+    targets = vm.get_blk_devices().keys()
+    if target_dev in targets:
+        return True
+    return False
+
+
+def create_local_disk(disk_type, path=None, size=10,
+                      vgname=None, lvname=None):
+    if disk_type == "file":
+        utils.run("mkdir -p %s" % os.path.dirname(path))
+        cmd = "qemu-img create %s %sG" % (path, size)
+    else:
+        cmd = "lvcreate -V %sG %s --name %s --size 1M" % (size,
+                                                          vgname,
+                                                          lvname)
+        path = "/dev/%s/%s" % (vgname, lvname)
+    result = utils.run(cmd, ignore_status=True)
+    if result.exit_status:
+        raise error.TestFail("Create image '%s' on local host failed." % path)
+    else:
+        return path
+
+
+def delete_local_disk(disk_type, path=None):
+    if disk_type == "file":
+        cmd = "rm -f %s" % path
+    else:
+        cmd = "lvremove -f %s" % path
+    utils.run(cmd, ignore_status=True)
+
+
+def attach_disks(vm, path, vgname, params):
+    """
+    Attach multiple disks.According parameter disk_type in params,
+    it will create lvm or file type disks.
+
+    :param path: file type disk's path
+    :param vgname: lvm type disk's volume group name
+    """
+    # Additional disk on vm
+    disks_count = int(params.get("added_disks_count", 1)) - 1
+    disk_size = params.get("added_disk_size", "0.1")
+    disk_type = params.get("added_disk_type", "file")
+    target_list = []
+    index = 0
+    while len(target_list) < disks_count:
+        target_dev = "vd%s" % chr(ord('a') + index)
+        if not device_exists(vm, target_dev):
+            target_list.append(target_dev)
+        index += 1
+
+    # A dict include disks information: source file and size
+    added_disks = {}
+    for target_dev in target_list:
+        disk_params = {}
+        disk_params['type_name'] = disk_type
+        device_name = "%s_%s" % (target_dev, vm.name)
+        disk_path = os.path.join(os.path.dirname(path), device_name)
+        disk_path = create_local_disk(disk_type,
+                                      disk_path, disk_size,
+                                      vgname, device_name)
+        added_disks[disk_path] = disk_size
+        result = attach_additional_device(vm.name,
+                                          target_dev, disk_path, disk_params)
+        if result.exit_status:
+            raise error.TestFail("Attach device %s failed."
+                                 % target_dev)
+    logging.debug("New VM XML:\n%s", vm.get_xml())
+    return added_disks
+
+
+def define_new_vm(vm_name, new_name):
+    """
+    Just define a new vm from given name
+    """
+    try:
+        vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
+        vmxml.vm_name = new_name
+        del vmxml.uuid
+        vmxml.define()
+        return True
+    except xcepts.LibvirtXMLError, detail:
+        logging.error(detail)
+        return False

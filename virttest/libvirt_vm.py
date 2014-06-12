@@ -1721,6 +1721,27 @@ class VM(virt_vm.BaseVM):
                     'source': linesplit[3]}
         return disk
 
+    def get_device_details(self, device_target):
+        device_details = {}
+        result = virsh.domblkinfo(self.name, device_target,
+                                  uri=self.connect_uri)
+        details = result.stdout.strip().splitlines()
+        if result.exit_status != 0:
+            logging.info("Get vm device details failed.")
+        else:
+            for line in details:
+                attrs = line.split(":")
+                device_details[attrs[0].strip()] = attrs[-1].strip()
+        return device_details
+
+    def get_device_size(self, device_target):
+        domblkdict = self.get_blk_devices()
+        if device_target not in domblkdict.keys():
+            return None
+        path = domblkdict[device_target]["source"]
+        size = self.get_device_details(device_target)["Capacity"]
+        return path, size
+
     def get_max_mem(self):
         """
         Get vm's maximum memory(kilobytes).
