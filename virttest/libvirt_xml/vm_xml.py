@@ -103,7 +103,8 @@ class VMXMLBase(base.LibvirtXMLBase):
     __slots__ = ('hypervisor_type', 'vm_name', 'uuid', 'vcpu', 'max_mem',
                  'current_mem', 'numa', 'devices', 'seclabel',
                  'cputune', 'placement', 'current_vcpu', 'os', 'os_type',
-                 'os_arch', 'os_init', 'pm')
+                 'os_arch', 'os_init', 'os_boot', 'os_loader', 'os_bios',
+                 'pm')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -169,11 +170,26 @@ class VMXMLBase(base.LibvirtXMLBase):
                                parent_xpath='/os',
                                tag_name='type',
                                attribute='arch')
+        accessors.XMLElementDict(property_name="os_boot",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/os',
+                                 tag_name='boot')
         accessors.XMLElementText(property_name="os_init",
                                  libvirtxml=self,
                                  forbidden=None,
                                  parent_xpath='/os',
                                  tag_name='init')
+        accessors.XMLElementText(property_name="os_loader",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/os',
+                                 tag_name='loader')
+        accessors.XMLElementDict(property_name="os_bios",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/os',
+                                 tag_name='bios')
         accessors.XMLElementDict(property_name="numa",
                                  libvirtxml=self,
                                  forbidden=None,
@@ -937,7 +953,7 @@ class VMXML(VMXMLBase):
                 devices.remove(device)
                 break
         if not_found:
-            logging.debug("Device %s does not exist in VM %s." % self)
+            logging.debug("Device %s does not exist in VM %s.", value, self)
             return
         self.set_devices(devices)
 
