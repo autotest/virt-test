@@ -1142,7 +1142,7 @@ def renew_guest_ip(session, mac_addr, os_type="linux", ip_version="ipv4"):
 
 def set_net_if_ip(if_name, ip_addr, runner=None):
     """
-    Get network device ip addresses. ioctl not used because there is
+    Set network device ip addresses. ioctl not used because there is
     incompatibility with ipv6.
 
     :param if_name: Name of interface.
@@ -1152,6 +1152,23 @@ def set_net_if_ip(if_name, ip_addr, runner=None):
     if runner is None:
         runner = local_runner
     cmd = "ip addr add %s dev %s" % (ip_addr, if_name)
+    try:
+        runner(cmd)
+    except error.CmdError, e:
+        raise IfChangeAddrError(if_name, ip_addr, e)
+
+
+def del_net_if_ip(if_name, ip_addr, runner=None):
+    """
+    Delete network device ip addresses.
+
+    :param if_name: Name of interface.
+    :param ip_addr: Interface ip addr in format "ip_address/mask".
+    :raise: IfChangeAddrError.
+    """
+    if runner is None:
+        runner = local_runner
+    cmd = "ip addr del %s dev %s" % (ip_addr, if_name)
     try:
         runner(cmd)
     except error.CmdError, e:
