@@ -905,7 +905,12 @@ class RemoteFile(object):
         backup_file.close()
 
         # Get file from remote.
-        self._pull_file()
+        try:
+            self._pull_file()
+        except SCPTransferFailedError:
+            # Remote file doesn't exist, create empty file on local
+            self._write_local([])
+
         # Save a backup.
         shutil.copy(self.local_path, self.backup_path)
 
@@ -994,6 +999,24 @@ class RemoteFile(object):
             for index in range(len(lines)):
                 line = lines[index]
                 lines[index] = re.sub(pattern, repl, line)
+        self._write_local(lines)
+        self._push_file()
+
+    def truncate(self, length=0):
+        """
+        Truncate the detail of remote file to assigned length
+        Content before
+        line 1
+        line 2
+        line 3
+        remote_file.truncate(length=1)
+        Content after
+        line 1
+
+        :param length: how many lines you want to keep
+        """
+        lines = self._read_local()
+        lines = lines[0: length]
         self._write_local(lines)
         self._push_file()
 
