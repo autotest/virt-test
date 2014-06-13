@@ -933,7 +933,7 @@ class VM(virt_vm.BaseVM):
         else:
             try:
                 grub = "/etc/grub.cfg"
-                if session.cmd_status("ls /etc/grub2.cfg"):
+                if not session.cmd_status("ls /etc/grub2.cfg"):
                     grub = "/etc/grub2.cfg"
                 kernel_params = "console=%s" % device
                 if speed is not None:
