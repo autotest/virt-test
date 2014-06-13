@@ -1438,6 +1438,19 @@ class NumaNode(object):
             logging.info("    %s: %s" % (i, self.dict[i]))
 
 
+def get_dev_major_minor(dev):
+    """
+    Get the major and minor numbers of the device
+    @return: Tuple(major, minor) numbers of the device
+    """
+    try:
+        rdev = os.stat(dev).st_rdev
+        return (os.major(rdev), os.minor(rdev))
+    except IOError, details:
+        raise error.TestError("Fail to get major and minor numbers of the "
+                              "device %s:\n%s" % (dev, details))
+
+
 class Flag(str):
 
     """
