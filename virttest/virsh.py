@@ -140,9 +140,6 @@ class VirshSession(aexpect.ShellSession):
         self.remote_user = remote_user
         self.remote_pwd = remote_pwd
 
-        if virsh_exec is None:
-            virsh_exec = VIRSH_EXEC
-
         # Special handling if setting up a remote session
         if ssh_remote_auth:  # remote to remote
             if remote_pwd:
