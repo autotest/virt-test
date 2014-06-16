@@ -331,13 +331,7 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
                     "image_size": image_size, "iscsi_thread_id": "virt"}
     _iscsi = iscsi.Iscsi(iscsi_params)
     if is_setup:
-        sv_status = None
-        if utils_selinux.is_enforcing():
-            sv_status = utils_selinux.get_status()
-            utils_selinux.set_status("permissive")
         _iscsi.export_target()
-        if sv_status is not None:
-            utils_selinux.set_status(sv_status)
         if is_login:
             _iscsi.login()
             # The device doesn't necessarily appear instantaneously, so give

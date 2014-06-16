@@ -8,6 +8,7 @@ except ImportError:
     import common
 
 import iscsi
+from virttest import utils_selinux
 from autotest.client.shared.test_utils import mock
 from autotest.client import os_dep
 from autotest.client.shared import utils
@@ -74,6 +75,7 @@ class iscsi_test(unittest.TestCase):
     def setup_stubs_export_target(self, iscsi_obj):
         s_cmd = "tgtadm --lld iscsi --mode target --op show"
         utils.system_output.expect_call(s_cmd).and_return("")
+        utils_selinux.is_enforcing.expect_call().and_return(False)
         utils.system_output.expect_call(s_cmd).and_return("")
         t_cmd = "tgtadm --mode target --op new --tid"
         t_cmd += " %s --lld iscsi " % iscsi_obj.emulated_id
@@ -110,6 +112,7 @@ class iscsi_test(unittest.TestCase):
         self.god.stub_function(utils, "system")
         self.god.stub_function(utils, "system_output")
         self.god.stub_function(os.path, "isfile")
+        self.god.stub_function(utils_selinux, "is_enforcing")
 
     def tearDown(self):
         self.god.unstub_all()

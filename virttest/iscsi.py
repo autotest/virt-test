@@ -13,6 +13,7 @@ import os
 import logging
 from autotest.client import os_dep
 from autotest.client.shared import utils, error
+from virttest import utils_selinux
 
 
 def iscsi_get_sessions():
@@ -225,6 +226,8 @@ class Iscsi(object):
         """
         Export target in localhost for emulated iscsi
         """
+        selinux_mode = None
+
         if not os.path.isfile(self.emulated_image):
             utils.system(self.create_cmd)
         else:
@@ -240,6 +243,13 @@ class Iscsi(object):
             output = utils.system_output(cmd)
         if not re.findall("%s$" % self.target, output, re.M):
             logging.debug("Need to export target in host")
+
+            # Set selinux to permissive mode to make sure iscsi target
+            # export successfully
+            if utils_selinux.is_enforcing():
+                selinux_mode = utils_selinux.get_status()
+                utils_selinux.set_status("permissive")
+
             output = utils.system_output(cmd)
             used_id = re.findall("Target\s+(\d+)", output)
             emulated_id = 1
@@ -278,6 +288,10 @@ class Iscsi(object):
             cmd += "--backing-store %s" % self.emulated_image
             utils.system(cmd)
             self.export_flag = True
+
+        # Restore selinux
+        if selinux_mode is not None:
+            utils_selinux.set_status(selinux_mode)
 
     def delete_target(self):
         """
