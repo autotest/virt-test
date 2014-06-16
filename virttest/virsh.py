@@ -3715,15 +3715,15 @@ def sendkey(name, options="", **dargs):
     return command(cmd, **dargs)
 
 
-def create(name, options="", **dargs):
+def create(xmlfile, options="", **dargs):
     """
     Create guest from xml
 
-    :param name: name of domain
+    :param xmlfile: domain xml file
     :param options: --paused
     :return: CmdResult object
     """
-    cmd = "create %s %s" % (name, options)
+    cmd = "create %s %s" % (xmlfile, options)
     return command(cmd, **dargs)
 
 
