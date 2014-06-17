@@ -977,7 +977,11 @@ def create_disk_xml(params):
     target_bus = params.get("target_bus", "virtio")
     diskxml = disk.Disk(type_name)
     diskxml.device = params.get("device_type", "disk")
-    diskxml.source = diskxml.new_disk_source(attrs={'file': source_file})
+    if type_name == "file":
+        source_type = "file"
+    else:
+        source_type = "dev"
+    diskxml.source = diskxml.new_disk_source(attrs={source_type: source_file})
     diskxml.target = {'dev': target_dev, 'bus': target_bus}
     logging.debug("Disk XML:\n%s", str(diskxml))
     return diskxml.xml
