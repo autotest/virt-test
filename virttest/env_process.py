@@ -94,7 +94,7 @@ def preprocess_vm(test, params, env, name):
     old_vm = copy.copy(vm)
 
     if vm_type == 'libvirt':
-        if not vm.exists() and (params.get("type") != "unattended_install" or
+        if not vm.exists() and (params.get("type") != "unattended_install" and
                                 params.get("type") != "svirt_install"):
             error_msg = "Test VM %s does not exist." % name
             if name == params.get("main_vm"):
