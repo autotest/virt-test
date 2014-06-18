@@ -170,11 +170,8 @@ class Cgroup(object):
         :param args: Executed command's parameters
         """
         try:
-            args_str = ""
-            if len(args):
-                args_str = " ".join(args)
             cgexec_cmd = ("cgexec -g %s:%s %s %s" %
-                          (self.module, cgroup, cmd, args_str))
+                          (self.module, cgroup, cmd, args))
             status, output = commands.getstatusoutput(cgexec_cmd)
             return status, output
         except error.CmdError, detail:
