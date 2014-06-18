@@ -486,3 +486,27 @@ class PoolVolume(object):
         else:
             logging.info("Volume '%s' does not exist.", name)
             return True     # Return True for expected result
+
+    def clone_volume(self, old_name, new_name):
+        """
+        Clone a volume
+        """
+        if self.volume_exists(old_name) and not self.volume_exists(new_name):
+            try:
+                self.virsh_instance.vol_clone(old_name, new_name,
+                                              self.pool_name,
+                                              ignore_status=False)
+            except error.CmdError, detail:
+                logging.error("Clone volume failed:%s", detail)
+                return False
+            if self.volume_exists(new_name):
+                logging.debug("Volume '%s' has been created by clone.",
+                              new_name)
+                return True
+            else:
+                logging.debug("Volume '%s' clone failed.", old_name)
+                return False
+        else:
+            logging.info("Volume '%s' does not exist or '%s' has been exist."
+                         % (old_name, new_name))
+            return False
