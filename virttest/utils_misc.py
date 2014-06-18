@@ -1518,6 +1518,47 @@ def kvm_flags_to_stresstests(flags):
     return param
 
 
+def set_cpu_status(cpu_num, enable=True):
+    """
+    Set assigned cpu to be enable or disable
+    """
+    if cpu_num == 0:
+        raise error.TestNAError("The 0 cpu cannot be set!")
+    cpu_status = get_cpu_status(cpu_num)
+    if cpu_status == -1:
+        return False
+    cpu_file = "/sys/devices/system/cpu/cpu%s/online" % cpu_num
+    cpu_enable = 1 if enable else 0
+    if cpu_status == cpu_enable:
+        logging.debug("No need to set, %s has already been '%s'"
+                      % (cpu_file, cpu_enable))
+        return True
+    try:
+        cpu_file_w = open(cpu_file, 'w')
+        cpu_file_w.write("%s" % cpu_enable)
+        cpu_file_w.close()
+    except IOError:
+        return False
+    return True
+
+
+def get_cpu_status(cpu_num):
+    """
+    Get cpu status to check it's enable or disable
+    """
+    if cpu_num == 0:
+        logging.debug("The 0 cpu always be enable.")
+        return 1
+    cpu_file = "/sys/devices/system/cpu/cpu%s/online" % cpu_num
+    if not os.path.exists(cpu_file):
+        logging.debug("'%s' cannot be found!" % cpu_file)
+        return -1
+    cpu_file_r = open(cpu_file, 'r')
+    cpu_status = int(cpu_file_r.read().strip())
+    cpu_file_r.close()
+    return cpu_status
+
+
 def get_cpu_flags(cpu_info=""):
     """
     Returns a list of the CPU flags
