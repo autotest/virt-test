@@ -1297,6 +1297,8 @@ class VM(virt_vm.BaseVM):
             # Is it already dead?
             if self.is_alive():
                 logging.debug("Destroying VM")
+                if self.is_paused():
+                    self.resume()
                 if (not self.is_lxc() and gracefully and
                         self.params.get("shutdown_command")):
                     # Try to destroy with shell command
