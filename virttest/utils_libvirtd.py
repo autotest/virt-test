@@ -58,16 +58,18 @@ class Libvirtd(object):
 
     def start(self):
         # pylint: disable=E1103
-        self.libvirtd.start()
+        if not self.libvirtd.start():
+            return False
         return self._wait_for_start()
 
     def stop(self):
         # pylint: disable=E1103
-        self.libvirtd.stop()
+        return self.libvirtd.stop()
 
     def restart(self):
         # pylint: disable=E1103
-        self.libvirtd.restart()
+        if not self.libvirtd.restart():
+            return False
         return self._wait_for_start()
 
     def is_running(self):
