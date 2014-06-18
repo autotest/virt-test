@@ -43,6 +43,9 @@ _screendump_thread_termination_event = None
 _vm_register_thread = None
 _vm_register_thread_termination_event = None
 
+kernel_modified = False
+kernel_cmdline = None
+
 
 def preprocess_image(test, params, image_name, vm_process_status=None):
     """
@@ -189,6 +192,49 @@ def preprocess_vm(test, params, env, name):
 
     if pause_vm:
         vm.pause()
+
+    if params.get("check_kernel_cmd_line_from_serial") == "yes":
+        debug_msg = ""
+        if vm.is_paused():
+            debug_msg += "VM is paused."
+        elif not vm.is_alive():
+            debug_msg += "VM is not alive."
+        elif vm.serial_console is None:
+            debug_msg += "There is no serial console in VM."
+        if debug_msg:
+            debug_msg += " Skip the kernel command line check."
+            logging.warn(debug_msg)
+            return
+        cmd_line = params.get("kernel_cmd_line_str", "Command line:")
+        try:
+            output = vm.serial_console.read_until_output_matches(cmd_line,
+                                                                 timeout=60)
+
+            kernel_cmd_line = re.findall("%s.*" % cmd_line, output[1])[0]
+            kernel_options_exist = params.get("kernel_options_exist", "")
+            kernel_options_not_exist = params.get("kernel_options_not_exist",
+                                                  "")
+
+            err_msg = ""
+            for kernel_option in kernel_options_exist.split():
+                if kernel_option not in kernel_cmd_line:
+                    err_msg += "%s not in kernel command line" % kernel_option
+                    err_msg += " as expect."
+            for kernel_option in kernel_options_not_exist.split():
+                if kernel_option in kernel_cmd_line:
+                    err_msg += "%s exist in kernel command" % kernel_option
+                    err_msg += " line."
+            if err_msg:
+                err_msg += " Kernel command line get from"
+                err_msg += " serial output is %s" % kernel_cmd_line
+                raise error.TestError(err_msg)
+
+            logging.info("Kernel command line get from serial port is"
+                         " as expect")
+        except Exception, err:
+            logging.warn("Did not get the kernel command line from serial "
+                         "port output. Skip the kernel command line check."
+                         "Error is %s" % err)
 
 
 def postprocess_image(test, params, image_name, vm_process_status=None):
@@ -643,47 +689,22 @@ def preprocess(test, params, env):
                         int(params.get("pre_command_timeout", "600")),
                         params.get("pre_command_noncritical") == "yes")
 
-    # if you want set "pci=nomsi" before test, set "disable_pci_msi = yes"
-    # and pci_msi_sensitive = "yes"
-    if params.get("pci_msi_sensitive", "no") == "yes":
-        disable_pci_msi = params.get("disable_pci_msi", "no")
-        image_filename = storage.get_image_filename(params,
-                                                    data_dir.get_data_dir())
-        grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
-        kernel_cfg_pos_reg = params.get("kernel_cfg_pos_reg",
-                                        r".*vmlinuz-\d+.*")
-        msi_keyword = params.get("msi_keyword", " pci=nomsi")
-
-        disk_obj = utils_disk.GuestFSModiDisk(image_filename)
-        kernel_config_ori = disk_obj.read_file(grub_file)
-        kernel_config = re.findall(kernel_cfg_pos_reg, kernel_config_ori)
-        if not kernel_config:
-            raise error.TestError("Cannot find the kernel config, reg is %s" %
-                                  kernel_cfg_pos_reg)
-        kernel_config_line = kernel_config[0]
-
-        kernel_need_modify = False
+    kernel_extra_params_add = params.get("kernel_extra_params_add")
+    kernel_extra_params_remove = params.get("kernel_extra_params_remove")
+    if params.get("disable_pci_msi"):
+        disable_pci_msi = params.get("disable-pci_msi")
         if disable_pci_msi == "yes":
-            if not re.findall(msi_keyword, kernel_config_line):
-                kernel_config_set = kernel_config_line + msi_keyword
-                kernel_need_modify = True
+            if "pci=" in kernel_extra_params_add:
+                kernel_extra_params_add = re.sub("pci=.*?\s+", "pci=nomsi ",
+                                                 kernel_extra_params_add)
+            else:
+                kernel_extra_params_add += " pci=nomsi"
+            params["ker_remove_similar_pci"] = "yes"
         else:
-            if re.findall(msi_keyword, kernel_config_line):
-                kernel_config_set = re.sub(msi_keyword, "", kernel_config_line)
-                kernel_need_modify = True
+            kernel_extra_params_remove += " pci=nomsi"
 
-        if kernel_need_modify:
-            for vm in env.get_all_vms():
-                if vm:
-                    vm.destroy()
-                    env.unregister_vm(vm.name)
-            disk_obj.replace_image_file_content(grub_file, kernel_config_line,
-                                                kernel_config_set)
-        logging.debug("Guest cmdline 'pci=nomsi' setting is: [ %s ]" %
-                      disable_pci_msi)
-
-    kernel_extra_params = params.get("kernel_extra_params")
-    if kernel_extra_params:
+    if kernel_extra_params_add or kernel_extra_params_remove:
+        global kernel_cmdline, kernel_modified
         image_filename = storage.get_image_filename(params,
                                                     data_dir.get_data_dir())
         grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
@@ -696,22 +717,47 @@ def preprocess(test, params, env):
         if not kernel_config:
             raise error.TestError("Cannot find the kernel config, reg is %s" %
                                   kernel_cfg_pos_reg)
-        kernel_config_line = kernel_config[0]
+        kernel_config = kernel_config[0]
+        kernel_cmdline = kernel_config
 
         kernel_need_modify = False
-        if not re.findall(kernel_extra_params, kernel_config_line):
-            kernel_config_set = kernel_config_line + kernel_extra_params
-            kernel_need_modify = True
+        kernel_config_set = kernel_config
+        debug_msg = "Guest cmdline extra_params setting:"
+        if kernel_extra_params_add:
+            debug_msg += " added '%s'" % kernel_extra_params_add
+            kernel_extra_params = kernel_extra_params_add.split()
+            for kernel_extra_param in kernel_extra_params:
+                param_tag = kernel_extra_param.split("=")[0]
+                params_kernel = params.object_params(param_tag)
+                rm_s = params_kernel.get("ker_remove_similar", "no") == "yes"
+                kernel_config_set = utils_misc.add_ker_cmd(kernel_config_set,
+                                                           kernel_extra_param,
+                                                           rm_s)
+        if kernel_extra_params_remove:
+            debug_msg += " removed '%s'" % kernel_extra_params_remove
+            kernel_extra_params = kernel_extra_params_remove.split()
+            for kernel_extra_param in kernel_extra_params:
+                kernel_config_set = utils_misc.rm_ker_cmd(kernel_config_set,
+                                                          kernel_extra_param)
+
+        if kernel_config_set.strip() != kernel_cmdline.strip():
+                kernel_need_modify = True
 
         if kernel_need_modify:
             for vm in env.get_all_vms():
                 if vm:
                     vm.destroy()
                     env.unregister_vm(vm.name)
-            disk_obj.replace_image_file_content(grub_file, kernel_config_line,
+            disk_obj.replace_image_file_content(grub_file, kernel_config,
                                                 kernel_config_set)
-        logging.debug("Guest cmdline extra_params setting is: [ %s ]" %
-                      kernel_extra_params)
+            kernel_modified = True
+        del disk_obj
+        params["check_kernel_cmd_line_from_serial"] = "yes"
+        if kernel_extra_params_add:
+            params['kernel_options_exist'] = kernel_extra_params_add
+        if kernel_extra_params_remove:
+            params['kernel_options_not_exist'] = kernel_extra_params_remove
+        logging.debug(debug_msg)
 
     # Clone master image from vms.
     base_dir = data_dir.get_data_dir()
@@ -932,6 +978,31 @@ def postprocess(test, params, env):
                 err += "\nPolkit cleanup: %s" % str(details
                                                     ).replace('\\n', '\n  ')
                 logging.error("Unexpected error: %s" % details)
+
+    global kernel_cmdline, kernel_modified
+    if kernel_modified and params.get("restore_kernel_cmd", "yes") == "yes":
+        image_filename = storage.get_image_filename(params,
+                                                    data_dir.get_data_dir())
+        grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
+        kernel_cfg_pos_reg = params.get("kernel_cfg_pos_reg",
+                                        r".*vmlinuz-\d+.*")
+
+        for vm in env.get_all_vms():
+            if vm:
+                vm.destroy()
+
+        disk_obj = utils_disk.GuestFSModiDisk(image_filename)
+        kernel_config_cur = disk_obj.read_file(grub_file)
+        kernel_config = re.findall(kernel_cfg_pos_reg, kernel_config_cur)
+        if not kernel_config:
+            raise error.TestError("Cannot find the kernel config, reg is %s" %
+                                  kernel_cfg_pos_reg)
+        kernel_config = kernel_config[0]
+        disk_obj.replace_image_file_content(grub_file, kernel_config,
+                                            kernel_cmdline)
+        kernel_modified = False
+        del disk_obj
+        logging.debug("Restore the guest cmd line after test.")
 
     # Execute any post_commands
     if params.get("post_command"):
