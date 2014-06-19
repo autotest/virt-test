@@ -6,6 +6,7 @@ http://libvirt.org/formatnetwork.html
 import logging
 from virttest import xml_utils
 from virttest.libvirt_xml import base, xcepts, accessors
+from xml.dom.minidom import parseString
 
 
 class RangeList(list):
@@ -454,6 +455,19 @@ class NetworkXML(NetworkXMLBase):
         network_xml = NetworkXML.new_from_net_dumpxml(network_name,
                                                       virsh_instance)
         return network_xml.uuid
+
+    @staticmethod
+    def get_subsection(network_name, element, virsh_instance=base.virsh):
+        """
+        Return the sub section of Network xml
+
+        :param network_name: Network's name
+        :param element: the sub section head in xml
+        :return: sub section element
+        """
+        network_xml = virsh_instance.net_dumpxml(network_name).stdout.strip()
+        xmldoc = parseString(network_xml)
+        return xmldoc.getElementsByTagName(element)
 
     def debug_xml(self):
         """
