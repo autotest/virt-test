@@ -168,6 +168,8 @@ SUPPORTED_LOG_LEVELS = [
 SUPPORTED_TEST_TYPES = [
     'qemu', 'libvirt', 'libguestfs', 'openvswitch', 'v2v', 'lvsb']
 
+SUPPORTED_LIBVIRT_URIS = ['qemu:///system', 'lxc:///']
+
 SUPPORTED_IMAGE_TYPES = ['raw', 'qcow2', 'qed', 'vmdk']
 
 SUPPORTED_DISK_BUSES = ['ide', 'scsi', 'virtio_blk', 'virtio_scsi', 'lsi_scsi',
@@ -241,6 +243,9 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("-t", "--type", action="store", dest="type",
                            help="Choose test type (%s)" %
                            ", ".join(SUPPORTED_TEST_TYPES))
+        general.add_option("--connect-uri", action="store", dest="uri",
+                           help="Choose test connect uri for libvirt (E.g: %s)" %
+                           ", ".join(SUPPORTED_LIBVIRT_URIS))
         general.add_option("-c", "--config", action="store", dest="config",
                            help=("Explicitly choose a cartesian config. "
                                  "When choosing this, some options will be "

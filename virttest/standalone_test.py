@@ -920,6 +920,9 @@ def run_tests(parser, options):
                     dependencies_satisfied = False
                     break
 
+        if options.uri:
+            dct["connect_uri"] = options.uri
+
         current_status = False
 
         pretty_index = "(%d/%d)" % (index, n_tests)
