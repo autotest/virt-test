@@ -1224,6 +1224,71 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("equal %s %s" % (file1, file2))
 
+    def fill(self, c, len, path):
+        """
+        fill - fill a file with octets
+
+        This command creates a new file called "path". The initial content of
+        the file is "len" octets of "c", where "c" must be a number in the range
+        "[0..255]".
+        """
+        return self.inner_cmd("fill %s %s %s" % (c, len, path))
+
+    def fill_dir(self, dir, nr):
+        """
+        fill-dir - fill a directory with empty files
+
+        This function, useful for testing filesystems, creates "nr" empty files
+        in the directory "dir" with names 00000000 through "nr-1" (ie. each file
+        name is 8 digits long padded with zeroes).
+        """
+        return self.inner_cmd("fill-dir %s %s" % (dir, nr))
+
+    def strings(self, path):
+        """
+        strings - print the printable strings in a file
+
+        This runs the strings(1) command on a file and returns the list of
+        printable strings found.
+        """
+        return self.inner_cmd("strings %s" % path)
+
+    def head(self, path):
+        """
+        head - return first 10 lines of a file
+
+        This command returns up to the first 10 lines of a file as a list of
+        strings.
+        """
+        return self.inner_cmd("head %s" % path)
+
+    def head_n(self, nrlines, path):
+        """
+        head-n - return first N lines of a file
+
+        If the parameter "nrlines" is a positive number, this returns the first
+        "nrlines" lines of the file "path".
+        """
+        return self.inner_cmd("head-n %s %s" % (nrlines, path))
+
+    def tail(self, path):
+        """
+        tail - return last 10 lines of a file
+
+        This command returns up to the last 10 lines of a file as a list of
+        strings.
+        """
+        return self.inner_cmd("tail %s" % path)
+
+    def pread(self, path, count, offset):
+        """
+        pread - read part of a file
+
+        This command lets you read part of a file. It reads "count" bytes of the
+        file, starting at "offset", from file "path".
+        """
+        return self.inner_cmd("pread %s %s %s" % (path, count, offset))
+
     def download(self, remotefilename, filename):
         """
         download - download a file to the local machine
@@ -2044,6 +2109,16 @@ class GuestfishPersistent(Guestfish):
         Some internal mounts are not unmounted by this call.
         """
         return self.inner_cmd("umount-all")
+
+    def ls(self, directory):
+        """
+        ls - list the files in a directory
+
+        List the files in "directory" (relative to the root directory, there is
+        no cwd). The '.' and '..' entries are not returned, but hidden files are
+        shown.
+        """
+        return self.inner_cmd("ls %s" % (directory))
 
     def ll(self, directory):
         """
