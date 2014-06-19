@@ -362,7 +362,7 @@ def get_path(base_path, user_path):
     :param base_path: The base path of relative user specified paths.
     :param user_path: The user specified path.
     """
-    if os.path.isabs(user_path):
+    if os.path.isabs(user_path) or utils.is_url(user_path):
         return user_path
     else:
         return os.path.join(base_path, user_path)
