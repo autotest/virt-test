@@ -2063,6 +2063,15 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("sync")
 
+    def debug(self, subcmd, extraargs):
+        """
+        debug - debugging and internals
+
+        The "debug" command exposes some internals of "guestfsd" (the guestfs
+        daemon) that runs inside the hypervisor.
+        """
+        return self.inner_cmd("debug %s %s" % (subcmd, extraargs))
+
 # libguestfs module functions follow #####
 
 
