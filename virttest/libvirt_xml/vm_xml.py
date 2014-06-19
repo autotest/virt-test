@@ -703,6 +703,19 @@ class VMXML(VMXMLBase):
         return interfaces
 
     @staticmethod
+    def get_iface_count(vm_name, virsh_instance=base.virsh):
+        """
+        Get count of VM's interfaces.
+
+        :param vm_name: Name of defined vm.
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        ifaces = vmxml.get_iface_all()
+        if ifaces is not None:
+            return len(ifaces.keys())
+        return 0
+
+    @staticmethod
     def get_iface_by_mac(vm_name, mac, virsh_instance=base.virsh):
         """
         Get the interface if mac is matched.
