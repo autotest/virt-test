@@ -649,11 +649,16 @@ def run_autotest(vm, session, control_path, timeout,
             logging.error("Error processing guest autotest results: %s", e)
             return None
 
-    def config_control(control_path):
+    def config_control(control_path, job_args=None):
         """
         Edit the control file to adapt the current environment.
 
         Replace CLIENTIP with guestip, and replace SERVERIP with hostip.
+        Support to pass arguments for client jobs.
+        For example:
+            stress args: job.run_test('stress', args="...")
+            so job_args can be {'args': "..."}, they should be arguments
+            of this job.
 
         :return: Path of a temp file which contains the result of replacing.
         """
@@ -667,6 +672,33 @@ def run_autotest(vm, session, control_path, timeout,
             for index in range(len(lines)):
                 line = lines[index]
                 lines[index] = re.sub(pattern, repl, line)
+
+        # Provided arguments need to be added
+        if job_args is not None and type(job_args) is dict:
+            newlines = []
+            for index in range(len(lines)):
+                line = lines[index]
+                # Only job lines need to be configured now
+                if re.search("job.run_test", line):
+                    # Get job type
+                    allargs = line.split('(')[1].split(',')
+                    if len(allargs) > 1:
+                        job_type = allargs[0]
+                    elif len(allargs) == 1:
+                        job_type = allargs[0].split(')')[0]
+                    else:
+                        job_type = ""
+                    # Assemble job function
+                    jobline = "job.run_test(%s" % job_type
+                    for key, value in job_args.items():
+                        jobline += ", %s='%s'" % (key, value)
+                    jobline += ")\n"
+                    newlines.append(jobline)
+                    break   # No need following lines
+                else:
+                    # None of these lines' business
+                    newlines.append(line)
+            lines = newlines
 
         fd, temp_control_path = tempfile.mkstemp(prefix="control",
                                                  dir=data_dir.get_tmp_dir())
@@ -749,7 +781,11 @@ def run_autotest(vm, session, control_path, timeout,
         server_control_path = config_control(server_control_path)
         control_path = os.path.join(control_path, "control.client")
     # Edit control file and copy it to vm.
-    temp_control_path = config_control(control_path)
+    if control_args is not None:
+        job_args = {'args': control_args}
+    else:
+        job_args = None
+    temp_control_path = config_control(control_path, job_args=job_args)
     vm.copy_files_to(temp_control_path,
                      os.path.join(destination_autotest_path, 'control'))
 
@@ -813,7 +849,8 @@ def run_autotest(vm, session, control_path, timeout,
 
                 bg = utils.InterruptedThread(session.cmd_output,
                                              kwargs={
-                                                 'cmd': "./autotest --args="
+                                                 'cmd': "./autotest-local "
+                                                        "--args="
                                                         "\"%s\" control" %
                                                         (control_args),
                                                  'timeout': timeout,
@@ -1333,7 +1370,7 @@ class VMStress(object):
             raise StressError("Stress %s is not supported now." % stress_type)
 
         _parameters_filter(stress_type)
-        self.stress_arg = self.params.get("stress_args", "")
+        self.stress_args = self.params.get("stress_args", "")
 
     def get_session(self):
         try:
@@ -1349,8 +1386,8 @@ class VMStress(object):
         """
         session = self.get_session()
         command = run_autotest(self.vm, session, self.control_path,
-                               None, None,
-                               self.params, copy_only=True)
+                               None, None, self.params, copy_only=True,
+                               control_args=self.stress_args)
         session.cmd("%s &" % command)
         logging.info("Command: %s", command)
         running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
@@ -1414,7 +1451,9 @@ class HostStress(object):
                 self.check_cmd = ""
                 self.stop_cmd = ""
 
-        self.params = params
+        self.params = {}
+        if params:
+            self.params = params
         self.timeout = 60
         self.stress_type = stress_type
         self.host_stress_process = None
@@ -1422,7 +1461,7 @@ class HostStress(object):
             raise StressError("Stress %s is not supported now." % stress_type)
 
         _parameters_filter(stress_type)
-        self.stress_arg = self.params.get("stress_args", "")
+        self.stress_args = self.params.get("stress_args", "")
 
     @error.context_aware
     def load_stress_tool(self):
@@ -1434,7 +1473,8 @@ class HostStress(object):
         autotest_client_dir = os.path.dirname(common.__file__)
         autotest_local_path = os.path.join(autotest_client_dir,
                                            "autotest-local")
-        args = [autotest_local_path, self.control_path, '--verbose']
+        args = [autotest_local_path, '--args=%s' % self.stress_args,
+                self.control_path, '--verbose']
         self.host_stress_process = subprocess.Popen(args)
 
         running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
