@@ -1031,6 +1031,7 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
 
     provider = params.get("provider", None)
     subtest_dirs = []
+    subtest_dir = None
 
     if provider is None:
         # Verify if we have the correspondent source file for it
