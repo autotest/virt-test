@@ -308,7 +308,8 @@ def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
 
 
 def setup_or_cleanup_iscsi(is_setup, is_login=True,
-                           emulated_image="emulated_iscsi", image_size="1G"):
+                           emulated_image="emulated_iscsi", image_size="1G",
+                           chap_user="", chap_passwd=""):
     """
     Set up(and login iscsi target) or clean up iscsi service on localhost.
 
@@ -316,6 +317,8 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
     :param is_login: Boolean value, true for login, false for not login
     :param emulated_image: name of iscsi device
     :param image_size: emulated image's size
+    :param chap_user: CHAP authentication username
+    :param chap_passwd: CHAP authentication password
     :return: iscsi device name or iscsi target
     """
     try:
@@ -328,7 +331,8 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
     emulated_path = os.path.join(tmpdir, emulated_image)
     emulated_target = "iqn.2001-01.com.virttest:%s.target" % emulated_image
     iscsi_params = {"emulated_image": emulated_path, "target": emulated_target,
-                    "image_size": image_size, "iscsi_thread_id": "virt"}
+                    "image_size": image_size, "iscsi_thread_id": "virt",
+                    "chap_user": chap_user, "chap_passwd": chap_passwd}
     _iscsi = iscsi.Iscsi(iscsi_params)
     if is_setup:
         _iscsi.export_target()

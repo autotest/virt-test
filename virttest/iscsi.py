@@ -119,6 +119,14 @@ class Iscsi(object):
         else:
             self.id = utils.generate_random_string(4)
         self.initiator = params.get("initiator")
+
+        # CHAP AUTHENTICATION
+        self.chap_flag = False
+        self.chap_user = params.get("chap_user")
+        self.chap_passwd = params.get("chap_passwd")
+        if self.chap_user and self.chap_passwd:
+            self.chap_flag = True
+
         if params.get("emulated_image"):
             self.initiator = None
             os_dep.command("tgtadm")
@@ -222,6 +230,86 @@ class Iscsi(object):
 
         return target_id
 
+    def get_chap_accounts(self):
+        """
+        Get all CHAP authentication accounts
+        """
+        cmd = "tgtadm --lld iscsi --op show --mode account"
+        all_accounts = utils.system_output(cmd)
+        if all_accounts:
+            all_accounts = map(str.strip, all_accounts.splitlines()[1:])
+        return all_accounts
+
+    def add_chap_account(self):
+        """
+        Add CHAP authentication account
+        """
+        try:
+            cmd = "tgtadm --lld iscsi --op new --mode account"
+            cmd += " --user %s" % self.chap_user
+            cmd += " --password %s" % self.chap_passwd
+            utils.system(cmd)
+        except error.CmdError, err:
+            logging.error("Fail to add account: %s", err)
+
+        # Check the new add account exist
+        if self.chap_user not in self.get_chap_accounts():
+            logging.error("Can't find account %s" % self.chap_user)
+
+    def delete_chap_account(self):
+        """
+        Delete the CHAP authentication account
+        """
+        if self.chap_user in self.get_chap_accounts():
+            cmd = "tgtadm --lld iscsi --op delete --mode account"
+            cmd += " --user %s" % self.chap_user
+            utils.system(cmd)
+
+    def get_target_account_info(self):
+        """
+        Get the target account information
+        """
+        cmd = "tgtadm --lld iscsi --mode target --op show"
+        target_info = utils.system_output(cmd)
+        pattern = r"Target\s+\d:\s+%s" % self.target
+        pattern += ".*Account information:\s(.*)ACL information"
+        try:
+            target_account = re.findall(pattern, target_info,
+                                        re.S)[0].strip().splitlines()
+        except IndexError:
+            target_account = []
+        return map(str.strip, target_account)
+
+    def set_chap_auth_target(self):
+        """
+        Set CHAP authentication on a target, it will require authentication
+        before an initiator is allowed to log in and access devices.
+        """
+        if self.chap_user not in self.get_chap_accounts():
+            self.add_chap_account()
+        if self.chap_user in self.get_target_account_info():
+            logging.debug("Target %s already has account %s", self.target,
+                          self.chap_user)
+        else:
+            cmd = "tgtadm --lld iscsi --op bind --mode account"
+            cmd += " --tid %s --user %s" % (self.emulated_id, self.chap_user)
+            utils.system(cmd)
+
+    def set_chap_auth_initiator(self):
+        """
+        Set CHAP authentication for initiator.
+        """
+        name_dict = {'node.session.auth.authmethod': 'CHAP'}
+        name_dict['node.session.auth.username'] = self.chap_user
+        name_dict['node.session.auth.password'] = self.chap_passwd
+        for name in name_dict.keys():
+            cmd = "iscsiadm --mode node --targetname %s " % self.target
+            cmd += "--op update --name %s --value %s" % (name, name_dict[name])
+            try:
+                utils.system(cmd)
+            except error.CmdError:
+                logging.error("Fail to set CHAP authentication for initiator")
+
     def export_target(self):
         """
         Export target in localhost for emulated iscsi
@@ -279,7 +367,6 @@ class Iscsi(object):
             # Exist already
             logging.debug("Exported image already exists.")
             self.export_flag = True
-            return
         else:
             luns = len(re.findall("\s+LUN:\s(\d+)", output, re.M))
             cmd = "tgtadm --mode logicalunit --op new "
@@ -292,6 +379,13 @@ class Iscsi(object):
         # Restore selinux
         if selinux_mode is not None:
             utils_selinux.set_status(selinux_mode)
+
+        if self.chap_flag:
+            # Set CHAP authentication on the exported target
+            self.set_chap_auth_target()
+            # Set CHAP authentication for initiator to login target
+            if self.portal_visible():
+                self.set_chap_auth_initiator()
 
     def delete_target(self):
         """
