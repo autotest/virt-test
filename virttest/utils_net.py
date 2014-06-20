@@ -9,6 +9,7 @@ import random
 import math
 import time
 import shelve
+import remote
 import commands
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
@@ -2771,3 +2772,49 @@ def get_host_iface():
     host_iface_info = proc_net_file.read()
     proc_net_file.close()
     return [_.strip() for _ in re.findall("(.*):", host_iface_info)]
+
+
+def check_listening_port_by_service(service, port, listen_addr='0.0.0.0',
+                                    runner=None):
+    """
+    Check TCP/IP listening by service
+    """
+    cmd = "netstat -tunlp | grep -E '^tcp.*LISTEN.*%s.*'" % service
+    find_netstat_cmd = "which netstat"
+    output = ""
+    find_str = listen_addr + ":" + port
+
+    try:
+        if not runner:
+            try:
+                os_dep.command("netstat")
+            except ValueError, details:
+                raise error.TestNAError(details)
+            output = utils.system_output(cmd)
+        else:
+            if not runner(find_netstat_cmd):
+                raise error.TestNAError("Missing netstat command on remote")
+            output = runner(cmd)
+    except error.CmdError:
+        logging.error("Failed to run command '%s'", cmd)
+
+    if not re.search(find_str, output, re.M):
+        raise error.TestFail("Failed to listen %s: %s", find_str, output)
+    logging.info("The listening is active: %s", output)
+
+
+def check_listening_port_remote_by_service(server_ip, server_user, server_pwd,
+                                           service, port, listen_addr):
+    """
+    Check remote TCP/IP listening by service
+    """
+    # setup remote session
+    session = None
+    try:
+        session = remote.wait_for_login('ssh', server_ip, '22', server_user,
+                                        server_pwd, r"[\#\$]\s*$")
+        runner = session.cmd_output
+        check_listening_port_by_service(service, port, listen_addr, runner)
+    except:
+        if session:
+            session.close()
