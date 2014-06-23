@@ -157,9 +157,10 @@ def preprocess_vm(test, params, env, name):
     elif not vm.is_alive():    # VM is dead and won't be started, update params
         vm.devices = None
         vm.params = params
-    else:       # VM is alive and we don't care
-        if params.get("kill_vm_before_test") == "yes":
-            # Destroy the VM if kill_vm_before_test = "yes".
+    else:
+        # Only work when parameter 'start_vm' is no and VM is alive
+        if params.get("kill_vm_before_test") == "yes" and\
+           params.get("start_vm") == "no":
             old_vm.destroy(gracefully=gracefully_kill)
         else:
             # VM is alive and we just need to open the serial console
