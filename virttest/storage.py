@@ -457,6 +457,7 @@ class Iscsidev(Rawdev):
         self.emulated_file_remove = False
         self.emulated_image = params.get("emulated_image")
         if self.emulated_image:
+            self.emulated_image = os.path.join(root_dir, self.emulated_image)
             if params.get("emulated_file_remove", "no") == "yes":
                 self.emulated_file_remove = True
         params["iscsi_thread_id"] = self.image_name
