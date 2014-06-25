@@ -527,7 +527,8 @@ class VM(virt_vm.BaseVM):
 
         def add_nic(devices, vlan, model=None, mac=None, device_id=None,
                     netdev_id=None, nic_extra_params=None, pci_addr=None,
-                    bootindex=None, queues=1, vectors=None, pci_bus='pci.0'):
+                    bootindex=None, queues=1, vectors=None, pci_bus='pci.0',
+                    ctrl_mac_addr=None):
             if model == 'none':
                 return
             if devices.has_option("device"):
@@ -536,6 +537,8 @@ class VM(virt_vm.BaseVM):
                 elif model == "virtio":
                     model = "virtio-net-pci"
                 dev = QDevice(model)
+                if ctrl_mac_addr and ctrl_mac_addr in ["on", "off"]:
+                    dev.set_param('ctrl_mac_addr', ctrl_mac_addr)
                 dev.set_param('mac', mac, dynamic=True)
                 # only pci domain=0,bus=0,function=0 is supported for now.
                 #
@@ -1401,7 +1404,8 @@ class VM(virt_vm.BaseVM):
                 add_nic(devices, vlan, nic_model, mac,
                         device_id, netdev_id, nic_extra,
                         nic_params.get("nic_pci_addr"),
-                        bootindex, queues, vectors, pci_bus)
+                        bootindex, queues, vectors, pci_bus,
+                        nic_params.get("ctrl_mac_addr"))
 
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 cmd, cmd_nd = add_net(devices, vlan, nettype, ifname, tftp,
@@ -1805,7 +1809,10 @@ class VM(virt_vm.BaseVM):
         if nic.nettype == 'macvtap':
             macvtap_mode = self.params.get("macvtap_mode", "vepa")
             nic.tapfds = utils_net.create_and_open_macvtap(nic.ifname,
-                                                           macvtap_mode, nic.queues, nic.netdst, nic.mac)
+                                                           macvtap_mode,
+                                                           nic.queues,
+                                                           nic.netdst,
+                                                           nic.mac)
         else:
             nic.tapfds = utils_net.open_tap("/dev/net/tun", nic.ifname,
                                             queues=nic.queues, vnet_hdr=True)
