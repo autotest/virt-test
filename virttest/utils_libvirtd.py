@@ -111,7 +111,7 @@ def libvirtd_restart():
     return libvirtd_instance.restart()
 
 
-def service_libvirtd_control(action):
-    libvirtd_instance = Libvirtd()
+def service_libvirtd_control(action, session=None):
+    libvirtd_instance = Libvirtd(session)
     deprecation_warning()
     getattr(libvirtd_instance, action)()
