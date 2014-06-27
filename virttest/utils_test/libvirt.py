@@ -568,6 +568,17 @@ def mk_part(disk, size="100M", session=None):
         utils.run(mkpart_cmd)
 
 
+def mkfs(partition, fs_type, options="", session=None):
+    """
+    Make a file system on the partition
+    """
+    mkfs_cmd = "mkfs.%s -F %s %s" % (fs_type, partition, options)
+    if session:
+        session.cmd(mkfs_cmd)
+    else:
+        utils.run(mkfs_cmd)
+
+
 def check_actived_pool(pool_name):
     """
     Check if pool_name exist in active pool list
