@@ -136,6 +136,7 @@ class Iscsi(object):
             if emulated_size.has_key(self.unit):
                 block_size = emulated_size[self.unit][1]
                 size = int(self.emulated_size) * emulated_size[self.unit][0]
+                self.emulated_expect_size = block_size * size
                 self.create_cmd = ("dd if=/dev/zero of=%s count=%s bs=%sK"
                                    % (self.emulated_image, size, block_size))
 
@@ -226,6 +227,11 @@ class Iscsi(object):
         """
         if not os.path.isfile(self.emulated_image):
             utils.system(self.create_cmd)
+        else:
+            emulated_image_size = os.path.getsize(self.emulated_image) / 1024
+            if emulated_image_size != self.emulated_expect_size:
+                # No need to remvoe, rebuild is fine
+                utils.system(self.create_cmd)
         cmd = "tgtadm --lld iscsi --mode target --op show"
         try:
             output = utils.system_output(cmd)
