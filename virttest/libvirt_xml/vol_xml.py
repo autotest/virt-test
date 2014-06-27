@@ -81,6 +81,15 @@ class VolXML(VolXMLBase):
         super(VolXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<volume><name>%s</name></volume>" % vol_name
 
+    def create(self, pool_name, virsh_instance=base.virsh):
+        """
+        Create volume with virsh from this instance
+        """
+        result = virsh_instance.vol_create(pool_name, self.xml)
+        if result.exit_status:
+            return False
+        return True
+
     @staticmethod
     def new_from_vol_dumpxml(vol_name, pool_name, virsh_instance=base.virsh):
         """
