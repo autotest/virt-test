@@ -1244,6 +1244,17 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("fill-dir %s %s" % (dir, nr))
 
+    def fill_pattern(self, pattern, len, path):
+        """
+        fill-pattern - fill a file with a repeating pattern of bytes
+
+        This function is like "fill" except that it creates a new file of length
+        "len" containing the repeating pattern of bytes in "pattern". The
+        pattern is truncated if necessary to ensure the length of the file is
+        exactly "len" bytes.
+        """
+        return self.inner_cmd("fill-pattern %s %s %s" % (pattern, len, path))
+
     def strings(self, path):
         """
         strings - print the printable strings in a file
@@ -1288,6 +1299,23 @@ class GuestfishPersistent(Guestfish):
         file, starting at "offset", from file "path".
         """
         return self.inner_cmd("pread %s %s %s" % (path, count, offset))
+
+    def hexdump(self, path):
+        """
+        hexdump - dump a file in hexadecimal
+
+        This runs "hexdump -C" on the given "path". The result is the
+        human-readable, canonical hex dump of the file.
+        """
+        return self.inner_cmd("hexdump %s" % path)
+
+    def more(self, filename):
+        """
+        more - view a file
+
+        This is used to view a file.
+        """
+        return self.inner_cmd("more %s" % filename)
 
     def download(self, remotefilename, filename):
         """
