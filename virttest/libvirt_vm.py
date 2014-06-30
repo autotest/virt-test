@@ -1040,6 +1040,8 @@ class VM(virt_vm.BaseVM):
             internal_timeout = super(VM, self).LOGIN_TIMEOUT
 
         if self.is_lxc():
+            self.cleanup_serial_console()
+            self.create_serial_console()
             return self.wait_for_serial_login(timeout, internal_timeout,
                                               restart_network,
                                               username, password)
