@@ -1430,7 +1430,13 @@ class VM(virt_vm.BaseVM):
 
         :return: int with PID. If VM is not alive, returns None.
         """
-        pid_file = "/var/run/libvirt/qemu/%s.pid" % self.name
+        if self.is_lxc():
+            pid_file = "/var/run/libvirt/lxc/%s.pid" % self.name
+        elif self.is_qemu():
+            pid_file = "/var/run/libvirt/qemu/%s.pid" % self.name
+        # TODO: Add more vm driver type
+        else:
+            raise ValueError("Unsupport connect uri: %s." % self.connect_uri)
         pid = None
         if os.path.exists(pid_file):
             try:
