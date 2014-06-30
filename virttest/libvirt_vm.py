@@ -192,6 +192,12 @@ class VM(virt_vm.BaseVM):
         """
         return (self.connect_uri and self.connect_uri.count("qemu"))
 
+    def is_xen(self):
+        """
+        Return True if VM is a xen guest.
+        """
+        return (self.connect_uri and self.connect_uri.count("xen"))
+
     def verify_alive(self):
         """
         Make sure the VM is alive.
