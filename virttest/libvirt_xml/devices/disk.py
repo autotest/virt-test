@@ -57,12 +57,14 @@ class Disk(base.TypedDeviceBase):
             libvirt_xml.devices.Disk.IOTune instance
         source:
             libvirt_xml.devices.Disk.DiskSource instance
+        encryption:
+            libvirt_xml.devices.Disk.Encryption instance.
     """
 
     __slots__ = ('device', 'rawio', 'sgio', 'snapshot', 'driver', 'target',
                  'address', 'boot', 'readonly', 'transient', 'share',
                  'mirror', 'ready', 'iotune', 'source', 'blockio', 'geometry',
-                 'wwn', 'serial', 'vendor', 'product')
+                 'wwn', 'serial', 'vendor', 'product', 'encryption')
 
     def __init__(self, type_name='file', virsh_instance=base.base.virsh):
         accessors.XMLAttribute('device', self, parent_xpath='/',
@@ -114,6 +116,10 @@ class Disk(base.TypedDeviceBase):
                                  tag_name='iotune', subclass=self.IOTune,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
+        accessors.XMLElementNest('encryption', self, parent_xpath='/',
+                                 tag_name='encryption', subclass=self.Encryption,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
         super(Disk, self).__init__(device_tag='disk', type_name=type_name,
                                    virsh_instance=virsh_instance)
 
@@ -131,6 +137,15 @@ class Disk(base.TypedDeviceBase):
         Return a new disk IOTune instance and set properties from dargs
         """
         new_one = self.IOTune(virsh_instance=self.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
+
+    def new_encryption(self, **dargs):
+        """
+        Return a new disk encryption instance and set properties from dargs
+        """
+        new_one = self.Encryption(virsh_instance=self.virsh)
         for key, value in dargs.items():
             setattr(new_one, key, value)
         return new_one
@@ -243,3 +258,26 @@ class Disk(base.TypedDeviceBase):
                                             tag_name=slot)
             super(Disk.IOTune, self).__init__(virsh_instance=virsh_instance)
             self.xml = '<iotune/>'
+
+    class Encryption(base.base.LibvirtXMLBase):
+
+        """
+        Encryption device XML class
+
+        Properties:
+
+        encryption:
+            string.
+        secret:
+            dict, keys: type, uuid
+        """
+
+        __slots__ = ('encryption', 'secret')
+
+        def __init__(self, virsh_instance=base.base.virsh):
+            accessors.XMLAttribute('encryption', self, parent_xpath='/',
+                                   tag_name='encryption', attribute='format')
+            accessors.XMLElementDict('secret', self, parent_xpath='/',
+                                     tag_name='secret')
+            super(Disk.Encryption, self).__init__(virsh_instance=virsh_instance)
+            self.xml = '<encryption/>'

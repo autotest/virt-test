@@ -24,10 +24,13 @@ class VolXMLBase(base.LibvirtXMLBase):
         label: string, operates on label attribute of label tag
         compat: string, operates on compat attribute of label tag
         lazy_refcounts: bool, True/False
+        encryption: VolXMLBase.Encryption instance.
+        capacity_unit: string, operates on unit attribute of capacity tag
     """
 
     __slots__ = ('name', 'key', 'capacity', 'allocation', 'format', 'path',
-                 'owner', 'group', 'mode', 'label', 'compat', 'lazy_refcounts')
+                 'owner', 'group', 'mode', 'label', 'compat', 'lazy_refcounts',
+                 'encryption', "capacity_unit")
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -44,6 +47,12 @@ class VolXMLBase(base.LibvirtXMLBase):
                                 tag_name='allocation')
         accessors.XMLAttribute('format', self, parent_xpath='/target',
                                tag_name='format', attribute='type')
+        accessors.XMLAttribute('capacity_unit', self, parent_xpath='/',
+                               tag_name='capacity', attribute='unit')
+        accessors.XMLElementNest('encryption', self, parent_xpath='/target',
+                                 tag_name='encryption', subclass=self.Encryption,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
         accessors.XMLElementText('path', self, parent_xpath='/target',
                                  tag_name='path')
         accessors.XMLElementInt('owner', self,
@@ -80,6 +89,15 @@ class VolXML(VolXMLBase):
         """
         super(VolXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<volume><name>%s</name></volume>" % vol_name
+
+    def new_encryption(self, **dargs):
+        """
+        Return a new volume encryption instance and set properties from dargs
+        """
+        new_one = self.Encryption(virsh_instance=self.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
 
     def create(self, pool_name, virsh_instance=base.virsh):
         """
@@ -134,3 +152,26 @@ class VolXML(VolXMLBase):
         for key, value in dargs.items():
             setattr(new_one, key, value)
         return new_one
+
+    class Encryption(base.LibvirtXMLBase):
+
+        """
+        Encryption volume XML class
+
+        Properties:
+
+        format:
+            string.
+        secret:
+            dict, keys: type, uuid
+        """
+
+        __slots__ = ('format', 'secret')
+
+        def __init__(self, virsh_instance=base.virsh):
+            accessors.XMLAttribute('format', self, parent_xpath='/',
+                                   tag_name='encryption', attribute='format')
+            accessors.XMLElementDict('secret', self, parent_xpath='/',
+                                     tag_name='secret')
+            super(VolXML.Encryption, self).__init__(virsh_instance=virsh_instance)
+            self.xml = '<encryption/>'
