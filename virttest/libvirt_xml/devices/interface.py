@@ -5,14 +5,14 @@ http://libvirt.org/formatdomain.html#elementsNICS
 """
 
 from virttest.libvirt_xml import accessors
-from virttest.libvirt_xml.devices import base
+from virttest.libvirt_xml.devices import base, librarian
 
 
 class Interface(base.TypedDeviceBase):
 
     __slots__ = ('source', 'mac_address', 'bandwidth_inbound',
                  'bandwidth_outbound', 'portgroup', 'model',
-                 'driver')
+                 'driver', 'address')
 
     def __init__(self, type_name, virsh_instance=base.base.virsh):
         super(Interface, self).__init__(device_tag='interface',
@@ -56,3 +56,9 @@ class Interface(base.TypedDeviceBase):
                                parent_xpath='/',
                                tag_name='model',
                                attribute='type')
+        accessors.XMLElementNest('address', self, parent_xpath='/',
+                                 tag_name='address', subclass=self.Address,
+                                 subclass_dargs={'type_name': 'drive',
+                                                 'virsh_instance': virsh_instance})
+    # For convenience
+    Address = librarian.get('address')
