@@ -172,7 +172,7 @@ class LibvirtXMLBase(propcan.PropCanBase):
         """
         section = self.xmltreefile.find(xpath)
         if section is None:
-            raise xcepts.LibvirtXMLNotFoundError("Path %s is not found.")
+            raise xcepts.LibvirtXMLNotFoundError("Path %s is not found." % xpath)
 
         return self.xmltreefile.get_element_string(xpath)
 
