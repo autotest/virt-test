@@ -1883,7 +1883,7 @@ class GuestfishPersistent(Guestfish):
         This command is the same as "pvresize" except that it allows you to
         specify the new size (in bytes) explicitly.
         """
-        return self.inner_cmd("pvresize %s %s" % (device, size))
+        return self.inner_cmd("pvresize-size %s %s" % (device, size))
 
     def pvremove(self, device):
         """
