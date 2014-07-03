@@ -321,6 +321,12 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
                 next_element = ElementTree.SubElement(cur_element, tag)
             cur_element = next_element
 
+    def get_element_string(self, xpath):
+        """
+        Returns the string for the element on xpath.
+        """
+        return ElementTree.tostring(self.find(xpath))
+
     # This overrides the file.write() method
     def write(self, filename=None, encoding=ENCODING):
         """
