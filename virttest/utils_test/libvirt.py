@@ -269,42 +269,76 @@ def check_blockjob(vm_name, target, check_point="none", value="0"):
     return False
 
 
-def setup_or_cleanup_nfs(is_setup, mount_dir="", is_mount=False,
+def setup_or_cleanup_nfs(is_setup, mount_dir="nfs-mount", is_mount=False,
                          export_options="rw,no_root_squash",
-                         mount_src="nfs-export"):
+                         mount_options="rw",
+                         export_dir="nfs-export",
+                         restore_selinux=""):
     """
-    Set up or clean up nfs service on localhost.
+    Set SElinux to "permissive" and Set up nfs service on localhost.
+    Or clean up nfs service on localhost and restore SElinux.
+
+    Note: SElinux status must be backed up and restored after use.
+    Example:
+
+    # Setup NFS.
+    res = setup_or_cleanup_nfs(is_setup=True)
+    # Backup SELinux status.
+    selinux_bak = res["selinux_status_bak"]
+
+    # Do something.
+    ...
+
+    # Cleanup NFS and restore NFS.
+    res = setup_or_cleanup_nfs(is_setup=False, restore_selinux=selinux_bak)
 
     :param is_setup: Boolean value, true for setup, false for cleanup
-    :param mount_dir: NFS mount point
-    :param is_mount: Boolean value, true for mount, false for umount
-    :param export_options: options for nfs dir
-    :return: export nfs path or nothing
+    :param mount_dir: NFS mount dir. This can be an absolute path on the
+                      host or a relative path origin from libvirt tmp dir.
+                      Default to "nfs-mount".
+    :param is_mount: Boolean value, Whether the target NFS should be mounted.
+    :param export_options: Options for nfs dir. Default to "nfs-export".
+    :param mount_options: Options for mounting nfs dir. Default to "rw".
+    :param export_dir: NFS export dir. This can be an absolute path on the
+                      host or a relative path origin from libvirt tmp dir.
+                      Default to "nfs-export".
+    :return: A dict contains export and mount result parameters:
+             export_dir: Absolute directory of exported local NFS file system.
+             mount_dir: Absolute directory NFS file system mounted on.
+             selinux_status_bak: SELinux status before set
     """
-    tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
-    if not os.path.isabs(mount_src):
-        mount_src = os.path.join(tmpdir, mount_src)
-    if not mount_dir:
-        mount_dir = os.path.join(tmpdir, 'nfs-mount')
+    result = {}
 
-    nfs_params = {"nfs_mount_dir": mount_dir, "nfs_mount_options": "rw",
-                  "nfs_mount_src": mount_src, "setup_local_nfs": "yes",
-                  "export_options": "rw,no_root_squash"}
+    tmpdir = data_dir.get_tmp_dir()
+    if not os.path.isabs(export_dir):
+        export_dir = os.path.join(tmpdir, export_dir)
+    if not os.path.isabs(mount_dir):
+        mount_dir = os.path.join(tmpdir, mount_dir)
+    result["export_dir"] = export_dir
+    result["mount_dir"] = mount_dir
+    result["selinux_status_bak"] = utils_selinux.get_status()
+
+    nfs_params = {"nfs_mount_dir": mount_dir, "nfs_mount_options": mount_options,
+                  "nfs_mount_src": export_dir, "setup_local_nfs": "yes",
+                  "export_options": export_options}
     _nfs = nfs.Nfs(nfs_params)
-    # Set selinux to permissive that the file in nfs
-    # can be used freely
-    if utils_selinux.is_enforcing():
-        sv_status = utils_selinux.get_status()
-        utils_selinux.set_status("permissive")
+
     if is_setup:
+        # Set selinux to permissive that the file in nfs
+        # can be used freely
+        if utils_selinux.is_enforcing():
+            utils_selinux.set_status("permissive")
+
         _nfs.setup()
         if not is_mount:
             _nfs.umount()
-        return mount_src
+            del result["mount_dir"]
     else:
+        if restore_selinux:
+            utils_selinux.set_status(restore_selinux)
         _nfs.unexportfs_in_clean = True
         _nfs.cleanup()
-        return ""
+    return result
 
 
 def setup_or_cleanup_iscsi(is_setup, is_login=True,
@@ -413,19 +447,25 @@ def define_pool(pool_name, pool_type, pool_target, cleanup_flag):
     :param pool_name: Name of the pool
     :param pool_type: Type of the pool
     :param pool_target: Target for underlying storage
+    :param cleanup_flag: A list contains 3 booleans and 1 string stands for
+                         need_cleanup_nfs, need_cleanup_iscsi,
+                         need_cleanup_logical and selinux_bak separately.
     """
     extra = ""
     vg_name = pool_name
     cleanup_nfs = False
     cleanup_iscsi = False
     cleanup_logical = False
+    selinux_bak = ""
     if not os.path.exists(pool_target):
         os.mkdir(pool_target)
     if pool_type == "dir":
         pass
     elif pool_type == "netfs":
         # Set up NFS server without mount
-        nfs_path = setup_or_cleanup_nfs(True, pool_target, False)
+        res = setup_or_cleanup_nfs(True, pool_target, False)
+        nfs_path = res["export_dir"]
+        selinux_bak = res["selinux_status_bak"]
         cleanup_nfs = True
         extra = "--source-host %s --source-path %s" % ('localhost',
                                                        nfs_path)
@@ -469,6 +509,7 @@ def define_pool(pool_name, pool_type, pool_target, cleanup_flag):
     cleanup_flag[0] = cleanup_nfs
     cleanup_flag[1] = cleanup_iscsi
     cleanup_flag[2] = cleanup_logical
+    cleanup_flag[3] = selinux_bak
     try:
         result = virsh.pool_define_as(pool_name, pool_type, pool_target, extra,
                                       ignore_status=True)
@@ -608,6 +649,7 @@ class PoolVolumeTest(object):
     def __init__(self, test, params):
         self.tmpdir = test.tmpdir
         self.params = params
+        self.selinux_bak = ""
 
     def cleanup_pool(self, pool_name, pool_type, pool_target, emulated_image,
                      source_name=None):
@@ -629,7 +671,8 @@ class PoolVolumeTest(object):
             if pool_type == "netfs":
                 nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
                 nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
-                setup_or_cleanup_nfs(is_setup=False, mount_dir=nfs_path)
+                setup_or_cleanup_nfs(is_setup=False, mount_dir=nfs_path,
+                                     restore_selinux=self.selinux_bak)
                 if os.path.exists(nfs_path):
                     shutil.rmtree(nfs_path)
             if pool_type == "logical":
@@ -642,6 +685,12 @@ class PoolVolumeTest(object):
             if pool_type in ["logical", "iscsi", "fs", "disk", "scsi"]:
                 setup_or_cleanup_iscsi(is_setup=False,
                                        emulated_image=emulated_image)
+                if pool_type == "scsi":
+                    scsi_xml_file = self.params.get("scsi_xml_file")
+                    if not os.path.exists(scsi_xml_file):
+                        scsi_xml_file = os.path.join(self.tmpdir, scsi_xml_file)
+                    if os.path.exists(scsi_xml_file):
+                        os.remove(scsi_xml_file)
             if pool_type in ["dir", "fs", "netfs"]:
                 pool_target = os.path.join(self.tmpdir, pool_target)
                 if os.path.exists(pool_target):
@@ -719,9 +768,10 @@ class PoolVolumeTest(object):
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
                 os.mkdir(pool_target)
-            setup_or_cleanup_nfs(is_setup=True,
-                                 export_options="rw,async,no_root_squash",
-                                 mount_src=nfs_path)
+            res = setup_or_cleanup_nfs(is_setup=True,
+                                       export_options="rw,async,no_root_squash",
+                                       export_dir=nfs_path)
+            self.selinux_bak = res["selinux_status_bak"]
             source_host = self.params.get("source_host", "localhost")
             extra = "--source-host %s --source-path %s" % (source_host,
                                                            nfs_path)
