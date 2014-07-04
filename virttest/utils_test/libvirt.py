@@ -981,17 +981,71 @@ def create_disk_xml(params):
     """
     # Create attributes dict for disk's address element
     type_name = params.get("type_name", "file")
-    source_file = params.get("source_file")
     target_dev = params.get("target_dev", "vdb")
     target_bus = params.get("target_bus", "virtio")
     diskxml = disk.Disk(type_name)
     diskxml.device = params.get("device_type", "disk")
-    if type_name == "file":
-        source_type = "file"
-    else:
-        source_type = "dev"
-    diskxml.source = diskxml.new_disk_source(attrs={source_type: source_file})
-    diskxml.target = {'dev': target_dev, 'bus': target_bus}
+    source_attrs = {}
+    source_host = []
+    auth_attrs = {}
+    driver_attrs = {}
+    try:
+        if type_name == "file":
+            source_file = params.get("source_file", "")
+            source_attrs = {'file': source_file}
+        elif type_name == "block":
+            source_file = params.get("source_file", "")
+            source_attrs = {'dev': source_file}
+        elif type_name == "dir":
+            source_dir = params.get("source_dir", "")
+            source_attrs = {'dir': source_dir}
+        elif type_name == "volume":
+            source_pool = params.get("source_pool")
+            source_volume = params.get("source_volume")
+            source_mode = params.get("source_mode", "")
+            source_attrs = {'pool': source_pool, 'volume': source_volume,
+                            'mode': source_mode}
+        elif type_name == "network":
+            source_protocol = params.get("source_protocol")
+            source_name = params.get("source_name")
+            source_host_name = params.get("source_host_name")
+            source_host_port = params.get("source_host_port")
+            source_attrs = {'protocol': source_protocol, 'name': source_name}
+            source_host = [{'name': source_host_name, 'port': source_host_port}]
+        else:
+            error.TestNAError("Unsupport disk type %s" % type_name)
+        source_startupPolicy = params.get("source_startupPolicy")
+        if source_startupPolicy:
+            source_attrs['startupPolicy'] = source_startupPolicy
+        diskxml.source = diskxml.new_disk_source(attrs=source_attrs,
+                                                 hosts=source_host)
+        auth_user = params.get("auth_user")
+        secret_type = params.get("secret_type")
+        secret_usage = params.get("secret_usage")
+        if auth_user:
+            auth_attrs['auth_user'] = auth_user
+        if secret_type:
+            auth_attrs['secret_type'] = secret_type
+        if secret_usage:
+            auth_attrs['secret_usage'] = secret_usage
+        if auth_attrs:
+            diskxml.new_auth(auth_attrs)
+        driver_name = params.get("driver_name", "qemu")
+        driver_type = params.get("driver_type", "")
+        driver_cache = params.get("driver_cache", "")
+        if driver_name:
+            driver_attrs['name'] = driver_name
+        if driver_type:
+            driver_attrs['type'] = driver_type
+        if driver_cache:
+            driver_attrs['cache'] = driver_cache
+        if driver_attrs:
+            diskxml.driver = driver_attrs
+        diskxml.readonly = "yes" == params.get("readonly", "no")
+        diskxml.share = "yes" == params.get("shareable", "no")
+        diskxml.target = {'dev': target_dev, 'bus': target_bus}
+    except Exception, detail:
+        logging.error("Fail to create disk XML:\n%s", detail)
     logging.debug("Disk XML:\n%s", str(diskxml))
     return diskxml.xml
 
