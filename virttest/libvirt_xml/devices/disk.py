@@ -120,6 +120,10 @@ class Disk(base.TypedDeviceBase):
                                  tag_name='encryption', subclass=self.Encryption,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
+        accessors.XMLElementNest('auth', self, parent_xpath='/',
+                                 tag_name='auth', subclass=self.Auth,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
         super(Disk, self).__init__(device_tag='disk', type_name=type_name,
                                    virsh_instance=virsh_instance)
 
@@ -155,6 +159,15 @@ class Disk(base.TypedDeviceBase):
         Return a new disk Address instance and set properties from dargs
         """
         new_one = self.Address(type_name=type_name, virsh_instance=self.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
+
+    def new_auth(self, *dargs):
+        """
+        Return a new disk auth instance and set properties from dargs
+        """
+        new_one = self.Auth(virsh_instance=self.virsh)
         for key, value in dargs.items():
             setattr(new_one, key, value)
         return new_one
@@ -281,3 +294,30 @@ class Disk(base.TypedDeviceBase):
                                      tag_name='secret')
             super(Disk.Encryption, self).__init__(virsh_instance=virsh_instance)
             self.xml = '<encryption/>'
+
+    class Auth(base.base.LibvirtXMLBase):
+
+        """
+        Auth device XML class
+
+        Properties:
+
+        auth_user:
+            string, attribute of auth tag
+        secret_type:
+            string, attribute of secret tag, sub-tag of the auth tag
+        secret_usage:
+            string, attribute of secret tag, sub-tag of the auth tag
+        """
+
+        __slots__ = ('auth_user', 'secret_type', 'secret_usage')
+
+        def __init__(self, virsh_instance=base.base.virsh, auth_user=""):
+            accessors.XMLAttribute('auth_user', self, parent_xpath='/',
+                                   tag_name='auth', attribute='username')
+            accessors.XMLAttribute('secret_type', self, parent_xpath='/',
+                                   tag_name='secret', attribute='type')
+            accessors.XMLAttribute('secret_usage', self, parent_xpath='/',
+                                   tag_name='secret', attribute='usage')
+            super(self.__class__, self).__init__(virsh_instance=virsh_instance)
+            self.xml = u"<auth/>"
