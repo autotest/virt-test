@@ -545,15 +545,21 @@ def preprocess(test, params, env):
     vm_type = params.get('vm_type')
 
     setup_pb = False
+    ovs_pb = False
     for nic in params.get('nics', "").split():
         nic_params = params.object_params(nic)
         if nic_params.get('netdst') == 'private':
             setup_pb = True
             params_pb = nic_params
             params['netdst_%s' % nic] = nic_params.get("priv_brname", 'atbr0')
+            if nic_params.get("priv_br_type") == "openvswitch":
+                ovs_pb = True
 
     if setup_pb:
-        brcfg = test_setup.PrivateBridgeConfig(params_pb)
+        if ovs_pb:
+            brcfg = test_setup.PrivateOvsBridgeConfig(params_pb)
+        else:
+            brcfg = test_setup.PrivateBridgeConfig(params_pb)
         brcfg.setup()
 
     base_dir = data_dir.get_data_dir()
@@ -1041,16 +1047,26 @@ def postprocess(test, params, env):
             err += "\nnfs cleanup: %s" % str(details).replace('\\n', '\n  ')
 
     setup_pb = False
+    ovs_pb = False
     for nic in params.get('nics', "").split():
+        nic_params = params.object_params(nic)
         if params.get('netdst_%s' % nic) == 'private':
             setup_pb = True
+            params_pb = nic_params
             break
     else:
         setup_pb = params.get("netdst") == 'private'
+        params_pb = params
+
+    if params_pb.get("priv_br_type") == "openvswitch":
+        ovs_pb = True
 
     if setup_pb:
         try:
-            brcfg = test_setup.PrivateBridgeConfig()
+            if ovs_pb:
+                brcfg = test_setup.PrivateOvsBridgeConfig(params_pb)
+            else:
+                brcfg = test_setup.PrivateBridgeConfig(params_pb)
             brcfg.cleanup()
         except Exception, details:
             err += "\nPB cleanup: %s" % str(details).replace('\\n', '\n  ')
