@@ -134,51 +134,10 @@ class VM(virt_vm.BaseVM):
                                                             "default"))
         self.driver_type = virsh.driver(uri=self.connect_uri)
         self.params['driver_type_' + self.name] = self.driver_type
-        self.update_params_for_uri()
         # virtnet init depends on vm_type/driver_type being set w/in params
         super(VM, self).__init__(name, params)
         logging.info("Libvirt VM '%s', driver '%s', uri '%s'",
                      self.name, self.driver_type, self.connect_uri)
-
-    def update_params_for_uri(self):
-        """
-        Update the params for specific uri.
-
-        E.g: isa_serial, shell_prompt.
-        """
-        # Specific key for uri is startswith libvirt_URI_, such as
-        # libvirt_lxc_isa_serial.
-        prefix = ("libvirt_%s_" % self.driver_type)
-        for key in self.params.keys():
-            if key.startswith(prefix):
-                value = self.params.get(key)
-                # When we get a specific key param for this uri,
-                # we should update the shared param for it.
-                # E.g:
-                #   specific for lxc: libvirt_lxc_isa_serial.
-                #   share in all uri: isa_serial.
-                share_key = key.replace(prefix, "")
-                self.params[share_key] = value
-
-    def __setattr__(self, key, value):
-        """
-        Override the setter method.
-
-        It will take after a special problem when we set
-        self.params. In this case, we need to update the
-        params for some specific uri.
-        """
-        super(VM, self).__setattr__(key, value)
-        # call update_params_for_uri() when we set
-        # self.params.
-        if key == "params":
-            # update_params_for_uri() depends on self.driver_type.
-            # So we skip if self.driver_type does not exist.
-            # It may happen in VM.__init__(). And we call update
-            # function after self.driver_type initialized.
-            if not hasattr(self, "driver_type"):
-                return
-            self.update_params_for_uri()
 
     def is_lxc(self):
         """
@@ -1087,6 +1046,8 @@ class VM(virt_vm.BaseVM):
             internal_timeout = super(VM, self).LOGIN_TIMEOUT
 
         if self.is_lxc():
+            self.cleanup_serial_console()
+            self.create_serial_console()
             return self.wait_for_serial_login(timeout, internal_timeout,
                                               restart_network,
                                               username, password)

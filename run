@@ -170,6 +170,8 @@ SUPPORTED_TEST_TYPES = [
 
 SUPPORTED_LIBVIRT_URIS = ['qemu:///system', 'lxc:///']
 
+SUPPORTED_LIBVIRT_DRIVERS = ['qemu', 'lxc', 'xen']
+
 SUPPORTED_IMAGE_TYPES = ['raw', 'qcow2', 'qed', 'vmdk']
 
 SUPPORTED_DISK_BUSES = ['ide', 'scsi', 'virtio_blk', 'virtio_scsi', 'lsi_scsi',
@@ -674,6 +676,22 @@ class VirtTestApp(object):
         """
         self.options.no_downloads = True
 
+    def _process_libvirt_specific_options(self):
+        """
+        Calls for processing all options specific to libvirt test.
+        """
+        if self.options.uri:
+            driver_found = False
+            for driver in SUPPORTED_LIBVIRT_DRIVERS:
+                if self.options.uri.count(driver):
+                    driver_found = True
+                    self.cartesian_parser.only_filter(driver)
+            if not driver_found:
+                print("Not supported uri: %s." % self.options.uri)
+                sys.exit(1)
+        else:
+            self.cartesian_parser.only_filter("qemu")
+
     def _process_guest_os(self):
         if not self.options.config:
             from virttest import standalone_test
@@ -916,6 +934,8 @@ class VirtTestApp(object):
             self._process_lvsb_specific_options()
         elif self.options.type == 'openvswitch':
             self._process_qemu_specific_options()
+        elif self.options.type == 'libvirt':
+            self._process_libvirt_specific_options()
         # List and tests have to be the last things to be processed
         self._process_list()
         self._process_tests()
