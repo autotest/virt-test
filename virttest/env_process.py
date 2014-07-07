@@ -92,12 +92,16 @@ def preprocess_vm(test, params, env, name):
     connect_uri = params.get('connect_uri')
     target = params.get('target')
 
-    if vm_type == 'libvirt':
+    create_vm = False
+    if not vm:
+        create_vm = True
+    elif vm_type == 'libvirt':
         connect_uri = libvirt_vm.normalize_connect_uri(connect_uri)
         if (not vm.connect_uri == connect_uri):
-            vm = None
-
-    if not vm:
+            create_vm = True
+    else:
+        pass
+    if create_vm:
         vm = env.create_vm(vm_type, target, name, params, test.bindir)
 
     old_vm = copy.copy(vm)
