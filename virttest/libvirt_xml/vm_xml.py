@@ -661,15 +661,22 @@ class VMXML(VMXMLBase):
             raise xcepts.LibvirtXMLError("Wrong disk target:%s." % disk_target)
         address_str = ""
         try:
+            disk_bus = disk.find("target").get("bus")
             address = disk.find("address")
-            add_type = address.get("type")
-            add_domain = address.get("domain")
-            add_bus = address.get("bus")
-            add_slot = address.get("slot")
-            add_func = address.get("function")
-            address_str = ("%s:%s.%s.%s.%s"
-                           % (add_type, add_domain, add_bus,
-                              add_slot, add_func))
+            if disk_bus == "virtio":
+                add_type = address.get("type")
+                add_domain = address.get("domain")
+                add_bus = address.get("bus")
+                add_slot = address.get("slot")
+                add_func = address.get("function")
+                address_str = ("%s:%s.%s.%s.%s"
+                               % (add_type, add_domain, add_bus,
+                                  add_slot, add_func))
+            elif disk_bus in ["ide", "scsi"]:
+                bus = address.get("bus")
+                target = address.get("target")
+                unit = address.get("unit")
+                address_str = "%s:%s.%s.%s" % (disk_bus, bus, target, unit)
         except AttributeError, e:
             raise xcepts.LibvirtXMLError("Get wrong attribute: %s" % str(e))
         return address_str
