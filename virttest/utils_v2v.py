@@ -124,18 +124,26 @@ class Target(object):
         """
         Return command options.
         """
-        options = " -ic %s -os %s -b %s %s " % (self.uri,
-                                                self.params.get('storage'), self.params.get('network'),
-                                                self.params.get('vms'))
+        options = " -ic %s -os %s" % (self.uri, self.params.get('storage'))
+        if self.params.get('bridge'):
+            options += " -b %s" % self.params.get('bridge')
+        else:
+            options += " -n %s" % self.params.get('network')
+        options += " %s" % self.params.get('vms')
+
         return options
 
     def _get_libvirtxml_options(self):
         """
         Return command options.
         """
-        options = " -os %s -b %s %s " % (self.params.get('storage'),
-                                         self.params.get('network'),
-                                         self.params.get('vms'))
+        options = " -os %s" % self.params.get('storage')
+        if self.params.get('bridge'):
+            options += " -b %s" % self.params.get('bridge')
+        else:
+            options += " -n %s" % self.params.get('network')
+        options += " %s" % self.params.get('vms')
+
         return options
 
     def _get_ovirt_options(self):
