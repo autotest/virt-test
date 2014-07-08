@@ -2166,7 +2166,7 @@ def get_image_info(image_file):
         image_info_dict = {}
         if image_info:
             for line in image_info.splitlines():
-                if line.find("format") != -1:
+                if line.find("file format") != -1:
                     image_info_dict['format'] = line.split(':')[-1].strip()
                 elif line.find("virtual size") != -1:
                     # Use the value in (xxxxxx bytes) since it's the more
