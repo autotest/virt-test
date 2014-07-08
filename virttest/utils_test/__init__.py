@@ -1756,3 +1756,22 @@ def check_dest_vm_network(vm, ip, remote_host, username, password):
     if ping_failed:
         raise error.TestFail("Check %s IP failed:%s" % (vm.name,
                                                         ping_result.stdout))
+
+
+def canonicalize_disk_address(disk_address):
+    """
+    Canonicalize disk address.
+    Convert {decimal|octal|hexadecimal} to decimal
+    pci:0x0000.0x00.0x0b.0x0 => pci:0.0.11.0
+    ide:00.00.00 => ide:0.0.0
+    scsi:00.00.0x11 => scsi:0.0.17
+    """
+    add_info = disk_address.split(":")
+    add_bus_type = add_info[0]
+    add_detail = add_info[-1]
+    add_detail_str = ""
+    for add_item in add_detail.split("."):
+        add_detail_str += ("%s." % int(add_item, 0))
+    add_detail_str = "%s:%s" % (add_bus_type, add_detail_str[:-1])
+
+    return add_detail_str
