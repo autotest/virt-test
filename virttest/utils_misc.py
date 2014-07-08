@@ -211,6 +211,18 @@ def kill_process_tree(pid, sig=signal.SIGKILL):
     safe_kill(pid, signal.SIGCONT)
 
 
+def kill_process_by_pattern(pattern):
+    """Send SIGTERM signal to a process with matched pattern.
+    :param pattern: normally only matched against the process name
+    """
+    cmd = "pkill -f %s" % pattern
+    result = utils.run(cmd, ignore_status=True)
+    if result.exit_status:
+        logging.error("Failed to run '%s': %s", cmd, result)
+    else:
+        logging.info("Succeed to run '%s'.", cmd)
+
+
 def get_open_fds(pid):
     return len(os.listdir('/proc/%s/fd' % pid))
 
