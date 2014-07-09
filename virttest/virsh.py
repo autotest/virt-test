@@ -3869,3 +3869,34 @@ def blkiotune(name, weight=None, device_weights=None, options=None, **dargs):
         cmd += " --device-weights %s" % device_weights
 
     return command(cmd, **dargs)
+
+
+def blkdeviotune(name, device=None, options=None,
+                 total_bytes_sec=None, read_bytes_sec=None,
+                 write_bytes_sec=None, total_iops_sec=None,
+                 read_iops_sec=None, write_iops_sec=None, **dargs):
+    """
+    Set or get a domain's blkio parameters
+    :param name: name of domain
+    :param options: options may be live, config and current
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "blkdeviotune %s" % name
+    if options:
+        cmd += " --%s" % options
+    if device:
+        cmd += " --device %s" % device
+    if total_bytes_sec:
+        cmd += " --total-bytes-sec %s" % total_bytes_sec
+    if read_bytes_sec:
+        cmd += " --read-bytes-sec %s" % read_bytes_sec
+    if write_bytes_sec:
+        cmd += " --write-bytes-sec %s" % write_bytes_sec
+    if total_iops_sec:
+        cmd += " --total-iops-sec %s" % total_iops_sec
+    if read_iops_sec:
+        cmd += " --read-iops-sec %s" % read_iops_sec
+    if write_iops_sec:
+        cmd += " --write-iops-sec %s" % write_iops_sec
+    return command(cmd, **dargs)
