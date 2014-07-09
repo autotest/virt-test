@@ -1011,6 +1011,34 @@ class VMXML(VMXMLBase):
 
         return blkio_params
 
+    @staticmethod
+    def get_blkdevio_params(vm_name, options="", virsh_instance=base.virsh):
+        """
+        Return VM's block I/O tuning setting from XML definition
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, options=options,
+                                       virsh_instance=virsh_instance)
+        xmltreefile = vmxml.__dict_get__('xml')
+        blkdevio_params = {}
+        iotune = None
+        blkdevio_list = ['total_bytes_sec', 'read_bytes_sec',
+                         'write_bytes_sec', 'total_iops_sec',
+                         'read_iops_sec', 'write_iops_sec']
+
+        # Initialize all of arguments to zero
+        for k in blkdevio_list:
+            blkdevio_params[k] = 0
+
+        try:
+            iotune = xmltreefile.find('/devices/disk/iotune')
+            for k in blkdevio_list:
+                if iotune.findall(k):
+                    blkdevio_params[k] = int(iotune.find(k).text)
+        except AttributeError:
+            xcepts.LibvirtXMLError("Can't find <iotune> element")
+
+        return blkdevio_params
+
 
 class VMCPUXML(VMXML):
 
