@@ -10,7 +10,7 @@ from virttest.libvirt_xml.devices import base
 
 class Controller(base.TypedDeviceBase):
 
-    __slots__ = ('type', 'index', 'model',)
+    __slots__ = ('type', 'index', 'model', "driver",)
 
     def __init__(self, type_name, virsh_instance=base.base.virsh):
         super(Controller, self).__init__(device_tag='controller',
@@ -22,3 +22,5 @@ class Controller(base.TypedDeviceBase):
                                tag_name='controller', attribute='index')
         accessors.XMLAttribute('model', self, parent_xpath='/',
                                tag_name='controller', attribute='model')
+        accessors.XMLElementDict('driver', self, parent_xpath='/',
+                                 tag_name='driver')
