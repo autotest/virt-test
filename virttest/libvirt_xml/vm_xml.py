@@ -972,6 +972,24 @@ class VMXML(VMXMLBase):
         vmxml.devices = devices
         vmxml.define()
 
+    def get_graphics_devices(self, type_name=""):
+        """
+        Get all graphics devices or desired type graphics devices
+
+        :param type_name: graphic type, vnc or spice
+        """
+        devices = self.get_devices()
+        graphics_devices = devices.by_device_tag('graphics')
+        graphics_list = []
+        for graphics_device in graphics_devices:
+            graphics_index = devices.index(graphics_device)
+            graphics = devices[graphics_index]
+            if not type_name:
+                graphics_list.append(graphics)
+            elif graphics.type_name == type_name:
+                graphics_list.append(graphics)
+        return graphics_list
+
     def add_hostdev(self, source_address, mode='subsystem',
                     type='pci',
                     managed='yes'):
