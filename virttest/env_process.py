@@ -839,7 +839,7 @@ def postprocess(test, params, env):
     global _vm_register_thread, _vm_register_thread_termination_event
     if _vm_register_thread is not None:
         _vm_register_thread_termination_event.set()
-        _vm_register_thread.join()
+        _vm_register_thread.join(10)
         _vm_register_thread = None
 
     # Kill all unresponsive VMs
@@ -1122,8 +1122,11 @@ def store_vm_register(vm, log_filename, append=False):
     try:
         output = vm.monitor.info('registers', debug=False)
         timestamp = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    except qemu_monitor.MonitorError, e:
-        logging.warn(e)
+    except qemu_monitor.MonitorError, err:
+        logging.warn(err)
+        return False
+    except AttributeError, err:
+        logging.warn(err)
         return False
 
     log_filename = "%s_%s" % (log_filename, timestamp)
