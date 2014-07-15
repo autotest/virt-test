@@ -1144,10 +1144,10 @@ def store_vm_register(vm, log_filename, append=False):
 def _store_vm_register(test, params, env):
     def report_result(status, results):
         msg = "%s." % status
-        for vm_name in results.keys():
-            if results[vm_name] > 0:
+        for vm_instance in results.keys():
+            if results[vm_instance] > 0:
                 msg += " Used to failed to get register info from guest"
-                msg += " %s for %s times." % (vm_name, results[vm_name])
+                msg += " %s for %s times." % (vm_instance, results[vm_instance])
 
         if msg != "%s." % status:
             logging.debug(msg)
@@ -1158,14 +1158,14 @@ def _store_vm_register(test, params, env):
     vm_register_error_count = {}
     while True:
         for vm in env.get_all_vms():
-            if vm.name not in vm_register_error_count:
-                vm_register_error_count[vm.name] = 0
+            if vm.instance not in vm_register_error_count:
+                vm_register_error_count[vm.instance] = 0
 
             if not vm.is_alive():
-                if vm_register_error_count[vm.name] < 1:
+                if vm_register_error_count[vm.instance] < 1:
                     logging.warn("%s is not alive. Can not query the "
                                  "register status" % vm.name)
-                vm_register_error_count[vm.name] += 1
+                vm_register_error_count[vm.instance] += 1
                 continue
             vm_pid = vm.get_pid()
             vr_dir = utils_misc.get_path(test.debugdir,
@@ -1176,18 +1176,18 @@ def _store_vm_register(test, params, env):
             except OSError:
                 pass
 
-            if vm not in counter:
-                counter[vm] = 1
-            vr_filename = utils_misc.get_path(vr_dir, "%04d" % counter[vm])
+            if vm.instance not in counter:
+                counter[vm.instance] = 1
+            vr_filename = utils_misc.get_path(vr_dir, "%04d" % counter[vm.instance])
             stored_log = store_vm_register(vm, vr_filename)
-            if vm_register_error_count[vm.name] >= 1:
+            if vm_register_error_count[vm.instance] >= 1:
                 logging.debug("%s alive now. Used to failed to get register"
                               " info from guest %s"
                               " times" % (vm.name,
-                                          vm_register_error_count[vm.name]))
-                vm_register_error_count[vm.name] = 0
+                                          vm_register_error_count[vm.instance]))
+                vm_register_error_count[vm.instance] = 0
             if stored_log:
-                counter[vm] += 1
+                counter[vm.instance] += 1
 
         if _vm_register_thread_termination_event is not None:
             if _vm_register_thread_termination_event.isSet():
