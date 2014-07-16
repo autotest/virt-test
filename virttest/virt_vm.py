@@ -912,10 +912,8 @@ class BaseVM(object):
         prompt = self.params.get("shell_prompt", "[\#\$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         client = self.params.get("shell_client")
-        ip_version = self.params.get("ip_version", "ipv4").lower()
         neigh_attach_if = ""
-        address = self.wait_for_get_address(nic_index, timeout=360,
-                                            ip_version=ip_version)
+        address = self.get_address(nic_index)
         if address and address.lower().startswith("fe80"):
             neigh_attach_if = utils_net.get_neigh_attch_interface(address)
         port = self.get_port(int(self.params.get("shell_port")))
