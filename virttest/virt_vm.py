@@ -997,7 +997,8 @@ class BaseVM(object):
         :param internal_timeout: Timeout to pass to login().
         :param serial: Whether to use a serial connection when remote login
                 (ssh, rss) failed.
-        :param restart_network: Whether to try to restart guest's network.
+        :param restart_network: Whether to try to restart guest's network
+                when remote login (ssh, rss) failed.
         :return: A ShellSession object.
         """
         error_messages = []
@@ -1018,9 +1019,14 @@ class BaseVM(object):
         # Timeout expired
         if serial or restart_network:
             # Try to login via serila console
-            return self.wait_for_serial_login(timeout, internal_timeout,
-                                              restart_network,
-                                              username, password)
+            session = self.wait_for_serial_login(timeout, internal_timeout,
+                                                   restart_network,
+                                                   username, password)
+            if restart_network:
+                # Try one more time after restarting guest network.
+                session = self.login(nic_index, internal_timeout, username,
+                                     password)
+            return session
         else:
             # Try one more time but don't catch exceptions
             return self.login(nic_index, internal_timeout, username, password)
@@ -1164,6 +1170,7 @@ class BaseVM(object):
                 session = self.serial_login(internal_timeout)
                 if restart_network:
                     try:
+                        logging.debug("Attempting to restart guest network")
                         utils_net.restart_guest_network(session)
                     except Exception:
                         pass
