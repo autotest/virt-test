@@ -1116,30 +1116,45 @@ def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4",
         raise IPAddrGetError(mac_addr, err)
 
 
-def renew_guest_ip(session, mac_addr, os_type="linux", ip_version="ipv4"):
+def restart_guest_network(session, mac_addr=None, os_type="linux",
+                          ip_version="ipv4", timeout=240):
     """
-    Renew guest ip by serial session
+    Restart guest network by serial session
 
     :param session: serial session
-    :param mac_addr: nic mac address of the nic that you want renew
+    :param mac_addr: nic mac address of the nic that you want restart
     :param os_type: guest os type, windows or linux
     :param ip_version: guest ip version, ipv4 or ipv6
+    :param timeout: timeout value for command.
     """
     if os_type == "linux":
-        nic_ifname = get_linux_ifname(session, mac_addr)
-        renew_cmd = "ifconfig %s up; " % nic_ifname
-        renew_cmd += "pidof dhclient && killall dhclient; "
-        if ip_version == "ipv6":
-            renew_cmd += "dhclient -6 %s &" % nic_ifname
+        if mac_addr:
+            nic_ifname = get_linux_ifname(session, mac_addr)
+            restart_cmd = "ifconfig %s up; " % nic_ifname
+            restart_cmd += "pidof dhclient && killall dhclient; "
+            if ip_version == "ipv6":
+                restart_cmd += "dhclient -6 %s" % nic_ifname
+            else:
+                restart_cmd += "dhclient %s" % nic_ifname
         else:
-            renew_cmd += "dhclient %s &" % nic_ifname
+            restart_cmd = "pidof dhclient && killall dhclient; "
+            if ip_version == "ipv6":
+                restart_cmd += "dhclient -6"
+            else:
+                restart_cmd += "dhclient"
     elif os_type == "windows":
-        nic_connectionid = get_windows_nic_attribute(session,
-                                                     "macaddress", mac_addr,
-                                                     "netconnectionid")
-        renew_cmd = 'ipconfig /renew "%s"' % nic_connectionid
-
-    session.cmd_output_safe(renew_cmd)
+        if ip_version == "ipv6":
+            restart_cmd = 'ipconfig /renew6'
+        else:
+            restart_cmd = 'ipconfig /renew'
+        if mac_addr:
+            nic_connectionid = get_windows_nic_attribute(session,
+                                                         "macaddress",
+                                                         mac_addr,
+                                                         "netconnectionid",
+                                                         timeout=120)
+            restart_cmd += ' "%s"' % nic_connectionid
+    session.cmd_output_safe(restart_cmd, timeout=timeout)
 
 
 def set_net_if_ip(if_name, ip_addr, runner=None):
@@ -2606,26 +2621,6 @@ def get_linux_ifname(session, mac_address=""):
     # If we came empty handed, let's raise an error
     raise error.TestError("Failed to determine interface name with "
                           "mac %s" % mac_address)
-
-
-def restart_guest_network(session, nic_name=None):
-    """
-    Restart guest's network via serial console.
-
-    :param session: session to virtual machine
-    :param nic_name: nic card name in guest to restart
-    """
-    if_list = []
-    if not nic_name:
-        # initiate all interfaces on guest.
-        o = session.cmd_output("ip link")
-        if_list = re.findall(r"\d+: (eth\d+):", o)
-    else:
-        if_list.append(nic_name)
-
-    if if_list:
-        session.sendline("killall dhclient && "
-                         "dhclient %s &" % ' '.join(if_list))
 
 
 def update_mac_ip_address(vm, params, timeout=None):

@@ -1020,8 +1020,8 @@ class BaseVM(object):
         if serial or restart_network:
             # Try to login via serila console
             session = self.wait_for_serial_login(timeout, internal_timeout,
-                                                   restart_network,
-                                                   username, password)
+                                                 restart_network,
+                                                 username, password)
             if restart_network:
                 # Try one more time after restarting guest network.
                 session = self.login(nic_index, internal_timeout, username,
@@ -1169,9 +1169,10 @@ class BaseVM(object):
             try:
                 session = self.serial_login(internal_timeout)
                 if restart_network:
+                    os_type = self.params.get("os_type")
                     try:
                         logging.debug("Attempting to restart guest network")
-                        utils_net.restart_guest_network(session)
+                        utils_net.restart_guest_network(session, os_type=os_type)
                     except Exception:
                         pass
                 return session
