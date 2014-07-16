@@ -766,37 +766,7 @@ class BaseVM(object):
                 return False
 
         if not utils_misc.wait_for(_get_address, timeout, internal_timeout):
-            if self.is_dead():
-                raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
-            try:
-                s_session = None
-                # for windows guest make sure your guest supports
-                # login by serial_console
-                s_session = self.wait_for_serial_login()
-                nic_mac = self.get_mac_address(nic_index_or_name)
-                os_type = self.params.get("os_type")
-                try:
-                    utils_net.renew_guest_ip(s_session, nic_mac,
-                                             os_type, ip_version)
-                    return self.get_address(nic_index_or_name)
-                except (VMIPAddressMissingError, VMAddressVerificationError):
-                    try:
-                        nic_address = utils_net.get_guest_ip_addr(s_session,
-                                                                  nic_mac,
-                                                                  os_type,
-                                                                  ip_version)
-                        if nic_address:
-                            mac_key = nic_mac
-                            if ip_version == "ipv6":
-                                mac_key = "%s_6" % nic_mac
-                            self.address_cache[mac_key.lower()] = nic_address
-                            return nic_address
-                    except Exception, err:
-                        logging.debug("Can not get guest address, '%s'" % err)
-                        raise VMIPAddressMissingError(nic_mac)
-            finally:
-                if s_session:
-                    s_session.close()
+            raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
         return self.get_address(nic_index_or_name)
 
     # Adding/setup networking devices methods split between 'add_*' for
