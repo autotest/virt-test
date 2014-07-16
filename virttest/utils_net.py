@@ -13,6 +13,7 @@ import commands
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 import propcan
+import remote
 import utils_misc
 import arch
 import aexpect
@@ -1528,6 +1529,195 @@ def if_set_macaddress(ifname, mac):
         logging.info(e)
         raise HwAddrSetError(ifname, mac)
     ctrl_sock.close()
+
+
+class IPv6Manager(propcan.PropCanBase):
+
+    """
+    Setup and cleanup IPv6 environment.
+    """
+
+    __slots__ = ('server_ip', 'server_user', 'server_pwd', 'server_ifname',
+                 'client_ifname', 'client_ipv6_addr', 'server_ipv6_addr',
+                 'client', 'port', 'runner', 'prompt', 'session',
+                 'auto_recover', 'check_ipv6_connectivity')
+
+    def __init__(self, *args, **dargs):
+        init_dict = dict(*args, **dargs)
+        init_dict['server_ip'] = init_dict.get('server_ip', 'SERVER.IP')
+        init_dict['server_user'] = init_dict.get('server_user', 'root')
+        init_dict['server_pwd'] = init_dict.get('server_pwd', None)
+        init_dict['server_ifname'] = init_dict.get('server_ifname', 'eth0')
+        init_dict['server_ipv6_addr'] = init_dict.get('server_ipv6_addr')
+        init_dict['client_ifname'] = init_dict.get('client_ifname', 'eth0')
+        init_dict['client_ipv6_addr'] = init_dict.get('client_ipv6_addr')
+        init_dict['client'] = init_dict.get('client', 'ssh')
+        init_dict['port'] = init_dict.get('port', 22)
+        init_dict['prompt'] = init_dict.get('prompt', r"[\#\$]\s*$")
+        init_dict['auto_recover'] = init_dict.get('auto_recover', False)
+        init_dict['check_ipv6_connectivity'] = \
+            init_dict.get('check_ipv6_connectivity', 'yes')
+
+        self.__dict_set__('session', None)
+        super(IPv6Manager, self).__init__(init_dict)
+
+    def __del__(self):
+        """
+        Close opened session and recover network configuration.
+        """
+        self.close_session()
+        if self.auto_recover:
+            try:
+                self.cleanup()
+            except:
+                raise error.TestError("Failed to cleanup test environment")
+
+    def _new_session(self):
+        """
+        Build a new server session.
+        """
+        port = self.port
+        prompt = self.prompt
+        host = self.server_ip
+        client = self.client
+        username = self.server_user
+        password = self.server_pwd
+
+        try:
+            session = remote.wait_for_login(client, host, port,
+                                            username, password, prompt)
+        except remote.LoginTimeoutError:
+            raise error.TestError("Got a timeout error when login to server.")
+        except remote.LoginAuthenticationError:
+            raise error.TestError("Authentication failed to login to server.")
+        except remote.LoginProcessTerminatedError:
+            raise error.TestError("Host terminates during login to server.")
+        except remote.LoginError:
+            raise error.TestError("Some error occurs login to client server.")
+        return session
+
+    def get_session(self):
+        """
+        Make sure the session is alive and available
+        """
+        session = self.__dict_get__('session')
+
+        if (session is not None) and (session.is_alive()):
+            return session
+        else:
+            session = self._new_session()
+
+        self.__dict_set__('session', session)
+        return session
+
+    def close_session(self):
+        """
+        If the session exists then close it.
+        """
+        if self.session:
+            self.session.close()
+
+    def get_addr_list(self):
+        """
+        Get IPv6 address list from local and remote host.
+        """
+        local_ipv6_addr_list = get_net_if_addrs(self.client_ifname).get("ipv6")
+        logging.debug("Local IPv6 address list: %s", local_ipv6_addr_list)
+
+        remote_ipv6_addr_list = get_net_if_addrs(self.server_ifname,
+                                                 self.runner).get("ipv6")
+        logging.debug("remote IPv6 address list: %s", remote_ipv6_addr_list)
+        return (local_ipv6_addr_list, remote_ipv6_addr_list)
+
+    @staticmethod
+    def check_connectivity(client_ifname, server_ipv6, count=5):
+        """
+        Check IPv6 network connectivity
+        :param client_ifname: client network interface name
+        :param server_ipv6: server IPv6 address
+        ::param count: sending packets counts, default is 5
+        """
+        try:
+            os_dep.command("ping6")
+        except ValueError:
+            raise error.TestNAError("Can't find ping6 command")
+        command = "ping6 -I %s %s -c %s" % (client_ifname, server_ipv6, count)
+        result = utils.run(command, ignore_status=True)
+        if result.exit_status:
+            raise error.TestNAError("The '%s' destination is unreachable:"
+                                    " %s", server_ipv6, result.stderr)
+        else:
+            logging.info("The '%s' destination is connectivity!", server_ipv6)
+
+    def flush_ip6tables(self):
+        """
+        Refresh IPv6 firewall rules
+        """
+        flush_cmd = "ip6tables -F"
+        find_ip6tables_cmd = "which ip6tables"
+        test_NA_err = "Can't find ip6tables command"
+        test_fail_err = "Failed to flush 'icmp6-adm-prohibited' rule"
+        flush_cmd_pass = "Succeed to run command '%s'" % flush_cmd
+        # check if ip6tables command exists on the local
+        try:
+            os_dep.command("ip6tables")
+        except ValueError:
+            raise error.TestNAError(test_NA_err)
+        # flush local ip6tables rules
+        result = utils.run(flush_cmd, ignore_status=True)
+        if result.exit_status:
+            raise error.TestFail("%s on local host:%s",
+                                 test_fail_err, result.stderr)
+        else:
+            logging.info("%s on the local host", flush_cmd_pass)
+
+        # check if ip6tables command exists on the remote
+        if self.session.cmd_status(find_ip6tables_cmd):
+            raise error.TestNAError(test_NA_err)
+        # flush remote ip6tables rules
+        if self.session.cmd_status(flush_cmd):
+            raise error.TestFail("%s on the remote host", test_fail_err)
+        else:
+            logging.info("%s on the remote host", flush_cmd_pass)
+
+    def setup(self):
+        """
+        Setup IPv6 network environment.
+        """
+        self.session = self.get_session()
+        self.runner = self.session.cmd_output
+
+        logging.info("Prepare to configure IPv6 test environment...")
+        # configure global IPv6 address for local host
+        set_net_if_ip(self.client_ifname, self.client_ipv6_addr)
+        # configure global IPv6 address for remote host
+        set_net_if_ip(self.server_ifname, self.server_ipv6_addr, self.runner)
+        # check IPv6 network connectivity
+        if self.check_ipv6_connectivity == "yes":
+            # the ipv6 address looks like this '3efe::101/64'
+            ipv6_addr_des = self.server_ipv6_addr.split('/')[0]
+            self.check_connectivity(self.client_ifname, ipv6_addr_des)
+        # flush ip6tables both local and remote host
+        self.flush_ip6tables()
+
+    def cleanup(self):
+        """
+        Cleanup IPv6 network environment.
+        """
+        self.session = self.get_session()
+        self.runner = self.session.cmd_output
+
+        logging.info("Prepare to clean up IPv6 test environment...")
+        local_ipv6_addr_list, remote_ipv6_addr_list = self.get_addr_list()
+        # the ipv6 address looks like this '3efe::101/64'
+        ipv6_addr_src = self.client_ipv6_addr.split('/')[0]
+        ipv6_addr_des = self.server_ipv6_addr.split('/')[0]
+        # delete global IPv6 address from local host
+        if ipv6_addr_src in local_ipv6_addr_list:
+            del_net_if_ip(self.client_ifname, self.client_ipv6_addr)
+        # delete global IPv6 address from remote host
+        if ipv6_addr_des in remote_ipv6_addr_list:
+            del_net_if_ip(self.server_ifname, self.server_ipv6_addr, self.runner)
 
 
 class VirtIface(propcan.PropCan, object):
