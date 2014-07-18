@@ -4,6 +4,7 @@ http://libvirt.org/formatsecret.html
 """
 
 from virttest.libvirt_xml import base, accessors
+from virttest.libvirt_xml import xcepts
 
 
 class SecretXMLBase(base.LibvirtXMLBase):
@@ -20,15 +21,25 @@ class SecretXMLBase(base.LibvirtXMLBase):
             string, operates on description tag
         uuid:
             string, operates on uuid tag
+        auth_type:
+            string, sercet authentication type, operates
+            on auth tag
+        auth_username:
+            string, secret authentication username, operates
+            on auth tag
         usage:
             string, operates on usage tag
+        target:
+            string, sub-tag of the usage tag, operates on
+            target tag
         volume:
             the volume file path, sub-tag of the usage tag,
             operates on volume tag
     """
 
     __slots__ = ('secret_ephemeral', 'secret_private', 'description',
-                 'uuid', 'usage', 'volume')
+                 'auth_type', 'auth_username', 'uuid', 'usage', 'target',
+                 'volume')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -41,10 +52,16 @@ class SecretXMLBase(base.LibvirtXMLBase):
                                tag_name='secret', attribute='private')
         accessors.XMLElementText('uuid', self, parent_xpath='/',
                                  tag_name='uuid')
+        accessors.XMLAttribute('auth_type', self, parent_xpath='/',
+                               tag_name='auth', attribute='type')
+        accessors.XMLAttribute('auth_username', self, parent_xpath='/',
+                               tag_name='auth', attribute='username')
         accessors.XMLElementText('description', self, parent_xpath='/',
                                  tag_name='description')
         accessors.XMLAttribute('usage', self, parent_xpath='/',
                                tag_name='usage', attribute='type')
+        accessors.XMLElementText('target', self, parent_xpath='/usage',
+                                 tag_name='target')
         accessors.XMLElementText('volume', self, parent_xpath='/usage',
                                  tag_name='volume')
         super(SecretXMLBase, self).__init__(virsh_instance=virsh_instance)
@@ -96,7 +113,17 @@ class SecretXML(SecretXMLBase):
         secret_xml['secret_private'] = sec_xml.secret_private
         secret_xml['uuid'] = sec_xml.uuid
         secret_xml['description'] = sec_xml.description
-        secret_xml['usage'] = sec_xml.usage
-        secret_xml['volume'] = sec_xml.volume
-
+        #secret XML may not has usage, target or volume tag
+        try:
+            secret_xml['usage'] = sec_xml.usage
+        except xcepts.LibvirtXMLNotFoundError:
+            secret_xml['usage'] = ""
+        try:
+            secret_xml['target'] = sec_xml.target
+        except xcepts.LibvirtXMLNotFoundError:
+            secret_xml['target'] = ""
+        try:
+            secret_xml['volume'] = sec_xml.volume
+        except xcepts.LibvirtXMLNotFoundError:
+            secret_xml['volume'] = ""
         return secret_xml

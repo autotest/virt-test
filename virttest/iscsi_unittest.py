@@ -8,6 +8,7 @@ except ImportError:
     import common
 
 import iscsi
+from virttest import utils_selinux
 from autotest.client.shared.test_utils import mock
 from autotest.client import os_dep
 from autotest.client.shared import utils
@@ -74,6 +75,7 @@ class iscsi_test(unittest.TestCase):
     def setup_stubs_export_target(self, iscsi_obj):
         s_cmd = "tgtadm --lld iscsi --mode target --op show"
         utils.system_output.expect_call(s_cmd).and_return("")
+        utils_selinux.is_enforcing.expect_call().and_return(False)
         utils.system_output.expect_call(s_cmd).and_return("")
         t_cmd = "tgtadm --mode target --op new --tid"
         t_cmd += " %s --lld iscsi " % iscsi_obj.emulated_id
@@ -88,11 +90,55 @@ class iscsi_test(unittest.TestCase):
         t_cmd += "--lun %s " % 0
         t_cmd += "--backing-store %s" % iscsi_obj.emulated_image
         utils.system.expect_call(t_cmd)
+        self.setup_stubs_set_chap_auth_target(iscsi_obj)
+        self.setup_stubs_portal_visible(iscsi_obj, "127.0.0.1:3260,1 %s"
+                                        % iscsi_obj.target)
+        self.setup_stubs_set_chap_auth_initiator(iscsi_obj)
 
     def setup_stubs_get_target_id(self):
         s_cmd = "tgtadm --lld iscsi --mode target --op show"
         s_msg = "Target 1: iqn.iscsitest\nBacking store path: /tmp/iscsitest"
         utils.system_output.expect_call(s_cmd).and_return(s_msg)
+
+    def setup_stubs_get_chap_accounts(self, result=""):
+        s_cmd = "tgtadm --lld iscsi --op show --mode account"
+        utils.system_output.expect_call(s_cmd).and_return(result)
+
+    def setup_stubs_add_chap_account(self, iscsi_obj):
+        n_cmd = "tgtadm --lld iscsi --op new --mode account"
+        n_cmd += " --user %s" % iscsi_obj.chap_user
+        n_cmd += " --password %s" % iscsi_obj.chap_passwd
+        utils.system.expect_call(n_cmd)
+        a_msg = "Account list:\n %s" % iscsi_obj.chap_user
+        self.setup_stubs_get_chap_accounts(a_msg)
+
+    def setup_stubs_delete_chap_account(self, iscsi_obj):
+        self.setup_stubs_get_chap_accounts(iscsi_obj)
+        d_cmd = "tgtadm --lld iscsi --op delete --mode account"
+        d_cmd += " --user %s" % iscsi_obj.chap_user
+        utils.system.expect_call(d_cmd)
+
+    def setup_stubs_get_target_account_info(self):
+        s_cmd = "tgtadm --lld iscsi --mode target --op show"
+        s_msg = "Target 1: iqn.iscsitest\nAccount information:\n"
+        utils.system_output.expect_call(s_cmd).and_return(s_msg)
+
+    def setup_stubs_set_chap_auth_target(self, iscsi_obj):
+        self.setup_stubs_get_chap_accounts()
+        self.setup_stubs_add_chap_account(iscsi_obj)
+        self.setup_stubs_get_target_account_info()
+        b_cmd = "tgtadm --lld iscsi --op bind --mode account"
+        b_cmd += " --tid 1 --user %s" % iscsi_obj.chap_user
+        utils.system.expect_call(b_cmd)
+
+    def setup_stubs_set_chap_auth_initiator(self, iscsi_obj):
+        u_name = {'node.session.auth.authmethod': 'CHAP'}
+        u_name['node.session.auth.username'] = iscsi_obj.chap_user
+        u_name['node.session.auth.password'] = iscsi_obj.chap_passwd
+        for name in u_name.keys():
+            u_cmd = "iscsiadm --mode node --targetname %s " % iscsi_obj.target
+            u_cmd += "--op update --name %s --value %s" % (name, u_name[name])
+            utils.system.expect_call(u_cmd)
 
     def setUp(self):
         # The normal iscsi with iscsi server should configure following
@@ -104,12 +150,15 @@ class iscsi_test(unittest.TestCase):
 
         self.iscsi_emulated_params = {"emulated_image": "/tmp/iscsitest",
                                       "target": "iqn.iscsitest",
-                                      "image_size": "1024K"}
+                                      "image_size": "1024K",
+                                      "chap_user": "tester",
+                                      "chap_passwd": "123456"}
         self.god = mock.mock_god()
         self.god.stub_function(os_dep, "command")
         self.god.stub_function(utils, "system")
         self.god.stub_function(utils, "system_output")
         self.god.stub_function(os.path, "isfile")
+        self.god.stub_function(utils_selinux, "is_enforcing")
 
     def tearDown(self):
         self.god.unstub_all()
