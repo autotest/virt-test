@@ -85,9 +85,9 @@ class Cgroup(object):
             pwd = self.cgroups[pwd]
         # self.root is "/cgroup/blkio," not "/cgroup/blkio/"
         # cgroup is "/cgroup/blkio/test" or "/cgroup/blkio/test/test"
-        # expected cgroup name is test/ or test/test/
+        # expected cgroup name is test or test/test
         if pwd.startswith(self.root + '/'):
-            return pwd[len(self.root) + 1:]
+            return pwd[len(self.root) + 1: -1]
         return None
 
     def get_cgroup_index(self, cgroup):
@@ -194,6 +194,26 @@ class Cgroup(object):
                          "using this Cgroup")
         except Exception, inst:
             raise error.TestError("cg.rm_cgroup(): %s" % inst)
+
+    def get_all_cgroups(self):
+        """
+        Get all sub cgroups in this controller
+        """
+        lscgroup_cmd = "lscgroup %s:/" % self.module
+        result = utils.run(lscgroup_cmd, ignore_status=True)
+        if result.exit_status:
+            raise error.TestFail(result.stderr.strip())
+        cgroup_list = result.stdout.strip().splitlines()
+        # Remove root cgroup
+        cgroup_list = cgroup_list[1:]
+        self.root = get_cgroup_mountpoint(self.module)
+        sub_cgroup_list = []
+        for item in cgroup_list:
+            sub_cg = item.split(":/")[-1]
+            sub_cg_path = os.path.join(self.root, sub_cg) + '/'
+            sub_cgroup_list.append(sub_cg_path)
+        self.cgroups = sub_cgroup_list
+        return self.cgroups
 
     def cgdelete_all_cgroups(self):
         """
