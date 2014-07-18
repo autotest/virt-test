@@ -25,7 +25,7 @@ class CapabilityXML(base.LibvirtXMLBase):
     # e.g. guest_count etc.
 
     __slots__ = ('uuid', 'os_arch_machine_map', 'cpu_count', 'arch', 'model',
-                 'vendor', 'feature_list',)
+                 'vendor', 'feature_list', 'power_management_list')
     __schema_name__ = "capability"
 
     def __init__(self, virsh_instance=base.virsh):
@@ -59,6 +59,9 @@ class CapabilityXML(base.LibvirtXMLBase):
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                libvirtxml=self)
+        # This will skip self.get_power_management_list() defined below
+        accessors.AllForbidden(property_name="power_management_list",
+                               libvirtxml=self)
         super(CapabilityXML, self).__init__(virsh_instance)
         # calls set_xml accessor method
         self['xml'] = self.__dict_get__('virsh').capabilities()
@@ -86,6 +89,14 @@ class CapabilityXML(base.LibvirtXMLBase):
                 amm[arch_name] = mmap
             oamm[os_type_name] = amm
         return oamm
+
+    def get_power_management_list(self):
+        """
+        Accessor method for power_management_list property (in __slots__)
+        """
+        xmltreefile = self.__dict_get__('xml')
+        pms = xmltreefile.find('host').find('power_management').getchildren()
+        return [pm.tag for pm in pms]
 
     def get_feature_list(self):
         """
