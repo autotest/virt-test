@@ -66,25 +66,29 @@ class Graphics(base.TypedDeviceBase):
         if passwd is not None:
             graphics.passwd = passwd
         vmxml.devices = devices
-        vmxml.define()
+        vmxml.sync()
 
     @staticmethod
-    def add_ssl_spice_graphic(vm_name, passwd=None):
+    def add_graphic(vm_name, passwd=None, graphic="vnc",
+                    add_channel=False):
         """
-        Add spice ssl graphic with passwd
+        Add spice ssl or vnc graphic with passwd
 
         :param vm_name: name of vm
         :param passwd: password for graphic
+        :param graphic: graphic type, spice or vnc
+        :param add_channel: add channel for spice
         """
         vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
-        grap = vmxml.get_device_class('graphics')(type_name='spice')
+        grap = vmxml.get_device_class('graphics')(type_name=graphic)
         if passwd is not None:
             grap.passwd = passwd
         grap.autoport = "yes"
-        grap.add_channel(name='main', mode='secure')
-        grap.add_channel(name='inputs', mode='secure')
+        if graphic == "spice" and add_channel:
+            grap.add_channel(name='main', mode='secure')
+            grap.add_channel(name='inputs', mode='secure')
         vmxml.devices = vmxml.devices.append(grap)
-        vmxml.define()
+        vmxml.sync()
 
     @staticmethod
     def del_graphic(vm_name):
@@ -96,4 +100,4 @@ class Graphics(base.TypedDeviceBase):
         vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
         vmxml.xmltreefile.remove_by_xpath('/devices/graphics')
         vmxml.xmltreefile.write()
-        vmxml.define()
+        vmxml.sync()
