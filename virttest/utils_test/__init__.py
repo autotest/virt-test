@@ -513,7 +513,8 @@ def run_file_transfer(test, params, env):
 
 
 def run_autotest(vm, session, control_path, timeout,
-                 outputdir, params, copy_only=False, control_args=None):
+                 outputdir, params, copy_only=False, control_args=None,
+                 ignore_session_terminated=False):
     """
     Run an autotest control file inside a guest (linux only utility).
 
@@ -527,6 +528,8 @@ def run_autotest(vm, session, control_path, timeout,
             return the command which need to run test on guest, without
             executing it.
     :param control_args: The arguments for control file.
+    :param ignore_session_terminated: If set up this parameter to True we will
+            ignore the session terminated during test.
 
     The following params is used by the migration
     :param params: Test params used in the migration test
@@ -850,6 +853,7 @@ def run_autotest(vm, session, control_path, timeout,
     try:
         bg = None
         try:
+            start_time = time.time()
             logging.info("---------------- Test output ----------------")
             if migrate_background:
                 mig_timeout = float(params.get("mig_timeout", "3600"))
@@ -907,9 +911,32 @@ def run_autotest(vm, session, control_path, timeout,
             raise error.TestError("Autotest job on guest failed "
                                   "(VM terminated during job)")
     except aexpect.ShellProcessTerminatedError:
-        get_results(destination_autotest_path)
-        raise error.TestError("Autotest job on guest failed "
-                              "(Remote session terminated during job)")
+        if ignore_session_terminated:
+            try:
+                vm.verify_alive()
+            except Exception:
+                get_results(destination_autotest_path)
+                raise error.TestError("Autotest job on guest failed "
+                                      "(VM terminated during job)")
+            logging.debug("Wait for autotest job finished on guest.")
+            session.close()
+            session = vm.wait_for_login()
+            while time.time() < start_time + timeout:
+                ps_cmd = "ps ax"
+                _, processes = session.cmd_status_output(ps_cmd)
+                if "autotest-local" not in processes:
+                    logging.debug("Autotest job finished on guest")
+                    break
+                time.sleep(1)
+            else:
+                get_results(destination_autotest_path)
+                get_results_summary()
+                raise error.TestError("Timeout elapsed while waiting for job "
+                                      "to complete")
+        else:
+            get_results(destination_autotest_path)
+            raise error.TestError("Autotest job on guest failed "
+                                  "(Remote session terminated during job)")
 
     get_results(destination_autotest_path)
     results = get_results_summary()
