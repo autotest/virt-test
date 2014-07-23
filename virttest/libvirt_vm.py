@@ -1349,6 +1349,21 @@ class VM(virt_vm.BaseVM):
         self.destroy(gracefully=False, free_mac_addresses=True)
         logging.debug("VM '%s' was removed", self.name)
 
+    def remove_with_storage(self):
+        """
+        Virsh undefine provides an option named --remove-all-storage, but it
+        only removes the storage which is managed by libvirt.
+
+        This method undefines vm and removes the all storages related with this
+        vm, no matter storages are managed by libvirt or not.
+        """
+        blklist = self.get_disk_devices().values()
+        self.remove()
+        for blk in blklist:
+            path = blk['source']
+            if os.path.exists(path):
+                os.remove(path)
+
     def get_uuid(self):
         """
         Return VM's UUID.
