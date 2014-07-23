@@ -1086,10 +1086,11 @@ def device_exists(vm, target_dev):
 
 
 def create_local_disk(disk_type, path=None, size=10,
-                      vgname=None, lvname=None):
+                      vgname=None, lvname=None,
+                      disk_format="raw"):
     if disk_type == "file":
         utils.run("mkdir -p %s" % os.path.dirname(path))
-        cmd = "qemu-img create %s %sG" % (path, size)
+        cmd = "qemu-img create -f %s %s %sG" % (disk_format, path, size)
     else:
         cmd = "lvcreate -V %sG %s --name %s --size 1M" % (size,
                                                           vgname,
