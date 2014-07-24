@@ -312,7 +312,7 @@ class VM(virt_vm.BaseVM):
             state = None
         return VM(name, params, root_dir, address_cache, state)
 
-    def make_create_command(self, name=None, params=None, root_dir=None):
+    def make_create_command(self, name=None, params=None, root_dir=None, resource_label=None):
         """
         Generate a libvirt command line. All parameters are optional. If a
         parameter is not supplied, the corresponding value stored in the
@@ -396,6 +396,8 @@ class VM(virt_vm.BaseVM):
 
         def add_cdrom(help_text, filename, index=None):
             if has_option(help_text, "cdrom"):
+                if resource_label and utils_selinux.is_not_disabled():
+                    utils_selinux.set_context_of_file(filename, resource_label)
                 return " --cdrom %s" % filename
             else:
                 return ""
@@ -417,6 +419,8 @@ class VM(virt_vm.BaseVM):
                       cache=None, fmt=None):
             cmd = " --disk"
             if filename:
+                if resource_label and utils_selinux.is_not_disabled():
+                    utils_selinux.set_context_of_file(filename, resource_label)
                 cmd += " path=%s" % filename
             elif pool:
                 if vol:
@@ -440,6 +444,8 @@ class VM(virt_vm.BaseVM):
             return cmd
 
         def add_floppy(help_text, filename):
+            if resource_label and utils_selinux.is_not_disabled():
+                utils_selinux.set_context_of_file(filename, resource_label)
             return " --disk path=%s,device=floppy,ro" % filename
 
         def add_vnc(help_text, vnc_port=None):
@@ -1196,7 +1202,8 @@ class VM(virt_vm.BaseVM):
                 self.activate_nic(nic.nic_name)
 
             # Make qemu command
-            install_command = self.make_create_command()
+            install_command = self.make_create_command(
+                resource_label=self.params.get("selinux_resource_label"))
 
             logging.info("Running libvirt command (reformatted):")
             for item in install_command.replace(" -", " \n    -").splitlines():
