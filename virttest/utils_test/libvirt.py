@@ -552,6 +552,17 @@ def pci_label_from_address(address_dict, radix=10):
     return pci_label
 
 
+def mk_label(disk, label="msdos", session=None):
+    """
+    Set label for disk.
+    """
+    mklabel_cmd = "parted -s %s mklabel %s" % (disk, label)
+    if session:
+        session.cmd(mklabel_cmd)
+    else:
+        utils.run(mklabel_cmd)
+
+
 def mk_part(disk, size="100M", session=None):
     """
     Create a partition for disk
@@ -673,6 +684,8 @@ class PoolVolumeTest(object):
             if type(pre_disk_vol) == list and len(pre_disk_vol):
                 for vol in pre_disk_vol:
                     mk_part(device_name, vol)
+            else:
+                mk_label(device_name, "gpt")
             extra = " --source-dev %s" % device_name
         elif pool_type == "fs":
             device_name = setup_or_cleanup_iscsi(is_setup=True,
