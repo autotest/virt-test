@@ -732,7 +732,7 @@ def setvcpus(name, count, extra="", **dargs):
     return command(cmd, **dargs)
 
 
-def vcpupin(name, vcpu, cpu_list, options="", **dargs):
+def vcpupin(name, vcpu="", cpu_list="", options="", **dargs):
     """
     Changes the cpu affinity for respective vcpu.
 
