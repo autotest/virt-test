@@ -125,6 +125,7 @@ def handle_prompts(session, username, password, prompt, timeout=10,
     password_prompt_count = 0
     login_prompt_count = 0
 
+    output = ""
     while True:
         try:
             match, text = session.read_until_last_line_matches(
@@ -136,6 +137,7 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                  r"[Pp]lease wait", r"[Ww]arning", r"[Ee]nter.*username",
                  r"[Ee]nter.*password", prompt],
                 timeout=timeout, internal_timeout=0.5)
+            output += text
             if match == 0:  # "Are you sure you want to continue connecting"
                 if debug:
                     logging.debug("Got 'Are you sure...', sending 'yes'")
@@ -187,6 +189,8 @@ def handle_prompts(session, username, password, prompt, timeout=10,
             raise LoginTimeoutError(e.output)
         except aexpect.ExpectProcessTerminatedError, e:
             raise LoginProcessTerminatedError(e.status, e.output)
+
+        return output
 
 
 def remote_login(client, host, port, username, password, prompt, linesep="\n",
