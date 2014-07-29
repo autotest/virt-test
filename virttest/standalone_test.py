@@ -554,6 +554,9 @@ def print_test_list(options, cartesian_parser):
     index = 0
 
     pipe.write(get_cartesian_parser_details(cartesian_parser))
+    if options.tests:
+        tests = options.tests.split(" ")
+        cartesian_parser.only_filter(", ".join(tests))
     for params in cartesian_parser.get_dicts():
         virt_test_type = params.get('virt_test_type', "")
         supported_virt_backends = virt_test_type.split(" ")
