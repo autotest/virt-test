@@ -2622,7 +2622,7 @@ def virt_format(disk, filesystem=None, image_format=None, lvm=None,
 
 
 def virt_inspector(disk_or_domain, is_disk=False, ignore_status=True,
-                   debug=False, timeout=30):
+                   debug=False, timeout=60):
     """
     virt-inspector2 examines a virtual machine or disk image and tries to
     determine the version of the operating system and other information

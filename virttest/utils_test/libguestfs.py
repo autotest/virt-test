@@ -82,7 +82,7 @@ def get_primary_disk(vm):
     """
     vmdisks = vm.get_disk_devices()
     if len(vmdisks):
-        pri_target = ['vda', 'sda']
+        pri_target = ['vda', 'sda', 'hda']
         for target in pri_target:
             try:
                 return vmdisks[target]['source']
