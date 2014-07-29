@@ -358,7 +358,8 @@ class VirtTools(object):
             return (False, gmo)
 
         # file's path on host's mountpoint
-        file_path = os.path.join(mountpoint, path)
+        # Connect mountpoint and path, then remove additional character '/'
+        file_path = os.path.abspath("%s/%s" % (mountpoint, path))
         if content is None:
             content = "This is a temp file with guestmount."
         try:
