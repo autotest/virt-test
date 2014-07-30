@@ -1804,3 +1804,15 @@ class VM(virt_vm.BaseVM):
         if cmd_result.exit_status:
             raise error.TestFail("Failed to dump %s to %s.\n"
                                  "Detail: %s." % (self.name, path, cmd_result))
+
+    def get_job_type(self):
+        jobresult = virsh.domjobinfo(self.name, uri=self.connect_uri)
+        if not jobresult.exit_status:
+            for line in jobresult.stdout.splitlines():
+                key = line.split(':')[0]
+                value = line.split(':')[-1]
+                if key.count("type"):
+                    return value.strip()
+        else:
+            logging.error(jobresult)
+        return False
