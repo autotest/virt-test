@@ -1042,7 +1042,7 @@ def create_disk_xml(params):
         if secret_usage:
             auth_attrs['secret_usage'] = secret_usage
         if auth_attrs:
-            diskxml.new_auth(auth_attrs)
+            diskxml.auth = diskxml.new_auth(**auth_attrs)
         driver_name = params.get("driver_name", "qemu")
         driver_type = params.get("driver_type", "")
         driver_cache = params.get("driver_cache", "")
