@@ -5,6 +5,7 @@ Utility classes and functions to handle Virtual Machine creation using libvirt.
 """
 
 import time
+import string
 import os
 import logging
 import fcntl
@@ -972,6 +973,260 @@ class VM(virt_vm.BaseVM):
         logging.debug("Set kernel params for %s failed.", device)
         return False
 
+    def set_kernel_param(self, parameter, value=None, remove=False):
+        """
+        Set a specific kernel parameter.
+
+        :param option: A kernel parameter to set.
+        :param value: The value of the parameter to be set.
+        :param remove: Remove the parameter if True.
+        :return: True if succeed of False if failed.
+        """
+        if self.is_dead():
+            logging.error("Can't set kernel param on a dead VM.")
+            return False
+
+        session = self.wait_for_login()
+        try:
+            grub_paths = [
+                '/etc/grub.conf',
+                '/etc/grub2.cfg',
+                '/boot/grub/grub.conf',
+                '/boot/grub2/grub.cfg',
+            ]
+            grub_path = ''
+            for path in grub_paths:
+                if not session.cmd_status("ls %s" % path):
+                    grub_path = path
+                    break
+            if not grub_path:
+                logging.error("Failed to locate grub config file "
+                              "in %s." % grub_paths)
+                return False
+
+            grub_text = session.cmd_output("cat %s" % grub_path)
+            kernel_lines = [l.strip() for l in grub_text.splitlines()
+                            if re.match(r"\s*(linux|kernel).*", l)]
+            if not kernel_lines:
+                logging.error("Can't find any kernel lines in grub "
+                              "file %s:\n%s" % (grub_path, grub_text))
+                return False
+
+            for line in kernel_lines:
+                line = line.replace('\t', r'\t')
+                if remove:
+                    new_string = ""
+                else:
+                    if value is None:
+                        new_string = parameter
+                    else:
+                        new_string = "%s=%s" % (parameter, value)
+
+                patts = [
+                    "\s+(%s=\S*)(\s|$)" % parameter,
+                    "\s+(%s)(\s|$)" % parameter,
+                ]
+                old_string = ""
+                for patt in patts:
+                    res = re.search(patt, line)
+                    if res:
+                        old_string = res.group(1)
+                        break
+
+                if old_string:
+                    new_line = line.replace(old_string, new_string)
+                else:
+                    new_line = " ".join((line, new_string))
+
+                line_patt = "\s*".join(line.split())
+                logging.debug("Substituting grub line '%s' to '%s'." %
+                              (line, new_line))
+                stat_sed, output = session.cmd_status_output(
+                    "sed -i --follow-symlinks -e \"s@%s@%s@g\" %s" %
+                    (line_patt, new_line, grub_path))
+                if stat_sed:
+                    logging.error("Failed to substitute grub file:\n%s" %
+                                  output)
+                    return False
+            if remove:
+                logging.debug("Remove kernel params %s successfully.",
+                              parameter)
+            else:
+                logging.debug("Set kernel params %s to %s successfully.",
+                              parameter, value)
+            return True
+        finally:
+            session.close()
+
+    def has_swap(self):
+        """
+        Check if there is any active swap partition/file.
+
+        :return : True if swap is on or False otherwise.
+        """
+        if self.is_dead():
+            logging.error("Can't check swap on a dead VM.")
+            return False
+
+        session = self.wait_for_login()
+        try:
+            cmd = "swapon -s"
+            output = session.cmd_output(cmd)
+            if output.strip():
+                return True
+            return False
+        finally:
+            session.close()
+
+    def create_swap_partition(self):
+        """
+        Make a swap partition and active it.
+
+        A cleanup_swap() should be call after use to clean up
+        the environment changed.
+        """
+        if self.is_dead():
+            logging.error("Can't create swap on a dead VM.")
+            return False
+
+        swap_path = os.path.join(data_dir.get_tmp_dir(), "swap_image")
+        swap_size = self.get_used_mem()
+        utils.run("qemu-img create %s %s" % (swap_path, swap_size * 1024))
+        self.created_swap_path = swap_path
+
+        device = self.attach_disk(swap_path, extra="--persistent")
+
+        session = self.wait_for_login()
+        try:
+            dev_path = "/dev/" + device
+            session.cmd_status("mkswap %s" % dev_path)
+            session.cmd_status("swapon %s" % dev_path)
+            self.set_kernel_param("resume", dev_path)
+            return True
+        finally:
+            session.close()
+        logging.error("Failed to create a swap partition.")
+        return False
+
+    def create_swap_file(self, swapfile='/swapfile'):
+        """
+        Make a swap file and active it through a session.
+
+        A cleanup_swap() should be call after use to clean up
+        the environment changed.
+
+        :param swapfile: Swap file path in VM to be created.
+        """
+        if self.is_dead():
+            logging.error("Can't create swap on a dead VM.")
+            return False
+
+        session = self.wait_for_login()
+        try:
+            # Get memory size.
+            swap_size = self.get_used_mem() / 1024
+
+            # Create, change permission, and make a swap file.
+            cmd = ("dd if=/dev/zero of={1} bs=1M count={0} && "
+                   "chmod 600 {1} && "
+                   "mkswap {1}".format(swap_size, swapfile))
+            stat_create, output = session.cmd_status_output(cmd)
+            if stat_create:
+                logging.error("Fail to create swap file in guest."
+                              "\n%s" % output)
+                return False
+            self.created_swap_file = swapfile
+
+            # Get physical swap file offset for kernel param resume_offset.
+            cmd = "filefrag -v %s" % swapfile
+            output = session.cmd_output(cmd)
+            # For compatibility of different version of filefrag
+            # Sample output of 'filefrag -v /swapfile'
+            # On newer version:
+            #Filesystem type is: 58465342
+            #File size of /swapfile is 1048576000 (256000 blocks of 4096 bytes)
+            # ext:     logical_offset:        physical_offset: length:   expected: flags:
+            #        0:        0..   65519:     395320..    460839:  65520:
+            # ...
+            # On older version:
+            #Filesystem type is: ef53
+            #File size of /swapfile is 1048576000 (256000 blocks, blocksize 4096)
+            # ext logical physical expected length flags
+            #    0       0  2465792           32768
+            # ...
+            offset_line = output.splitlines()[3]
+            if '..' in offset_line:
+                offset = offset_line.split()[3].rstrip('..')
+            else:
+                offset = offset_line.split()[2]
+
+            # Get physical swap file device for kernel param resume.
+            cmd = "df %s" % swapfile
+            output = session.cmd_output(cmd)
+            # Sample output of 'df /swapfile':
+            #Filesystem 1K-blocks     Used Available Use% Mounted on
+            #/dev/vdb    52403200 15513848  36889352  30% /
+            device = output.splitlines()[1].split()[0]
+
+            # Set kernel parameters.
+            self.set_kernel_param("resume", device)
+            self.set_kernel_param("resume_offset", offset)
+        finally:
+            session.close()
+
+        self.reboot()
+
+        session = self.wait_for_login()
+        try:
+            # Activate a swap file.
+            cmd = "swapon %s" % swapfile
+            stat_swapon, output = session.cmd_status_output(cmd)
+            if stat_create:
+                logging.error("Fail to activate swap file in guest."
+                              "\n%s" % output)
+                return False
+        finally:
+            session.close()
+
+        if self.has_swap():
+            logging.debug("Successfully created swapfile %s." % swapfile)
+            return True
+        else:
+            logging.error("Failed to create swap file.")
+            return False
+
+    def cleanup_swap(self):
+        """
+        Cleanup environment changed by create_swap_partition() or
+        create_swap_file().
+        """
+        if self.is_dead():
+            logging.error("Can't cleanup swap on a dead VM.")
+            return False
+
+        # Remove kernel parameters.
+        self.set_kernel_param("resume", remove=True)
+        self.set_kernel_param("resume_offset", remove=True)
+
+        # Deactivate swap partition/file.
+        session = self.wait_for_login()
+        try:
+            session.cmd_status("swapoff -a")
+            if "created_swap_file" in dir(self):
+                session.cmd_status("rm -f %s" % self.created_swap_file)
+                del self.created_swap_file
+        finally:
+            session.close()
+
+        # Cold unplug attached swap disk
+        if self.shutdown():
+            if "created_swap_device" in dir(self):
+                self.detach_disk(self.created_swap_device, extra="--persistent")
+                del self.created_swap_device
+            if "created_swap_path" in dir(self):
+                os.remove(self.created_swap_path)
+                del self.created_swap_path
+
     def set_console_getty(self, device, getty="mgetty", remove=False):
         """
         Set getty for given console device.
@@ -1268,6 +1523,44 @@ class VM(virt_vm.BaseVM):
         self.create_serial_console()
         return result
 
+    def attach_disk(self, source, target=None, prefix="vd", extra="",
+                    ignore_status=False, debug=False):
+        """
+        Attach a disk to VM and return the target device name.
+
+        :param source: source of disk device
+        :param target: target of disk device, None for automatic assignment.
+        :param prefix: disk device prefix.
+        :param extra: additional arguments to command
+        :return: target device name if successed
+        """
+        # Find the next available target device name.
+        if target is None:
+            disks = self.get_disk_devices()
+            for ch in string.ascii_lowercase:
+                target = prefix + ch
+                if target not in disks:
+                    break
+
+        virsh.attach_disk(self.name, source, target, extra,
+                          uri=self.connect_uri,
+                          ignore_status=ignore_status,
+                          debug=debug)
+        return target
+
+    def detach_disk(self, target, extra="",
+                    ignore_status=False, debug=False):
+        """
+        Detach a disk from VM.
+
+        :param target: target of disk device need to be detached.
+        :param extra: additional arguments to command
+        """
+        return virsh.detach_disk(self.name, target, extra,
+                                 uri=self.connect_uri,
+                                 ignore_status=ignore_status,
+                                 debug=debug)
+
     def attach_interface(self, option="", ignore_status=False,
                          debug=False):
         """
@@ -1281,7 +1574,7 @@ class VM(virt_vm.BaseVM):
     def detach_interface(self, option="", ignore_status=False,
                          debug=False):
         """
-        Detach a NIC to VM.
+        Detach a NIC from VM.
         """
         return virsh.detach_interface(self.name, option,
                                       uri=self.connect_uri,
