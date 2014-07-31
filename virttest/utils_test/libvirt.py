@@ -1046,12 +1046,15 @@ def create_disk_xml(params):
         driver_name = params.get("driver_name", "qemu")
         driver_type = params.get("driver_type", "")
         driver_cache = params.get("driver_cache", "")
+        driver_discard = params.get("driver_discard", "")
         if driver_name:
             driver_attrs['name'] = driver_name
         if driver_type:
             driver_attrs['type'] = driver_type
         if driver_cache:
             driver_attrs['cache'] = driver_cache
+        if driver_discard:
+            driver_attrs['discard'] = driver_discard
         if driver_attrs:
             diskxml.driver = driver_attrs
         diskxml.readonly = "yes" == params.get("readonly", "no")
