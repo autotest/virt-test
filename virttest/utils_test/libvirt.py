@@ -1109,7 +1109,7 @@ def create_local_disk(disk_type, path=None, size=10,
     elif disk_type == "floppy":
         cmd = "dd if=/dev/zero of=%s count=1024 bs=1024" % path
     elif disk_type == "iso":
-        cmd = "mkisofs -o %s /tmp/*" % path
+        cmd = "mkisofs -o %s /root/*.*" % path
     else:
         cmd = "lvcreate -V %sG %s --name %s --size 1M" % (size,
                                                           vgname,
