@@ -561,6 +561,34 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("df")
 
+    def df_h(self):
+        """
+        df-h - report file system disk space usage (human readable)
+
+        This command runs the "df -h" command to report disk space used in
+        human-readable format.
+        """
+        return self.inner_cmd("df-h")
+
+    def dd(self, src, dest):
+        """
+        dd - copy from source to destination using dd
+
+        This command copies from one source device or file "src" to another
+        destination device or file "dest".Normally you would use this to copy
+        to or from a device or partition,for example to duplicate a filesystem
+        """
+        return self.inner_cmd("dd %s %s" % (src, dest))
+
+    def copy_size(self, src, dest, size):
+        """
+        copy-size - copy size bytes from source to destination using dd
+
+        This command copies exactly "size" bytes from one source device or file
+        "src" to another destination device or file "dest".
+        """
+        return self.inner_cmd("copy-size %s %s %s" % (src, dest, size))
+
     def list_partitions(self):
         """
         list-partitions - list the partitions
@@ -1325,6 +1353,50 @@ class GuestfishPersistent(Guestfish):
         machine.
         """
         return self.inner_cmd("download %s %s" % (remotefilename, filename))
+
+    def download_offset(self, remotefilename, filename, offset, size):
+        """
+        download-offset - download a file to the local machine with offset and
+        size
+
+        Download file "remotefilename" and save it as "filename" on the local
+        machine.
+        """
+        return self.inner_cmd("download-offset %s %s %s %s" % (remotefilename, filename, offset, size))
+
+    def upload(self, filename, remotefilename):
+        """
+        upload - upload a file from the local machine
+
+        Upload local file "filename" to "remotefilename" on the filesystem.
+        """
+        return self.inner_cmd("upload %s %s" % (filename, remotefilename))
+
+    def upload_offset(self, filename, remotefilename, offset):
+        """
+        upload - upload a file from the local machine with offset
+
+        Upload local file "filename" to "remotefilename" on the filesystem.
+        """
+        return self.inner_cmd("upload-offset %s %s %s" % (filename, remotefilename, offset))
+
+    def fallocate(self, path, len):
+        """
+        fallocate - preallocate a file in the guest filesystem
+
+        This command preallocates a file (containing zero bytes) named "path" of
+        size "len" bytes. If the file exists already, it is overwritten.
+        """
+        return self.inner_cmd("fallocate %s %s" % (path, len))
+
+    def fallocate64(self, path, len):
+        """
+        fallocate - preallocate a file in the guest filesystem
+
+        This command preallocates a file (containing zero bytes) named "path" of
+        size "len" bytes. If the file exists already, it is overwritten.
+        """
+        return self.inner_cmd("fallocate64 %s %s" % (path, len))
 
     def part_init(self, device, parttype):
         """
