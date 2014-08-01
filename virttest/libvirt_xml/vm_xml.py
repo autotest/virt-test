@@ -73,10 +73,26 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: returns integer
             set: set integer
             del: removes tag
+        dumpcore: string,  control guest OS memory dump
+            get: return text value
+            set: set 'on' or 'off' for guest OS memory dump
+            del: removes tag
         numa: dictionary
             get: return dictionary of numatune/memory attributes
             set: set numatune/memory attributes from dictionary
             del: remove numatune/memory tag
+        on_poweroff: string, action to take when the guest requests a poweroff
+            get: returns text value of on_poweroff tag
+            set: set test of on_poweroff tag
+            del: remove on_poweroff tag
+        on_reboot: string, action to take when the guest requests a reboot
+            get: returns text value of on_reboot tag
+            set: set test of on_reboot tag
+            del: remove on_reboot tag
+        on_crash: string, action to take when the guest crashes
+            get: returns text value of on_crash tag
+            set: set test of on_crash tag
+            del: remove on_crash tag
         devices: VMXMLDevices (list-like)
             get: returns VMXMLDevices instance for all devices
             set: Define all devices from VMXMLDevices instance
@@ -101,10 +117,10 @@ class VMXMLBase(base.LibvirtXMLBase):
 
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = ('hypervisor_type', 'vm_name', 'uuid', 'vcpu', 'max_mem',
-                 'current_mem', 'numa', 'devices', 'seclabel',
+                 'current_mem', 'dumpcore', 'numa', 'devices', 'seclabel',
                  'cputune', 'placement', 'current_vcpu', 'os', 'os_type',
                  'os_arch', 'os_init', 'os_boot', 'os_loader', 'os_bios',
-                 'pm')
+                 'pm', 'on_poweroff', 'on_reboot', 'on_crash')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -149,6 +165,12 @@ class VMXMLBase(base.LibvirtXMLBase):
                                 forbidden=None,
                                 parent_xpath='/',
                                 tag_name='memory')
+        accessors.XMLAttribute(property_name="dumpcore",
+                               libvirtxml=self,
+                               forbidden=None,
+                               parent_xpath='/',
+                               tag_name='memory',
+                               attribute='dumpCore')
         accessors.XMLElementInt(property_name="current_mem",
                                 libvirtxml=self,
                                 forbidden=None,
@@ -209,6 +231,21 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  subclass=VMPM,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
+        accessors.XMLElementText(property_name="on_poweroff",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='on_poweroff')
+        accessors.XMLElementText(property_name="on_reboot",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='on_reboot')
+        accessors.XMLElementText(property_name="on_crash",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='on_crash')
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def get_devices(self, device_type=None):
