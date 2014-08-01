@@ -2688,20 +2688,12 @@ def snapshot_current(name, options="--name", **dargs):
     :param name: name of domain
     :param options: options of snapshot-current, default is --name
     :param dargs: standardized virsh function API keywords
-    :return: name or xml of snapshot
+    :return: CmdResult instance
     """
-    # CmdResult is handled here, force ignore_status
-    dargs['ignore_status'] = True
     cmd = "snapshot-current %s" % name
     if options is not None:
         cmd += " %s" % options
-    sc_output = command(cmd, **dargs)
-    if sc_output.exit_status != 0 and dargs['readonly'] is False:
-        raise error.CmdError(cmd, sc_output, "Failed to get current snapshot")
-    elif sc_output.exit_status != 0:
-        return sc_output
-
-    return sc_output.stdout.strip()
+    return command(cmd, **dargs)
 
 
 def snapshot_list(name, options=None, **dargs):
