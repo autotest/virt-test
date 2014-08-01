@@ -64,7 +64,7 @@ class Disk(base.TypedDeviceBase):
     __slots__ = ('device', 'rawio', 'sgio', 'snapshot', 'driver', 'target',
                  'address', 'boot', 'readonly', 'transient', 'share',
                  'mirror', 'ready', 'iotune', 'source', 'blockio', 'geometry',
-                 'wwn', 'serial', 'vendor', 'product', 'encryption')
+                 'wwn', 'serial', 'vendor', 'product', 'encryption', 'auth')
 
     def __init__(self, type_name='file', virsh_instance=base.base.virsh):
         accessors.XMLAttribute('device', self, parent_xpath='/',
@@ -163,7 +163,7 @@ class Disk(base.TypedDeviceBase):
             setattr(new_one, key, value)
         return new_one
 
-    def new_auth(self, *dargs):
+    def new_auth(self, **dargs):
         """
         Return a new disk auth instance and set properties from dargs
         """
@@ -306,17 +306,21 @@ class Disk(base.TypedDeviceBase):
             string, attribute of auth tag
         secret_type:
             string, attribute of secret tag, sub-tag of the auth tag
+        secret_uuid:
+            string, attribute of secret tag, sub-tag of the auth tag
         secret_usage:
             string, attribute of secret tag, sub-tag of the auth tag
         """
 
-        __slots__ = ('auth_user', 'secret_type', 'secret_usage')
+        __slots__ = ('auth_user', 'secret_type', 'secret_uuid', 'secret_usage')
 
         def __init__(self, virsh_instance=base.base.virsh, auth_user=""):
             accessors.XMLAttribute('auth_user', self, parent_xpath='/',
                                    tag_name='auth', attribute='username')
             accessors.XMLAttribute('secret_type', self, parent_xpath='/',
                                    tag_name='secret', attribute='type')
+            accessors.XMLAttribute('secret_uuid', self, parent_xpath='/',
+                                   tag_name='secret', attribute='uuid')
             accessors.XMLAttribute('secret_usage', self, parent_xpath='/',
                                    tag_name='secret', attribute='usage')
             super(self.__class__, self).__init__(virsh_instance=virsh_instance)
