@@ -496,7 +496,12 @@ class VMXML(VMXMLBase):
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         if value is not None:
             if current is not None:
-                if current > value:
+                try:
+                    current_int = int(current)
+                except ValueError:
+                    raise xcepts.LibvirtXMLError("Invalid 'current' value '%s'"
+                                                 % current)
+                if current_int > value:
                     raise xcepts.LibvirtXMLError(
                         "The cpu current value %s is larger than max number %s"
                         % (current, value))
