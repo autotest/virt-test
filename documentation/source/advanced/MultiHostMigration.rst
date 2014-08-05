@@ -1,62 +1,163 @@
-Writing your own QEMU multi host migration test
-===============================================
+==========================
+Multi Host Migration Tests
+==========================
 
-Client part of Autotest works only on a single host, for this reason multi host
-migration test needs to be started from the server part of Autotest. The server
-module is responsible for preparing all hosts, then to start client part with
-the appropriate parameters. To simplify writing a multi host migration, we
-developed the MultihostMigration class. The class is a framework class that
-allows to create, start and sync migration scenario over multiple host, taking
-care of most of the heavy lifting for you.
+Running Multi Host Migration Tests
+==================================
 
-Prepare env
------------
+virt-test is our test suite, but for simplicity purposes it can only run on
+a single host. For multi host tests, you'll need the full autotest + virt-test
+package, and the procedure is more complex. We'll try to keep this procedure
+as objective as possible.
 
-For migration without disk migration is necessary have shared storage (NFS, ceph, etc.).
-There have to be placed images of guests system in shared storage.
-Nested virtualization config 
-:doc:`Use nested virt to develop multi host tests <../advanced/VirtualEnvMultihost>`
+Prerequesites
+=============
 
-Prepare config files
---------------------
+This guide assumes that:
 
-Multi host migration uses almost all the configuration files from standard virt
-tests. The only difference the main configuration file, named
-``multi-host-tests.cfg``. All multi host migration tests are defined in
-``client/virt/qemu/tests/cfg/multi-host.cfg``.
+1) You have at least 2 virt capable machines that have shared storage setup
+   in [insert specific path]. Let's call them ``host1.foo.com`` and ``host2.foo.com``.
+2) You can ssh into both of those machines without a password (which means
+   there is an SSH key setup with the account you're going to use to run
+   the tests) as root.
+3) The machines should be able to communicate freely, so beware of the potential
+   firewall complications. On each of those machines you need a specific NFS mount setup:
 
-Start multi host migration tests
---------------------------------
+* /var/lib/virt_test/isos
+* /var/lib/virt_test/steps_data
+* /var/lib/virt_test/gpg
 
-The server part of Autotest, just as the client part, uses a control file to
-describe the operations to be executed on a test job. The multi host migration
-control file can be found at ``client/virt/qemu/multi_host.srv``.
+They all need to be backed by an NFS share read only. Why read only? Because
+it is safer, we exclude the chance to delete this important data by accident.
+Besides the data above is only needed in a read only fashion.
+fstab example::
 
-Starting autoserv:
+    myserver.foo.com:/virt-test/iso /var/lib/virt_test/isos nfs ro,nosuid,nodev,noatime,intr,hard,tcp 0 0
+    myserver.foo.com:/virt-test/steps_data  /var/lib/virt_test/steps_data nfs rw,nosuid,nodev,noatime,intr,hard,tcp 0 0
+    myserver.foo.com:/virt-test/gpg  /var/lib/virt_test/gpg nfs rw,nosuid,nodev,noatime,intr,hard,tcp 0 0
 
-Change your current working directory to the root of the autotest repo, say
-``/home/myuser/Code/autotest``:
+* /var/lib/virt_test/images
+* /var/lib/virt_test/images_archive
+
+Those all need to be backed by an NFS share read write (or any other shared
+storage you might have). This is necessary because both hosts need to see
+the same coherent storage. fstab example::
+
+    myserver.foo.com:/virt-test/images_archive  /var/lib/virt_test/images_archive nfs rw,nosuid,nodev,noatime,intr,hard,tcp 0 0
+    myserver.foo.com:/virt-test/images /var/lib/virt_test/images  nfs rw,nosuid,nodev,noatime,intr,hard,tcp 0 0
+
+The images dir must be populated with the installed guests you want to run
+your tests on. They must match the file names used by guest OS in virt-test.
+For example, for RHEL 6.4, the image name virt-test uses is::
+
+    rhel64-64.qcow2
+
+double check your files are there::
+
+    $ ls /var/lib/virt_test/images
+    $ rhel64-64.qcow2
+
+
+Setup step by step
+==================
+
+First, clone the autotest repo recursively. It's a repo with lots of
+submodules, so you'll see a lot of output::
+
+    $ git clone --recursive https://github.com/autotest/autotest.git
+    ... lots of output ...
+
+Then, edit the global_config.ini file, and change the key::
+
+    serve_packages_from_autoserv: True
+
+to::
+
+    serve_packages_from_autoserv: False
+
+Then you need to update virt-test's config files and sub tests (that live in
+separate repositories that are not git submodules). You don't need to download
+the JeOS file in this step, so simply answer 'n' to the quest
+
+Note: The bootstrap procedure described below will be performed automatically
+upon running the autoserv command that triggers the test. The problem is that
+then you will not be able to see the config files and modify filters prior
+to actually running the test. Therefore this documentation will instruct you
+to run the steps below manually.
 
 ::
 
-    cd /home/myuser/Code/autotest
-    server/autoserv -m 192.168.100.220,192.168.100.240 client/tests/virt/qemu/multi_host.srv
+    $ export AUTOTEST_PATH=.;client/tests/virt/run -t qemu --bootstrap --update-providers
+    16:11:14 INFO | qemu test config helper
+    16:11:14 INFO |
+    16:11:14 INFO | 1 - Updating all test providers
+    16:11:14 INFO | Fetching git [REP 'git://github.com/autotest/tp-qemu.git' BRANCH 'master'] -> /var/tmp/autotest/client/tests/virt/test-providers.d/downloads/io-github-autotest-qemu
+    16:11:17 INFO | git commit ID is 6046958afa1ccab7f22bb1a1a73347d9c6ed3211 (no tag found)
+    16:11:17 INFO | Fetching git [REP 'git://github.com/autotest/tp-libvirt.git' BRANCH 'master'] -> /var/tmp/autotest/client/tests/virt/test-providers.d/downloads/io-github-autotest-libvirt
+    16:11:19 INFO | git commit ID is edc07c0c4346f9029930b062c573ff6f5433bc53 (no tag found)
+    16:11:20 INFO |
+    16:11:20 INFO | 2 - Checking the mandatory programs and headers
+    16:11:20 INFO | /usr/bin/7za
+    16:11:20 INFO | /usr/sbin/tcpdump
+    16:11:20 INFO | /usr/bin/nc
+    16:11:20 INFO | /sbin/ip
+    16:11:20 INFO | /sbin/arping
+    16:11:20 INFO | /usr/bin/gcc
+    16:11:20 INFO | /usr/include/bits/unistd.h
+    16:11:20 INFO | /usr/include/bits/socket.h
+    16:11:20 INFO | /usr/include/bits/types.h
+    16:11:20 INFO | /usr/include/python2.6/Python.h
+    16:11:20 INFO |
+    16:11:20 INFO | 3 - Checking the recommended programs
+    16:11:20 INFO | Recommended command missing. You may want to install it if not building it from source. Aliases searched: ('qemu-kvm', 'kvm')
+    16:11:20 INFO | Recommended command qemu-img missing. You may want to install it if not building from source.
+    16:11:20 INFO | Recommended command qemu-io missing. You may want to install it if not building from source.
+    16:11:20 INFO |
+    16:11:20 INFO | 4 - Verifying directories
+    16:11:20 INFO |
+    16:11:20 INFO | 5 - Generating config set
+    16:11:20 INFO |
+    16:11:20 INFO | 6 - Verifying (and possibly downloading) guest image
+    16:11:20 INFO | File JeOS 19 x86_64 not present. Do you want to download it? (y/n) n
+    16:11:30 INFO |
+    16:11:30 INFO | 7 - Checking for modules kvm, kvm-amd
+    16:11:30 WARNI| Module kvm is not loaded. You might want to load it
+    16:11:30 WARNI| Module kvm-amd is not loaded. You might want to load it
+    16:11:30 INFO |
+    16:11:30 INFO | 8 - If you wish, take a look at the online docs for more info
+    16:11:30 INFO |
+    16:11:30 INFO | https://github.com/autotest/virt-test/wiki/GetStarted
 
-the command starts autotest on machine 192.168.100.220 and 192.168.100.240 and
-uses them for multi_host.srv control file. If four machines are defined it'll
-create two pairs and with each pair the independent migration test is started.
-Because of it there is added new arg "all" in multi_host.srv. It starts
-one migration test with all machines.
+Then you need to copy the multihost config file to the appropriate place::
 
-::
+    cp client/tests/virt/test-providers.d/downloads/io-github-autotest-qemu/qemu/cfg/multi-host-tests.cfg client/tests/virt/backends/qemu/cfg/
 
-    server/autoserv -m 192.168.100.220,192.168.100.240,192.168.100.221 -a all client/virt/qemu/multi_host.srv
+Now, edit the file::
+
+    server/tests/multihost_migration/control.srv
+
+In there, you have to change the EXTRA_PARAMS to restrict the number of guests
+you want to run the tests on. On this example, we're going to restrict our tests
+to RHEL 6.4. The particular section of the control file should look like::
+
+    EXTRA_PARAMS = """
+    only RHEL.6.4.x86_64
+    """
+
+It is important to stress that the guests must be installed for this to work
+smoothly. Then the last step would be to run the tests. Using the same convention
+for the machine hostnames, here's the command you should use::
+
+    server/autotest-remote -m host1.foo.com,host2.foo.com server/tests/multihost_migration/control.srv
+
+Now, you'll see a boatload of output from the autotest remote output. This is
+normal, and you should be patient until all the tests are done.
 
 
 .. _multihost_migration:
 
-Using of MultihostMigration class
----------------------------------
+Writing Multi Host Migration tests
+----------------------------------
 
 Scheme:
 ~~~~~~~
