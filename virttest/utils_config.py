@@ -3,7 +3,6 @@ import logging
 import os.path
 import ConfigParser
 import StringIO
-import utils_libvirtd
 
 
 class ConfigError(Exception):
@@ -24,15 +23,6 @@ class ConfigNoOptionError(ConfigError):
     def __str__(self):
         return "There's no option %s in config file %s." % (
             self.option, self.path)
-
-
-class LibvirtConfigSyncError(ConfigError):
-
-    def __init__(self):
-        pass
-
-    def __str__(self):
-        return "Failed to restart libvirtd when syncronizing config file."
 
 
 class LibvirtConfigUnknownKeyTypeError(ConfigError):
@@ -250,7 +240,8 @@ class LibvirtConfigCommon(SectionlessConfig):
     >>> del config.listen_tcp
 
     5) Make the changes take effect in libvirt by restart libvirt daemon.
-    >>> config.sync()
+    >>> from virttest import utils_libvirtd
+    >>> utils_libvirtd.Libvirtd().restart()
 
     6) Restore the content of the config file.
     >>> config.restore()
@@ -265,7 +256,6 @@ class LibvirtConfigCommon(SectionlessConfig):
             raise ConfigError("Path for config file is not set up.")
         if not self.__option_types__:
             raise ConfigError("__option_types__ is not set up.")
-        self.libvirtd = utils_libvirtd.Libvirtd()
         if not os.path.isfile(self.conf_path):
             raise ConfigError("Path for config file %s don't exists."
                               % self.conf_path)
@@ -313,14 +303,6 @@ class LibvirtConfigCommon(SectionlessConfig):
                 super(LibvirtConfigCommon, self).__setattr__(key, None)
         else:
             raise LibvirtConfigUnknownKeyError(key)
-
-    def sync(self):
-        if not self.libvirtd.restart():
-            raise LibvirtConfigSyncError()
-
-    def restore(self):
-        super(LibvirtConfigCommon, self).restore()
-        self.sync()
 
 
 class LibvirtdConfig(LibvirtConfigCommon):

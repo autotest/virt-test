@@ -4,10 +4,6 @@ import os
 import unittest
 import common
 import tempfile
-import utils_libvirtd
-from staging import service
-from nfs_unittest import FakeService
-from autotest.client.shared.test_utils import mock
 import utils_config
 
 # Test conf file content
@@ -292,13 +288,7 @@ class LibvirtConfigCommonTest(unittest.TestCase):
             self.assertTrue("not set up" in str(e))
 
     def test_undefined_type(self):
-        if utils_libvirtd.LIBVIRTD is None:
-            return
         try:
-            self.god = mock.mock_god()
-            self.god.stub_function(service.Factory, "create_service")
-            service.Factory.create_service.expect_any_call().and_return(
-                FakeService("libvirtd"))
             config = self.UndefinedTypeConfig()
         except Exception, e:
             self.assertEqual(utils_config.ConfigError, e.__class__)
@@ -309,10 +299,6 @@ class LibvirtConfigCommonTest(unittest.TestCase):
             config_file.write('')
             config_file.close()
 
-            self.god = mock.mock_god()
-            self.god.stub_function(service.Factory, "create_service")
-            service.Factory.create_service.expect_any_call().and_return(
-                FakeService("libvirtd"))
             config = self.UndefinedTypeConfig()
 
             # Test setter getter
@@ -358,11 +344,7 @@ class LibvirtConfigCommonTest(unittest.TestCase):
                 self.assertEqual(utils_config.LibvirtConfigUnknownKeyError, e.__class__)
                 self.assertTrue('Unknown config key' in str(e))
 
-            try:
-                config.restore()
-            except Exception, e:
-                self.assertEqual(utils_config.LibvirtConfigSyncError, e.__class__)
-                self.assertTrue('Failed' in str(e))
+            config.restore()
         finally:
             os.remove('/tmp/config_unittest.conf')
 
@@ -370,8 +352,6 @@ class LibvirtConfigCommonTest(unittest.TestCase):
 class LibvirtConfigTest(unittest.TestCase):
 
     def test_accessers(self):
-        if utils_libvirtd.LIBVIRTD is None:
-            return
         config_file = tempfile.NamedTemporaryFile()
         config_path = config_file.name
         config_file.close()
@@ -379,10 +359,6 @@ class LibvirtConfigTest(unittest.TestCase):
             config_file = open(config_path, 'w')
             config_file.write('')
             config_file.close()
-            self.god = mock.mock_god()
-            self.god.stub_function(service.Factory, "create_service")
-            service.Factory.create_service.expect_any_call().and_return(
-                FakeService("libvirtd"))
             config = utils_config.LibvirtdConfig(path=config_path)
 
             # Test internal property.
@@ -427,13 +403,6 @@ class LibvirtConfigTest(unittest.TestCase):
             config.access_drivers = [1, "a"]
             self.assertEqual(
                 config.get_raw('access_drivers'), '["1", "a"]')
-
-            try:
-                config.sync()
-            except Exception, e:
-                self.assertEqual(utils_config.LibvirtConfigSyncError, e.__class__)
-                self.assertTrue('Failed' in str(e))
-
         finally:
             os.remove(config_path)
 
