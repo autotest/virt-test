@@ -729,7 +729,7 @@ class MutableIssue(dict):
         # Access PyGithub object to change labels
         self._github_issue['github_issue'].set_labels(*gh_labels)
         # Force retrieval of changed item
-        self._github_issues.clean_cache_entry(self._issue_cache_key())
+        self._github_issues.clean_cache_entry(self._issue_cache_key)
 
     def del_labels(self):
         """
@@ -737,6 +737,6 @@ class MutableIssue(dict):
         """
         self._github_issue['github_issue'].delete_labels()
         # Force retrieval of changed item
-        self._github_issues.clean_cache_entry(self._issue_cache_key())
+        self._github_issues.clean_cache_entry(self._issue_cache_key)
 
     # TODO: Write get_*(), set_*(), del_*() for other dictionary keys
