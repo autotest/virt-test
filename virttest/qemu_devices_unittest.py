@@ -1031,7 +1031,6 @@ fdc
                             "than the one in which it was plugged:\n"
                             "%s\n%s\n%s" % (out.str_long(), dev.str_long(),
                                             qdev.str_long()))
-    # pylint: enable=W0212
 
     def test_qdev_equal(self):
         qdev1 = self.create_qdev('vm1', allow_hotplugged_vm='no')
