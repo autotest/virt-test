@@ -292,6 +292,8 @@ class LibvirtConfigCommonTest(unittest.TestCase):
             self.assertTrue("not set up" in str(e))
 
     def test_undefined_type(self):
+        if utils_libvirtd.LIBVIRTD is None:
+            return
         try:
             self.god = mock.mock_god()
             self.god.stub_function(service.Factory, "create_service")
@@ -368,6 +370,8 @@ class LibvirtConfigCommonTest(unittest.TestCase):
 class LibvirtConfigTest(unittest.TestCase):
 
     def test_accessers(self):
+        if utils_libvirtd.LIBVIRTD is None:
+            return
         config_file = tempfile.NamedTemporaryFile()
         config_path = config_file.name
         config_file.close()
