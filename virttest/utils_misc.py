@@ -1196,6 +1196,7 @@ def cpu_str_to_list(origin_str):
     :rtype: list
     """
     if isinstance(origin_str, str):
+        origin_str = "".join([_ for _ in origin_str if _ in string.printable])
         cpu_list = []
         for cpu in origin_str.strip().split(","):
             if "-" in cpu:
