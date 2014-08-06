@@ -121,10 +121,13 @@ def handle_prompts(session, username, password, prompt, timeout=10,
     :raise LoginAuthenticationError: If authentication fails
     :raise LoginProcessTerminatedError: If the client terminates during login
     :raise LoginError: If some other error occurs
+    :return: If connect succeed return the output text to script for further
+             debug.
     """
     password_prompt_count = 0
     login_prompt_count = 0
 
+    output = ""
     while True:
         try:
             match, text = session.read_until_last_line_matches(
@@ -134,8 +137,9 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                  r"(?<![Ll]ast).*[Ll]ogin:\s*$",  # Don't match "Last Login:"
                  r"[Cc]onnection.*closed", r"[Cc]onnection.*refused",
                  r"[Pp]lease wait", r"[Ww]arning", r"[Ee]nter.*username",
-                 r"[Ee]nter.*password", prompt],
+                 r"[Ee]nter.*password", r"[Cc]onnection timed out", prompt],
                 timeout=timeout, internal_timeout=0.5)
+            output += text
             if match == 0:  # "Are you sure you want to continue connecting"
                 if debug:
                     logging.debug("Got 'Are you sure...', sending 'yes'")
@@ -170,6 +174,8 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                 raise LoginError("Client said 'connection closed'", text)
             elif match == 6:  # "Connection refused"
                 raise LoginError("Client said 'connection refused'", text)
+            elif match == 11:  # Connection timeout
+                raise LoginError("Client said 'connection timeout'", text)
             elif match == 7:  # "Please wait"
                 if debug:
                     logging.debug("Got 'Please wait'")
@@ -179,7 +185,7 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                 if debug:
                     logging.debug("Got 'Warning added RSA to known host list")
                 continue
-            elif match == 11:  # prompt
+            elif match == 12:  # prompt
                 if debug:
                     logging.debug("Got shell prompt -- logged in")
                 break
@@ -187,6 +193,8 @@ def handle_prompts(session, username, password, prompt, timeout=10,
             raise LoginTimeoutError(e.output)
         except aexpect.ExpectProcessTerminatedError, e:
             raise LoginProcessTerminatedError(e.status, e.output)
+
+        return output
 
 
 def remote_login(client, host, port, username, password, prompt, linesep="\n",
