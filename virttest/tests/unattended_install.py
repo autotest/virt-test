@@ -1044,7 +1044,7 @@ def run(test, params, env):
 
     post_finish_str = params.get("post_finish_str",
                                  "Post set up finished")
-    install_timeout = int(params.get("install_timeout", 3000))
+    install_timeout = int(params.get("install_timeout", 4800))
 
     migrate_background = params.get("migrate_background") == "yes"
     if migrate_background:
