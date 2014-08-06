@@ -985,13 +985,16 @@ def string_to_bitlist(data):
     return result
 
 
-def strip_console_codes(output):
+def strip_console_codes(output, custom_codes=None):
     """
     Remove the Linux console escape and control sequences from the console
     output. Make the output readable and can be used for result check. Now
     only remove some basic console codes using during boot up.
 
     :param output: The output from Linux console
+    :type output: string
+    :param custom_codes: The codes added to the console codes which is not
+                         covered in the default codes
     :type output: string
     :return: the string wihout any special codes
     :rtype: string
@@ -1003,7 +1006,10 @@ def strip_console_codes(output):
     return_str = ""
     index = 0
     output = "\x1b[m%s" % output
-    console_codes = "%G|\[m|\[[\d;]+[HJnrm]"
+    console_codes = "%[G@8]|\[[@A-HJ-MPXa-hl-nqrsu\`]"
+    console_codes += "|\[[\d;]+[HJKgqnrm]|#8|\([B0UK]|\)"
+    if custom_codes is not None and custom_codes not in console_codes:
+        console_codes += "|%s" % custom_codes
     while index < len(output):
         tmp_index = 0
         tmp_word = ""
