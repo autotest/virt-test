@@ -97,9 +97,9 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: returns VMXMLDevices instance for all devices
             set: Define all devices from VMXMLDevices instance
             del: remove all devices
-        cputune: VMCPUTune
-            get: return VMCPUTune instance for the domain.
-            set: Define cputune tag from a VMCPUTune instance.
+        cputune: VMCPUTuneXML
+            get: return VMCPUTuneXML instance for the domain.
+            set: Define cputune tag from a VMCPUTuneXML instance.
             del: remove cputune tag
         current_vcpu: string, 'current' attribute of vcpu tag
             get: return a string for 'current' attribute of vcpu
@@ -176,42 +176,13 @@ class VMXMLBase(base.LibvirtXMLBase):
                                 forbidden=None,
                                 parent_xpath='/',
                                 tag_name='currentMemory')
-        accessors.XMLElementText(property_name="os",
+        accessors.XMLElementNest(property_name='os',
                                  libvirtxml=self,
-                                 forbidden=None,
                                  parent_xpath='/',
-                                 tag_name='os')
-        accessors.XMLElementText(property_name="os_type",
-                                 libvirtxml=self,
-                                 forbidden=None,
-                                 parent_xpath='/os',
-                                 tag_name='type')
-        accessors.XMLAttribute(property_name="os_arch",
-                               libvirtxml=self,
-                               forbidden=None,
-                               parent_xpath='/os',
-                               tag_name='type',
-                               attribute='arch')
-        accessors.XMLElementDict(property_name="os_boot",
-                                 libvirtxml=self,
-                                 forbidden=None,
-                                 parent_xpath='/os',
-                                 tag_name='boot')
-        accessors.XMLElementText(property_name="os_init",
-                                 libvirtxml=self,
-                                 forbidden=None,
-                                 parent_xpath='/os',
-                                 tag_name='init')
-        accessors.XMLElementText(property_name="os_loader",
-                                 libvirtxml=self,
-                                 forbidden=None,
-                                 parent_xpath='/os',
-                                 tag_name='loader')
-        accessors.XMLElementDict(property_name="os_bios",
-                                 libvirtxml=self,
-                                 forbidden=None,
-                                 parent_xpath='/os',
-                                 tag_name='bios')
+                                 tag_name='os',
+                                 subclass=VMOSXML,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
         accessors.XMLElementDict(property_name="numa",
                                  libvirtxml=self,
                                  forbidden=None,
@@ -221,14 +192,14 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  libvirtxml=self,
                                  parent_xpath='/',
                                  tag_name='cputune',
-                                 subclass=VMCPUTune,
+                                 subclass=VMCPUTuneXML,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
         accessors.XMLElementNest(property_name='pm',
                                  libvirtxml=self,
                                  parent_xpath='/',
                                  tag_name='pm',
-                                 subclass=VMPM,
+                                 subclass=VMPMXML,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
         accessors.XMLElementText(property_name="on_poweroff",
@@ -503,8 +474,8 @@ class VMXML(VMXMLBase):
         :params mem: Enable suspend to memory
         :params disk: Enable suspend to disk
         """
-        # Build a instance of class VMPM.
-        pm = VMPM()
+        # Build a instance of class VMPMXML.
+        pm = VMPMXML()
         pm.mem_enabled = mem
         pm.disk_enabled = disk
         # Set pm to the new instance.
@@ -1264,7 +1235,7 @@ class VMClockXML(VMXML):
                                           virsh_instance=virsh_instance).xml
 
     # Sub-element of clock
-    class Timer(VMXML):
+    class TimerXML(VMXML):
 
         """Timer element of clock"""
 
@@ -1272,7 +1243,7 @@ class VMClockXML(VMXML):
 
         def __init__(self, virsh_instance=base.virsh, timer_name="tsc"):
             """
-            Create new Timer XML instance
+            Create new TimerXML instance
             """
             # The set action is for test.
             accessors.XMLAttribute(property_name="name",
@@ -1287,7 +1258,7 @@ class VMClockXML(VMXML):
                                    parent_xpath='/clock',
                                    tag_name='timer',
                                    attribute='present')
-            super(VMClockXML.Timer, self).__init__(virsh_instance=virsh_instance)
+            super(VMClockXML.TimerXML, self).__init__(virsh_instance=virsh_instance)
             # name is mandatory for timer
             self.name = timer_name
 
@@ -1297,7 +1268,7 @@ class VMClockXML(VMXML):
 
     @staticmethod
     def marshal_from_timer(item, index, libvirtxml):
-        """Convert a Timer instance into tag + attributes"""
+        """Convert a TimerXML instance into tag + attributes"""
         del index
         del libvirtxml
         timer = item.xmltreefile.find("clock/timer")
@@ -1309,17 +1280,17 @@ class VMClockXML(VMXML):
 
     @staticmethod
     def marshal_to_timer(tag, attr_dict, index, libvirtxml):
-        """Convert a tag + attributes to a Timer instance"""
+        """Convert a tag + attributes to a TimerXML instance"""
         del index
         if tag == 'timer':
-            newone = VMClockXML.Timer(virsh_instance=libvirtxml.virsh)
+            newone = VMClockXML.TimerXML(virsh_instance=libvirtxml.virsh)
             newone.update(attr_dict)
             return newone
         else:
             return None
 
 
-class VMCPUTune(base.LibvirtXMLBase):
+class VMCPUTuneXML(base.LibvirtXMLBase):
 
     """
     CPU tuning tag XML class
@@ -1376,7 +1347,93 @@ class VMCPUTune(base.LibvirtXMLBase):
         return dict(attr_dict)
 
 
-class VMPM(base.LibvirtXMLBase):
+class VMOSXML(base.LibvirtXMLBase):
+
+    """
+    Class to access <os> tag of domain XML.
+
+    Elements:
+        type:         text attributes - arch, machine
+        loader:       path
+        boots:        list attributes - dev
+        bootmenu:          attributes - enable
+        smbios:            attributes - mode
+        bios:              attributes - useserial, rebootTimeout
+        init:         text
+        bootloader:   text
+        bootloader_args:   text
+        kernel:       text
+        initrd:       text
+        cmdline:      text
+        dtb:          text
+    TODO:
+        initargs:     list
+    """
+
+    __slots__ = ('type', 'arch', 'machine', 'loader', 'boots', 'bootmenu_enable',
+                 'smbios_mode', 'bios_useserial', 'bios_reboot_timeout', 'init',
+                 'bootloader', 'bootloader_args', 'kernel', 'initrd', 'cmdline',
+                 'dtb', 'initargs')
+
+    def __init__(self, virsh_instance=base.virsh):
+        accessors.XMLElementText('type', self, parent_xpath='/',
+                                 tag_name='type')
+        accessors.XMLElementText('loader', self, parent_xpath='/',
+                                 tag_name='loader')
+        accessors.XMLAttribute('arch', self, parent_xpath='/',
+                               tag_name='type', attribute='arch')
+        accessors.XMLAttribute('machine', self, parent_xpath='/',
+                               tag_name='type', attribute='machine')
+        accessors.XMLElementList('boots', self, parent_xpath='/',
+                                 marshal_from=self.marshal_from_boots,
+                                 marshal_to=self.marshal_to_boots)
+        accessors.XMLAttribute('bootmenu_enable', self, parent_xpath='/',
+                               tag_name='bootmenu', attribute='enable')
+        accessors.XMLAttribute('smbios_mode', self, parent_xpath='/',
+                               tag_name='smbios', attribute='mode')
+        accessors.XMLAttribute('bios_useserial', self, parent_xpath='/',
+                               tag_name='bios', attribute='useserial')
+        accessors.XMLAttribute('bios_reboot_timeout', self, parent_xpath='/',
+                               tag_name='bios', attribute='rebootTimeout')
+        accessors.XMLElementText('bootloader', self, parent_xpath='/',
+                                 tag_name='bootloader')
+        accessors.XMLElementText('bootloader_args', self, parent_xpath='/',
+                                 tag_name='bootloader_args')
+        accessors.XMLElementText('kernel', self, parent_xpath='/',
+                                 tag_name='kernel')
+        accessors.XMLElementText('initrd', self, parent_xpath='/',
+                                 tag_name='initrd')
+        accessors.XMLElementText('cmdline', self, parent_xpath='/',
+                                 tag_name='cmdline')
+        accessors.XMLElementText('dtb', self, parent_xpath='/',
+                                 tag_name='dtb')
+        accessors.XMLElementText('init', self, parent_xpath='/',
+                                 tag_name='init')
+        super(self.__class__, self).__init__(virsh_instance=virsh_instance)
+        self.xml = '<os/>'
+
+    @staticmethod
+    def marshal_from_boots(item, index, libvirtxml):
+        """
+        Convert a string to boot tag and attributes.
+        """
+        del index
+        del libvirtxml
+        return ('boot', {'dev': item})
+
+    @staticmethod
+    def marshal_to_boots(tag, attr_dict, index, libvirtxml):
+        """
+        Convert a boot tag and attributes to a string.
+        """
+        del index
+        del libvirtxml
+        if tag != 'boot':
+            return None
+        return attr_dict['dev']
+
+
+class VMPMXML(base.LibvirtXMLBase):
 
     """
     VM power management tag XML class
