@@ -2024,7 +2024,7 @@ class VM(virt_vm.BaseVM):
             host_ports = utils_misc.find_free_ports(
                 5000, 6000, len(redir_names))
 
-            old_redirs = None
+            old_redirs = {}
             if self.redirs:
                 old_redirs = self.redirs
 
@@ -2112,6 +2112,19 @@ class VM(virt_vm.BaseVM):
                         logging.info("Assuming dependencies met for "
                                      "user mode nic %s, and ready to go"
                                      % nic.nic_name)
+                    # Update the fd and vhostfd for nic devices
+                    if self.devices is not None:
+                        for device in self.devices:
+                            cmd = device.cmdline()
+                            if cmd is not None and "fd=" in cmd:
+                                new_cmd = ""
+                                for opt in cmd.split(","):
+                                    if re.match('fd=', opt):
+                                        opt = 'fd=%s' % nic.tapfds
+                                    if re.match('vhostfd=', opt):
+                                        opt = 'vhostfd=%s' % nic.vhostfds
+                                    new_cmd += "%s," % opt
+                                device._cmdline = new_cmd.rstrip(",")
 
                     self.virtnet.update_db()
 
