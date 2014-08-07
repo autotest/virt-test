@@ -185,6 +185,8 @@ class Netperf(object):
         :param port: Port to connect to
         :param username: Username (if required)
         :param password: Password (if required)
+        :param compile_option: Compile option for netperf
+        :param install: Whether need install netperf or not.
         """
         self.client = client
         if client == "nc":
@@ -244,6 +246,8 @@ class NetperfServer(Netperf):
         :param port: Port to connect to
         :param username: Username (if required)
         :param password: Password (if required)
+        :param compile_option: Compile option for netperf
+        :param install: Whether need install netperf or not.
         """
         super(NetperfServer, self).__init__(address, netperf_path, md5sum,
                                             netperf_source, client, port, username,
@@ -297,59 +301,78 @@ class NetperfClient(Netperf):
         :param port: Port to connect to
         :param username: Username (if required)
         :param password: Password (if required)
+        :param compile_option: Compile option for netperf
+        :param install: Whether need install netperf or not.
         """
         super(NetperfClient, self).__init__(address, netperf_path, md5sum,
                                             netperf_source, client, port, username,
                                             password, compile_option, install)
 
     def start(self, server_address, test_option="", timeout=1200,
-              cmd_prefix=""):
+              cmd_prefix="", package_sizes=""):
         """
         Run netperf test
 
         :param server_address: Remote netserver address
-        :param netperf_path: netperf test option (global/test option)
+        :param netperf_path: Netperf test option (global/test option)
         :param timeout: Netperf test timeout(-l)
+        :param cmd_prefix: Prefix in netperf command
+        :param package_sizes: Package sizes test in netperf command.
         :return: return test result
         """
         netperf_cmd = "%s %s -H %s %s " % (cmd_prefix, self.netperf_path,
                                            server_address, test_option)
-        logging.debug("Start netperf with cmd: '%s'" % netperf_cmd)
         try:
-            output = self.session.cmd_output_safe(netperf_cmd, timeout=timeout)
+            output = ""
+            if package_sizes:
+                for p_size in package_sizes.split():
+                    cmd = netperf_cmd + " -- -m %s" % p_size
+                    logging.info("Start netperf with cmd: '%s'" % cmd)
+                    output += self.session.cmd_output_safe(netperf_cmd,
+                                                           timeout=timeout)
+            else:
+                logging.info("Start netperf with cmd: '%s'" % netperf_cmd)
+                output = self.session.cmd_output_safe(cmd,
+                                                      timeout=timeout)
         except aexpect.ShellError, err:
             raise NetperfTestError("Run netperf error. %s" % str(err))
         self.result = output
         return self.result
 
     def bg_start(self, server_address, test_option="", session_num=1,
-                 cmd_prefix=""):
+                 cmd_prefix="", package_sizes=""):
         """
-        Run netperf background, for stress test, Only support linux now
-        Have no output
+        Run netperf background, for stress test do not have output
 
         :param server_address: Remote netserver address
         :param netperf_path: netperf test option (global/test option)
         :param timeout: Netperf test timeout(-l)
+        :param cmd_prefix: Prefix in netperf command
+        :param package_sizes: Package sizes test in netperf command.
+
         """
         if self.client == "nc":
             netperf_cmd = "start /b %s %s -H %s %s " % (cmd_prefix,
                                                         self.netperf_path,
                                                         server_address,
                                                         test_option)
-            logging.info("Start %s sessions netperf background with cmd: '%s'" %
-                         (session_num, netperf_cmd))
-            for num in xrange(int(session_num)):
-                self.session.cmd_output_safe(netperf_cmd)
-            return
         else:
             netperf_cmd = "%s %s -H %s %s " % (cmd_prefix, self.netperf_path,
                                                server_address, test_option)
-            logging.debug("Start %s sessions netperf background with cmd: '%s'" %
-                          (session_num, netperf_cmd))
+        if package_sizes:
+            for p_size in package_sizes.split():
+                cmd = netperf_cmd + " -- -m %s" % p_size
+                txt = "Start %s sessions netperf background" % session_num
+                txt += " with cmd: '%s' " % cmd
+                logging.info(txt)
+                for num in xrange(int(session_num)):
+                    self.session.cmd_output_safe("%s &" % cmd)
+        else:
+            txt = "Start %s sessions netperf background" % session_num
+            txt += " with cmd: '%s' " % netperf_cmd
+            logging.info(txt)
             for num in xrange(int(session_num)):
                 self.session.cmd_output_safe("%s &" % netperf_cmd)
-            return
 
     def is_netperf_running(self):
         return self.is_target_running("netperf")
