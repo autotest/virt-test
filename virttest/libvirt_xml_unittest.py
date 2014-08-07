@@ -808,7 +808,7 @@ class testSerialXML(LibvirtXMLTestBase):
         self.assertEqual(source_connect['service'], '5442')
 
 
-class testVMCPUTune(LibvirtXMLTestBase):
+class testVMCPUTuneXML(LibvirtXMLTestBase):
 
     def test_get_set_del(self):
         vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
