@@ -56,24 +56,24 @@ class Libvirtd(object):
                 return False
         return utils_misc.wait_for(_check_start, timeout=timeout)
 
-    def start(self):
-        # pylint: disable=E1103
+    def start(self, reset_failed=True):
+        if reset_failed:
+            self.libvirtd.reset_failed()
         if not self.libvirtd.start():
             return False
         return self._wait_for_start()
 
     def stop(self):
-        # pylint: disable=E1103
         return self.libvirtd.stop()
 
-    def restart(self):
-        # pylint: disable=E1103
+    def restart(self, reset_failed=True):
+        if reset_failed:
+            self.libvirtd.reset_failed()
         if not self.libvirtd.restart():
             return False
         return self._wait_for_start()
 
     def is_running(self):
-        # pylint: disable=E1103
         return self.libvirtd.status()
 
 

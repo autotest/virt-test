@@ -280,6 +280,11 @@ def sys_v_init_command_generator(command):
             target = convert_systemd_target_to_runlevel(target)
             return ["telinit", target]
         return set_target_command
+    # Do not need reset failed in sys_v style system.
+    elif command == "reset_failed":
+        def true_command(service_name):
+            return ["true"]
+        return true_command
 
     def method(service_name):
         return [command_name, service_name, command]
@@ -317,6 +322,8 @@ def systemd_command_generator(command):
         def set_target_command(target):
             return [command_name, "isolate", target]
         return set_target_command
+    elif command == "reset_failed":
+        command = "reset-failed"
 
     def method(service_name):
         return [command_name, command, "%s.service" % service_name]
@@ -335,6 +342,7 @@ COMMANDS = (
     "is_enabled",
     "list",
     "set_target",
+    "reset_failed"
 )
 
 
@@ -447,11 +455,8 @@ class _SpecificServiceManager(object):
                            We will not let the CmdError out.
             :return: result of parse_func.
             """
-            # If run_func is utils.run by default, we need to set
-            # ignore_status = True. Otherwise, skip this setting.
-            if run_func is utils.run:
-                logging.debug("Setting ignore_status to True.")
-                kwargs["ignore_status"] = True
+            logging.debug("Setting ignore_status to True.")
+            kwargs["ignore_status"] = True
             result = run_func(" ".join(command(service_name)), **kwargs)
             return parse_func(result)
         return run
@@ -511,11 +516,8 @@ class _GenericServiceManager(object):
                            We will not let the CmdError out.
             :return: result of parse_func.
             """
-            # If run_func is utils.run by default, we need to set
-            # ignore_status = True. Otherwise, skip this setting.
-            if run_func is utils.run:
-                logging.debug("Setting ignore_status to True.")
-                kwargs["ignore_status"] = True
+            logging.debug("Setting ignore_status to True.")
+            kwargs["ignore_status"] = True
             result = run_func(" ".join(command(service)), **kwargs)
             return parse_func(result)
         return run
