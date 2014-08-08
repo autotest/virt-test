@@ -246,8 +246,9 @@ class StoragePool(object):
         try:
             self.virsh_instance.pool_undefine(name, ignore_status=False)
         except error.CmdError, detail:
-            logging.error("Undefine pool '%s' failed:%s", name, detail)
-            return False
+            if self.pool_exists(name):
+                logging.error("Undefine pool '%s' failed:%s", name, detail)
+                return False
         logging.info("Deleted pool '%s'", name)
         return True
 
