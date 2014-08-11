@@ -1098,36 +1098,50 @@ def device_exists(vm, target_dev):
     return False
 
 
-def create_local_disk(disk_type, path=None, size=10,
-                      vgname=None, lvname=None,
-                      disk_format="raw"):
+def create_local_disk(disk_type, path=None,
+                      size="10", disk_format="raw",
+                      vgname=None, lvname=None):
+    if disk_type != "lvm" and path is None:
+        raise error.TestError("Path is needed for creating local disk")
     if path:
         utils.run("mkdir -p %s" % os.path.dirname(path))
-
+    try:
+        size = str(float(size)) + "G"
+    except ValueError:
+        pass
+    cmd = ""
     if disk_type == "file":
-        cmd = "qemu-img create -f %s %s %sG" % (disk_format, path, size)
+        cmd = "qemu-img create -f %s %s %s" % (disk_format, path, size)
     elif disk_type == "floppy":
         cmd = "dd if=/dev/zero of=%s count=1024 bs=1024" % path
     elif disk_type == "iso":
         cmd = "mkisofs -o %s /root/*.*" % path
-    else:
-        cmd = "lvcreate -V %sG %s --name %s --size 1M" % (size,
-                                                          vgname,
-                                                          lvname)
+    elif disk_type == "lvm":
+        if vgname is None or lvname is None:
+            raise error.TestError("Both VG name and LV name are needed")
+        lv_utils.lv_create(vgname, lvname, size)
         path = "/dev/%s/%s" % (vgname, lvname)
-    result = utils.run(cmd, ignore_status=True)
-    if result.exit_status:
-        raise error.TestFail("Create image '%s' on local host failed." % path)
     else:
-        return path
+        raise error.TestError("Unknown disk type %s" % disk_type)
+    if cmd:
+        utils.run(cmd, ignore_status=True)
+    return path
 
 
-def delete_local_disk(disk_type, path=None):
+def delete_local_disk(disk_type, path=None,
+                      vgname=None, lvname=None):
     if disk_type in ["file", "floppy", "iso"]:
-        cmd = "rm -f %s" % path
+        if path is None:
+            raise error.TestError("Path is needed for deleting local disk")
+        else:
+            cmd = "rm -f %s" % path
+            utils.run(cmd, ignore_status=True)
+    elif disk_type == "lvm":
+        if vgname is None or lvname is None:
+            raise error.TestError("Both VG name and LV name needed")
+        lv_utils.lv_remove(vgname, lvname)
     else:
-        cmd = "lvremove -f %s" % path
-    utils.run(cmd, ignore_status=True)
+        raise error.TestError("Unknown disk type %s" % disk_type)
 
 
 def create_scsi_disk(scsi_option, scsi_size="2048"):
@@ -1194,8 +1208,8 @@ def attach_disks(vm, path, vgname, params):
         disk_params['type_name'] = disk_type
         device_name = "%s_%s" % (target_dev, vm.name)
         disk_path = os.path.join(os.path.dirname(path), device_name)
-        disk_path = create_local_disk(disk_type,
-                                      disk_path, disk_size,
+        disk_path = create_local_disk(disk_type, disk_path,
+                                      disk_size, "",
                                       vgname, device_name)
         added_disks[disk_path] = disk_size
         result = attach_additional_device(vm.name,
