@@ -1101,9 +1101,15 @@ def device_exists(vm, target_dev):
 def create_local_disk(disk_type, path=None, size=10,
                       vgname=None, lvname=None,
                       disk_format="raw"):
-    if disk_type == "file":
+    if path:
         utils.run("mkdir -p %s" % os.path.dirname(path))
+
+    if disk_type == "file":
         cmd = "qemu-img create -f %s %s %sG" % (disk_format, path, size)
+    elif disk_type == "floppy":
+        cmd = "dd if=/dev/zero of=%s count=1024 bs=1024" % path
+    elif disk_type == "iso":
+        cmd = "mkisofs -o %s /root/*.*" % path
     else:
         cmd = "lvcreate -V %sG %s --name %s --size 1M" % (size,
                                                           vgname,
@@ -1117,11 +1123,48 @@ def create_local_disk(disk_type, path=None, size=10,
 
 
 def delete_local_disk(disk_type, path=None):
-    if disk_type == "file":
+    if disk_type in ["file", "floppy", "iso"]:
         cmd = "rm -f %s" % path
     else:
         cmd = "lvremove -f %s" % path
     utils.run(cmd, ignore_status=True)
+
+
+def create_scsi_disk(scsi_option, scsi_size="2048"):
+    """
+    Get the scsi device created by scsi_debug kernel module
+
+    :param scsi_option. The scsi_debug kernel module options.
+    :return: scsi device if it is created successfully.
+    """
+    try:
+        utils_misc.find_command("lsscsi")
+    except ValueError:
+        raise error.TestNAError("Missing command 'lsscsi'.")
+
+    try:
+        # Load scsi_debug kernel module.
+        # Unload it first if it's already loaded.
+        if utils.module_is_loaded("scsi_debug"):
+            utils.unload_module("scsi_debug")
+        utils.load_module("scsi_debug dev_size_mb=%s %s"
+                          % (scsi_size, scsi_option))
+        # Get the scsi device name
+        scsi_disk = utils.run("lsscsi|grep scsi_debug|"
+                              "awk '{print $6}'").stdout.strip()
+        logging.info("scsi disk: %s" % scsi_disk)
+        return scsi_disk
+    except Exception, e:
+        logging.error(str(e))
+        return None
+
+
+def delete_scsi_disk():
+    """
+    Delete scsi device by removing scsi_debug kernel module.
+    """
+    if utils.module_is_loaded("scsi_debug"):
+        utils.unload_module("scsi_debug")
 
 
 def attach_disks(vm, path, vgname, params):
