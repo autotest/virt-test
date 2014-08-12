@@ -1017,6 +1017,19 @@ class BaseVM(object):
                     error_messages.append(e)
             time.sleep(2)
         # Timeout expired
+        logging.info("Try to get guest network status.")
+        s_session = self.wait_for_serial_login(30, internal_timeout,
+                                               username=username,
+                                               password=password)
+        if s_session:
+            output = s_session.cmd_output("ipconfig || ifconfig", timeout=60)
+            txt = "Guest network status:\n %s" % output
+            logging.debug(txt)
+            out = s_session.cmd_output("ip route || route print", timeout=60)
+            txt = "Guest route table:\n %s" % out
+            logging.debug(txt)
+            s_session.close()
+
         if serial or restart_network:
             # Try to login via serila console
             session = self.wait_for_serial_login(timeout, internal_timeout,
