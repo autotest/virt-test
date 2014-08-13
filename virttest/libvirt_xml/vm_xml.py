@@ -268,62 +268,75 @@ class VMXMLBase(base.LibvirtXMLBase):
 
     def get_seclabel(self):
         """
-        Return seclabel + child attribute dict or raise LibvirtXML error
+        Return seclabel + child attribute dict list or raise LibvirtXML error
 
         :return: None if no seclabel in xml,
-                 dict of seclabel's attributs and children.
+                 list contains dict of seclabel's attributs and children.
         """
         __children_list__ = ['label', 'baselabel', 'imagelabel']
 
-        seclabel_node = self.xmltreefile.find("seclabel")
+        seclabel_node = self.xmltreefile.findall("seclabel")
         # no seclabel tag found in xml.
-        if seclabel_node is None:
+        if seclabel_node == []:
             raise xcepts.LibvirtXMLError("Seclabel for this domain does not "
                                          "exist")
-        seclabel = dict(seclabel_node.items())
-        for child_name in __children_list__:
-            child_node = seclabel_node.find(child_name)
-            if child_node is not None:
-                seclabel[child_name] = child_node.text
+        seclabels = []
+        for i in range(len(seclabel_node)):
+            seclabel = dict(seclabel_node[i].items())
+            for child_name in __children_list__:
+                child_node = seclabel_node[i].find(child_name)
+                if child_node is not None:
+                    seclabel[child_name] = child_node.text
+            seclabels.append(seclabel)
 
-        return seclabel
+        return seclabels
 
-    def set_seclabel(self, seclabel_dict):
+    def set_seclabel(self, seclabel_dict_list):
         """
-        Set seclabel of vm. Modify the attributs and children if seclabel
-        exists and create a new seclabel if seclabel is not found in
+        Set seclabel of vm. Delete all seclabels if seclabel exists, create
+        new seclabels use dict values from given seclabel_dict_list in
         xmltreefile.
         """
         __attributs_list__ = ['type', 'model', 'relabel']
         __children_list__ = ['label', 'baselabel', 'imagelabel']
 
-        # check the type of seclabel_dict.
-        if not isinstance(seclabel_dict, dict):
-            raise xcepts.LibvirtXMLError("seclabel_dict should be a instance of"
-                                         "dict, but not a %s.\n"
-                                         % type(seclabel_dict))
-        seclabel_node = self.xmltreefile.find("seclabel")
-        if seclabel_node is None:
+        # check the type of seclabel_dict_list and value.
+        if not isinstance(seclabel_dict_list, list):
+            raise xcepts.LibvirtXMLError("seclabel_dict_list should be a"
+                                         "instance of list, but not a %s.\n"
+                                         % type(seclabel_dict_list))
+        for seclabel_dict in seclabel_dict_list:
+            if not isinstance(seclabel_dict, dict):
+                raise xcepts.LibvirtXMLError("value in seclabel_dict_list"
+                                             "should be a instance of list, "
+                                             "but not a %s.\n"
+                                             % type(seclabel_dict))
+
+        seclabel_nodes = self.xmltreefile.findall("seclabel")
+        if seclabel_nodes is not None:
+            for i in range(len(seclabel_nodes)):
+                self.del_seclabel()
+        for i in range(len(seclabel_dict_list)):
             seclabel_node = xml_utils.ElementTree.SubElement(
                 self.xmltreefile.getroot(),
                 "seclabel")
 
-        for key, value in seclabel_dict.items():
-            if key in __children_list__:
-                child_node = seclabel_node.find(key)
-                if child_node is None:
-                    child_node = xml_utils.ElementTree.SubElement(
-                        seclabel_node,
-                        key)
-                child_node.text = value
+            for key, value in seclabel_dict_list[i].items():
+                if key in __children_list__:
+                    child_node = seclabel_node.find(key)
+                    if child_node is None:
+                        child_node = xml_utils.ElementTree.SubElement(
+                            seclabel_node,
+                            key)
+                    child_node.text = value
 
-            elif key in __attributs_list__:
-                seclabel_node.set(key, value)
+                elif key in __attributs_list__:
+                    seclabel_node.set(key, value)
 
-            else:
-                continue
+                else:
+                    continue
 
-        self.xmltreefile.write()
+            self.xmltreefile.write()
 
     def del_seclabel(self):
         """
