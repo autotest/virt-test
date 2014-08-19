@@ -581,7 +581,8 @@ class VMXML(VMXMLBase):
         attr_value = None
         try:
             disk = vmxml.get_disk_all()[target]
-            attr_value = disk.find(tag).get(attr)
+            if tag in ["driver", "boot", "address", "alias", "source"]:
+                attr_value = disk.find(tag).get(attr)
         except AttributeError:
             logging.error("No %s/%s found.", tag, attr)
 
