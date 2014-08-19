@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 import tempfile
+import commands
 
 from autotest.client import utils, os_dep
 from virttest import propcan, remote, utils_libvirtd
@@ -136,6 +137,22 @@ class SSHCheckError(ConnectionError):
                 "output: %s " % (self.server_ip, self.output))
 
 
+class SSHRmAuthKeysError(ConnectionError):
+
+    """
+    Error in removing authorized_keys file.
+    """
+
+    def __init__(self, auth_keys, output):
+        ConnectionError.__init__(self)
+        self.auth_keys = auth_keys
+        self.output = output
+
+    def __str__(self):
+        return ("Failed to remove authorized_keys file (%s).\n"
+                "output: %s .\n" % (self.auth_keys, self.output))
+
+
 class ConnCmdClientError(ConnectionError):
 
     """
@@ -181,6 +198,22 @@ class ConnCertError(ConnectionError):
 
     def __str__(self):
         return ("Failed to build certificate file (%s).\n"
+                "output: %s .\n" % (self.cert, self.output))
+
+
+class ConnRmCertError(ConnectionError):
+
+    """
+    Error in removing certificate file with rm command.
+    """
+
+    def __init__(self, cert, output):
+        ConnectionError.__init__(self)
+        self.cert = cert
+        self.output = output
+
+    def __str__(self):
+        return ("Failed to remove certificate file/path (%s).\n"
                 "output: %s .\n" % (self.cert, self.output))
 
 
@@ -516,9 +549,36 @@ class SSHConnection(ConnectionBase):
 
     def conn_recover(self):
         """
-        It's ok to ignore finish work for ssh connection.
+        Clean up authentication host.
         """
         pass
+        # initialize variables
+        server_ip = self.server_ip
+        server_user = self.server_user
+        server_pwd = self.server_pwd
+        client_ip = self.client_ip
+
+        ssh_authorized_keys_path = '/root/.ssh/authorized_keys'
+        cmd = "rm -rf %s" % ssh_authorized_keys_path
+
+        server_session = remote.wait_for_login('ssh', server_ip, '22',
+                                               server_user, server_pwd,
+                                               r"[\#\$]\s*$")
+        # remove authentication file
+        status, output = server_session.cmd_status_output(cmd)
+        if status:
+            raise SSHRmAuthKeysError(ssh_authorized_keys_path, output)
+
+        # restart libvirtd service on server
+        try:
+            libvirtd_service = utils_libvirtd.Libvirtd(session=server_session)
+            libvirtd_service.restart()
+            server_session.close()
+        except (remote.LoginError, aexpect.ShellError), detail:
+            server_session.close()
+            raise ConnServerRestartError(detail)
+
+        logging.debug("SSH authentication recover successfully.")
 
     def conn_setup(self):
         """
@@ -591,20 +651,25 @@ class TCPConnection(ConnectionBase):
 
     Some specific varaibles for TCPConnection class.
     """
-    __slots__ = ('tcp_port', 'remote_syslibvirtd', 'remote_libvirtdconf')
+    __slots__ = ('tcp_port', 'remote_syslibvirtd',
+                 'remote_libvirtdconf', 'sasl_allowed_users',
+                 'auth_tcp', 'listen_addr')
 
     def __init__(self, *args, **dargs):
         """
         init params for TCP connection and init tmp_dir.
 
-        param tcp_port: Port of tcp connection, default is 16509.
-        param sysconfig_libvirtd_path: Path of libvirtd file, default is
+        :param tcp_port: Port of tcp connection, default is 16509.
+        :param sysconfig_libvirtd_path: Path of libvirtd file, default is
                                        ``/etc/sysconfig/libvirtd``.
-        param libvirtd_conf_path: Path of libvirtd.conf, default is
+        :param libvirtd_conf_path: Path of libvirtd.conf, default is
                                   ``/etc/libvirt/libvirtd.conf``.
         """
         init_dict = dict(*args, **dargs)
         init_dict['tcp_port'] = init_dict.get('tcp_port', '16509')
+        init_dict['auth_tcp'] = init_dict.get('auth_tcp', 'none')
+        init_dict['listen_addr'] = init_dict.get('listen_addr')
+        init_dict['sasl_allowed_users'] = init_dict.get('sasl_allowed_users')
         super(TCPConnection, self).__init__(init_dict)
 
         self.remote_syslibvirtd = remote.RemoteFile(
@@ -664,6 +729,10 @@ class TCPConnection(ConnectionBase):
         server_user = self.server_user
         server_pwd = self.server_pwd
         tcp_port = self.tcp_port
+        auth_tcp = self.auth_tcp
+        # require a list data type
+        sasl_allowed_users = self.sasl_allowed_users
+        listen_addr = self.listen_addr
 
         # edit the /etc/sysconfig/libvirtd to add --listen args in libvirtd
         pattern2repl = {r".*LIBVIRTD_ARGS\s*=\s*\"\s*--listen\s*\".*":
@@ -672,10 +741,19 @@ class TCPConnection(ConnectionBase):
 
         # edit the /etc/libvirt/libvirtd.conf
         # listen_tcp=1, tcp_port=$tcp_port, auth_tcp="none"
+        # listen_tcp=1, tcp_port=$tcp_port, auth_tcp=$auth_tcp
         pattern2repl = {r".*listen_tls\s*=.*": 'listen_tls=0',
                         r".*listen_tcp\s*=.*": 'listen_tcp=1',
                         r".*tcp_port\s*=.*": 'tcp_port="%s"' % (tcp_port),
-                        r'.*auth_tcp\s*=.*': 'auth_tcp="none"'}
+                        r".*auth_tcp\s*=.*": 'auth_tcp="%s"' % (auth_tcp)}
+        # a whitelist of allowed SASL usernames, it's a list.
+        # If the list is an empty, no client can connect
+        if sasl_allowed_users:
+            pattern2repl[r".*sasl_allowed_username_list\s*=.*"] = \
+                'sasl_allowed_username_list=%s' % (sasl_allowed_users)
+        if listen_addr:
+            pattern2repl[r".*listen_addr\s*=.*"] = \
+                "listen_addr='%s'" % (listen_addr)
         self.remote_libvirtdconf.sub_else_add(pattern2repl)
 
         # restart libvirtd service on server
@@ -698,16 +776,27 @@ class TLSConnection(ConnectionBase):
 
     Some specific varaibles for TLSConnection class.
 
-    server_cn, client_cn: Info to build pki key.
+    server_cn, client_cn, ca_cn: Info to build pki key.
     CERTOOL: tool to build key for TLS connection.
     pki_CA_dir: Dir to store CA key.
     libvirt_pki_dir, libvirt_pki_private_dir: Dir to store pki in libvirt.
     sysconfig_libvirtd_path, libvirtd_conf_path: Path of libvirt config file.
     hosts_path: /etc/hosts
+    auth_tls, tls_port, listen_addr: custom TLS Auth, port and listen address
+    tls_allowed_dn_list: DN's list are checked
+    tls_verify_cert: disable verification, default is to always verify
+    tls_sanity_cert: disable checks, default is to always run sanity checks
+    custom_pki_path: custom pki path
+    ca_cakey_path: CA certification path, sometimes need to reuse previous cert
+    scp_new_cacert: copy new CA certification, default is to always copy
+    restart_libvirtd: default is to restart libvirtd
     """
-    __slots__ = ('server_cn', 'client_cn', 'CERTTOOL', 'pki_CA_dir',
+    __slots__ = ('server_cn', 'client_cn', 'ca_cn', 'CERTTOOL', 'pki_CA_dir',
                  'libvirt_pki_dir', 'libvirt_pki_private_dir', 'client_hosts',
-                 'server_libvirtdconf', 'server_syslibvirtd')
+                 'server_libvirtdconf', 'server_syslibvirtd', 'auth_tls',
+                 'tls_port', 'listen_addr', 'tls_allowed_dn_list',
+                 'custom_pki_path', 'tls_verify_cert', 'tls_sanity_cert',
+                 'ca_cakey_path', 'scp_new_cacert', 'restart_libvirtd')
 
     def __init__(self, *args, **dargs):
         """
@@ -721,6 +810,17 @@ class TLSConnection(ConnectionBase):
         init_dict = dict(*args, **dargs)
         init_dict['server_cn'] = init_dict.get('server_cn', 'TLSServer')
         init_dict['client_cn'] = init_dict.get('client_cn', 'TLSClient')
+        init_dict['ca_cn'] = init_dict.get('ca_cn', 'AUTOTEST.VIRT')
+        init_dict['ca_cakey_path'] = init_dict.get('ca_cakey_path', None)
+        init_dict['auth_tls'] = init_dict.get('auth_tls', 'none')
+        init_dict['tls_port'] = init_dict.get('tls_port', '16514')
+        init_dict['listen_addr'] = init_dict.get('listen_addr')
+        init_dict['custom_pki_path'] = init_dict.get('custom_pki_path')
+        init_dict['tls_verify_cert'] = init_dict.get('tls_verify_cert', 'yes')
+        init_dict['tls_sanity_cert'] = init_dict.get('tls_sanity_cert', 'yes')
+        init_dict['tls_allowed_dn_list'] = init_dict.get('tls_allowed_dn_list')
+        init_dict['scp_new_cacert'] = init_dict.get('scp_new_cacert', 'yes')
+        init_dict['restart_libvirtd'] = init_dict.get('restart_libvirtd', 'yes')
         super(TLSConnection, self).__init__(init_dict)
         # check and set CERTTOOL in slots
         try:
@@ -731,9 +831,20 @@ class TLSConnection(ConnectionBase):
             CERTTOOL = '/bin/true'
         self.CERTTOOL = CERTTOOL
         # set some pki related dir values
-        self.pki_CA_dir = ('/etc/pki/CA/')
-        self.libvirt_pki_dir = ('/etc/pki/libvirt/')
-        self.libvirt_pki_private_dir = ('/etc/pki/libvirt/private/')
+        if not self.custom_pki_path:
+            self.pki_CA_dir = ('/etc/pki/CA/')
+            self.libvirt_pki_dir = ('/etc/pki/libvirt/')
+            self.libvirt_pki_private_dir = ('/etc/pki/libvirt/private/')
+        else:
+            # set custom certifications path
+            dir_dict = {'CA': 'pki_CA_dir',
+                        'libvirt': 'libvirt_pki_dir',
+                        'libvirt/private': 'libvirt_pki_private_dir'}
+            if not os.path.exists(self.custom_pki_path):
+                os.makedirs(self.custom_pki_path)
+
+            for dir_name in dir_dict:
+                setattr(self, dir_dict[dir_name], self.custom_pki_path)
 
         self.client_hosts = remote.RemoteFile(address=self.client_ip,
                                               client='scp',
@@ -757,6 +868,13 @@ class TLSConnection(ConnectionBase):
             password=self.server_pwd,
             port='22',
             remote_path='/etc/libvirt/libvirtd.conf')
+
+    def __del__(self):
+        """
+        Clean up certifications.
+        """
+        if self.auto_recover:
+            self.cert_recover()
 
     def conn_recover(self):
         """
@@ -785,7 +903,48 @@ class TLSConnection(ConnectionBase):
             raise ConnServerRestartError(detail)
         logging.debug("TLS connection recover successfully.")
 
-    def conn_setup(self):
+    def cert_recover(self):
+        """
+        Do the clean up certifications work.
+
+        (1).initialize variables.
+        (2).Delete local and remote generated certifications file.
+        """
+        # initialize variables
+        server_ip = self.server_ip
+        server_user = self.server_user
+        server_pwd = self.server_pwd
+
+        cert_dict = {'CA': '%s*' % self.pki_CA_dir,
+                     'cert': self.libvirt_pki_dir,
+                     'key': self.libvirt_pki_private_dir}
+
+        # remove local generated certifications file
+        for cert in cert_dict:
+            cert_path = cert_dict[cert]
+            cmd = "rm -rf %s" % cert_path
+            if os.path.exists(cert_path):
+                shutil.rmtree(cert_path)
+            else:
+                status, output = commands.getstatusoutput(cmd)
+                if status:
+                    raise ConnRmCertError(cert_path, output)
+
+        # remove remote generated certifications file
+        server_session = remote.wait_for_login('ssh', server_ip, '22',
+                                               server_user, server_pwd,
+                                               r"[\#\$]\s*$")
+        for cert in cert_dict:
+            cert_path = cert_dict[cert]
+            cmd = "rm -rf %s" % cert_path
+            status, output = server_session.cmd_status_output(cmd)
+            if status:
+                raise ConnRmCertError(cert_path, output)
+
+        server_session.close()
+        logging.debug("TLS certifications recover successfully.")
+
+    def conn_setup(self, server_setup=True, client_setup=True):
         """
         setup a TLS connection between server and client.
         At first check the certtool needed to setup.
@@ -795,10 +954,15 @@ class TLSConnection(ConnectionBase):
             raise ConnToolNotFoundError('certtool',
                                         "certtool executable not set or found on path.")
 
-        build_CA(self.tmp_dir, self.CERTTOOL)
-        self.server_setup()
-        self.client_setup()
+        # support build multiple CAs with different CA CN
+        build_CA(self.tmp_dir, self.ca_cn, self.ca_cakey_path, self.CERTTOOL)
+        # not always need to setup CA, client and server together
+        if server_setup:
+            self.server_setup()
+        if client_setup:
+            self.client_setup()
 
+        self.close_session()
         logging.debug("TLS connection setup successfully.")
 
     def server_setup(self):
@@ -814,15 +978,29 @@ class TLSConnection(ConnectionBase):
         """
         # initialize variables
         tmp_dir = self.tmp_dir
-        cacert_path = '%s/cacert.pem' % tmp_dir
+        scp_new_cacert = self.scp_new_cacert
+        # sometimes, need to reuse previous CA cert
+        if self.ca_cakey_path and scp_new_cacert == 'no':
+            cacert_path = '%s/cacert.pem' % self.ca_cakey_path
+        else:
+            cacert_path = '%s/cacert.pem' % tmp_dir
         serverkey_path = '%s/serverkey.pem' % tmp_dir
         servercert_path = '%s/servercert.pem' % tmp_dir
         server_ip = self.server_ip
         server_user = self.server_user
         server_pwd = self.server_pwd
+        auth_tls = self.auth_tls
+        tls_port = self.tls_port
+        listen_addr = self.listen_addr
+        restart_libvirtd = self.restart_libvirtd
+        tls_allowed_dn_list = self.tls_allowed_dn_list
+        pki_path = self.custom_pki_path
+        tls_verify_cert = self.tls_verify_cert
+        tls_sanity_cert = self.tls_sanity_cert
 
         # build a server key.
-        build_server_key(tmp_dir, self.server_cn, self.CERTTOOL)
+        build_server_key(tmp_dir, self.ca_cakey_path,
+                         self.server_cn, self.CERTTOOL)
 
         # scp cacert.pem, servercert.pem and serverkey.pem to server.
         server_session = self.server_session
@@ -854,15 +1032,66 @@ class TLSConnection(ConnectionBase):
         pattern2repl = {r".*listen_tls\s*=\s*.*": "listen_tls=1"}
         self.server_libvirtdconf.sub_else_add(pattern2repl)
 
+        # edit the /etc/libvirt/libvirtd.conf to add
+        # listen_addr=$listen_addr
+        if listen_addr:
+            pattern2repl[r".*listen_addr\s*=.*"] = \
+                "listen_addr='%s'" % (listen_addr)
+            self.server_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to add auth_tls=$auth_tls
+        if auth_tls != 'none':
+            pattern2repl = {r".*auth_tls\s*=\s*.*": 'auth_tls="%s"' % auth_tls}
+            self.server_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to add tls_port=$tls_port
+        if tls_port != '16514':
+            pattern2repl = {r".*tls_port\s*=\s*.*": 'tls_port="%s"' % tls_port}
+            self.server_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to add
+        # tls_allowed_dn_list=$tls_allowed_dn_list
+        if isinstance(tls_allowed_dn_list, list):
+            pattern2repl = {r".*tls_allowed_dn_list\s*=\s*.*":
+                            'tls_allowed_dn_list=%s' % tls_allowed_dn_list}
+            self.server_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to override
+        # the default server certification file path
+        if pki_path:
+            cert_path_dict = {'ca_file': cacert_path,
+                              'key_file': serverkey_path,
+                              'cert_file': servercert_path}
+            pattern2repl = {}
+            for cert_name in cert_path_dict:
+                cert_file = os.path.basename(cert_path_dict[cert_name])
+                abs_cert_file = os.path.join(pki_path, cert_file)
+                pattern2repl[r".*%s\s*=.*" % (cert_name)] = \
+                    '%s="%s"' % (cert_name, abs_cert_file)
+            self.server_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to disable client verification
+        if tls_verify_cert == "no":
+            pattern2repl = {r".*tls_no_verify_certificate\s*=\s*.*":
+                            'tls_no_verify_certificate=1'}
+            self.server_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to disable server sanity checks
+        if tls_sanity_cert == "no":
+            pattern2repl = {r".*tls_no_sanity_certificate\s*=\s*.*":
+                            'tls_no_sanity_certificate=1'}
+            self.server_libvirtdconf.sub_else_add(pattern2repl)
+
         # restart libvirtd service on server
-        try:
-            session = remote.wait_for_login('ssh', server_ip, '22',
-                                            server_user, server_pwd,
-                                            r"[\#\$]\s*$")
-            libvirtd_service = utils_libvirtd.Libvirtd(session=session)
-            libvirtd_service.restart()
-        except (remote.LoginError, aexpect.ShellError), detail:
-            raise ConnServerRestartError(detail)
+        if restart_libvirtd == "yes":
+            try:
+                session = remote.wait_for_login('ssh', server_ip, '22',
+                                                server_user, server_pwd,
+                                                r"[\#\$]\s*$")
+                libvirtd_service = utils_libvirtd.Libvirtd(session=session)
+                libvirtd_service.restart()
+            except (remote.LoginError, aexpect.ShellError), detail:
+                raise ConnServerRestartError(detail)
 
     def client_setup(self):
         """
@@ -920,7 +1149,7 @@ def build_client_key(tmp_dir, client_cn="TLSClient", certtool="certtool"):
     (4).make a certificate file with certtool command.
     """
     # Initialize variables
-    cakey_path = '%s/tcakey.pem' % tmp_dir
+    cakey_path = '%s/cakey.pem' % tmp_dir
     cacert_path = '%s/cacert.pem' % tmp_dir
     clientkey_path = '%s/clientkey.pem' % tmp_dir
     clientcert_path = '%s/clientcert.pem' % tmp_dir
@@ -952,7 +1181,8 @@ def build_client_key(tmp_dir, client_cn="TLSClient", certtool="certtool"):
         raise ConnCertError(clientinfo_path, CmdResult.stderr)
 
 
-def build_server_key(tmp_dir, server_cn="TLSServer", certtool="certtool"):
+def build_server_key(tmp_dir, ca_cakey_path=None,
+                     server_cn="TLSServer", certtool="certtool"):
     """
     (1).initialization for variables.
     (2).make a private key with certtool command.
@@ -960,9 +1190,13 @@ def build_server_key(tmp_dir, server_cn="TLSServer", certtool="certtool"):
     (4).make a certificate file with certtool command.
     """
     # initialize variables
-    cakey_path = '%s/tcakey.pem' % tmp_dir
-    cacert_path = '%s/cacert.pem' % tmp_dir
+    # sometimes, need to reuse previous CA cert
+    if not ca_cakey_path:
+        cakey_path = '%s/cakey.pem' % tmp_dir
+    else:
+        cakey_path = '%s/cakey.pem' % ca_cakey_path
     serverkey_path = '%s/serverkey.pem' % tmp_dir
+    cacert_path = '%s/cacert.pem' % tmp_dir
     servercert_path = '%s/servercert.pem' % tmp_dir
     serverinfo_path = '%s/server.info' % tmp_dir
 
@@ -992,7 +1226,7 @@ def build_server_key(tmp_dir, server_cn="TLSServer", certtool="certtool"):
         raise ConnCertError(serverinfo_path, CmdResult.stderr)
 
 
-def build_CA(tmp_dir, certtool="certtool"):
+def build_CA(tmp_dir, cn="AUTOTEST.VIRT", ca_cakey_path=None, certtool="certtool"):
     """
     setup private key and certificate file which are needed to build.
     certificate file for client and server.
@@ -1003,18 +1237,24 @@ def build_CA(tmp_dir, certtool="certtool"):
     (4).make a certificate file with certtool command.
     """
     # initialize variables
-    cakey_path = '%s/tcakey.pem' % tmp_dir
+    if not ca_cakey_path:
+        cakey_path = '%s/cakey.pem' % tmp_dir
+    else:
+        cakey_path = '%s/cakey.pem' % ca_cakey_path
     cainfo_path = '%s/ca.info' % tmp_dir
     cacert_path = '%s/cacert.pem' % tmp_dir
 
     # make a private key
-    cmd = "%s --generate-privkey > %s " % (certtool, cakey_path)
-    cmd_result = utils.run(cmd, ignore_status=True, timeout=10)
-    if cmd_result.exit_status:
-        raise ConnPrivKeyError(cakey_path, cmd_result.stderr)
+    # sometimes, may reuse previous CA cert, so don't always need to
+    # generate private key
+    if not ca_cakey_path:
+        cmd = "%s --generate-privkey > %s " % (certtool, cakey_path)
+        cmd_result = utils.run(cmd, ignore_status=True, timeout=10)
+        if cmd_result.exit_status:
+            raise ConnPrivKeyError(cakey_path, cmd_result.stderr)
     # prepare a info file to build certificate file
     cainfo_file = open(cainfo_path, "w")
-    cainfo_file.write("cn = AUTOTEST.VIRT\n")
+    cainfo_file.write("cn = %s\n" % cn)
     cainfo_file.write("ca\n")
     cainfo_file.write("cert_signing_key\n")
     cainfo_file.close()
@@ -1026,3 +1266,144 @@ def build_CA(tmp_dir, certtool="certtool"):
     CmdResult = utils.run(cmd, ignore_status=True)
     if CmdResult.exit_status:
         raise ConnCertError(cainfo_path, CmdResult.stderr)
+
+
+class UNIXConnection(ConnectionBase):
+
+    """
+    Connection class for UNIX transport.
+
+    Some specific varaibles for UNIXConnection class.
+    """
+    __slots__ = ('auth_unix_ro', 'auth_unix_rw', 'unix_sock_dir',
+                 'unix_sock_group', 'unix_sock_ro_perms',
+                 'unix_sock_rw_perms', 'access_drivers',
+                 'client_ip', 'client_user', 'client_pwd',
+                 'client_libvirtdconf', 'restart_libvirtd')
+
+    def __init__(self, *args, **dargs):
+        """
+        init params for UNIX connection.
+
+        :param auth_unix_ro: UNIX R/O sockets, default is 'none'.
+        :param auth_unix_rw: UNIX R/W sockets, default is 'none'.
+        :param unix_sock_group: UNIX domain socket group ownership,
+                                default is 'libvirt'.
+        :param access_drivers: access control restrictions,
+                               default is '["polkit"]'.
+        :param unix_sock_ro_perms: UNIX socket permissions for the
+                                   R/O socket, default is '0777'.
+        :param unix_sock_rw_perms: UNIX socket permissions for the
+                                   R/W socket, default is '0770'.
+        :param client_libvirtdconf: Path of client libvirtd.conf, default is
+                                  '/etc/libvirt/libvirtd.conf'.
+        :param restart_libvirtd: default is to restart libvirtd.
+        """
+        init_dict = dict(*args, **dargs)
+        init_dict['auth_unix_ro'] = init_dict.get('auth_unix_ro', 'none')
+        init_dict['auth_unix_rw'] = init_dict.get('auth_unix_rw', 'none')
+        init_dict['unix_sock_dir'] = init_dict.get('unix_sock_dir', '/var/run/libvirt')
+        init_dict['unix_sock_group'] = init_dict.get('unix_sock_group', 'libvirt')
+        init_dict['access_drivers'] = init_dict.get('access_drivers', ["polkit"])
+        init_dict['unix_sock_ro_perms'] = init_dict.get('unix_sock_ro_perms', '0777')
+        init_dict['unix_sock_rw_perms'] = init_dict.get('unix_sock_rw_perms', '0770')
+        init_dict['restart_libvirtd'] = init_dict.get('restart_libvirtd', 'yes')
+
+        super(UNIXConnection, self).__init__(init_dict)
+
+        self.client_libvirtdconf = remote.RemoteFile(
+            address=self.client_ip,
+            client='scp',
+            username=self.client_user,
+            password=self.client_pwd,
+            port='22',
+            remote_path='/etc/libvirt/libvirtd.conf')
+
+    def conn_recover(self):
+        """
+        Do the clean up work.
+
+        (1).Delete remote file.
+        (2).Restart libvirtd on server.
+        """
+        del self.client_libvirtdconf
+        # restart libvirtd service on server
+        client_session = self.client_session
+        try:
+            libvirtd_service = utils_libvirtd.Libvirtd(session=client_session)
+            libvirtd_service.restart()
+        except (remote.LoginError, aexpect.ShellError), detail:
+            raise ConnServerRestartError(detail)
+
+        logging.debug("UNIX connection recover successfully.")
+
+    def conn_setup(self):
+        """
+        Setup a UNIX connection.
+
+        (1).Initialize variables.
+        (2).Update libvirtd.conf configuration.
+        (3).Restart libvirtd on client.
+        """
+        # initialize variables
+        auth_unix_ro = self.auth_unix_ro
+        auth_unix_rw = self.auth_unix_rw
+        unix_sock_group = self.unix_sock_group
+        unix_sock_dir = self.unix_sock_dir
+        unix_sock_ro_perms = self.unix_sock_ro_perms
+        unix_sock_rw_perms = self.unix_sock_rw_perms
+        access_drivers = self.access_drivers
+        restart_libvirtd = self.restart_libvirtd
+        client_session = self.client_session
+
+        # edit the /etc/libvirt/libvirtd.conf to add auth_unix_ro arg
+        if auth_unix_ro:
+            pattern2repl = {r".*auth_unix_ro\s*=.*":
+                            'auth_unix_ro="%s"' % auth_unix_ro}
+            self.client_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to add auth_unix_rw arg
+        if auth_unix_rw:
+            pattern2repl = {r".*auth_unix_rw\s*=.*":
+                            'auth_unix_rw="%s"' % auth_unix_rw}
+            self.client_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to add unix_sock_group arg
+        if unix_sock_group != 'libvirt':
+            pattern2repl = {r".*unix_sock_group\s*=.*":
+                            'unix_sock_group="%s"' % unix_sock_group}
+            self.client_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to add unix_sock_dir arg
+        if unix_sock_dir != '/var/run/libvirt':
+            pattern2repl = {r".*unix_sock_dir\s*=.*":
+                            'unix_sock_dir="%s"' % unix_sock_dir}
+            self.client_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to add access_drivers arg
+        if access_drivers != ["polkit"]:
+            pattern2repl = {r".*access_drivers\s*=.*":
+                            'access_drivers="%s"' % access_drivers}
+            self.client_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to add unix_sock_ro_perms arg
+        if unix_sock_ro_perms:
+            pattern2repl = {r".*unix_sock_ro_perms\s*=.*":
+                            'unix_sock_ro_perms="%s"' % unix_sock_ro_perms}
+            self.client_libvirtdconf.sub_else_add(pattern2repl)
+
+        # edit the /etc/libvirt/libvirtd.conf to add unix_sock_rw_perms arg
+        if unix_sock_rw_perms:
+            pattern2repl = {r".*unix_sock_rw_perms\s*=.*":
+                            'unix_sock_rw_perms="%s"' % unix_sock_rw_perms}
+            self.client_libvirtdconf.sub_else_add(pattern2repl)
+
+        # restart libvirtd service on server
+        if restart_libvirtd == "yes":
+            try:
+                libvirtd_service = utils_libvirtd.Libvirtd(session=client_session)
+                libvirtd_service.restart()
+            except (remote.LoginError, aexpect.ShellError), detail:
+                raise ConnServerRestartError(detail)
+
+        logging.debug("UNIX connection setup successfully.")
