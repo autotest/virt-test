@@ -1617,17 +1617,21 @@ class IPv6Manager(propcan.PropCanBase):
         if self.session:
             self.session.close()
 
-    def get_addr_list(self):
+    def get_addr_list(self, runner=None):
         """
         Get IPv6 address list from local and remote host.
         """
-        local_ipv6_addr_list = get_net_if_addrs(self.client_ifname).get("ipv6")
-        logging.debug("Local IPv6 address list: %s", local_ipv6_addr_list)
+        ipv6_addr_list = []
 
-        remote_ipv6_addr_list = get_net_if_addrs(self.server_ifname,
-                                                 self.runner).get("ipv6")
-        logging.debug("remote IPv6 address list: %s", remote_ipv6_addr_list)
-        return (local_ipv6_addr_list, remote_ipv6_addr_list)
+        if not runner:
+            ipv6_addr_list = get_net_if_addrs(self.client_ifname).get("ipv6")
+            logging.debug("Local IPv6 address list: %s", ipv6_addr_list)
+        else:
+            ipv6_addr_list = get_net_if_addrs(self.server_ifname,
+                                              runner).get("ipv6")
+            logging.debug("remote IPv6 address list: %s", ipv6_addr_list)
+
+        return ipv6_addr_list
 
     @staticmethod
     def check_connectivity(client_ifname, server_ipv6, count=5):
@@ -1685,39 +1689,49 @@ class IPv6Manager(propcan.PropCanBase):
         Setup IPv6 network environment.
         """
         self.session = self.get_session()
-        self.runner = self.session.cmd_output
+        runner = self.session.cmd_output
 
-        logging.info("Prepare to configure IPv6 test environment...")
-        # configure global IPv6 address for local host
-        set_net_if_ip(self.client_ifname, self.client_ipv6_addr)
-        # configure global IPv6 address for remote host
-        set_net_if_ip(self.server_ifname, self.server_ipv6_addr, self.runner)
-        # check IPv6 network connectivity
-        if self.check_ipv6_connectivity == "yes":
-            # the ipv6 address looks like this '3efe::101/64'
-            ipv6_addr_des = self.server_ipv6_addr.split('/')[0]
-            self.check_connectivity(self.client_ifname, ipv6_addr_des)
-        # flush ip6tables both local and remote host
-        self.flush_ip6tables()
+        try:
+            logging.info("Prepare to configure IPv6 test environment...")
+            # configure global IPv6 address for local host
+            set_net_if_ip(self.client_ifname, self.client_ipv6_addr)
+            # configure global IPv6 address for remote host
+            set_net_if_ip(self.server_ifname, self.server_ipv6_addr, runner)
+            # check IPv6 network connectivity
+            if self.check_ipv6_connectivity == "yes":
+                # the ipv6 address looks like this '3efe::101/64'
+                ipv6_addr_des = self.server_ipv6_addr.split('/')[0]
+                self.check_connectivity(self.client_ifname, ipv6_addr_des)
+            # flush ip6tables both local and remote host
+            self.flush_ip6tables()
+        except Exception, e:
+            self.close_session()
+            raise error.TestError("Failed to setup IPv6 environment!!:%s", e)
 
     def cleanup(self):
         """
         Cleanup IPv6 network environment.
         """
-        self.session = self.get_session()
-        self.runner = self.session.cmd_output
-
         logging.info("Prepare to clean up IPv6 test environment...")
-        local_ipv6_addr_list, remote_ipv6_addr_list = self.get_addr_list()
+        local_ipv6_addr_list = self.get_addr_list()
+
         # the ipv6 address looks like this '3efe::101/64'
         ipv6_addr_src = self.client_ipv6_addr.split('/')[0]
         ipv6_addr_des = self.server_ipv6_addr.split('/')[0]
+
         # delete global IPv6 address from local host
         if ipv6_addr_src in local_ipv6_addr_list:
             del_net_if_ip(self.client_ifname, self.client_ipv6_addr)
+
+        self.session = self.get_session()
+        runner = self.session.cmd_output
+        remote_ipv6_addr_list = self.get_addr_list(runner)
         # delete global IPv6 address from remote host
         if ipv6_addr_des in remote_ipv6_addr_list:
-            del_net_if_ip(self.server_ifname, self.server_ipv6_addr, self.runner)
+            del_net_if_ip(self.server_ifname, self.server_ipv6_addr, runner)
+
+        # make sure opening session is closed
+        self.close_session()
 
 
 class VirtIface(propcan.PropCan, object):
