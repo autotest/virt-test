@@ -33,6 +33,8 @@ from virttest import utils_selinux
 from virttest import libvirt_storage
 from virttest import utils_net
 from virttest import gluster
+from virttest import remote
+from virttest.utils_libvirtd import service_libvirtd_control
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
@@ -1219,4 +1221,83 @@ def define_new_vm(vm_name, new_name):
         return True
     except xcepts.LibvirtXMLError, detail:
         logging.error(detail)
+        return False
+
+
+def remotely_control_libvirtd(server_ip, server_user, server_pwd,
+                              action='restart', status_error='no'):
+    """
+    Remotely restart libvirt service
+    """
+    session = None
+    try:
+        session = remote.wait_for_login('ssh', server_ip, '22',
+                                        server_user, server_pwd,
+                                        r"[\#\$]\s*$")
+        logging.info("%s libvirt daemon\n", action)
+        service_libvirtd_control(action, session)
+        session.close()
+    except (remote.LoginError, aexpect.ShellError, error.CmdError), detail:
+        if session:
+            session.close()
+        if status_error == "no":
+            raise error.TestFail("Failed to %s libvirtd service on "
+                                 "server: %s\n", action, detail)
+        else:
+            logging.info("It is an expect %s", detail)
+
+
+def connect_libvirtd(uri, read_only="", virsh_cmd="list", auth_user=None,
+                     auth_pwd=None, vm_name="", status_error="no",
+                     extra="", log_level='LIBVIRT_DEBUG=3', su_user="",
+                     patterns_virsh_cmd=".*Id\s*Name\s*State\s*.*"):
+    """
+    Connect libvirt daemon
+    """
+    patterns_yes_no = r".*[Yy]es.*[Nn]o.*"
+    patterns_auth_name_comm = r".*name:.*"
+    patterns_auth_name_xen = r".*name.*root.*:.*"
+    patterns_auth_pwd = r".*[Pp]assword.*"
+
+    command = "%s %s virsh %s -c %s %s %s" % (extra, log_level, read_only,
+                                              uri, virsh_cmd, vm_name)
+    # allow specific user to run virsh command
+    if su_user != "":
+        command = "su %s -c '%s'" % (su_user, command)
+
+    logging.info("Execute %s", command)
+    # setup shell session
+    session = aexpect.ShellSession(command, echo=True)
+
+    try:
+        # requires access authentication
+        match_list = [patterns_yes_no, patterns_auth_name_comm,
+                      patterns_auth_name_xen, patterns_auth_pwd,
+                      patterns_virsh_cmd]
+        while True:
+            match, text = session.read_until_any_line_matches(match_list,
+                                                              timeout=30,
+                                                              internal_timeout=1)
+            if match == -5:
+                logging.info("Matched 'yes/no', details: <%s>", text)
+                session.sendline("yes")
+            elif match == -3 or match == -4:
+                logging.info("Matched 'username', details: <%s>", text)
+                session.sendline(auth_user)
+            elif match == -2:
+                logging.info("Matched 'password', details: <%s>", text)
+                session.sendline(auth_pwd)
+            elif match == -1:
+                logging.info("Expected output of virsh command: <%s>", text)
+                break
+            else:
+                logging.error("The real prompt text: <%s>", text)
+                break
+
+        session.close()
+        return True
+    except (aexpect.ShellError, aexpect.ExpectError), details:
+        log = session.get_output()
+        session.close()
+        logging.error("Failed to connect libvirtd: %s\n%s", details, log)
         return False
