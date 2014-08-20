@@ -72,6 +72,32 @@ def get_num_huge_pages():
     return int(raw_hugepages.split()[2])
 
 
+def get_num_anon_huge_pages(pid):
+    num_anon = 0
+    mem_infos = open('/proc/%s/smaps' % pid, 'r')
+    pattern = re.compile(r'^AnonHugePages*')
+    for info in mem_infos:
+        if pattern.match(info):
+            num_anon = num_anon + int(info.split()[1])
+    return num_anon
+
+
+def get_num_huge_pages_free():
+    mem_infos = open('/proc/meminfo', 'r')
+    pattern = re.compile(r'^HugePages_Free*')
+    for info in mem_infos:
+        if pattern.match(info):
+            return int(info.split()[1])
+
+
+def get_num_huge_pages_rsvd():
+    mem_infos = open('/proc/meminfo', 'r')
+    pattern = re.compile(r'^HugePages_Rsvd*')
+    for info in mem_infos:
+        if pattern.match(info):
+            return int(info.split()[1])
+
+
 def set_num_huge_pages(num):
     utils.system('/sbin/sysctl vm.nr_hugepages=%d' % num)
 
