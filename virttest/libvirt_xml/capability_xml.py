@@ -25,7 +25,8 @@ class CapabilityXML(base.LibvirtXMLBase):
     # e.g. guest_count etc.
 
     __slots__ = ('uuid', 'os_arch_machine_map', 'cpu_count', 'arch', 'model',
-                 'vendor', 'feature_list', 'power_management_list')
+                 'vendor', 'feature_list', 'power_management_list',
+                 'cpu_topolopy')
     __schema_name__ = "capability"
 
     def __init__(self, virsh_instance=base.virsh):
@@ -56,6 +57,11 @@ class CapabilityXML(base.LibvirtXMLBase):
                                  forbidden=['del'],
                                  parent_xpath='/host/cpu',
                                  tag_name='vendor')
+        accessors.XMLElementDict(property_name="cpu_topolopy",
+                                 libvirtxml=self,
+                                 forbidden=['del'],
+                                 parent_xpath='/host/cpu',
+                                 tag_name='topology')
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                libvirtxml=self)

@@ -1216,6 +1216,26 @@ def cpu_str_to_list(origin_str):
         return cpu_list
 
 
+def get_cpu_info(session=None):
+    """
+    Return information about the CPU architecture
+
+    :param session: session Object
+    :return: A dirt of cpu information
+    """
+    cpu_info = {}
+    cmd = "lscpu"
+    if session is None:
+        output = utils.system_output(cmd, ignore_status=True)
+    else:
+        try:
+            output = session.cmd_output(cmd).strip().splitlines()
+        finally:
+            session.close()
+    cpu_info = dict(map(lambda x: [i.strip() for i in x.split(":")], output))
+    return cpu_info
+
+
 class NumaInfo(object):
 
     """
