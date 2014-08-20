@@ -82,7 +82,7 @@ def get_primary_disk(vm):
     """
     vmdisks = vm.get_disk_devices()
     if len(vmdisks):
-        pri_target = ['vda', 'sda']
+        pri_target = ['vda', 'sda', 'hda']
         for target in pri_target:
             try:
                 return vmdisks[target]['source']
@@ -358,7 +358,8 @@ class VirtTools(object):
             return (False, gmo)
 
         # file's path on host's mountpoint
-        file_path = os.path.join(mountpoint, path)
+        # Connect mountpoint and path, then remove additional character '/'
+        file_path = os.path.abspath("%s/%s" % (mountpoint, path))
         if content is None:
             content = "This is a temp file with guestmount."
         try:
