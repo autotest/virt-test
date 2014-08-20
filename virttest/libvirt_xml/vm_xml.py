@@ -573,6 +573,22 @@ class VMXML(VMXMLBase):
         return 0
 
     @staticmethod
+    def get_disk_attr(vm_name, target, tag, attr, virsh_instance=base.virsh):
+        """
+        Get value of disk tag attribute for a given target dev.
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        attr_value = None
+        try:
+            disk = vmxml.get_disk_all()[target]
+            if tag in ["driver", "boot", "address", "alias", "source"]:
+                attr_value = disk.find(tag).get(attr)
+        except AttributeError:
+            logging.error("No %s/%s found.", tag, attr)
+
+        return attr_value
+
+    @staticmethod
     def check_disk_exist(vm_name, disk_src, virsh_instance=base.virsh):
         """
         Check if given disk exist in VM.
