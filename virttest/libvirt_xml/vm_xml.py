@@ -118,8 +118,7 @@ class VMXMLBase(base.LibvirtXMLBase):
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = ('hypervisor_type', 'vm_name', 'uuid', 'vcpu', 'max_mem',
                  'current_mem', 'dumpcore', 'numa', 'devices', 'seclabel',
-                 'cputune', 'placement', 'current_vcpu', 'os', 'os_type',
-                 'os_arch', 'os_init', 'os_boot', 'os_loader', 'os_bios',
+                 'cputune', 'placement', 'current_vcpu', 'os', 'cpu',
                  'pm', 'on_poweroff', 'on_reboot', 'on_crash')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
@@ -193,6 +192,13 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  parent_xpath='/',
                                  tag_name='cputune',
                                  subclass=VMCPUTuneXML,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
+        accessors.XMLElementNest(property_name='cpu',
+                                 libvirtxml=self,
+                                 parent_xpath='/',
+                                 tag_name='cpu',
+                                 subclass=VMCPUXML,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
         accessors.XMLElementNest(property_name='pm',
@@ -1089,38 +1095,59 @@ class VMXML(VMXMLBase):
         return blkdevio_params
 
 
-class VMCPUXML(VMXML):
+class VMCPUXML(base.LibvirtXMLBase):
 
     """
     Higher-level manipulations related to VM's XML(CPU)
     """
 
     # Must copy these here or there will be descriptor problems
-    __slots__ = ('model', 'vendor', 'feature_list',)
+    __slots__ = ('model', 'vendor', 'feature_list', 'mode', 'match',
+                 'fallback', 'topology')
 
-    def __init__(self, virsh_instance=base.virsh, vm_name='', mode='host-model'):
+    def __init__(self, virsh_instance=base.virsh):
         """
         Create new VMCPU XML instance
         """
         # The set action is for test.
+        accessors.XMLAttribute(property_name="mode",
+                               libvirtxml=self,
+                               forbidden=[],
+                               parent_xpath='/',
+                               tag_name='cpu',
+                               attribute='mode')
+        accessors.XMLAttribute(property_name="match",
+                               libvirtxml=self,
+                               forbidden=[],
+                               parent_xpath='/',
+                               tag_name='cpu',
+                               attribute='match')
         accessors.XMLElementText(property_name="model",
                                  libvirtxml=self,
-                                 forbidden=['del'],
-                                 parent_xpath='/cpu',
+                                 forbidden=[],
+                                 parent_xpath='/',
                                  tag_name='model')
         accessors.XMLElementText(property_name="vendor",
                                  libvirtxml=self,
-                                 forbidden=['del'],
-                                 parent_xpath='/cpu',
+                                 forbidden=[],
+                                 parent_xpath='/',
                                  tag_name='vendor')
+        accessors.XMLAttribute(property_name="fallback",
+                               libvirtxml=self,
+                               forbidden=[],
+                               parent_xpath='/',
+                               tag_name='model',
+                               attribute='fallback')
+        accessors.XMLElementDict(property_name="topology",
+                                 libvirtxml=self,
+                                 forbidden=[],
+                                 parent_xpath='/',
+                                 tag_name='topology')
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                libvirtxml=self)
         super(VMCPUXML, self).__init__(virsh_instance=virsh_instance)
-        # Setup some bare-bones XML to build upon
-        self.set_cpu_mode(vm_name, mode)
-        self['xml'] = self.__dict_get__('virsh').dumpxml(vm_name,
-                                                         extra="--update-cpu").stdout.strip()
+        self.xml = '<cpu/>'
 
     def get_feature_list(self):
         """
