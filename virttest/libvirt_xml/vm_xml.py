@@ -101,6 +101,10 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: return VMCPUTuneXML instance for the domain.
             set: Define cputune tag from a VMCPUTuneXML instance.
             del: remove cputune tag
+        cpu: VMCPUXML
+            get: return VMCPUXML instance for the domain.
+            set: Define cpu tag from a VMCPUXML instance.
+            del: remove cpu tag
         current_vcpu: string, 'current' attribute of vcpu tag
             get: return a string for 'current' attribute of vcpu
             set: change 'current' attribute of vcpu
@@ -1168,45 +1172,59 @@ class VMCPUXML(base.LibvirtXMLBase):
         """
         feature_list = []
         xmltreefile = self.__dict_get__('xml')
-        for feature_node in xmltreefile.findall('/cpu/feature'):
+        for feature_node in xmltreefile.findall('/feature'):
             feature_list.append(feature_node)
         return feature_list
 
-    def get_feature_name(self, num):
+    def get_feature(self, num):
         """
-        Get assigned feature name
+        Get a feature element from feature list by number
 
-        :param num: Assigned feature number
-        :return: Assigned feature name
+        :return: Feature element
         """
         count = len(self.feature_list)
-        if num >= count:
-            raise xcepts.LibvirtXMLError("Get %d from %d features"
-                                         % (num, count))
-        feature_name = self.feature_list[num].get('name')
-        return feature_name
+        try:
+            num = int(num)
+            return self.feature_list[num]
+        except (ValueError, TypeError):
+            raise xcepts.LibvirtXMLError("Invalid feature number %s" % num)
+        except IndexError:
+            raise xcepts.LibvirtXMLError("Only %d feature(s)" % count)
+
+    def get_feature_name(self, num):
+        """
+        Get feature name
+
+        :param num: Number in feature list
+        :return: Feature name
+        """
+        return self.get_feature(num).get('name')
+
+    def get_feature_policy(self, num):
+        """
+        Get feature policy
+
+        :param num: Number in feature list
+        :return: Feature policy
+        """
+        return self.get_feature(num).get('policy')
 
     def remove_feature(self, num):
         """
-        Remove a assigned feature from xml
+        Remove a feature from xml
 
-        :param num: Assigned feature number
+        :param num: Number in feature list
         """
         xmltreefile = self.__dict_get__('xml')
-        count = len(self.feature_list)
-        if num >= count:
-            raise xcepts.LibvirtXMLError("Remove %d from %d features"
-                                         % (num, count))
-        feature_remove_node = self.feature_list[num]
-        cpu_node = xmltreefile.find('/cpu')
-        cpu_node.remove(feature_remove_node)
+        node = xmltreefile.getroot()
+        node.remove(self.get_feature(num))
 
     @staticmethod
     def check_feature_name(value):
         """
         Check feature name valid or not.
 
-        :param value: The feature name
+        :param value: Feature name
         :return: True if check pass
         """
         sys_feature = []
@@ -1216,31 +1234,36 @@ class VMCPUXML(base.LibvirtXMLBase):
                 feature_names = line.split(':')[1].strip()
                 sys_sub_feature = feature_names.split(' ')
                 sys_feature = list(set(sys_feature + sys_sub_feature))
+        cpu_xml_file.close()
         return (value in sys_feature)
 
-    def set_feature(self, num, value):
+    def set_feature(self, num, name='', policy=''):
         """
-        Set a assigned feature value to xml
+        Set feature name (and policy) to xml
 
-        :param num: Assigned feature number
-        :param value: The feature name modified to
+        :param num: Number in feature list
+        :param name: New feature name
+        :param policy: New feature policy
         """
-        count = len(self.feature_list)
-        if num >= count:
-            raise xcepts.LibvirtXMLError("Set %d from %d features"
-                                         % (num, count))
-        feature_set_node = self.feature_list[num]
-        feature_set_node.set('name', value)
+        feature_set_node = self.get_feature(num)
+        if name:
+            feature_set_node.set('name', name)
+        if policy:
+            feature_set_node.set('policy', policy)
 
-    def add_feature(self, value):
+    def add_feature(self, name, policy=''):
         """
-        Add a feature Element to xml
+        Add a feature element to xml
 
-        :param num: Assigned feature number
+        :param name: New feature name
+        :param policy: New feature policy
         """
         xmltreefile = self.__dict_get__('xml')
-        cpu_node = xmltreefile.find('/cpu')
-        xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
+        node = xmltreefile.getroot()
+        feature_node = {'name': name}
+        if policy:
+            feature_node.update({'policy': policy})
+        xml_utils.ElementTree.SubElement(node, 'feature', feature_node)
 
 
 class VMClockXML(VMXML):

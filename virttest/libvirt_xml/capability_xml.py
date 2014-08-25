@@ -108,6 +108,21 @@ class CapabilityXML(base.LibvirtXMLBase):
             feature_list.append(feature_node)
         return feature_list
 
+    def get_feature(self, num):
+        """
+        Get a feature element from feature list by number
+
+        :return: Feature element
+        """
+        count = len(self.feature_list)
+        try:
+            num = int(num)
+            return self.feature_list[num]
+        except (ValueError, TypeError):
+            raise xcepts.LibvirtXMLError("Invalid feature number %s" % num)
+        except IndexError:
+            raise xcepts.LibvirtXMLError("Only %d feature(s)" % count)
+
     def get_feature_name(self, num):
         """
         Get assigned feature name
@@ -115,12 +130,7 @@ class CapabilityXML(base.LibvirtXMLBase):
         :param num: Assigned feature number
         :return: Assigned feature name
         """
-        count = len(self.feature_list)
-        if num >= count:
-            raise xcepts.LibvirtXMLError("Get %d from %d features:"
-                                         % (num, count))
-        feature_name = self.feature_list[num].get('name')
-        return feature_name
+        return self.get_feature(num).get('name')
 
     def get_cpu_count(self):
         """
@@ -140,11 +150,7 @@ class CapabilityXML(base.LibvirtXMLBase):
         :param num: Assigned feature number
         """
         xmltreefile = self.__dict_get__('xml')
-        count = len(self.feature_list)
-        if num >= count:
-            raise xcepts.LibvirtXMLError("Remove %d from %d features:"
-                                         % (num, count))
-        feature_remove_node = self.feature_list[num]
+        feature_remove_node = self.get_feature(num)
         cpu_node = xmltreefile.find('/host/cpu')
         cpu_node.remove(feature_remove_node)
 
@@ -172,11 +178,7 @@ class CapabilityXML(base.LibvirtXMLBase):
         :param num: Assigned feature number
         :param value: The feature name modified to
         """
-        count = len(self.feature_list)
-        if num >= count:
-            raise xcepts.LibvirtXMLError("Set %d from %d features:"
-                                         % (num, count))
-        feature_set_node = self.feature_list[num]
+        feature_set_node = self.get_feature(num)
         feature_set_node.set('name', value)
 
     def add_feature(self, value):
