@@ -367,6 +367,7 @@ class AccessorsTest(LibvirtXMLTestBase):
             __slots__ = ('test',)
 
             def __init__(self, virsh_instance):
+                # pylint: disable=E1003
                 super(FooBar, self).__init__(virsh_instance)
                 accessors.XMLElementDict('test', self, None, 'foo/bar', 'baz')
         foobar = FooBar(self.dummy_virsh)
@@ -388,6 +389,7 @@ class AccessorsTest(LibvirtXMLTestBase):
                                   'virsh_instance': virsh_instance}
                 accessors.XMLElementNest('bar', self, None,
                                          '/', 'bar', Bar, subclass_dargs)
+                # pylint: disable=E1003
                 super(Foo, self).__init__(virsh_instance=virsh_instance)
                 parent.assertTrue(isinstance(parent, AccessorsTest))
                 self.set_xml("""
@@ -423,6 +425,7 @@ class AccessorsTest(LibvirtXMLTestBase):
                                          parent_xpath='/', tag_name='bar')
                 accessors.XMLElementBool('baz', self,
                                          parent_xpath='/', tag_name='bar')
+                # pylint: disable=E1003
                 super(Foo, self).__init__(virsh_instance=virsh_instance)
                 self.xml = '<foo/>'
         foo = Foo(self.dummy_virsh)
@@ -452,6 +455,7 @@ class AccessorsTest(LibvirtXMLTestBase):
                                          parent_xpath='/l1/l2/l3', tag_name='bar')
                 accessors.XMLElementBool('baz', self,
                                          parent_xpath='/l1/l2', tag_name='baz')
+                # pylint: disable=E1003
                 super(Foo, self).__init__(virsh_instance=virsh_instance)
                 self.xml = '<root/>'
         foo = Foo(self.dummy_virsh)
@@ -500,6 +504,7 @@ class AccessorsTest(LibvirtXMLTestBase):
                 accessors.XMLElementList('bar', self, parent_xpath='/bar',
                                          marshal_from=Whatchamacallit.from_it,
                                          marshal_to=Whatchamacallit.to_it)
+                # pylint: disable=E1003
                 super(Foo, self).__init__(virsh_instance=virsh_instance)
                 self.xml = """<foo><bar>
                                   <notone secret_sauce='snafu'/>
