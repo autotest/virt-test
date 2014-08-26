@@ -1091,9 +1091,9 @@ class Grubby(object):
 
         This is much simpler version then the original boottool version, that
         does not attempt to filter the result of the command / system call
-        that returns the archicture.
+        that returns the architecture.
 
-        :return: string with system archicteture, such as x86_64, ppc64, etc
+        :return: string with system architecture, such as x86_64, ppc64, etc
         '''
         return os.uname()[4]
 
