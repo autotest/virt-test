@@ -609,23 +609,23 @@ class TestVMXML(LibvirtXMLTestBase):
         self.assertRaises(xcepts.LibvirtXMLError,
                           getattr, vmxml, 'seclabel')
 
-        vmxml.set_seclabel({'type': "dynamic"})
-        self.assertEqual(vmxml.seclabel['type'], 'dynamic')
-        self.assertEqual(len(vmxml.seclabel), 1)
+        vmxml.set_seclabel([{'type': "dynamic"}])
+        self.assertEqual(vmxml.seclabel[0]['type'], 'dynamic')
+        self.assertEqual(len(vmxml.seclabel[0]), 1)
 
         seclabel_dict = {'type': 'test_type', 'model': 'test_model',
                          'relabel': 'test_relabel', 'label': 'test_label',
                          'baselabel': 'test_baselabel',
                          'imagelabel': 'test_imagelabel'}
-        vmxml.set_seclabel(seclabel_dict)
+        vmxml.set_seclabel([seclabel_dict])
 
-        seclabel = vmxml.get_seclabel()
+        seclabel = vmxml.get_seclabel()[0]
 
         for key, value in seclabel_dict.items():
             self.assertEqual(seclabel[key], value)
 
         # test attribute-like access also
-        for key, value in vmxml.seclabel.items():
+        for key, value in vmxml.seclabel[0].items():
             self.assertEqual(seclabel_dict[key], value)
 
 
