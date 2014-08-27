@@ -702,7 +702,7 @@ class PoolVolumeTest(object):
 
     def pre_pool(self, pool_name, pool_type, pool_target, emulated_image,
                  image_size="100M", pre_disk_vol=[], source_name=None,
-                 source_path=None):
+                 source_path=None, export_options="rw,async,no_root_squash"):
         """
         Preapare the specific type pool
 
@@ -771,7 +771,7 @@ class PoolVolumeTest(object):
             if not os.path.exists(pool_target):
                 os.mkdir(pool_target)
             res = setup_or_cleanup_nfs(is_setup=True,
-                                       export_options="rw,async,no_root_squash",
+                                       export_options=export_options,
                                        export_dir=nfs_path)
             self.selinux_bak = res["selinux_status_bak"]
             source_host = self.params.get("source_host", "localhost")
