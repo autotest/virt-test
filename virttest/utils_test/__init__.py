@@ -1694,7 +1694,7 @@ class RemoteDiskManager(object):
         return True
 
     def create_image(self, disk_type, path=None, size=10, vgname=None,
-                     lvname=None, sparse=True, timeout=60):
+                     lvname=None, sparse=True, timeout=60, img_frmt=None):
         """
         Create an image for target path.
         """
@@ -1702,8 +1702,11 @@ class RemoteDiskManager(object):
             self.runner.run("mkdir -p %s" % os.path.dirname(path))
             if not os.path.basename(path):
                 path = os.path.join(path, "temp.img")
+            cmd = "qemu-img create"
+            if img_frmt is not None:
+                cmd += " -f %s" % img_frmt
             if sparse:
-                cmd = "qemu-img create %s %sG" % (path, size)
+                cmd += " %s %sG" % (path, size)
             else:
                 cmd = "dd if=/dev/zero of=%s bs=1G count=%s" % (path, size)
         elif disk_type == "lvm":
