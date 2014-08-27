@@ -102,7 +102,7 @@ class QemuImg(storage.QemuImg):
                     qemu_img_cmd += "preallocation=%s," % preallocated
 
                 if encrypted != "off":
-                    qemu_img_cmd += "encrypted=%s," % encrypted
+                    qemu_img_cmd += "encryption=%s," % encrypted
 
                 if image_cluster_size is not None:
                     qemu_img_cmd += "cluster_size=%s," % image_cluster_size
