@@ -1206,19 +1206,55 @@ def attach_disks(vm, path, vgname, params):
     disks_count = int(params.get("added_disks_count", 1)) - 1
     disk_size = params.get("added_disk_size", "0.1")
     disk_type = params.get("added_disk_type", "file")
+    disk_target = params.get("added_disk_target", "virtio")
+
     target_list = []
     index = 0
+    # Disks may exceed from a-z, aa, ab, ac...
+    number_list = []
     while len(target_list) < disks_count:
-        target_dev = "vd%s" % chr(ord('a') + index)
+        i = len(number_list) - 1
+        if index == 0 or index % 26 == 0:
+            index = 1
+            if i == -1:
+                number_list.append('a')
+            while i > -1:
+                if number_list[i] == 'z':
+                    if i == 0:
+                        number_list.append('a')
+                        j = len(number_list) - 2
+                        while j > -1:
+                            number_list[j] = 'a'
+                            j -= 1
+                    else:
+                        number_list[i] = 'a'
+                else:
+                    number_list[i] = chr(ord(number_list[i]) + 1)
+                    break
+                i -= 1
+        else:
+            number_list[i] = chr(ord(number_list[i]) + 1)
+            index += 1
+
+        dev_str = ""
+        for number in number_list:
+            dev_str += number
+
+        if disk_target == "virtio":
+            target_dev = "vd%s" % dev_str
+        elif disk_target == "scsi":
+            target_dev = "sd%s" % dev_str
         if not device_exists(vm, target_dev):
             target_list.append(target_dev)
-        index += 1
 
     # A dict include disks information: source file and size
     added_disks = {}
     for target_dev in target_list:
         disk_params = {}
         disk_params['type_name'] = disk_type
+        disk_params['target_dev'] = target_dev
+        disk_params['target_bus'] = disk_target
+        disk_params['device_type'] = params.get("device_type", "disk")
         device_name = "%s_%s" % (target_dev, vm.name)
         disk_path = os.path.join(os.path.dirname(path), device_name)
         disk_path = create_local_disk(disk_type, disk_path,
