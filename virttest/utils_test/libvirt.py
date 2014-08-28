@@ -1064,7 +1064,15 @@ def create_disk_xml(params):
         diskxml.target = {'dev': target_dev, 'bus': target_bus}
     except Exception, detail:
         logging.error("Fail to create disk XML:\n%s", detail)
-    logging.debug("Disk XML:\n%s", str(diskxml))
+    logging.debug("Disk XML %s:\n%s", diskxml.xml, str(diskxml))
+
+    # Wait for file completed
+    def file_exists():
+        if not utils.run("ls %s" % diskxml.xml,
+                         ignore_status=True).exit_status:
+            return True
+    utils_misc.wait_for(file_exists, 5)
+
     return diskxml.xml
 
 
