@@ -673,7 +673,7 @@ class PoolVolumeTest(object):
             if pool_type == "netfs":
                 nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
                 nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
-                setup_or_cleanup_nfs(is_setup=False, mount_dir=nfs_path,
+                setup_or_cleanup_nfs(is_setup=False, export_dir=nfs_path,
                                      restore_selinux=self.selinux_bak)
                 if os.path.exists(nfs_path):
                     shutil.rmtree(nfs_path)
