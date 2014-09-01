@@ -113,13 +113,17 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: return text value of cputune/emulatorpin attributes
             set: set cputune/emulatorpin attributes from string
             del: remove cputune/emulatorpin tag
+        features: VMFeaturesXML
+            get: return VMFeaturesXML instances for the domain.
+            set: define features tag from a VMFeaturesXML instances.
+            del: remove features tag
     """
 
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = ('hypervisor_type', 'vm_name', 'uuid', 'vcpu', 'max_mem',
                  'current_mem', 'dumpcore', 'numa', 'devices', 'seclabel',
                  'cputune', 'placement', 'current_vcpu', 'os', 'cpu',
-                 'pm', 'on_poweroff', 'on_reboot', 'on_crash')
+                 'pm', 'on_poweroff', 'on_reboot', 'on_crash', 'features')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -223,6 +227,13 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  forbidden=None,
                                  parent_xpath='/',
                                  tag_name='on_crash')
+        accessors.XMLElementNest(property_name='features',
+                                 libvirtxml=self,
+                                 parent_xpath='/',
+                                 tag_name='features',
+                                 subclass=VMFeaturesXML,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def get_devices(self, device_type=None):
@@ -1508,3 +1519,102 @@ class VMPMXML(base.LibvirtXMLBase):
                                tag_name='suspend-to-mem', attribute='enabled')
         super(self.__class__, self).__init__(virsh_instance=virsh_instance)
         self.xml = '<pm/>'
+
+
+class VMFeaturesXML(base.LibvirtXMLBase):
+
+    """
+    Class to access <features> tag of domain XML.
+
+    Elements:
+        feature_list       list of top level element
+        hyperv_relaxed:    attribute - state
+        hyperv_vapic:      attribute - state
+        hyperv_spinlocks:  attributes - state, retries
+        kvm_hidden:        attribute - state
+        pvspinlock:        attribute - state
+    """
+
+    __slots__ = ('feature_list', 'hyperv_relaxed_state', 'hyperv_vapic_state',
+                 'hyperv_spinlocks_state', 'hyperv_spinlocks_retries',
+                 'kvm_hidden_state', 'pvspinlock_state')
+
+    def __init__(self, virsh_instance=base.virsh):
+        accessors.XMLAttribute(property_name='hyperv_relaxed_state',
+                               libvirtxml=self,
+                               parent_xpath='/hyperv',
+                               tag_name='relaxed',
+                               attribute='state')
+        accessors.XMLAttribute(property_name='hyperv_vapic_state',
+                               libvirtxml=self,
+                               parent_xpath='/hyperv',
+                               tag_name='vapic',
+                               attribute='state')
+        accessors.XMLAttribute(property_name='hyperv_spinlocks_state',
+                               libvirtxml=self,
+                               parent_xpath='/hyperv',
+                               tag_name='spinlocks',
+                               attribute='state')
+        accessors.XMLAttribute(property_name='hyperv_spinlocks_retries',
+                               libvirtxml=self,
+                               parent_xpath='/hyperv',
+                               tag_name='spinlocks',
+                               attribute='retries')
+        accessors.XMLAttribute(property_name='kvm_hidden_state',
+                               libvirtxml=self,
+                               parent_xpath='/kvm',
+                               tag_name='hidden',
+                               attribute='state')
+        accessors.XMLAttribute(property_name='pvspinlock_state',
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='pvspinlock',
+                               attribute='state')
+        accessors.AllForbidden(property_name="feature_list",
+                               libvirtxml=self)
+        super(self.__class__, self).__init__(virsh_instance=virsh_instance)
+        self.xml = '<features/>'
+
+    def get_feature_list(self):
+        """
+        Return all features(top level elements) in xml
+        """
+        feature_list = []
+        root = self.__dict_get__('xml').getroot()
+        for feature in root:
+            feature_list.append(feature.tag)
+        return feature_list
+
+    def has_feature(self, name):
+        """
+        Return true if the given feature exist in xml
+        """
+        return name in self.get_feature_list()
+
+    def add_feature(self, name, attr_name='', attr_value=''):
+        """
+        Add a feature element to xml
+
+        :params name: Feature name
+        """
+        if self.has_feature(name):
+            logging.debug("Feature %s already exist, so remove it", name)
+            self.remove_feature(name)
+        root = self.__dict_get__('xml').getroot()
+        new_attr = {}
+        if attr_name:
+            new_attr = {attr_name: attr_value}
+        xml_utils.ElementTree.SubElement(root, name, new_attr)
+
+    def remove_feature(self, name):
+        """
+        Remove a feature element from xml
+
+        :params name: Feature name
+        """
+        root = self.__dict_get__('xml').getroot()
+        remove_feature = root.find(name)
+        if remove_feature is None:
+            logging.error("Feature %s doesn't exist", name)
+        else:
+            root.remove(remove_feature)
