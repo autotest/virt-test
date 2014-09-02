@@ -1556,9 +1556,14 @@ class ShellSession(Expect):
             raise ShellStatusError(cmd, o)
 
         # Get the first line consisting of digits only
-        digit_lines = [l for l in s.splitlines() if l.strip().isdigit()]
+        digit_lines = []
+        for line in s.splitlines():
+            try:
+                digit_lines.append(int(line.strip()))
+            except ValueError:
+                pass
         if digit_lines:
-            return int(digit_lines[0].strip()), o
+            return digit_lines[0], o
         else:
             raise ShellStatusError(cmd, o)
 
