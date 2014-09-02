@@ -374,6 +374,7 @@ class Monitor:
                  MB and cpus is a set of CPU numbers
         """
         r = self.human_monitor_cmd("info numa")
+        r = "\n".join(r.splitlines())
         return self.parse_info_numa(r)
 
     def info(self, what, debug=True):
