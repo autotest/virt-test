@@ -11,6 +11,7 @@ import shutil
 from virttest.staging import service
 from autotest.client.shared import error, utils
 from autotest.client import os_dep
+import data_dir
 import utils_misc
 
 try:
@@ -1480,3 +1481,107 @@ class LibvirtPolkitConfig(object):
                 utils.system(cmd, ignore_status=True)
         except Exception:
             raise PolkitConfigCleanupError("Failed to cleanup polkit config.")
+
+
+class EGDConfigError(Exception):
+
+    """
+    Raise when setup local egd.pl server failed.
+    """
+    pass
+
+
+class EGDConfig(object):
+
+    """
+    Setup egd.pl server on localhost, support startup with socket unix or tcp.
+    """
+
+    def __init__(self, params, env):
+        self.params = params
+        self.env = env
+
+    def __get_tarball(self):
+        tarball = "egd-0.9.tar.gz"
+        deps_dir = data_dir.get_deps_dir()
+        tarball = self.params.get("egd_source_tarball", tarball)
+        return utils_misc.get_path(deps_dir, tarball)
+
+    def __extra_tarball(self):
+        tmp_dir = data_dir.get_tmp_dir()
+        tarball = self.__get_tarball()
+        extra_cmd = "tar -xzvf %s -C %s" % (tarball, tmp_dir)
+        utils.system(extra_cmd, ignore_status=True)
+        output = utils.system_output("tar -tzf %s" % tarball)
+        return os.path.join(tmp_dir, output.splitlines()[0])
+
+    def startup(self, socket):
+        """
+        Start egd.pl server with tcp or unix socket.
+        """
+        if utils.system("which egd.pl", ignore_status=True) != 0:
+            self.install()
+        prog = utils.system_output("which egd.pl")
+        pid = self.get_pid(socket)
+        try:
+            if not pid:
+                cmd = "%s %s" % (prog, socket)
+                utils.BgJob(cmd)
+        except Exception, details:
+            msg = "Unable to start egd.pl on localhost '%s'" % details
+            raise EGDConfigError(msg)
+        pid = self.get_pid(socket)
+        logging.info("egd.pl started as pid: %s" % pid)
+        return pid
+
+    def install(self):
+        """
+        Install egd.pl from source code
+        """
+        pwd = os.getcwd()
+        try:
+            make_cmd = "perl Makefile.PL && make && make install"
+            make_cmd = self.params.get("build_egd_cmd", make_cmd)
+            src_root = self.__extra_tarball()
+            os.chdir(src_root)
+            utils.make(make=make_cmd, timeout=120)
+        except Exception, details:
+            raise EGDConfigError("Install egd.pl error '%s'" % details)
+        finally:
+            os.chdir(pwd)
+
+    def get_pid(self, socket):
+        """
+        Check egd.pl start at socket on localhost.
+        """
+        cmd = "lsof %s" % socket
+        if socket.startswith("localhost:"):
+            cmd = "lsof -i '@%s'" % socket
+        fuc = lambda: utils.system_output(cmd, ignore_status=True)
+        output = utils.wait_for(fuc, timeout=5)
+        if not output:
+            return 0
+        pid = int(re.findall(r".*egd.pl\s+(\d+)\s+\w+", output, re.M)[-1])
+        return pid
+
+    def setup(self):
+        backend = self.params["chardev_backend"]
+        backend_type = self.params["%s_type" % backend]
+        path = "path_%s" % backend_type
+        port = "port_%s" % backend_type
+        path, port = map(self.params.get, [path, port])
+        sockets = port and ["localhost:%s" % port] or []
+        if path:
+            sockets.append(path)
+        pids = filter(None, map(self.startup, sockets))
+        self.env.data["egd_pids"] = pids
+
+    def cleanup(self):
+        try:
+            for pid in self.env.data["egd_pids"]:
+                logging.info("Stop egd.pl(%s)" % pid)
+                utils.signal_pid(pid, 15)
+            # give time to wait port released by egd.pl
+            time.sleep(3)
+        except OSError:
+            logging.warn("egd.pl is running")
