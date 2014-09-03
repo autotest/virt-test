@@ -287,5 +287,8 @@ def get_image_filename(params, image_name, image_format):
 
     img_name = image_name.split('/')[-1]
     gluster_uri = create_gluster_uri(params)
-    image_filename = "%s%s.%s" % (gluster_uri, img_name, image_format)
+    if params.get("image_raw_device") == "yes":
+        image_filename = "%s%s" % (gluster_uri, img_name)
+    else:
+        image_filename = "%s%s.%s" % (gluster_uri, img_name, image_format)
     return image_filename
