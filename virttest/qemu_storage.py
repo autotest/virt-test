@@ -347,7 +347,9 @@ class QemuImg(storage.QemuImg):
         """
         logging.debug("Run qemu-img info comamnd on %s", self.image_filename)
         cmd = self.image_cmd
-        if os.path.exists(self.image_filename):
+        if (os.path.exists(self.image_filename) or
+                "gluster:" in self.image_filename or
+                "iscsi:" in self.image_filename):
             cmd += " info %s" % self.image_filename
             output = utils.system_output(cmd)
         else:
