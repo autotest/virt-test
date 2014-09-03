@@ -416,7 +416,8 @@ def get_host_ipv4_addr():
     return ip_addr
 
 
-def setup_or_cleanup_gluster(is_setup, vol_name, brick_path="", pool_name=""):
+def setup_or_cleanup_gluster(is_setup, vol_name, brick_path="", pool_name="",
+                             file_path="/etc/glusterfs/glusterd.vol"):
     """
     Set up or clean up glusterfs environment on localhost
     :param is_setup: Boolean value, true for setup, false for cleanup
@@ -429,9 +430,11 @@ def setup_or_cleanup_gluster(is_setup, vol_name, brick_path="", pool_name=""):
         brick_path = os.path.join(tmpdir, pool_name)
     if is_setup:
         ip_addr = get_host_ipv4_addr()
+        gluster.add_rpc_insecure(file_path)
         gluster.glusterd_start()
         logging.debug("finish start gluster")
-        gluster.gluster_vol_create(vol_name, ip_addr, brick_path)
+        gluster.gluster_vol_create(vol_name, ip_addr, brick_path, force=True)
+        gluster.gluster_allow_insecure(vol_name)
         logging.debug("finish vol create in gluster")
         return ip_addr
     else:
@@ -441,25 +444,30 @@ def setup_or_cleanup_gluster(is_setup, vol_name, brick_path="", pool_name=""):
         return ""
 
 
-def define_pool(pool_name, pool_type, pool_target, cleanup_flag):
+def define_pool(pool_name, pool_type, pool_target, cleanup_flag, **kwargs):
     """
     To define a given type pool(Support types: 'dir', 'netfs', logical',
-    iscsi', 'disk' and 'fs').
+    iscsi', 'gluster', 'disk' and 'fs').
 
     :param pool_name: Name of the pool
     :param pool_type: Type of the pool
     :param pool_target: Target for underlying storage
     :param cleanup_flag: A list contains 3 booleans and 1 string stands for
                          need_cleanup_nfs, need_cleanup_iscsi,
-                         need_cleanup_logical and selinux_bak separately.
+                         need_cleanup_logical, selinux_bak and
+                         need_cleanup_gluster
+    :param kwargs: key words for sepcial pool define. eg, glusterfs pool
+                         source path and source name, etc
     """
+
     extra = ""
     vg_name = pool_name
     cleanup_nfs = False
     cleanup_iscsi = False
     cleanup_logical = False
     selinux_bak = ""
-    if not os.path.exists(pool_target):
+    cleanup_gluster = False
+    if not os.path.exists(pool_target) and pool_type != "gluster":
         os.mkdir(pool_target)
     if pool_type == "dir":
         pass
@@ -501,6 +509,28 @@ def define_pool(pool_name, pool_type, pool_target, cleanup_flag):
         cmd = "mkfs.ext4 -F %s" % device_name
         utils.run(cmd)
         extra = "--source-dev %s" % device_name
+    elif pool_type == "gluster":
+        gluster_source_path = kwargs.get('gluster_source_path')
+        gluster_source_name = kwargs.get('gluster_source_name')
+        gluster_file_name = kwargs.get('gluster_file_name')
+        gluster_file_type = kwargs.get('gluster_file_type')
+        gluster_file_size = kwargs.get('gluster_file_size')
+        gluster_vol_number = kwargs.get('gluster_vol_number')
+
+        # Prepare gluster service and create volume
+        hostip = setup_or_cleanup_gluster(True, gluster_source_name,
+                                          pool_name=pool_name)
+        logging.debug("hostip is %s", hostip)
+        # create image in gluster volume
+        file_path = "gluster://%s/%s" % (hostip, gluster_source_name)
+        for i in range(gluster_vol_number):
+            file_name = "%s_%d" % (gluster_file_name, i)
+            utils.run("qemu-img create -f %s %s/%s %s" %
+                      (gluster_file_type, file_path, file_name,
+                       gluster_file_size))
+        cleanup_gluster = True
+        extra = "--source-host %s --source-path %s --source-name %s" % \
+                (hostip, gluster_source_path, gluster_source_name)
     elif pool_type in ["scsi", "mpath", "rbd", "sheepdog"]:
         raise error.TestNAError(
             "Pool type '%s' has not yet been supported in the test." %
@@ -512,6 +542,7 @@ def define_pool(pool_name, pool_type, pool_target, cleanup_flag):
     cleanup_flag[1] = cleanup_iscsi
     cleanup_flag[2] = cleanup_logical
     cleanup_flag[3] = selinux_bak
+    cleanup_flag[4] = cleanup_gluster
     try:
         result = virsh.pool_define_as(pool_name, pool_type, pool_target, extra,
                                       ignore_status=True)
