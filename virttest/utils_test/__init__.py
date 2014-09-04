@@ -823,9 +823,8 @@ def run_autotest(vm, session, control_path, timeout,
 
     # Check copy_only.
     if copy_only:
-        return ("%s/autotest-local --args=\"%s\" --verbose %s/control" %
-                (destination_autotest_path, control_args,
-                 destination_autotest_path))
+        return ("%s/autotest-local --verbose %s/control" %
+                (destination_autotest_path,  destination_autotest_path))
 
     # Run the test
     logging.info("Running autotest control file %s on guest, timeout %ss",
@@ -850,9 +849,7 @@ def run_autotest(vm, session, control_path, timeout,
                 bg = utils.InterruptedThread(session.cmd_output,
                                              kwargs={
                                                  'cmd': "./autotest-local "
-                                                        "--args="
-                                                        "\"%s\" control" %
-                                                        (control_args),
+                                                        " control",
                                                  'timeout': timeout,
                                                  'print_func': logging.info})
 
@@ -867,8 +864,7 @@ def run_autotest(vm, session, control_path, timeout,
                     verbose = " --verbose"
                 else:
                     verbose = ""
-                session.cmd_output("./autotest-local --args=\"%s\"%s"
-                                   " control" % (control_args, verbose),
+                session.cmd_output("./autotest-local %s control" % verbose,
                                    timeout=timeout,
                                    print_func=logging.info)
         finally:
