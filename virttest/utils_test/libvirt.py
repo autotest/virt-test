@@ -1315,3 +1315,16 @@ def connect_libvirtd(uri, read_only="", virsh_cmd="list", auth_user=None,
         session.close()
         logging.error("Failed to connect libvirtd: %s\n%s", details, log)
         return False
+
+
+def get_all_vol_paths():
+    """
+    Get all volumes' path in host
+    """
+    vol_path = []
+    sp = libvirt_storage.StoragePool()
+    for pool_name in sp.list_pools().keys():
+        pv = libvirt_storage.PoolVolume(pool_name)
+        for path in pv.list_volumes().values():
+            vol_path.append(path)
+    return set(vol_path)
