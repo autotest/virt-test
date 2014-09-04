@@ -1076,7 +1076,7 @@ def create_disk_xml(params):
     return diskxml.xml
 
 
-def attach_additional_device(vm_name, targetdev, disk_path, params):
+def attach_additional_device(vm_name, targetdev, disk_path, params, config=True):
     """
     Create a disk with disksize, then attach it to given vm.
 
@@ -1095,10 +1095,14 @@ def attach_additional_device(vm_name, targetdev, disk_path, params):
     xmlfile = create_disk_xml(params)
 
     # To confirm attached device do not exist.
-    virsh.detach_disk(vm_name, targetdev, extra="--config")
+    if config:
+        extra = "--config"
+    else:
+        extra = ""
+    virsh.detach_disk(vm_name, targetdev, extra=extra)
 
     return virsh.attach_device(domain_opt=vm_name, file_opt=xmlfile,
-                               flagstr="--config", debug=True)
+                               flagstr=extra, debug=True)
 
 
 def device_exists(vm, target_dev):
@@ -1207,6 +1211,8 @@ def attach_disks(vm, path, vgname, params):
     disk_size = params.get("added_disk_size", "0.1")
     disk_type = params.get("added_disk_type", "file")
     disk_target = params.get("added_disk_target", "virtio")
+    # Whether attaching device with --config
+    attach_config = "yes" == params.get("attach_disk_config", "yes")
 
     target_list = []
     index = 0
@@ -1261,8 +1267,8 @@ def attach_disks(vm, path, vgname, params):
                                       disk_size, "",
                                       vgname, device_name)
         added_disks[disk_path] = disk_size
-        result = attach_additional_device(vm.name,
-                                          target_dev, disk_path, disk_params)
+        result = attach_additional_device(vm.name, target_dev, disk_path,
+                                          disk_params, attach_config)
         if result.exit_status:
             raise error.TestFail("Attach device %s failed."
                                  % target_dev)
