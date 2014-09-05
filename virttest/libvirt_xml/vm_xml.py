@@ -1306,7 +1306,9 @@ class VMClockXML(VMXML):
 
         """Timer element of clock"""
 
-        __slots__ = ('name', 'present')
+        __slots__ = ('name', 'present', 'track', 'tickpolicy', 'frequency',
+                     'mode', 'catchup_threshold', 'catchup_slew',
+                     'catchup_limit')
 
         def __init__(self, virsh_instance=base.virsh, timer_name="tsc"):
             """
@@ -1325,6 +1327,48 @@ class VMClockXML(VMXML):
                                    parent_xpath='/clock',
                                    tag_name='timer',
                                    attribute='present')
+            accessors.XMLAttribute(property_name="track",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock',
+                                   tag_name='timer',
+                                   attribute='track')
+            accessors.XMLAttribute(property_name="tickpolicy",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock',
+                                   tag_name='timer',
+                                   attribute='tickpolicy')
+            accessors.XMLAttribute(property_name="frequency",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock',
+                                   tag_name='timer',
+                                   attribute='frequency')
+            accessors.XMLAttribute(property_name="mode",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock',
+                                   tag_name='timer',
+                                   attribute='mode')
+            accessors.XMLAttribute(property_name="catchup_threshold",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock/timer',
+                                   tag_name='catchup',
+                                   attribute='threshold')
+            accessors.XMLAttribute(property_name="catchup_slew",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock/timer',
+                                   tag_name='catchup',
+                                   attribute='slew')
+            accessors.XMLAttribute(property_name="catchup_limit",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/clock/timer',
+                                   tag_name='catchup',
+                                   attribute='limit')
             super(VMClockXML.TimerXML, self).__init__(virsh_instance=virsh_instance)
             # name is mandatory for timer
             self.name = timer_name
