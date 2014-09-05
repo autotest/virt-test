@@ -1060,6 +1060,13 @@ class VMXML(VMXMLBase):
                 graphics_list.append(graphics)
         return graphics_list
 
+    def remove_all_graphics(self):
+        """
+        Remove all graphics devices.
+        """
+        self.xmltreefile.remove_by_xpath('/devices/graphics')
+        self.xmltreefile.write()
+
     def add_hostdev(self, source_address, mode='subsystem',
                     type='pci',
                     managed='yes'):
