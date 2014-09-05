@@ -531,8 +531,8 @@ class VMXML(VMXMLBase):
                         "The cpu current value %s is larger than max number %s"
                         % (current, value))
                 else:
-                    vmxml['vcpu'] = value  # call accessor method to change XML
                     vmxml['current_vcpu'] = current
+            vmxml['vcpu'] = value  # call accessor method to change XML
         else:  # value is None
             del vmxml.vcpu
         vmxml.undefine()
