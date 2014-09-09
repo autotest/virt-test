@@ -1030,7 +1030,7 @@ class VM(virt_vm.BaseVM):
 
         def add_numa_node(devices, mem=None, cpus=None, nodeid=None):
             """
-            This function used to add numa node to guest command line
+            This function is used to add numa node to guest command line
             """
             if not devices.has_option("numa"):
                 return ""
