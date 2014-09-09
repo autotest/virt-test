@@ -34,7 +34,7 @@ d-i pkgsel/include string openssh-server build-essential lvm2 ethtool sg3-utils 
 
 d-i grub-installer/only_debian boolean true
 d-i grub-installer/with_other_os boolean true
-d-i debian-installer/add-kernel-opts string console=ttyS0,115200 console=tty0
+d-i debian-installer/add-kernel-opts string console=tty0 console=ttyS0,115200
 
 d-i apt-setup/security_host string
 base-config apt-setup/security-updates boolean false
