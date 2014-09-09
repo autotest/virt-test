@@ -1043,6 +1043,18 @@ class VM(virt_vm.BaseVM):
                 numa_cmd += ",nodeid=%s" % nodeid
             return numa_cmd
 
+        def add_balloon(devices, devid=None, bus=None, use_old_format=None):
+            """
+            This function is used to add balloon device
+            """
+            if not devices.has_option("device") or use_old_format is True:
+                devices.insert(StrDev('balloon', cmdline=" -balloon virtio"))
+                return
+            dev = QDevice("virtio-balloon-pci", parent_bus=bus)
+            if devid:
+                dev.set_param("id", devid)
+            devices.insert(dev)
+
         # End of command line option wrappers
 
         # If nothing changed and devices exists, return imediatelly
@@ -1801,6 +1813,17 @@ class VM(virt_vm.BaseVM):
                 cmd += add_option_rom(devices, opt_rom)
             if cmd:
                 devices.insert(StrDev('ROM', cmdline=cmd))
+
+        for balloon_device in params.objects("balloon"):
+            params_balloon = params.object_params(balloon_device)
+            balloon_devid = params_balloon.get("balloon_dev_devid")
+            balloon_bus = None
+            use_ofmt = params_balloon.get("balloon_use_old_format",
+                                          "no") == "yes"
+            if params_balloon.get("balloon_dev_add_bus") == "yes":
+                balloon_bus = pci_bus
+            add_balloon(devices, devid=balloon_devid, bus=balloon_bus,
+                        use_old_format=use_ofmt)
 
         return devices
 
