@@ -32,7 +32,7 @@ class QemuImg(storage.QemuImg):
         """
         storage.QemuImg.__init__(self, params, root_dir, tag)
         self.image_cmd = utils_misc.get_qemu_img_binary(params)
-        q_result = utils.run(self.image_cmd, ignore_status=True,
+        q_result = utils.run(self.image_cmd + ' -h', ignore_status=True,
                              verbose=False)
         self.help_text = q_result.stdout
 
