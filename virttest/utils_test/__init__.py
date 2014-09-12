@@ -1329,7 +1329,17 @@ def get_date(session=None):
 
 ##########Stress functions################
 class StressError(Exception):
-    pass
+
+    """
+    Stress test exception.
+    """
+
+    def __init__(self, msg):
+        Exception.__init__(self, msg)
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
 
 
 class VMStress(object):
@@ -1525,15 +1535,15 @@ def load_stress(stress_type, vms, params):
                 vstress = VMStress(vm, "stress")
                 vstress.load_stress_tool()
             except StressError, detail:
-                fail_info.append("Launch stress in %s failed:%s" % (vm.name,
-                                                                    detail))
+                fail_info.append("Launch stress in %s failed: %s"
+                                 % (vm.name, detail))
     # Add stress for host
     elif stress_type == "stress_on_host":
         try:
             hstress = HostStress(params, "stress")
             hstress.load_stress_tool()
         except StressError, detail:
-            fail_info.append("Launch stress on host failed:%s" % str(detail))
+            fail_info.append("Launch stress on host failed: %s" % str(detail))
     # Booting vm for following test
     elif stress_type == "load_vm_booting":
         load_vms = params.get("load_vms", [])
