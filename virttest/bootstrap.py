@@ -160,7 +160,7 @@ def write_subtests_files(config_file_list, output_file_object, test_type=None):
         for line in config_file.readlines():
             if line.startswith('- ') and provider_name is not None:
                 name, deps = line.split(":")
-                name = name.split('-')[-1].strip()
+                name = name[1:].strip()
                 if name[0] == "@":
                     name = name[1:]
                 line = "- %s.%s:%s" % (provider_name, name, deps)
