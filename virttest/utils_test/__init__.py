@@ -1476,8 +1476,10 @@ class HostStress(object):
                                            "autotest-local")
         args = [autotest_local_path, '--args=%s' % self.stress_args,
                 self.control_path, '--verbose']
-        self.host_stress_process = subprocess.Popen(args)
-
+        logging.info("Start sub-process by args: %s", args)
+        self.host_stress_process = subprocess.Popen(args,
+                                                    stdout=subprocess.PIPE,
+                                                    stderr=subprocess.PIPE)
         running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
         if not running:
             raise StressError("Stress tool %s isn't running"
