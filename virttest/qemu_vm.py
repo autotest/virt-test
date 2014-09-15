@@ -576,7 +576,7 @@ class VM(virt_vm.BaseVM):
                     netdev_extra_params=None, tapfds=None, script=None,
                     downscript=None, vhost=None, queues=None, vhostfds=None,
                     add_queues=None, helper=None, add_tapfd=None,
-                    add_vhostfd=None):
+                    add_vhostfd=None, vhostforce=None):
             mode = None
             if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
@@ -616,6 +616,9 @@ class VM(virt_vm.BaseVM):
                         if add_vhostfd:
                             cmd += ",vhostfd=%(vhostfd)s"
                             cmd_nd += ",vhostfd=%(vhostfd)s"
+                if vhostforce in ["on", "off"]:
+                    cmd += ",vhostforce=%s" % vhostforce
+                    cmd_nd = cmd
                 if netdev_extra_params:
                     cmd += "%s" % netdev_extra_params
                     cmd_nd += "%s" % netdev_extra_params
@@ -1330,6 +1333,7 @@ class VM(virt_vm.BaseVM):
                 script = nic_params.get("nic_script")
                 downscript = nic_params.get("nic_downscript")
                 vhost = nic_params.get("vhost")
+                vhostforce = nic_params.get("vhostforce")
                 script_dir = data_dir.get_data_dir()
                 if script:
                     script = utils_misc.get_path(script_dir, script)
@@ -1411,7 +1415,7 @@ class VM(virt_vm.BaseVM):
                                       bootp, redirs, netdev_id, netdev_extra,
                                       tapfds, script, downscript, vhost,
                                       queues, vhostfds, add_queues, helper,
-                                      add_tapfd, add_vhostfd)
+                                      add_tapfd, add_vhostfd, vhostforce)
 
                 if vhostfds is None:
                     vhostfds = ""
