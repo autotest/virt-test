@@ -1014,7 +1014,7 @@ class DevContainer(object):
                                    pci_addr=None, scsi_hba=None, x_data_plane=None,
                                    blk_extra_params=None, scsi=None,
                                    pci_bus='pci.0', drv_extra_params=None,
-                                   num_queues=None):
+                                   num_queues=None, bus_extra_params=None):
         """
         Creates related devices by variables
         :note: To skip the argument use None, to disable it use False
@@ -1049,9 +1049,11 @@ class DevContainer(object):
         :param pci_addr: drive pci address ($int)
         :param scsi_hba: Custom scsi HBA
         :param num_queues: performace option for virtio-scsi-pci
+        :param bus_extra_params: options want to add to virtio-scsi-pci bus
         """
         def define_hbas(qtype, atype, bus, unit, port, qbus, addr_spec=None,
-                        pci_bus='pci.0', num_queues=None):
+                        pci_bus='pci.0', num_queues=None,
+                        bus_extra_params=None):
             """
             Helper for creating HBAs of certain type.
             """
@@ -1075,6 +1077,10 @@ class DevContainer(object):
                     bus_params = {'id': _bus_name, 'driver': atype}
                     if num_queues is not None and int(num_queues) > 1:
                         bus_params['num_queues'] = num_queues
+                    if bus_extra_params is not None:
+                        for extra_param in bus_extra_params.split(","):
+                            key, value = extra_param.split('=')
+                            bus_params[key] = value
                     if addr_spec:
                         dev = qdevices.QDevice(params=bus_params,
                                                parent_bus={'aobject': pci_bus},
@@ -1191,7 +1197,8 @@ class DevContainer(object):
                 addr_spec = [256, 16384]
             _, bus, dev_parent = define_hbas('SCSI', scsi_hba, bus, unit, port,
                                              qbuses.QSCSIBus, addr_spec,
-                                             num_queues=num_queues)
+                                             num_queues=num_queues,
+                                             bus_extra_params=bus_extra_params)
             devices.extend(_)
         elif fmt in ('usb1', 'usb2', 'usb3'):
             if bus:
@@ -1399,7 +1406,8 @@ class DevContainer(object):
                                                image_params.get("virtio-blk-pci_scsi"),
                                                image_params.get('pci_bus', 'pci.0'),
                                                image_params.get("drv_extra_params"),
-                                               image_params.get("num_queues"))
+                                               image_params.get("num_queues"),
+                                               image_params.get("bus_extra_params"))
 
     def cdroms_define_by_params(self, name, image_params, media=None,
                                 index=None, image_boot=None,
@@ -1477,7 +1485,9 @@ class DevContainer(object):
                                                    "blk_extra_params"),
                                                image_params.get("virtio-blk-pci_scsi"),
                                                image_params.get('pci_bus', 'pci.0'),
-                                               image_params.get("drv_extra_params"))
+                                               image_params.get("drv_extra_params"),
+                                               None,
+                                               image_params.get("bus_extra_params"))
 
     def pcic_by_params(self, name, params):
         """
