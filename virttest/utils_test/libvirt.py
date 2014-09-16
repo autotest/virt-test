@@ -1211,6 +1211,7 @@ def attach_disks(vm, path, vgname, params):
     disk_size = params.get("added_disk_size", "0.1")
     disk_type = params.get("added_disk_type", "file")
     disk_target = params.get("added_disk_target", "virtio")
+    disk_format = params.get("added_disk_format", "raw")
     # Whether attaching device with --config
     attach_config = "yes" == params.get("attach_disk_config", "yes")
 
@@ -1264,7 +1265,7 @@ def attach_disks(vm, path, vgname, params):
         device_name = "%s_%s" % (target_dev, vm.name)
         disk_path = os.path.join(os.path.dirname(path), device_name)
         disk_path = create_local_disk(disk_type, disk_path,
-                                      disk_size, "",
+                                      disk_size, disk_format,
                                       vgname, device_name)
         added_disks[disk_path] = disk_size
         result = attach_additional_device(vm.name, target_dev, disk_path,
