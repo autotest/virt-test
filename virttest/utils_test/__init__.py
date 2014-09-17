@@ -89,7 +89,7 @@ def update_boot_option(vm, args_removed=None, args_added=None,
     login_timeout = int(vm.params.get("login_timeout"))
     session = vm.wait_for_login(timeout=login_timeout)
 
-    msg = "Update guest kernel cmdline. "
+    msg = "Update guest kernel option. "
     cmd = "grubby --update-kernel=`grubby --default-kernel` "
     if args_removed is not None:
         msg += " remove args: %s." % args_removed
@@ -98,14 +98,23 @@ def update_boot_option(vm, args_removed=None, args_added=None,
         msg += " add args: %s" % args_added
         cmd += '--args="%s"' % args_added
     error.context(msg, logging.info)
-    s, o = session.cmd_status_output(cmd)
-    if s != 0:
-        logging.error(o)
-        raise error.TestError("Fail to modify guest kernel cmdline")
+    status, output = session.cmd_status_output(cmd)
+    if status != 0:
+        logging.error(output)
+        raise error.TestError("Fail to modify guest kernel option")
 
     if need_reboot:
         error.context("Rebooting guest ...", logging.info)
-        vm.reboot(session=session, timeout=login_timeout)
+        session = vm.reboot(session=session, timeout=login_timeout)
+    cmdline = session.cmd("cat /proc/cmdline", timeout=60)
+    if args_removed and args_removed in cmdline:
+        logging.error(output)
+        error = "Fail to remove guest kernel option %s" % args_removed
+        raise error.TestError(error)
+    if args_added and args_added not in cmdline:
+        logging.error(output)
+        error = "Fail to add guest kernel option %s" % args_added
+        raise error.TestError(error)
 
 
 def stop_windows_service(session, service, timeout=120):
