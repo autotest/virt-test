@@ -631,6 +631,27 @@ def mkfs(partition, fs_type, options="", session=None):
         utils.run(mkfs_cmd)
 
 
+def get_parts_list(session=None):
+    """
+    Get all partition lists.
+    """
+    parts_cmd = "cat /proc/partitions"
+    if session:
+        _, parts_out = session.cmd_status_output(parts_cmd)
+    else:
+        parts_out = utils.run(parts_cmd).stdout
+    parts = []
+    if parts_out:
+        for line in parts_out.rsplit("\n"):
+            if line.startswith("major") or line == "":
+                continue
+            parts_line = line.rsplit()
+            if len(parts_line) == 4:
+                parts.append(parts_line[3])
+    logging.debug("Find parts: %s" % parts)
+    return parts
+
+
 def check_actived_pool(pool_name):
     """
     Check if pool_name exist in active pool list
