@@ -535,6 +535,22 @@ class VMXML(VMXMLBase):
             disks[dev] = node
         return disks
 
+    def set_hugepage_tag(vm_name):
+        """
+        Return VM's xml buckup.
+        Add a hugepage tag to the VM.
+        """
+        vmxml = VMXML.new_from_inactive_dumpxml(vm_name)
+        backup_xml = vmxml.copy()
+        vmxml.set_mem_backing(hugepages=True)
+        logging.debug("adding tag for %s\n"
+                      "<memoryBacking>\n"
+                      "<hugepages/>\n"
+                      "</memoryBacking>\n" % vm_name)
+        logging.debug("setting hugepages tag for vm success!")
+        vmxml.sync()
+        return backup_xml
+
     @staticmethod
     def get_disk_source(vm_name, option="", virsh_instance=base.virsh):
         """
@@ -586,7 +602,8 @@ class VMXML(VMXMLBase):
         if not vmxml.get_disk_count(vm_name, virsh_instance=virsh_instance):
             raise xcepts.LibvirtXMLError("No disk in domain %s." % vm_name)
         blk_list = vmxml.get_disk_blk(vm_name, virsh_instance=virsh_instance)
-        disk_list = vmxml.get_disk_source(vm_name, virsh_instance=virsh_instance)
+        disk_list = vmxml.get_disk_source(
+            vm_name, virsh_instance=virsh_instance)
         try:
             file_list = []
             for disk in disk_list:
@@ -763,7 +780,8 @@ class VMXML(VMXMLBase):
         vmxml = VMXML.new_from_dumpxml(vm_name)
 
         try:
-            exist = vmxml.__dict_get__('xml').find('devices').findall('channel')
+            exist = vmxml.__dict_get__('xml').find(
+                'devices').findall('channel')
             findc = 0
             for ec in exist:
                 if ec.find('target').get('name') == "org.qemu.guest_agent.0":
@@ -790,10 +808,12 @@ class VMXML(VMXMLBase):
         vmxml = VMXML.new_from_dumpxml(vm_name)
 
         try:
-            exist = vmxml.__dict_get__('xml').find('devices').findall('channel')
+            exist = vmxml.__dict_get__('xml').find(
+                'devices').findall('channel')
             for ec in exist:
                 if ec.find('target').get('name') == "org.qemu.guest_agent.0":
-                    channel = vmxml.get_device_class('channel')(type_name='unix')
+                    channel = vmxml.get_device_class(
+                        'channel')(type_name='unix')
                     channel.add_source(mode='bind',
                                        path=ec.find('source').get('path'))
                     channel.add_target(type='virtio',
@@ -1258,7 +1278,8 @@ class VMClockXML(VMXML):
                                    parent_xpath='/clock',
                                    tag_name='timer',
                                    attribute='present')
-            super(VMClockXML.TimerXML, self).__init__(virsh_instance=virsh_instance)
+            super(VMClockXML.TimerXML, self).__init__(
+                virsh_instance=virsh_instance)
             # name is mandatory for timer
             self.name = timer_name
 
@@ -1370,10 +1391,11 @@ class VMOSXML(base.LibvirtXMLBase):
         initargs:     list
     """
 
-    __slots__ = ('type', 'arch', 'machine', 'loader', 'boots', 'bootmenu_enable',
-                 'smbios_mode', 'bios_useserial', 'bios_reboot_timeout', 'init',
-                 'bootloader', 'bootloader_args', 'kernel', 'initrd', 'cmdline',
-                 'dtb', 'initargs')
+    __slots__ = (
+        'type', 'arch', 'machine', 'loader', 'boots', 'bootmenu_enable',
+        'smbios_mode', 'bios_useserial', 'bios_reboot_timeout', 'init',
+        'bootloader', 'bootloader_args', 'kernel', 'initrd', 'cmdline',
+        'dtb', 'initargs')
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText('type', self, parent_xpath='/',

@@ -2,7 +2,9 @@ import re
 import glob
 import math
 import logging
-from autotest.client import utils
+import os
+from virttest.libvirt_xml.vm_xml import VMXML
+from autotest.client.shared import error
 
 
 # Returns total memory in kb
@@ -70,6 +72,57 @@ def get_huge_page_size():
 def get_num_huge_pages():
     raw_hugepages = utils.system_output('/sbin/sysctl vm.nr_hugepages')
     return int(raw_hugepages.split()[2])
+
+
+def get_num_anon_hugepage(pid):
+    num_anon = 0
+    try:
+        try:
+            mem_info = open('/proc/%s/smaps' % pid, 'r')
+            pattern = re.compile(r'^AnonHugePages*')
+            for info in mem_infos:
+                if pattern.match(info):
+                    num_anon = num_anon + int(info.split()[1])
+        except:
+            logging.error(
+                "There is something wrong while getting anon_hugepage.")
+    finally:
+        mem_info.close()
+        return num_anon
+
+
+def get_num_huge_pages_free():
+    hugepages_free = 0
+    try:
+        try:
+            mem_infos = open('/proc/meminfo', 'r')
+            pattern = re.compile(r'^HugePages_Free*')
+            for info in mem_infos:
+                if pattern.match(info):
+                    hugepages_free = int(info.split()[1])
+        except:
+            logging.error(
+                "There is something wrong while getting huge_pages_free.")
+    finally:
+        mem_infos.close()
+        return hugepages_free
+
+
+def get_num_huge_pages_rsvd():
+    hugepages_rsvd = 0
+    try:
+        try:
+            mem_infos = open('/proc/meminfo', 'r')
+            pattern = re.compile(r'^HugePages_Rsvd*')
+            for info in mem_infos:
+                if pattern.match(info):
+                    hugepages_rsvd = int(info.split()[1])
+        except:
+            logging.error(
+                "There is something wrong while getting hugepage_rsvd.")
+    finally:
+        mem_infos.close()
+        return hugepages_rsvd
 
 
 def set_num_huge_pages(num):
@@ -208,3 +261,40 @@ def get_buddy_info(chunk_sizes, nodes="all", zones="all"):
             buddyinfo_dict[chunk_size] += int(chunk_info)
 
     return buddyinfo_dict
+
+
+def set_transparent_hugepage(setflag=False):
+    if setflag == True:
+        str_flag = 'always'
+    else:
+        str_flag = 'never'
+    RH_THP_PATH = "/sys/kernel/mm/redhat_transparent_hugepage"
+    UPSTREAM_THP_PATH = "/sys/kernel/mm/transparent_hugepage"
+    if os.path.isdir(RH_THP_PATH):
+        thp_path = RH_THP_PATH
+    elif os.path.isdir(UPSTREAM_THP_PATH):
+        thp_path = UPSTREAM_THP_PATH
+    else:
+        raise error.TestFail("System doesn't support transparent "
+                             "hugepages")
+    re = os.system("echo %s > %s/enabled" % (str_flag, thp_path))
+    if re == 0:
+        logging.debug("RUNNING: \"echo %s > %s/enabled\"" %
+                      (str_flag, thp_path))
+        logging.debug("Setting SUCCESS!")
+    else:
+        raise error.TestFail("setting transparent_hugepage FAIL!")
+
+
+def get_transparent_hugepage():
+    RH_THP_PATH = "/sys/kernel/mm/redhat_transparent_hugepage"
+    UPSTREAM_THP_PATH = "/sys/kernel/mm/transparent_hugepage"
+    if os.path.isdir(RH_THP_PATH):
+        thp_path = RH_THP_PATH
+    elif os.path.isdir(UPSTREAM_THP_PATH):
+        thp_path = UPSTREAM_THP_PATH
+    output = utils.system_output('cat %s/enabled' % thp_path)
+    if output[0] == '[always]':
+        return True
+    else:
+        return False
