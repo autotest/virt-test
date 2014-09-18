@@ -323,13 +323,13 @@ class VMXMLBase(base.LibvirtXMLBase):
 
         # check the type of seclabel_dict_list and value.
         if not isinstance(seclabel_dict_list, list):
-            raise xcepts.LibvirtXMLError("seclabel_dict_list should be a"
+            raise xcepts.LibvirtXMLError("seclabel_dict_list should be a "
                                          "instance of list, but not a %s.\n"
                                          % type(seclabel_dict_list))
         for seclabel_dict in seclabel_dict_list:
             if not isinstance(seclabel_dict, dict):
                 raise xcepts.LibvirtXMLError("value in seclabel_dict_list"
-                                             "should be a instance of list, "
+                                             "should be a instance of dict "
                                              "but not a %s.\n"
                                              % type(seclabel_dict))
 
