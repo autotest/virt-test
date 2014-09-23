@@ -1215,48 +1215,61 @@ def attach_disks(vm, path, vgname, params):
     # Whether attaching device with --config
     attach_config = "yes" == params.get("attach_disk_config", "yes")
 
-    target_list = []
-    index = 0
-    # Disks may exceed from a-z, aa, ab, ac...
-    number_list = []
-    while len(target_list) < disks_count:
-        i = len(number_list) - 1
-        if index == 0 or index % 26 == 0:
-            index = 1
-            if i == -1:
-                number_list.append('a')
-            while i > -1:
-                if number_list[i] == 'z':
-                    if i == 0:
-                        number_list.append('a')
-                        j = len(number_list) - 2
-                        while j > -1:
-                            number_list[j] = 'a'
-                            j -= 1
+    def generate_disks_index(count, target="virtio"):
+        # Created disks' index
+        target_list = []
+        # Used to flag progression
+        index = 0
+        # A list to maintain prefix for generating device
+        # ['a','b','c'] means prefix abc
+        prefix_list = []
+        while count > 0:
+            # Out of range for current prefix_list
+            if (index / 26) > 0:
+                # Update prefix_list to expand disks, such as [] -> ['a'],
+                # ['z'] -> ['a', 'a'], ['z', 'z'] -> ['a', 'a', 'a']
+                prefix_index = len(prefix_list)
+                if prefix_index == 0:
+                    prefix_list.append('a')
+                # Append a new prefix to list, then update pre-'z' in list
+                # to 'a' to keep the progression 1
+                while prefix_index > 0:
+                    prefix_index -= 1
+                    prefix_cur = prefix_list[prefix_index]
+                    if prefix_cur == 'z':
+                        prefix_list[prefix_index] = 'a'
+                        # All prefix in prefix_list are 'z',
+                        # it's time to expand it.
+                        if prefix_index == 0:
+                            prefix_list.append('a')
                     else:
-                        number_list[i] = 'a'
-                else:
-                    number_list[i] = chr(ord(number_list[i]) + 1)
-                    break
-                i -= 1
-        else:
-            number_list[i] = chr(ord(number_list[i]) + 1)
+                        # For whole prefix_list, progression is 1
+                        prefix_list[prefix_index] = chr(ord(prefix_cur) + 1)
+                        break
+                # Reset for another iteration
+                index = 0
+            prefix = "".join(prefix_list)
+            suffix_index = index % 26
+            suffix = chr(ord('a') + suffix_index)
             index += 1
+            count -= 1
 
-        dev_str = ""
-        for number in number_list:
-            dev_str += number
-
-        if disk_target == "virtio":
-            target_dev = "vd%s" % dev_str
-        elif disk_target == "scsi":
-            target_dev = "sd%s" % dev_str
-        if not device_exists(vm, target_dev):
+            # Generate device target according to driver type
+            if target == "virtio":
+                target_dev = "vd%s" % (prefix + suffix)
+            elif target == "scsi":
+                target_dev = "sd%s" % (prefix + suffix)
             target_list.append(target_dev)
+        return target_list
+
+    target_list = generate_disks_index(disks_count, disk_target)
 
     # A dict include disks information: source file and size
     added_disks = {}
     for target_dev in target_list:
+        # Do not attach if it does already exist
+        if device_exists(vm, target_dev):
+            continue
         disk_params = {}
         disk_params['type_name'] = disk_type
         disk_params['target_dev'] = target_dev
