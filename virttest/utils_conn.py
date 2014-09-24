@@ -869,13 +869,6 @@ class TLSConnection(ConnectionBase):
             port='22',
             remote_path='/etc/libvirt/libvirtd.conf')
 
-    def __del__(self):
-        """
-        Clean up certifications.
-        """
-        if self.auto_recover:
-            self.cert_recover()
-
     def conn_recover(self):
         """
         Do the clean up work.
@@ -884,6 +877,10 @@ class TLSConnection(ConnectionBase):
         (2).Delete remote file.
         (3).Restart libvirtd on server.
         """
+        # clean up certifications firstly
+        if self.auto_recover:
+            self.cert_recover()
+
         # initialize variables
         server_ip = self.server_ip
         server_user = self.server_user
