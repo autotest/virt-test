@@ -786,10 +786,7 @@ class DevContainer(object):
             :return: List of added devices (including default buses)
             """
             devices = []
-            if arch.ARCH == 'ppc64':
-                pci_bus = "pci"
-            else:
-                pci_bus = "pci.0"
+            pci_bus = "pci.0"
             bus = (qbuses.QPCIBus(pci_bus, 'PCI', 'pci.0'),
                    qbuses.QStrictCustomBus(None, [['chassis'], [256]], '_PCI_CHASSIS',
                                            first_port=[1]),

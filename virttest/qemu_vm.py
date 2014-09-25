@@ -1,7 +1,7 @@
 """
 Utility classes and functions to handle Virtual Machine creation using qemu.
 
-:copyright: 2008-2009 Red Hat Inc.
+:copyright: 2008-2009, 2014 Red Hat Inc.
 """
 
 import time
@@ -23,6 +23,7 @@ import qemu_virtio_port
 import remote
 import data_dir
 import utils_net
+import arch
 
 
 class QemuSegFaultError(virt_vm.VMError):
@@ -422,7 +423,7 @@ class VM(virt_vm.BaseVM):
             return cmd
 
         def add_serial(devices, name, filename):
-            if not devices.has_option("chardev"):
+            if arch.ARCH == 'ppc64' or not devices.has_option("chardev"):
                 return " -serial unix:'%s',server,nowait" % filename
 
             serial_id = "serial_id_%s" % name
