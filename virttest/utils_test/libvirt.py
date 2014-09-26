@@ -40,6 +40,7 @@ from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
 from virttest.libvirt_xml import xcepts
 from virttest.libvirt_xml.devices import disk
+from virttest.libvirt_xml.devices import hostdev
 from virttest.libvirt_xml.devices import controller
 from __init__ import ping
 try:
@@ -1093,6 +1094,32 @@ def check_iface(iface_name, checkpoint, extra="", **dargs):
     except Exception, detail:
         raise error.TestFail("Interface check failed: %s" % detail)
     return check_pass
+
+
+def create_hostdev_xml(pci_id):
+    """
+    Create a hostdev configuration file.
+
+    :param pci_id: such as "0000:03:04.0"
+    """
+    # Create attributes dict for device's address element
+    device_domain = "0x0000"
+    device_bus = pci_id.split(':')[0]
+    device_bus = "0x%s" % device_bus
+    device_slot = pci_id.split(':')[-1].split('.')[0]
+    device_slot = "0x%s" % device_slot
+    device_function = pci_id.split('.')[-1]
+    device_function = "0x%s" % device_function
+
+    hostdev_xml = hostdev.Hostdev()
+    hostdev_xml.mode = "subsystem"
+    hostdev_xml.managed = "yes"
+    hostdev_xml.hostdev_type = "pci"
+    attrs = {'domain': device_domain, 'slot': device_slot,
+             'bus': device_bus, 'function': device_function}
+    hostdev_xml.source_address = hostdev_xml.new_source_address(**attrs)
+    logging.debug("Hostdev XML:\n%s", str(hostdev_xml))
+    return hostdev_xml.xml
 
 
 def create_disk_xml(params):
