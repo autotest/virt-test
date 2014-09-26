@@ -2308,18 +2308,20 @@ class VM(virt_vm.BaseVM):
 
             # Establish monitor connections
             self.monitors = []
-            for monitor_name in params.objects("monitors"):
-                monitor_params = params.object_params(monitor_name)
+            for m_name in params.objects("monitors"):
+                m_params = params.object_params(m_name)
                 try:
                     monitor = qemu_monitor.wait_for_create_monitor(self,
-                                                                   monitor_name, monitor_params, timeout)
+                                                                   m_name,
+                                                                   m_params,
+                                                                   timeout)
                 except qemu_monitor.MonitorConnectError, detail:
                     logging.error(detail)
                     self.destroy()
                     raise
 
                 # Add this monitor to the list
-                self.monitors += [monitor]
+                self.monitors.append(monitor)
 
             # Create isa serial ports.
             for serial in params.objects("isa_serials"):
