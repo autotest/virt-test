@@ -2511,3 +2511,54 @@ def monotonic_time():
         return time.monotonic()
     else:
         return monotonic_time_os()
+
+
+def add_ker_cmd(kernel_cmdline, kernel_param, remove_similar=False):
+    """
+    Add a parameter to kernel command line content
+
+    :param kernel_cmdline: Original kernel command line.
+    :type kernel_cmdline: string
+    :param kernel_param: parameter want to change include the value.
+    :type kernel_param: string
+    :param remove_similar: remove the value of the parameter that already in
+                           kernel cmd line or not.
+    :type remove_similar: bool
+    :return: kernel command line
+    :rtype: string
+    """
+    kernel_param = kernel_param.strip()
+    kernel_cmdline = kernel_cmdline.strip()
+    kernel_cmdline_cmp = " %s " % kernel_cmdline
+    need_update = True
+    if " %s " % kernel_param in kernel_cmdline_cmp:
+        logging.debug("Parameter already in kernel command line.")
+        need_update = False
+    elif "=" in kernel_param and remove_similar:
+        kernel_param_key = kernel_param.split("=")[0]
+        kernel_cmdline = re.sub(" %s= " % kernel_param_key, " ",
+                                kernel_cmdline_cmp).strip()
+
+    if need_update:
+        kernel_cmdline += " %s" % kernel_param
+    return kernel_cmdline
+
+
+def rm_ker_cmd(kernel_cmdline, kernel_param):
+    """
+    Remove a parameter from kernel command line content
+
+    :param kernel_cmdline: Original kernel command line.
+    :type kernel_cmdline: string
+    :param kernel_param: parameter want to change include the value.
+    :type kernel_param: string
+    :return: kernel command line
+    :rtype: string
+    """
+    kernel_param = kernel_param.strip()
+    kernel_cmdline = kernel_cmdline.strip()
+    kernel_cmdline_cmp = " %s " % kernel_cmdline
+    if " %s " % kernel_param in kernel_cmdline_cmp:
+        kernel_cmdline = re.sub(" %s " % kernel_param, " ",
+                                kernel_cmdline_cmp).strip()
+    return kernel_cmdline
