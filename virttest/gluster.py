@@ -38,7 +38,7 @@ def glusterd_start():
     """
     cmd = "service glusterd status"
     output = utils.system_output(cmd, ignore_status=True)
-    if 'inactive' or 'stopped' in output:
+    if 'inactive' in output or 'stopped' in output:
         cmd = "service glusterd start"
         error.context("Starting gluster dameon failed")
         output = utils.system_output(cmd)
