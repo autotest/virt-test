@@ -1007,7 +1007,7 @@ def check_exit_status(result, expect_error=False):
         raise error.TestFail("Expect fail, but run successfully.")
 
 
-def check_iface(iface_name, checkpoint, extra=""):
+def check_iface(iface_name, checkpoint, extra="", **dargs):
     """
     Check interface with specified checkpoint.
 
@@ -1050,8 +1050,10 @@ def check_iface(iface_name, checkpoint, extra=""):
             logging.debug("IP address of %s: %s", iface_name, iface_ip)
         elif checkpoint == "ping":
             # extra is the ping destination
-            ping_s, _ = ping(dest=extra, count=3, interface=iface_name,
-                             timeout=5,)
+            count = dargs.get("count", 3)
+            timeout = dargs.get("timeout", 5)
+            ping_s, _ = ping(dest=extra, count=count, interface=iface_name,
+                             timeout=timeout,)
             check_pass = ping_s == 0
         else:
             logging.debug("Support check points are: %s", support_check)
