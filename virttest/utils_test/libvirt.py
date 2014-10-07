@@ -40,6 +40,7 @@ from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
 from virttest.libvirt_xml import xcepts
 from virttest.libvirt_xml.devices import disk
+from virttest.libvirt_xml.devices import controller
 from __init__ import ping
 try:
     from autotest.client import lv_utils
@@ -1198,6 +1199,47 @@ def delete_scsi_disk():
         utils.unload_module("scsi_debug")
 
 
+def set_controller_multifunction(vm_name, controller_type='scsi'):
+    """
+    Set multifunction on for controller device and expand to all function.
+    """
+    vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
+    exist_controllers = vmxml.get_devices("controller")
+    # Used to contain controllers in format:
+    # domain:bus:slot:func -> controller object
+    expanded_controllers = {}
+    # The index of controller
+    index = 0
+    for e_controller in exist_controllers:
+        if e_controller.type != controller_type:
+            continue
+        # Set multifunction on
+        address_attrs = e_controller.address.attrs
+        address_attrs['multifunction'] = "on"
+        domain = address_attrs['domain']
+        bus = address_attrs['bus']
+        slot = address_attrs['slot']
+        all_funcs = ["0x0", "0x1", "0x2", "0x3", "0x4", "0x5", "0x6"]
+        for func in all_funcs:
+            key = "%s:%s:%s:%s" % (domain, bus, slot, func)
+            address_attrs['function'] = func
+            # Create a new controller instance
+            new_controller = controller.Controller(controller_type)
+            new_controller.xml = str(xml_utils.XMLTreeFile(e_controller.xml))
+            new_controller.index = index
+            new_controller.address = new_controller.new_controller_address(
+                attrs=address_attrs)
+            # Expand controller to all functions with multifunction
+            if key not in expanded_controllers.keys():
+                expanded_controllers[key] = new_controller
+                index += 1
+
+    logging.debug("Expanded controllers: %s", expanded_controllers.values())
+    vmxml.del_controller(controller_type)
+    vmxml.set_controller(expanded_controllers.values())
+    vmxml.sync()
+
+
 def attach_disks(vm, path, vgname, params):
     """
     Attach multiple disks.According parameter disk_type in params,
@@ -1208,6 +1250,7 @@ def attach_disks(vm, path, vgname, params):
     """
     # Additional disk on vm
     disks_count = int(params.get("added_disks_count", 1)) - 1
+    multifunction_on = "yes" == params.get("multifunction_on", "no")
     disk_size = params.get("added_disk_size", "0.1")
     disk_type = params.get("added_disk_type", "file")
     disk_target = params.get("added_disk_target", "virtio")
@@ -1270,6 +1313,12 @@ def attach_disks(vm, path, vgname, params):
         # Do not attach if it does already exist
         if device_exists(vm, target_dev):
             continue
+
+        # Prepare controller for special disks like virtio-scsi
+        # Open multifunction to add more controller for disks(150 or more)
+        if multifunction_on:
+            set_controller_multifunction(vm.name, disk_target)
+
         disk_params = {}
         disk_params['type_name'] = disk_type
         disk_params['target_dev'] = target_dev
