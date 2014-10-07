@@ -354,6 +354,46 @@ class VMXMLBase(base.LibvirtXMLBase):
             pass  # Element already doesn't exist
         self.xmltreefile.write()
 
+    def set_controller(self, controller_list):
+        """
+        Set controller of vm. Create new controllers use xmltreefile
+        from given controller_list.
+        """
+
+        # check the type of controller_list and value.
+        if not isinstance(controller_list, list):
+            raise xcepts.LibvirtXMLError("controller_element_list should be a"
+                                         "instance of list, but not a %s.\n"
+                                         % type(controller_list))
+
+        devices_element = self.xmltreefile.find("devices")
+        for contl in controller_list:
+            element = xml_utils.ElementTree.ElementTree(
+                file=contl.xml)
+            devices_element.append(element.getroot())
+        self.xmltreefile.write()
+
+    def del_controller(self, controller_type=None):
+        """
+        Delete controllers according controller type
+
+        :return: None if deleting all controllers
+        """
+        all_controllers = self.xmltreefile.findall("devices/controller")
+        del_controllers = []
+        for controller in all_controllers:
+            if controller.get("type") != controller_type:
+                continue
+            del_controllers.append(controller)
+
+        # no seclabel tag found in xml.
+        if del_controllers == []:
+            logging.debug("Controller %s for this domain does not "
+                          "exist" % controller_type)
+
+        for controller in del_controllers:
+            self.xmltreefile.remove(controller)
+
 
 class VMXML(VMXMLBase):
 

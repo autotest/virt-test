@@ -5,12 +5,12 @@ http://libvirt.org/formatdomain.html#elementsControllers
 """
 
 from virttest.libvirt_xml import accessors
-from virttest.libvirt_xml.devices import base
+from virttest.libvirt_xml.devices import base, librarian
 
 
 class Controller(base.TypedDeviceBase):
 
-    __slots__ = ('type', 'index', 'model', "driver",)
+    __slots__ = ('type', 'index', 'model', 'driver', 'address')
 
     def __init__(self, type_name, virsh_instance=base.base.virsh):
         super(Controller, self).__init__(device_tag='controller',
@@ -24,3 +24,18 @@ class Controller(base.TypedDeviceBase):
                                tag_name='controller', attribute='model')
         accessors.XMLElementDict('driver', self, parent_xpath='/',
                                  tag_name='driver')
+        accessors.XMLElementNest('address', self, parent_xpath='/',
+                                 tag_name='address', subclass=self.Address,
+                                 subclass_dargs={'type_name': 'pci',
+                                                 'virsh_instance': virsh_instance})
+
+    Address = librarian.get('address')
+
+    def new_controller_address(self, **dargs):
+        """
+        Return a new controller Address instance and set properties from dargs
+        """
+        new_one = self.Address("pci", virsh_instance=self.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
