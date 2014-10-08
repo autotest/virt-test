@@ -165,12 +165,12 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             string, operates on XML name tag
         uuid:
             string, operates on uuid tag
-        fwd_mode:
-            string, operates on mode attribute of forward tag
         mac:
             string, operates on address attribute of mac tag
         ip:
             string operate on ip/dhcp ranges as IPXML instances
+        forward:
+            dict, operates on forward tag
         bridge:
             dict, operates on bridge attributes
         bandwidth_inbound:
@@ -218,7 +218,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
     """
 
     __slots__ = ('name', 'uuid', 'bridge', 'defined', 'active',
-                 'autostart', 'persistent', 'fwd_mode', 'mac', 'ip',
+                 'autostart', 'persistent', 'forward', 'mac', 'ip',
                  'bandwidth_inbound', 'bandwidth_outbound', 'portgroup')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
@@ -232,10 +232,10 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                  tag_name='name')
         accessors.XMLElementText('uuid', self, parent_xpath='/',
                                  tag_name='uuid')
-        accessors.XMLAttribute('fwd_mode', self, parent_xpath='/',
-                               tag_name='forward', attribute='mode')
         accessors.XMLAttribute('mac', self, parent_xpath='/',
                                tag_name='mac', attribute='address')
+        accessors.XMLElementDict('forward', self, parent_xpath='/',
+                                 tag_name='forward')
         accessors.XMLElementDict('bridge', self, parent_xpath='/',
                                  tag_name='bridge')
         accessors.XMLElementDict('bandwidth_inbound', self,
