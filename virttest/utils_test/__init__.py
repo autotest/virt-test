@@ -109,12 +109,12 @@ def update_boot_option(vm, args_removed=None, args_added=None,
     cmdline = session.cmd("cat /proc/cmdline", timeout=60)
     if args_removed and args_removed in cmdline:
         logging.error(output)
-        error = "Fail to remove guest kernel option %s" % args_removed
-        raise error.TestError(error)
+        err = "Fail to remove guest kernel option %s" % args_removed
+        raise error.TestError(err)
     if args_added and args_added not in cmdline:
         logging.error(output)
-        error = "Fail to add guest kernel option %s" % args_added
-        raise error.TestError(error)
+        err = "Fail to add guest kernel option %s" % args_added
+        raise error.TestError(err)
 
 
 def stop_windows_service(session, service, timeout=120):
