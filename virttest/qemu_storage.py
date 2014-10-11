@@ -97,26 +97,28 @@ class QemuImg(storage.QemuImg):
             has_backing_file = params.get('has_backing_file')
 
             qemu_img_cmd += " -o "
-            if preallocated != "off":
-                qemu_img_cmd += "preallocation=%s," % preallocated
+            if self.image_format == "qcow2":
+                if preallocated != "off":
+                    qemu_img_cmd += "preallocation=%s," % preallocated
 
-            if encrypted != "off":
-                qemu_img_cmd += "encrypted=%s," % encrypted
+                if encrypted != "off":
+                    qemu_img_cmd += "encryption=%s," % encrypted
 
-            if image_cluster_size is not None:
-                qemu_img_cmd += "cluster_size=%s," % image_cluster_size
+                if image_cluster_size is not None:
+                    qemu_img_cmd += "cluster_size=%s," % image_cluster_size
 
-            if has_backing_file == "yes":
-                backing_param = params.object_params("backing_file")
-                backing_file = storage.get_image_filename(backing_param,
-                                                          self.root_dir)
-                backing_fmt = backing_param.get("image_format")
-                qemu_img_cmd += "backing_file=%s," % backing_file
+                if has_backing_file == "yes":
+                    backing_param = params.object_params("backing_file")
+                    backing_file = storage.get_image_filename(backing_param,
+                                                              self.root_dir)
+                    backing_fmt = backing_param.get("image_format")
+                    qemu_img_cmd += "backing_file=%s," % backing_file
 
-                qemu_img_cmd += "backing_fmt=%s," % backing_fmt
+                    qemu_img_cmd += "backing_fmt=%s," % backing_fmt
 
             if image_extra_params:
                 qemu_img_cmd += "%s," % image_extra_params
+
             qemu_img_cmd = qemu_img_cmd.rstrip(" -o")
             qemu_img_cmd = qemu_img_cmd.rstrip(",")
 
