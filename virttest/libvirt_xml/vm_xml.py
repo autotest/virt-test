@@ -1068,16 +1068,18 @@ class VMXML(VMXMLBase):
         self.xmltreefile.write()
 
     def add_hostdev(self, source_address, mode='subsystem',
-                    type='pci',
+                    hostdev_type='pci',
                     managed='yes'):
         """
         Add a hostdev device to guest.
+
+        :param source_address: A dict include slot, function, bus, domain
         """
         dev = self.get_device_class('hostdev')()
         dev.mode = mode
-        dev.type = type
+        dev.hostdev_type = hostdev_type
         dev.managed = managed
-        dev.source_address = source_address
+        dev.source_address = dev.new_source_address(**source_address)
         self.add_device(dev)
 
     @staticmethod
