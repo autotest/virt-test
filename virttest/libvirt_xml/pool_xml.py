@@ -217,7 +217,8 @@ class PoolXML(PoolXMLBase):
         pool_details['capacity'] = pool_xml.capacity
         pool_details['allocation'] = pool_xml.allocation
         pool_details['available'] = pool_xml.available
-        pool_details['target_path'] = pool_xml.target_path
+        if pool_xml.pool_type != "gluster":
+            pool_details['target_path'] = pool_xml.target_path
         return pool_details
 
     def pool_undefine(self):

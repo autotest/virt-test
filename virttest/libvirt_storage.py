@@ -285,8 +285,8 @@ class StoragePool(object):
             return True
         try:
             self.virsh_instance.pool_start(name, ignore_status=False)
-        except error.CmdError:
-            logging.error("Start pool '%s' failed.", name)
+        except error.CmdError, details:
+            logging.error("Start pool '%s' failed: %s", name, details)
             return False
         logging.info("Started pool '%s'", name)
         return True
@@ -412,7 +412,7 @@ class PoolVolume(object):
         for line in lines:
             # Path may be not standard unix path
             try:
-                path = re.findall("\s+/.*", line)[0]
+                path = re.findall("\s+\S*/.*", line)[0]
             except IndexError:
                 # Do not find a path
                 path = ""

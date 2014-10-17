@@ -166,8 +166,13 @@ def gluster_vol_create(vol_name, hostname, brick_path, force=False):
 
     gluster_brick_create(brick_path)
 
-    cmd = "gluster volume create %s %s:/%s" % (vol_name, hostname,
-                                               brick_path)
+    if force:
+        force_opt = "force"
+    else:
+        force_opt = ""
+
+    cmd = "gluster volume create %s %s:/%s %s" % (vol_name, hostname,
+                                                  brick_path, force_opt)
     error.context("Volume creation failed")
     utils.system(cmd)
     return is_gluster_vol_avail(vol_name)
@@ -292,3 +297,41 @@ def get_image_filename(params, image_name, image_format):
     else:
         image_filename = "%s%s.%s" % (gluster_uri, img_name, image_format)
     return image_filename
+
+
+@error.context_aware
+def gluster_allow_insecure(vol_name):
+    """
+    Allow gluster volume insecure
+
+    :param vol_name: name of gluster volume
+    """
+
+    cmd = "gluster volume set %s server.allow-insecure on" % vol_name
+    error.context("Volume set server.allow-insecure failed")
+    utils.system(cmd)
+
+    cmd = "gluster volume info"
+    output = utils.system_output(cmd)
+    match = re.findall(r'server.allow-insecure: on', output)
+
+    if not match:
+        return False
+    else:
+        return True
+
+
+def add_rpc_insecure(filepath):
+    """
+    Allow glusterd RPC authority insecure
+    """
+
+    cmd = "cat %s" % filepath
+    content = utils.system_output(cmd)
+    match = re.findall(r'rpc-auth-allow-insecure on', content)
+    logging.info("match is %s", match)
+    if not match:
+        logging.info("not match")
+        cmd = "sed -i '/end-volume/i \ \ \ \ option rpc-auth-allow-insecure on' %s" % filepath
+        utils.system(cmd)
+        utils.system("service glusterd restart; sleep 2")

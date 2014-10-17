@@ -2015,7 +2015,7 @@ def pool_define_as(name, pool_type, target, extra="", **dargs):
     :return: True if pool define command was successful
     """
 
-    types = ['dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical']
+    types = ['dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical', 'gluster']
 
     if pool_type and pool_type not in types:
         logging.error("Only support pool types: %s.", types)
