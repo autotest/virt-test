@@ -807,7 +807,7 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=False,
         fstype_mtab = "nfs\d?"
 
     mount_point = os.path.realpath(mount_point)
-    if fstype not in ['nfs', 'smbfs', 'glusterfs']:
+    if fstype not in get_filesystems(nodev_only=True):
         if src:
             src = os.path.realpath(src)
         else:
@@ -823,6 +823,26 @@ def is_mounted(src, mount_point, fstype, perm=None, verbose=False,
     else:
         logging.debug("%s is not mounted.", src)
         return False
+
+
+def get_filesystems(nodev_only=False):
+    """
+    Read the /proc/filesystems and return a list.
+
+    :param nodev_only: Only return the filesystem in nodev mode.
+    """
+    f = open("/proc/filesystems", "r")
+    lines = f.readlines()
+    f.close()
+
+    fs_list = []
+    for line in lines:
+        if nodev_only and not line.startswith("nodev"):
+            continue
+        sub_line = line.split()
+        fs_list.append(sub_line[-1])
+
+    return fs_list
 
 
 def install_host_kernel(job, params):
