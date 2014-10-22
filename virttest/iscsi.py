@@ -368,7 +368,13 @@ class Iscsi(object):
             logging.debug("Exported image already exists.")
             self.export_flag = True
         else:
-            luns = len(re.findall("\s+LUN:\s(\d+)", output, re.M))
+            tgt_str = re.search(r'.*(Target\s+\d+:\s+%s\s*.*)$' % self.target,
+                                output, re.DOTALL)
+            if tgt_str:
+                luns = len(re.findall("\s+LUN:\s(\d+)",
+                                      tgt_str.group(1), re.M))
+            else:
+                luns = len(re.findall("\s+LUN:\s(\d+)", output, re.M))
             cmd = "tgtadm --mode logicalunit --op new "
             cmd += "--tid %s --lld iscsi " % self.emulated_id
             cmd += "--lun %s " % luns
