@@ -40,6 +40,7 @@ from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
 from virttest.libvirt_xml import xcepts
 from virttest.libvirt_xml.devices import disk
+from virttest.libvirt_xml.devices import controller
 from __init__ import ping
 try:
     from autotest.client import lv_utils
@@ -1168,11 +1169,19 @@ def create_disk_xml(params):
         diskxml.target = {'dev': target_dev, 'bus': target_bus}
     except Exception, detail:
         logging.error("Fail to create disk XML:\n%s", detail)
-    logging.debug("Disk XML:\n%s", str(diskxml))
+    logging.debug("Disk XML %s:\n%s", diskxml.xml, str(diskxml))
+
+    # Wait for file completed
+    def file_exists():
+        if not utils.run("ls %s" % diskxml.xml,
+                         ignore_status=True).exit_status:
+            return True
+    utils_misc.wait_for(file_exists, 5)
+
     return diskxml.xml
 
 
-def attach_additional_device(vm_name, targetdev, disk_path, params):
+def attach_additional_device(vm_name, targetdev, disk_path, params, config=True):
     """
     Create a disk with disksize, then attach it to given vm.
 
@@ -1191,10 +1200,14 @@ def attach_additional_device(vm_name, targetdev, disk_path, params):
     xmlfile = create_disk_xml(params)
 
     # To confirm attached device do not exist.
-    virsh.detach_disk(vm_name, targetdev, extra="--config")
+    if config:
+        extra = "--config"
+    else:
+        extra = ""
+    virsh.detach_disk(vm_name, targetdev, extra=extra)
 
     return virsh.attach_device(domain_opt=vm_name, file_opt=xmlfile,
-                               flagstr="--config", debug=True)
+                               flagstr=extra, debug=True)
 
 
 def device_exists(vm, target_dev):
@@ -1290,6 +1303,47 @@ def delete_scsi_disk():
         utils.unload_module("scsi_debug")
 
 
+def set_controller_multifunction(vm_name, controller_type='scsi'):
+    """
+    Set multifunction on for controller device and expand to all function.
+    """
+    vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
+    exist_controllers = vmxml.get_devices("controller")
+    # Used to contain controllers in format:
+    # domain:bus:slot:func -> controller object
+    expanded_controllers = {}
+    # The index of controller
+    index = 0
+    for e_controller in exist_controllers:
+        if e_controller.type != controller_type:
+            continue
+        # Set multifunction on
+        address_attrs = e_controller.address.attrs
+        address_attrs['multifunction'] = "on"
+        domain = address_attrs['domain']
+        bus = address_attrs['bus']
+        slot = address_attrs['slot']
+        all_funcs = ["0x0", "0x1", "0x2", "0x3", "0x4", "0x5", "0x6"]
+        for func in all_funcs:
+            key = "%s:%s:%s:%s" % (domain, bus, slot, func)
+            address_attrs['function'] = func
+            # Create a new controller instance
+            new_controller = controller.Controller(controller_type)
+            new_controller.xml = str(xml_utils.XMLTreeFile(e_controller.xml))
+            new_controller.index = index
+            new_controller.address = new_controller.new_controller_address(
+                attrs=address_attrs)
+            # Expand controller to all functions with multifunction
+            if key not in expanded_controllers.keys():
+                expanded_controllers[key] = new_controller
+                index += 1
+
+    logging.debug("Expanded controllers: %s", expanded_controllers.values())
+    vmxml.del_controller(controller_type)
+    vmxml.set_controller(expanded_controllers.values())
+    vmxml.sync()
+
+
 def attach_disks(vm, path, vgname, params):
     """
     Attach multiple disks.According parameter disk_type in params,
@@ -1300,29 +1354,88 @@ def attach_disks(vm, path, vgname, params):
     """
     # Additional disk on vm
     disks_count = int(params.get("added_disks_count", 1)) - 1
+    multifunction_on = "yes" == params.get("multifunction_on", "no")
     disk_size = params.get("added_disk_size", "0.1")
     disk_type = params.get("added_disk_type", "file")
-    target_list = []
-    index = 0
-    while len(target_list) < disks_count:
-        target_dev = "vd%s" % chr(ord('a') + index)
-        if not device_exists(vm, target_dev):
+    disk_target = params.get("added_disk_target", "virtio")
+    disk_format = params.get("added_disk_format", "raw")
+    # Whether attaching device with --config
+    attach_config = "yes" == params.get("attach_disk_config", "yes")
+
+    def generate_disks_index(count, target="virtio"):
+        # Created disks' index
+        target_list = []
+        # Used to flag progression
+        index = 0
+        # A list to maintain prefix for generating device
+        # ['a','b','c'] means prefix abc
+        prefix_list = []
+        while count > 0:
+            # Out of range for current prefix_list
+            if (index / 26) > 0:
+                # Update prefix_list to expand disks, such as [] -> ['a'],
+                # ['z'] -> ['a', 'a'], ['z', 'z'] -> ['a', 'a', 'a']
+                prefix_index = len(prefix_list)
+                if prefix_index == 0:
+                    prefix_list.append('a')
+                # Append a new prefix to list, then update pre-'z' in list
+                # to 'a' to keep the progression 1
+                while prefix_index > 0:
+                    prefix_index -= 1
+                    prefix_cur = prefix_list[prefix_index]
+                    if prefix_cur == 'z':
+                        prefix_list[prefix_index] = 'a'
+                        # All prefix in prefix_list are 'z',
+                        # it's time to expand it.
+                        if prefix_index == 0:
+                            prefix_list.append('a')
+                    else:
+                        # For whole prefix_list, progression is 1
+                        prefix_list[prefix_index] = chr(ord(prefix_cur) + 1)
+                        break
+                # Reset for another iteration
+                index = 0
+            prefix = "".join(prefix_list)
+            suffix_index = index % 26
+            suffix = chr(ord('a') + suffix_index)
+            index += 1
+            count -= 1
+
+            # Generate device target according to driver type
+            if target == "virtio":
+                target_dev = "vd%s" % (prefix + suffix)
+            elif target == "scsi":
+                target_dev = "sd%s" % (prefix + suffix)
             target_list.append(target_dev)
-        index += 1
+        return target_list
+
+    target_list = generate_disks_index(disks_count, disk_target)
 
     # A dict include disks information: source file and size
     added_disks = {}
     for target_dev in target_list:
+        # Do not attach if it does already exist
+        if device_exists(vm, target_dev):
+            continue
+
+        # Prepare controller for special disks like virtio-scsi
+        # Open multifunction to add more controller for disks(150 or more)
+        if multifunction_on:
+            set_controller_multifunction(vm.name, disk_target)
+
         disk_params = {}
         disk_params['type_name'] = disk_type
+        disk_params['target_dev'] = target_dev
+        disk_params['target_bus'] = disk_target
+        disk_params['device_type'] = params.get("device_type", "disk")
         device_name = "%s_%s" % (target_dev, vm.name)
         disk_path = os.path.join(os.path.dirname(path), device_name)
         disk_path = create_local_disk(disk_type, disk_path,
-                                      disk_size, "",
+                                      disk_size, disk_format,
                                       vgname, device_name)
         added_disks[disk_path] = disk_size
-        result = attach_additional_device(vm.name,
-                                          target_dev, disk_path, disk_params)
+        result = attach_additional_device(vm.name, target_dev, disk_path,
+                                          disk_params, attach_config)
         if result.exit_status:
             raise error.TestFail("Attach device %s failed."
                                  % target_dev)
