@@ -2,7 +2,9 @@ import re
 import glob
 import math
 import logging
+import os
 from autotest.client import utils
+from autotest.client.shared import error
 
 
 # Returns total memory in kb
@@ -63,17 +65,65 @@ def node_size():
 
 
 def get_huge_page_size():
-    output = utils.system_output('grep Hugepagesize /proc/meminfo')
-    return int(output.split()[1])  # Assumes units always in kB. :(
+    return read_from_meminfo('Hugepagesize')
 
 
 def get_num_huge_pages():
-    raw_hugepages = utils.system_output('/sbin/sysctl vm.nr_hugepages')
-    return int(raw_hugepages.split()[2])
+    return read_from_meminfo('HugePages_Total')
+
+
+def get_num_huge_pages_free():
+    return read_from_meminfo('HugePages_Free')
+
+
+def get_num_huge_pages_rsvd():
+    return read_from_meminfo('HugePages_Rsvd')
+
+
+def get_num_anon_huge_pages(pid):
+    return read_from_smaps(pid, 'AnonHugePages')
+
+
+def get_transparent_hugepage():
+    UPSTREAM_THP_PATH = "/sys/kernel/mm/transparent_hugepage"
+    RH_THP_PATH = "/sys/kernel/mm/redhat_transparent_hugepage"
+    if os.path.isdir(UPSTREAM_THP_PATH):
+        thp_path = UPSTREAM_THP_PATH
+    elif os.path.isdir(RH_THP_PATH):
+        thp_path = RH_THP_PATH
+    else:
+        raise error.TestFail("transparent hugepage Not supported")
+    out = utils.system_output('cat %s/enabled' % thp_path)
+    if out[0] == "[always]":
+        return 'always'
+    elif out[1] == "[madvise]":
+        return 'madvise'
+    else:
+        return 'never'
 
 
 def set_num_huge_pages(num):
     utils.system('/sbin/sysctl vm.nr_hugepages=%d' % num)
+
+
+def set_transparent_hugepage(sflag):
+    """
+    sflag only can be set always, madvise or never.
+    """
+    flags = ['always', 'madvise', 'never']
+    if sflag not in flags:
+        raise error.TestFail("specify wrong parameter")
+    UPSTREAM_THP_PATH = "/sys/kernel/mm/transparent_hugepage"
+    RH_THP_PATH = "/sys/kernel/mm/redhat_transparent_hugepage"
+    if os.path.isdir(UPSTREAM_THP_PATH):
+        thp_path = UPSTREAM_THP_PATH
+    elif os.path.isdir(RH_THP_PATH):
+        thp_path = RH_THP_PATH
+    else:
+        raise error.TestFail("transparent hugepage Not supported")
+    ret = os.system("echo %s > %s/enabled" % (sflag, thp_path))
+    if ret != 0:
+        raise error.TestFail("setting transparent_hugepage failed")
 
 
 def drop_caches():

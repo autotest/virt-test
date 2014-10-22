@@ -121,13 +121,18 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: return VMFeaturesXML instances for the domain.
             set: define features tag from a VMFeaturesXML instances.
             del: remove features tag
+        mem_backing: VMMemBackingXML
+            get: return VMMemBackingXML instances for the domain.
+            set: define memoryBacking tag from a VMMemBackingXML instances.
+            del: remove memoryBacking tag
     """
 
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = ('hypervisor_type', 'vm_name', 'uuid', 'vcpu', 'max_mem',
                  'current_mem', 'dumpcore', 'numa', 'devices', 'seclabel',
                  'cputune', 'placement', 'current_vcpu', 'os', 'cpu',
-                 'pm', 'on_poweroff', 'on_reboot', 'on_crash', 'features')
+                 'pm', 'on_poweroff', 'on_reboot', 'on_crash', 'features',
+                 'mb')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -236,6 +241,13 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  parent_xpath='/',
                                  tag_name='features',
                                  subclass=VMFeaturesXML,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
+        accessors.XMLElementNest(property_name='mb',
+                                 libvirtxml=self,
+                                 parent_xpath='/',
+                                 tag_name='memoryBacking',
+                                 subclass=VMMemBackingXML,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
@@ -1176,6 +1188,24 @@ class VMXML(VMXMLBase):
 
         return blkdevio_params
 
+    @staticmethod
+    def set_memoryBacking_tag(vm_name, hpgs=True, nosp=False, locked=False,
+                              virsh_instance=base.virsh):
+        """
+        let the guest using hugepages.
+        """
+        # Create a new memoryBacking tag
+        mb_xml = VMMemBackingXML()
+        mb_xml.nosharepages = nosp
+        mb_xml.locked = locked
+        if hpgs:
+            hpgs = VMHugepagesXML()
+            mb_xml.hugepages = hpgs
+        # Set memoryBacking to the new instance.
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        vmxml.mb = mb_xml
+        vmxml.sync()
+
 
 class VMCPUXML(base.LibvirtXMLBase):
 
@@ -1739,3 +1769,107 @@ class VMFeaturesXML(base.LibvirtXMLBase):
             logging.error("Feature %s doesn't exist", name)
         else:
             root.remove(remove_feature)
+
+
+# Sub-element of memoryBacking
+class VMHugepagesXML(VMXML):
+
+    """hugepages element"""
+
+    __slots__ = ('pages',)
+
+    def __init__(self, virsh_instance=base.virsh):
+        accessors.XMLElementList('pages',
+                                 libvirtxml=self,
+                                 forbidden=[],
+                                 parent_xpath="/",
+                                 marshal_from=self.marshal_from_page,
+                                 marshal_to=self.marshal_to_page)
+        super(self.__class__, self).__init__(virsh_instance=virsh_instance)
+        self.xml = '<hugepages/>'
+
+    # Sub-element of hugepages
+    class PageXML(VMXML):
+
+        """Page element of hugepages"""
+
+        __slots__ = ('size', 'unit', 'nodeset')
+
+        def __init__(self, virsh_instance=base.virsh):
+            """
+            Create new PageXML instance
+            """
+            accessors.XMLAttribute(property_name="size",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/hugepages',
+                                   tag_name='page',
+                                   attribute='size')
+            accessors.XMLAttribute(property_name="unit",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/hugepages',
+                                   tag_name='page',
+                                   attribute='unit')
+            accessors.XMLAttribute(property_name="nodeset",
+                                   libvirtxml=self,
+                                   forbidden=[],
+                                   parent_xpath='/hugepages',
+                                   tag_name='page',
+                                   attribute='nodeset')
+            super(VMHugepagesXML.PageXML, self).__init__(virsh_instance=virsh_instance)
+
+        def update(self, attr_dict):
+            for attr, value in attr_dict.items():
+                setattr(self, attr, value)
+
+    @staticmethod
+    def marshal_from_page(item, index, libvirtxml):
+        """Convert a PageXML instance into tag + attributes"""
+        del index
+        del libvirtxml
+        page = item.xmltreefile.find("/hugepages/page")
+        try:
+            return (page.tag, dict(page.items()))
+        except AttributeError:  # Didn't find page
+            raise xcepts.LibvirtXMLError("Expected a list of page "
+                                         "instances, not a %s" % str(item))
+
+    @staticmethod
+    def marshal_to_page(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes to a PageXML instance"""
+        del index
+        if tag == 'page':
+            newone = VMHugepagesXML.PageXML(virsh_instance=libvirtxml.virsh)
+            newone.update(attr_dict)
+            return newone
+        else:
+            return None
+
+
+class VMMemBackingXML(VMXML):
+
+    """
+    memoryBacking tag XML class
+
+    Elements:
+        hugepages
+        nosharepages
+        locked
+    """
+
+    __slots__ = ('hugepages', 'nosharepages', 'locked')
+
+    def __init__(self, virsh_instance=base.virsh):
+        accessors.XMLElementNest(property_name='hugepages',
+                                 libvirtxml=self,
+                                 parent_xpath='/',
+                                 tag_name='hugepages',
+                                 subclass=VMHugepagesXML,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
+        for slot in ('nosharepages', 'locked'):
+            accessors.XMLElementBool(slot, self, parent_xpath='/',
+                                     tag_name=slot)
+        super(self.__class__, self).__init__(virsh_instance=virsh_instance)
+        self.xml = '<memoryBacking/>'
