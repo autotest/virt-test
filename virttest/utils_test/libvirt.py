@@ -1130,8 +1130,11 @@ def create_disk_xml(params):
             source_name = params.get("source_name")
             source_host_name = params.get("source_host_name")
             source_host_port = params.get("source_host_port")
+            transport = params.get("transport")
             source_attrs = {'protocol': source_protocol, 'name': source_name}
             source_host = [{'name': source_host_name, 'port': source_host_port}]
+            if transport:
+                source_host[0].update({'transport': transport})
         else:
             error.TestNAError("Unsupport disk type %s" % type_name)
         source_startupPolicy = params.get("source_startupPolicy")
