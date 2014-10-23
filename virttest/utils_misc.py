@@ -2569,8 +2569,9 @@ def check_module(module_name, submodules=[]):
     Check whether module and its submodules work.
     """
     module_info = utils.loaded_module_info(module_name)
+    logging.debug(module_info)
     # Return if module is not loaded.
-    if module_info is None:
+    if not len(module_info):
         logging.debug("Module %s was not loaded.", module_name)
         return False
 
@@ -2622,9 +2623,10 @@ def get_pci_group_by_id(pci_id, device_type=""):
         # Informal pci_id, no matched list
         return []
     devices = get_pci_devices_in_group(device_type)
-    for device_key in devices.keys():
-        if device_key.count(pci_id):
-            return devices[device_key]
+    for device_key, device_value in devices.items():
+        for value in device_value:
+            if value.count(pci_id):
+                return devices[device_key]
     # No matched devices
     return []
 
@@ -2781,7 +2783,7 @@ class VFIOController(object):
             group_id = int(os.path.basename(utils.run(readlink_cmd).stdout))
         except ValueError, detail:
             raise error.TestError("Get iommu group id failed:%s" % detail)
-        return group_id.strip
+        return group_id
 
     def get_iommu_group_devices(self, group_id):
         """
@@ -2792,7 +2794,7 @@ class VFIOController(object):
         group_devices = []
         for line in output.splitlines():
             devices = line.split()
-            group_devices.append(devices.strip())
+            group_devices += devices
         return group_devices
 
     def bind_device_to_iommu_group(self, pci_id):
