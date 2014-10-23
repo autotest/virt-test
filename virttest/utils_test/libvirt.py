@@ -1096,15 +1096,16 @@ def check_iface(iface_name, checkpoint, extra="", **dargs):
     return check_pass
 
 
-def create_hostdev_xml(pci_id):
+def create_hostdev_xml(pci_id, boot_order=0):
     """
     Create a hostdev configuration file.
 
     :param pci_id: such as "0000:03:04.0"
     """
     # Create attributes dict for device's address element
-    device_domain = "0x0000"
-    device_bus = pci_id.split(':')[0]
+    device_domain = pci_id.split(':')[0]
+    device_domain = "0x%s" % device_domain
+    device_bus = pci_id.split(':')[1]
     device_bus = "0x%s" % device_bus
     device_slot = pci_id.split(':')[-1].split('.')[0]
     device_slot = "0x%s" % device_slot
@@ -1115,6 +1116,8 @@ def create_hostdev_xml(pci_id):
     hostdev_xml.mode = "subsystem"
     hostdev_xml.managed = "yes"
     hostdev_xml.hostdev_type = "pci"
+    if boot_order:
+        hostdev_xml.boot_order = boot_order
     attrs = {'domain': device_domain, 'slot': device_slot,
              'bus': device_bus, 'function': device_function}
     hostdev_xml.source_address = hostdev_xml.new_source_address(**attrs)
