@@ -82,7 +82,7 @@ class VM(virt_vm.BaseVM):
     This class handles all basic VM operations.
     """
 
-    MIGRATION_PROTOS = ['rdma', 'x-rdma', 'tcp', 'unix', 'exec', 'fd']
+    MIGRATION_PROTOS = ['rdma', 'tcp', 'unix', 'exec', 'fd']
 
     # By default we inherit all timeouts from the base VM class except...
     CLOSE_SESSION_TIMEOUT = 30
@@ -1967,7 +1967,7 @@ class VM(virt_vm.BaseVM):
         :param params: A dict containing VM params
         :param root_dir: Base directory for relative filenames
         :param migration_mode: If supplied, start VM for incoming migration
-                using this protocol (either 'rdma', 'x-rdma', 'rdma', 'tcp', 'unix' or 'exec')
+                using this protocol (either 'rdma', 'tcp', 'unix' or 'exec')
         :param migration_exec_cmd: Command to embed in '-incoming "exec: ..."'
                 (e.g. 'gzip -c -d filename') if migration_mode is 'exec'
                 default to listening on a random TCP port
@@ -2203,7 +2203,7 @@ class VM(virt_vm.BaseVM):
                                            'Check the log for traceback.')
 
             # Add migration parameters if required
-            if migration_mode in ["tcp", "rdma", "x-rdma"]:
+            if migration_mode in ["tcp", "rdma"]:
                 self.migration_port = utils_misc.find_free_port(5200, 6000)
                 qemu_command += (" -incoming " + migration_mode +
                                  ":0:%d" % self.migration_port)
@@ -3285,7 +3285,7 @@ class VM(virt_vm.BaseVM):
                 if cmdline:
                     self.monitor.send_args_cmd(cmdline)
 
-            if protocol in ["tcp", "rdma", "x-rdma"]:
+            if protocol in ["tcp", "rdma"]:
                 if local:
                     uri = protocol + ":localhost:%d" % clone.migration_port
                 else:
