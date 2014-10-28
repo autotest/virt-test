@@ -836,7 +836,7 @@ class PoolVolumeTest(object):
                                    image_size=image_size)
             # Verify if expected iscsi device has been set
             iscsi_sessions = iscsi.iscsi_get_sessions()
-            iscsi_target = ()
+            iscsi_device = ()
             for iscsi_node in iscsi_sessions:
                 if iscsi_node[1].count(emulated_image):
                     # Remove port for pool operations
