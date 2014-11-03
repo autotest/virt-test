@@ -125,6 +125,18 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: return VMMemBackingXML instances for the domain.
             set: define memoryBacking tag from a VMMemBackingXML instances.
             del: remove memoryBacking tag
+        max_mem_unit: string, 'unit' attribute of memory
+            get: return text value of memory unit attribute
+            set: set memory unit attribute
+            del: remove memory unit attribute
+        current_mem_unit: string, 'unit' attribute of memory
+            get: return text value of current_memory unit attribute
+            set: set current_memory unit attribute
+            del: remove current_memory unit attribute
+        memtune: VMMemTuneXML
+            get: return VMMemTuneXML instance for the domain.
+            set: Define memtune tag from a VMCPUTuneXML instance.
+            del: remove memtune tag
     """
 
     # Additional names of attributes and dictionary-keys instances may contain
@@ -132,7 +144,7 @@ class VMXMLBase(base.LibvirtXMLBase):
                  'current_mem', 'dumpcore', 'numa', 'devices', 'seclabel',
                  'cputune', 'placement', 'current_vcpu', 'os', 'cpu',
                  'pm', 'on_poweroff', 'on_reboot', 'on_crash', 'features',
-                 'mb')
+                 'mb', 'max_mem_unit', 'current_mem_unit', 'memtune')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -177,6 +189,11 @@ class VMXMLBase(base.LibvirtXMLBase):
                                 forbidden=None,
                                 parent_xpath='/',
                                 tag_name='memory')
+        accessors.XMLAttribute(property_name="max_mem_unit",
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='memory',
+                               attribute='unit')
         accessors.XMLAttribute(property_name="dumpcore",
                                libvirtxml=self,
                                forbidden=None,
@@ -188,6 +205,11 @@ class VMXMLBase(base.LibvirtXMLBase):
                                 forbidden=None,
                                 parent_xpath='/',
                                 tag_name='currentMemory')
+        accessors.XMLAttribute(property_name="current_mem_unit",
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='currentMemory',
+                               attribute='unit')
         accessors.XMLElementNest(property_name='os',
                                  libvirtxml=self,
                                  parent_xpath='/',
@@ -248,6 +270,13 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  parent_xpath='/',
                                  tag_name='memoryBacking',
                                  subclass=VMMemBackingXML,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
+        accessors.XMLElementNest(property_name='memtune',
+                                 libvirtxml=self,
+                                 parent_xpath='/',
+                                 tag_name='memtune',
+                                 subclass=VMMemTuneXML,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
@@ -1873,3 +1902,64 @@ class VMMemBackingXML(VMXML):
                                      tag_name=slot)
         super(self.__class__, self).__init__(virsh_instance=virsh_instance)
         self.xml = '<memoryBacking/>'
+
+
+class VMMemTuneXML(base.LibvirtXMLBase):
+
+    """
+    Memory Tuning tag XML class
+
+    Element:
+        hard_limit:            int
+        hard_limit_unit:       attribute
+        soft_limit:            int
+        soft_limit_unit:       attribute
+        swap_hard_limit:       int
+        swap_limit_unit:       attribute
+        min_guarantee:         int
+        min_guarantee_unit:    attribute
+    """
+
+    __slots__ = ('hard_limit', 'soft_limit', 'swap_hard_limit', 'min_guarantee',
+                 'hard_limit_unit', 'soft_limit_unit', 'swap_limit_unit',
+                 'min_guarantee_unit')
+
+    def __init__(self, virsh_instance=base.virsh):
+        accessors.XMLElementInt(property_name='hard_limit',
+                                libvirtxml=self,
+                                parent_xpath='/',
+                                tag_name='hard_limit')
+        accessors.XMLAttribute(property_name="hard_limit_unit",
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='hard_limit',
+                               attribute='unit')
+        accessors.XMLElementInt(property_name='soft_limit',
+                                libvirtxml=self,
+                                parent_xpath='/',
+                                tag_name='soft_limit')
+        accessors.XMLAttribute(property_name="soft_limit_unit",
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='soft_limit',
+                               attribute='unit')
+        accessors.XMLElementInt(property_name='swap_hard_limit',
+                                libvirtxml=self,
+                                parent_xpath='/',
+                                tag_name='swap_hard_limit')
+        accessors.XMLAttribute(property_name="swap_limit_unit",
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='swap_hard_limit',
+                               attribute='unit')
+        accessors.XMLElementInt(property_name='min_guarantee',
+                                libvirtxml=self,
+                                parent_xpath='/',
+                                tag_name='min_guarantee')
+        accessors.XMLAttribute(property_name="min_guarantee_unit",
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='min_guarantee',
+                               attribute='unit')
+        super(VMMemTuneXML, self).__init__(virsh_instance=virsh_instance)
+        self.xml = '<memtune/>'
