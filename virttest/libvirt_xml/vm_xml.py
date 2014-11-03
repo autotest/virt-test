@@ -1090,16 +1090,20 @@ class VMXML(VMXMLBase):
         devices.append(value)
         self.set_devices(devices)
 
-    def del_device(self, value):
+    def del_device(self, value, by_tag=False):
         """
         Remove a device from VMXML
 
-        :param value: instance of device in libvirt_xml/devices/
+        :param value: instance of device in libvirt_xml/devices/ or device tag
+        :param by_tag: Boolean value. True for delete device by tag name
         """
         devices = self.get_devices()
         not_found = True
         for device in devices:
-            if device == value:
+            device_value = device
+            if by_tag:
+                device_value = device.device_tag
+            if device_value == value:
                 not_found = False
                 devices.remove(device)
                 break
