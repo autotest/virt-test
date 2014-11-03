@@ -1184,6 +1184,240 @@ def create_disk_xml(params):
     return diskxml.xml
 
 
+def set_domain_state(vm, vm_state):
+    """
+    Set domain state.
+
+    :param vm: the vm object
+    :param vm_state: the given vm state string "shut off", "running"
+                     "paused", "halt" or "pm_suspend"
+    """
+    # reset domain state
+    if vm.is_alive():
+        vm.destroy(gracefully=False)
+    if not vm_state == "shut off":
+        vm.start()
+        session = vm.wait_for_login()
+    if vm_state == "paused":
+        vm.pause()
+    elif vm_state == "halt":
+        try:
+            session.cmd("halt")
+        except (aexpect.ShellProcessTerminatedError, aexpect.ShellStatusError):
+            # The halt command always gets these errors, but execution is OK,
+            # skip these errors
+            pass
+    elif vm_state == "pm_suspend":
+        # Execute "pm-suspend-hybrid" command directly will get Timeout error,
+        # so here execute it in background, and wait for 3s manually
+        if session.cmd_status("which pm-suspend-hybrid"):
+            raise error.TestNAError("Cannot execute this test for domain"
+                                    " doesn't have pm-suspend-hybrid command!")
+        session.cmd("pm-suspend-hybrid &")
+        time.sleep(3)
+
+
+def set_guest_agent(vm):
+    """
+    Set domain xml with guest agent channel and install guest agent rpm
+    in domain.
+
+    :param vm: the vm object
+    """
+    # reset domain state
+    if vm.is_alive():
+        vm.destroy(gracefully=False)
+    vmxml = vm_xml.VMXML.new_from_inactive_dumpxml(vm.name)
+    logging.debug("Attempting to set guest agent channel")
+    vmxml.set_agent_channel(vm.name)
+    vm.start()
+    session = vm.wait_for_login()
+    # Check if qemu-ga already started automatically
+    cmd = "rpm -q qemu-guest-agent || yum install -y qemu-guest-agent"
+    stat_install = session.cmd_status(cmd, 300)
+    if stat_install != 0:
+        raise error.TestFail("Fail to install qemu-guest-agent, make "
+                             "sure that you have usable repo in guest")
+
+    # Check if qemu-ga already started
+    stat_ps = session.cmd_status("ps aux |grep [q]emu-ga")
+    if stat_ps != 0:
+        session.cmd("qemu-ga -d")
+        # Check if the qemu-ga really started
+        stat_ps = session.cmd_status("ps aux |grep [q]emu-ga")
+        if stat_ps != 0:
+            raise error.TestFail("Fail to run qemu-ga in guest")
+
+
+def set_vm_disk(vm, params, tmp_dir=None):
+    """
+    Replace vm first disk with given type in domain xml, including file type
+    (local, nfs), network type(gluster, iscsi), block type(use connected iscsi
+    block disk).
+
+    For all types, all following params are common and need be specified:
+
+        disk_device: default to 'disk'
+        disk_type: 'block' or 'network'
+        disk_target: default to 'vda'
+        disk_target_bus: default to 'virtio'
+        disk_format: default to 'qcow2'
+        disk_src_protocol: 'iscsi', 'gluster' or 'netfs'
+
+    For 'gluster' network type, following params are gluster only and need be
+    specified:
+
+        vol_name: string
+        pool_name: default to 'gluster-pool'
+        transport: 'tcp', 'rdma' or '', default to ''
+
+    For 'iscsi' network type, following params need be specified:
+
+        image_size: default to "10G", 10G is raw size of jeos disk
+        disk_src_host: default to "127.0.0.1"
+        disk_src_port: default to "3260"
+
+    For 'netfs' network type, following params need be specified:
+
+        mnt_path_name: the mount dir name, default to "nfs-mount"
+        export_options: nfs mount options, default to "rw,no_root_squash,fsid=0"
+
+    For 'block' type, using connected iscsi block disk, following params need
+    be specified:
+
+        image_size: default to "10G", 10G is raw size of jeos disk
+
+    :param vm: the vm object
+    :param tmp_dir: string, dir path
+    :param params: dict, dict include setup vm disk xml configurations
+    """
+    vmxml = vm_xml.VMXML.new_from_inactive_dumpxml(vm.name)
+    logging.debug("original xml is: %s", vmxml.xmltreefile)
+    disk_device = params.get("disk_device", "disk")
+    disk_type = params.get("disk_type")
+    disk_target = params.get("disk_target", 'vda')
+    disk_target_bus = params.get("disk_target_bus", "virtio")
+    disk_src_protocol = params.get("disk_source_protocol")
+    disk_src_host = params.get("disk_source_host", "127.0.0.1")
+    disk_src_port = params.get("disk_source_port", "3260")
+    image_size = params.get("image_size", "10G")
+    disk_format = params.get("disk_format", "qcow2")
+    mnt_path_name = params.get("mnt_path_name", "nfs-mount")
+    exp_opt = params.get("export_options", "rw,no_root_squash,fsid=0")
+    first_disk = vm.get_first_disk_devices()
+    blk_source = first_disk['source']
+    disk_xml = vmxml.devices.by_device_tag('disk')[0]
+    src_disk_format = disk_xml.xmltreefile.find('driver').get('type')
+    disk_params = {'device_type': disk_device,
+                   'type_name': disk_type,
+                   'target_dev': disk_target,
+                   'target_bus': disk_target_bus,
+                   'driver_type': disk_format,
+                   'driver_cache': 'none'}
+
+    if not tmp_dir:
+        tmp_dir = data_dir.get_tmp_dir()
+
+    # gluster only params
+    vol_name = params.get("vol_name")
+    pool_name = params.get("pool_name", "gluster-pool")
+    transport = params.get("transport", "")
+    brick_path = os.path.join(tmp_dir, pool_name)
+
+    if vm.is_alive():
+        vm.destroy(gracefully=False)
+    # Replace domain disk with iscsi, gluster, block or netfs disk
+    if disk_src_protocol == 'iscsi':
+        if disk_type == 'block':
+            is_login = True
+        elif disk_type == 'network':
+            is_login = False
+        else:
+            raise error.TestFail("Disk type '%s' not expected, only disk "
+                                 "type 'block' or 'network' work with "
+                                 "'iscsi'" % disk_type)
+
+        # Setup iscsi target
+        emu_n = "emulated_iscsi"
+        iscsi_target = setup_or_cleanup_iscsi(is_setup=True,
+                                              is_login=is_login,
+                                              image_size=image_size,
+                                              emulated_image=emu_n)
+
+        # Copy first disk to emulated backing store path
+        emulated_path = os.path.join(tmp_dir, emu_n)
+        cmd = "qemu-img convert -f %s -O raw %s %s" % (src_disk_format,
+                                                       blk_source,
+                                                       emulated_path)
+        utils.run(cmd, ignore_status=False)
+
+        if disk_type == 'block':
+            disk_params_src = {'source_file': iscsi_target}
+        else:
+            disk_params_src = {'source_protocol': disk_src_protocol,
+                               'source_name': iscsi_target + "/1",
+                               'source_host_name': disk_src_host,
+                               'source_host_port': disk_src_port}
+    elif disk_src_protocol == 'gluster':
+        # Setup gluster.
+        host_ip = setup_or_cleanup_gluster(True, vol_name,
+                                           brick_path, pool_name)
+        logging.debug("host ip: %s " % host_ip)
+        dist_img = "gluster.%s" % disk_format
+
+        # Convert first disk to gluster disk path
+        disk_cmd = ("qemu-img convert -f %s -O %s %s /mnt/%s" %
+                    (src_disk_format, disk_format, blk_source, dist_img))
+
+        # Mount the gluster disk and create the image.
+        utils.run("mount -t glusterfs %s:%s /mnt; %s; umount /mnt"
+                  % (host_ip, vol_name, disk_cmd))
+
+        disk_params_src = {'source_protocol': disk_src_protocol,
+                           'source_name': "%s/%s" % (vol_name, dist_img),
+                           'source_host_name': host_ip,
+                           'source_host_port': "24007"}
+        if transport:
+            disk_params_src.update({"transport": transport})
+    elif disk_src_protocol == 'netfs':
+        # Setup nfs
+        res = setup_or_cleanup_nfs(True, mnt_path_name,
+                                   is_mount=True,
+                                   export_options=exp_opt)
+        exp_path = res["export_dir"]
+        mnt_path = res["mount_dir"]
+        params["selinux_status_bak"] = res["selinux_status_bak"]
+        dist_img = "nfs-img"
+
+        # Convert first disk to gluster disk path
+        disk_cmd = ("qemu-img convert -f %s -O %s %s %s/%s" %
+                    (src_disk_format, disk_format,
+                     blk_source, exp_path, dist_img))
+        utils.run(disk_cmd, ignore_status=False)
+
+        src_file_path = "%s/%s" % (mnt_path, dist_img)
+        disk_params_src = {'source_file': src_file_path}
+    else:
+        raise error.TestNAError("Disk source protocol %s not supported in "
+                                "current test" % disk_src_protocol)
+
+    # Delete disk elements
+    disks = vmxml.get_devices(device_type="disk")
+    for disk_ in disks:
+        vmxml.del_device(disk_)
+    # New disk xml
+    new_disk = disk.Disk(type_name=disk_type)
+    new_disk.new_disk_source(attrs={'file': blk_source})
+    disk_params.update(disk_params_src)
+    disk_xml = create_disk_xml(disk_params)
+    new_disk.xml = disk_xml
+    # Add new disk xml and redefine vm
+    vmxml.add_device(new_disk)
+    logging.debug("The vm xml now is: %s" % vmxml.xmltreefile)
+    vmxml.sync()
+    vm.start()
+
+
 def attach_additional_device(vm_name, targetdev, disk_path, params, config=True):
     """
     Create a disk with disksize, then attach it to given vm.
