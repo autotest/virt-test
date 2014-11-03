@@ -586,6 +586,12 @@ def preprocess(test, params, env):
     # have to be honored.
     env.start_tcpdump(params)
 
+    # Add migrate_vms to vms
+    migrate_vms = params.objects("migrate_vms")
+    if migrate_vms:
+        vms = list(set(params.objects("vms") + migrate_vms))
+        params["vms"] = ' '.join(vms)
+
     # Destroy and remove VMs that are no longer needed in the environment
     requested_vms = params.objects("vms")
     for key in env.keys():
