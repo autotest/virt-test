@@ -454,8 +454,12 @@ class QtreeDisksContainer(object):
         for scsi in _scsis:
             # Ignore IDE disks
             if scsi[5] != 'CD-ROM':
-                scsis.add("%d-%d-%d" % (int(scsi[1]), int(scsi[2]),
-                                        int(scsi[3])))
+                # Qemu encode LUNs with scsi's with 'flat space addressing'
+                # method if LUNs > 255, decode LUNs when LUN ID - 16384 > 255.
+                lun_id = int(scsi[3])
+                if lun_id > 255 + 16384:
+                    lun_id -= 16384
+                scsis.add("%d-%d-%d" % (int(scsi[1]), int(scsi[2]), lun_id))
             else:
                 proc_not_scsi += 1
         for disk in disks.difference(scsis):
