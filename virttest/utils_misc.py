@@ -21,6 +21,7 @@ import tarfile
 import shutil
 import getpass
 import ctypes
+import threading
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git, base_job
@@ -313,6 +314,20 @@ def find_free_ports(start_port, end_port, count, address="localhost"):
 
 _open_log_files = {}
 _log_file_dir = "/tmp"
+_log_lock = threading.RLock()
+
+
+def _acquire_lock(lock, timeout=10):
+    end_time = time.time() + timeout
+    while time.time() < end_time:
+        if lock.acquire(False):
+            return True
+        time.sleep(0.05)
+    return False
+
+
+class LogLockError(Exception):
+    pass
 
 
 def log_line(filename, line):
@@ -323,21 +338,27 @@ def log_line(filename, line):
                      the dir set by set_log_file_dir().
     :param line: Line to write.
     """
-    global _open_log_files, _log_file_dir
+    global _open_log_files, _log_file_dir, _log_lock
 
-    path = get_path(_log_file_dir, filename)
-    if path not in _open_log_files:
-        # First, let's close the log files opened in old directories
-        close_log_file(filename)
-        # Then, let's open the new file
-        try:
-            os.makedirs(os.path.dirname(path))
-        except OSError:
-            pass
-        _open_log_files[path] = open(path, "w")
-    timestr = time.strftime("%Y-%m-%d %H:%M:%S")
-    _open_log_files[path].write("%s: %s\n" % (timestr, line))
-    _open_log_files[path].flush()
+    if not _acquire_lock(_log_lock):
+        raise LogLockError("Could not acquire exclusive lock to access"
+                           " _open_log_files")
+    try:
+        path = get_path(_log_file_dir, filename)
+        if path not in _open_log_files:
+            # First, let's close the log files opened in old directories
+            close_log_file(filename)
+            # Then, let's open the new file
+            try:
+                os.makedirs(os.path.dirname(path))
+            except OSError:
+                pass
+            _open_log_files[path] = open(path, "w")
+        timestr = time.strftime("%Y-%m-%d %H:%M:%S")
+        _open_log_files[path].write("%s: %s\n" % (timestr, line))
+        _open_log_files[path].flush()
+    finally:
+        _log_lock.release()
 
 
 def set_log_file_dir(directory):
@@ -351,16 +372,22 @@ def set_log_file_dir(directory):
 
 
 def close_log_file(filename):
-    global _open_log_files, _log_file_dir
+    global _open_log_files, _log_file_dir, _log_lock
     remove = []
-    for k in _open_log_files:
-        if os.path.basename(k) == filename:
-            f = _open_log_files[k]
-            f.close()
-            remove.append(k)
-    if remove:
-        for key_to_remove in remove:
-            _open_log_files.pop(key_to_remove)
+    if not _acquire_lock(_log_lock):
+        raise LogLockError("Could not acquire exclusive lock to access"
+                           " _open_log_files")
+    try:
+        for k in _open_log_files:
+            if os.path.basename(k) == filename:
+                f = _open_log_files[k]
+                f.close()
+                remove.append(k)
+        if remove:
+            for key_to_remove in remove:
+                _open_log_files.pop(key_to_remove)
+    finally:
+        _log_lock.release()
 
 
 # The following are miscellaneous utility functions.
