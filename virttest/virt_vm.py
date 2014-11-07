@@ -766,37 +766,7 @@ class BaseVM(object):
                 return False
 
         if not utils_misc.wait_for(_get_address, timeout, internal_timeout):
-            if self.is_dead():
-                raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
-            try:
-                s_session = None
-                # for windows guest make sure your guest supports
-                # login by serial_console
-                s_session = self.wait_for_serial_login()
-                nic_mac = self.get_mac_address(nic_index_or_name)
-                os_type = self.params.get("os_type")
-                try:
-                    utils_net.renew_guest_ip(s_session, nic_mac,
-                                             os_type, ip_version)
-                    return self.get_address(nic_index_or_name)
-                except (VMIPAddressMissingError, VMAddressVerificationError):
-                    try:
-                        nic_address = utils_net.get_guest_ip_addr(s_session,
-                                                                  nic_mac,
-                                                                  os_type,
-                                                                  ip_version)
-                        if nic_address:
-                            mac_key = nic_mac
-                            if ip_version == "ipv6":
-                                mac_key = "%s_6" % nic_mac
-                            self.address_cache[mac_key.lower()] = nic_address
-                            return nic_address
-                    except Exception, err:
-                        logging.debug("Can not get guest address, '%s'" % err)
-                        raise VMIPAddressMissingError(nic_mac)
-            finally:
-                if s_session:
-                    s_session.close()
+            raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
         return self.get_address(nic_index_or_name)
 
     # Adding/setup networking devices methods split between 'add_*' for
@@ -942,10 +912,8 @@ class BaseVM(object):
         prompt = self.params.get("shell_prompt", "[\#\$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         client = self.params.get("shell_client")
-        ip_version = self.params.get("ip_version", "ipv4").lower()
         neigh_attach_if = ""
-        address = self.wait_for_get_address(nic_index, timeout=360,
-                                            ip_version=ip_version)
+        address = self.get_address(nic_index)
         if address and address.lower().startswith("fe80"):
             neigh_attach_if = utils_net.get_neigh_attch_interface(address)
         port = self.get_port(int(self.params.get("shell_port")))
@@ -1029,7 +997,8 @@ class BaseVM(object):
         :param internal_timeout: Timeout to pass to login().
         :param serial: Whether to use a serial connection when remote login
                 (ssh, rss) failed.
-        :param restart_network: Whether to try to restart guest's network.
+        :param restart_network: Whether to try to restart guest's network
+                when remote login (ssh, rss) failed.
         :return: A ShellSession object.
         """
         error_messages = []
@@ -1048,11 +1017,29 @@ class BaseVM(object):
                     error_messages.append(e)
             time.sleep(2)
         # Timeout expired
+        logging.info("Try to get guest network status.")
+        s_session = self.wait_for_serial_login(30, internal_timeout,
+                                               username=username,
+                                               password=password)
+        if s_session:
+            output = s_session.cmd_output("ipconfig || ifconfig", timeout=60)
+            txt = "Guest network status:\n %s" % output
+            logging.debug(txt)
+            out = s_session.cmd_output("ip route || route print", timeout=60)
+            txt = "Guest route table:\n %s" % out
+            logging.debug(txt)
+            s_session.close()
+
         if serial or restart_network:
             # Try to login via serila console
-            return self.wait_for_serial_login(timeout, internal_timeout,
-                                              restart_network,
-                                              username, password)
+            session = self.wait_for_serial_login(timeout, internal_timeout,
+                                                 restart_network,
+                                                 username, password)
+            if restart_network:
+                # Try one more time after restarting guest network.
+                session = self.login(nic_index, internal_timeout, username,
+                                     password)
+            return session
         else:
             # Try one more time but don't catch exceptions
             return self.login(nic_index, internal_timeout, username, password)
@@ -1195,8 +1182,10 @@ class BaseVM(object):
             try:
                 session = self.serial_login(internal_timeout)
                 if restart_network:
+                    os_type = self.params.get("os_type")
                     try:
-                        utils_net.restart_guest_network(session)
+                        logging.debug("Attempting to restart guest network")
+                        utils_net.restart_guest_network(session, os_type=os_type)
                     except Exception:
                         pass
                 return session
