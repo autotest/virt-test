@@ -701,7 +701,7 @@ class PciAssignable(object):
 
     def __init__(self, driver=None, driver_option=None, host_set_flag=None,
                  kvm_params=None, vf_filter_re=None, pf_filter_re=None,
-                 device_driver=None):
+                 device_driver=None, nic_name_re=None):
         """
         Initialize parameter 'type' which could be:
         vf: Virtual Functions
@@ -744,6 +744,10 @@ class PciAssignable(object):
         self.dev_drivers = {}
         self.vf_filter_re = vf_filter_re
         self.pf_filter_re = pf_filter_re
+        if nic_name_re:
+            self.nic_name_re = nic_name_re
+        else:
+            self.nic_name_re = "\w+(?=: flags)|eth[0-9](?=\s*Link)"
         if device_driver:
             if device_driver == "pci-assign":
                 self.device_driver = "pci-stub"
@@ -936,8 +940,7 @@ class PciAssignable(object):
             pf_info["vf_ids"] = vf_ids
             pf_vf_dict.append(pf_info)
         if_out = utils.system_output("ifconfig -a")
-        re_ethname = "\w+(?=: flags)|eth[0-9](?=\s*Link)"
-        ethnames = re.findall(re_ethname, if_out)
+        ethnames = re.findall(self.nic_name_re, if_out)
         for eth in ethnames:
             cmd = "ethtool -i %s | awk '/bus-info/ {print $2}'" % eth
             pci_id = utils.system_output(cmd)
@@ -1131,7 +1134,8 @@ class PciAssignable(object):
         if status:
             re_probe = True
         elif not self.check_vfs_count():
-            utils.system_output("modprobe -r %s" % self.driver, timeout=60)
+            if self.driver:
+                utils.system_output("modprobe -r %s" % self.driver, timeout=60)
             re_probe = True
         else:
             self.setup = None
@@ -1139,10 +1143,16 @@ class PciAssignable(object):
 
         # Re-probe driver with proper number of VFs
         if re_probe:
-            cmd = "modprobe %s %s" % (self.driver, self.driver_option)
-            error.context("Loading the driver '%s' with command '%s'" %
-                          (self.driver, cmd), logging.info)
-            status = utils.system(cmd, ignore_status=True)
+            cmd = None
+            status = 0
+            if self.driver:
+                cmd = "modprobe %s " % self.driver
+                if self.driver_option:
+                    cmd += " %s" % self.driver_option
+            if cmd:
+                error.context("Loading the driver '%s' with command '%s'" %
+                              (self.driver, cmd), logging.info)
+                status = utils.system(cmd, ignore_status=True)
             dmesg = utils.system_output("dmesg", timeout=60, ignore_status=True)
             file_name = "host_dmesg_after_load_%s.txt" % self.driver
             logging.info("Log dmesg after loading '%s' to '%s'.", self.driver,
@@ -1182,22 +1192,24 @@ class PciAssignable(object):
         status = utils.system('lsmod | grep %s' % self.driver,
                               ignore_status=True)
         if status:
-            cmd = "modprobe -r %s" % self.driver
-            logging.info("Running host command: %s" % cmd)
-            utils.system_output(cmd, timeout=60)
+            if self.driver:
+                cmd = "modprobe -r %s" % self.driver
+                logging.info("Running host command: %s" % cmd)
+                utils.system_output(cmd, timeout=60)
             re_probe = True
         else:
             return True
 
         # Re-probe driver with proper number of VFs
         if re_probe:
-            cmd = "modprobe %s" % self.driver
-            msg = "Loading the driver '%s' without option" % self.driver
-            error.context(msg, logging.info)
-            status = utils.system(cmd, ignore_status=True)
-            utils.system("/etc/init.d/network restart", ignore_status=True)
-            if status:
-                return False
+            if self.driver:
+                cmd = "modprobe %s" % self.driver
+                msg = "Loading the driver '%s' without option" % self.driver
+                error.context(msg, logging.info)
+                status = utils.system(cmd, ignore_status=True)
+                utils.system("/etc/init.d/network restart", ignore_status=True)
+                if status:
+                    return False
             return True
 
     def request_devs(self, devices=None):
