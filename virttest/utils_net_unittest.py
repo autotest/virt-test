@@ -84,22 +84,25 @@ virbr2        8000.525400c0b080    yes        em1
     def test_getstructure(self):
 
         br = utils_net.Bridge().get_structure()
-        self.assertEqual(br, {'virbr1': ['em1', 'virbr1-nic'],
-                              'virbr0': ['virbr0-nic']})
+        self.assertEqual(br, {'virbr1': {'iface': ['em1', 'virbr1-nic'], 'stp': 'yes'},
+                              'virbr0': {'iface': ['virbr0-nic'], 'stp': 'yes'}})
 
         br = utils_net.Bridge().get_structure()
-        self.assertEqual(br, {'virbr0': []})
+        self.assertEqual(br, {'virbr0': {"iface": [], "stp": "yes"}})
 
         br = utils_net.Bridge().get_structure()
         self.assertEqual(br, {})
 
         br = utils_net.Bridge().get_structure()
-        self.assertEqual(br, {'virbr2': ['em1', 'virbr10-nic',
-                                         'virbr40-nic', 'virbr50-nic'],
-                              'virbr1': ['em1', 'virbr1-nic', 'virbr4-nic',
-                                         'virbr5-nic'],
-                              'virbr0': ['virbr0-nic', 'virbr2-nic',
-                                         'virbr3-nic']})
+        self.assertEqual(br, {'virbr2': {"iface": ['em1', 'virbr10-nic',
+                                                   'virbr40-nic', 'virbr50-nic'],
+                                         "stp": "yes"},
+                              'virbr1': {"iface": ['em1', 'virbr1-nic',
+                                                   'virbr4-nic', 'virbr5-nic'],
+                                         "stp": "yes"},
+                              'virbr0': {"iface": ['virbr0-nic', 'virbr2-nic',
+                                                   'virbr3-nic'],
+                                         "stp": "yes"}})
 
     def tearDown(self):
         self.god.unstub_all()
