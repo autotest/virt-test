@@ -2374,14 +2374,20 @@ def vol_resize(volume_name, capacity, pool_name="", extra="", **dargs):
     return command(cmd, **dargs)
 
 
-def capabilities(option='', **dargs):
+def capabilities(option='', to_file=None, **dargs):
     """
     Return output from virsh capabilities command
 
     :param option: additional options (takes none)
     :param dargs: standardized virsh function API keywords
     """
-    return command('capabilities %s' % option, **dargs).stdout.strip()
+    cmd_result = command('capabilities %s' % option, **dargs)
+    if to_file is not None:
+        result_file = open(to_file, 'w')
+        result_file.write(cmd_result.stdout.strip())
+        result_file.close()
+
+    return cmd_result.stdout.strip()
 
 
 def nodecpustats(option='', **dargs):
