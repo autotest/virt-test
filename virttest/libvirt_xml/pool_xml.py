@@ -19,7 +19,7 @@ class SourceXML(base.LibvirtXMLBase):
 
     __slots__ = ('device_path', 'vg_name', 'host_name', 'dir_path',
                  'adp_type', 'adp_name', 'adp_parent', 'adp_wwnn',
-                 'adp_wwpn')
+                 'adp_wwpn', 'format_type')
 
     def __init__(self, virsh_instance=base.virsh):
         """
@@ -69,6 +69,11 @@ class SourceXML(base.LibvirtXMLBase):
                                parent_xpath='/',
                                tag_name='adapter',
                                attribute='wwpn')
+        accessors.XMLAttribute(property_name='format_type',
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='format',
+                               attribute='type')
         super(SourceXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<source></source>"
 
