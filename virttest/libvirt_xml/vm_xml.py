@@ -325,7 +325,10 @@ class VMXMLBase(base.LibvirtXMLBase):
         """
         Remove all devices
         """
-        self.xmltreefile.remove_by_xpath('/devices')
+        try:
+            self.xmltreefile.remove_by_xpath('/devices')
+        except (AttributeError, TypeError):
+            pass  # Element already doesn't exist
         self.xmltreefile.write()
 
     def get_seclabel(self):
@@ -1149,7 +1152,10 @@ class VMXML(VMXMLBase):
         """
         Remove all graphics devices.
         """
-        self.xmltreefile.remove_by_xpath('/devices/graphics')
+        try:
+            self.xmltreefile.remove_by_xpath('/devices/graphics')
+        except (AttributeError, TypeError):
+            pass  # Element already doesn't exist
         self.xmltreefile.write()
 
     def add_hostdev(self, source_address, mode='subsystem',
