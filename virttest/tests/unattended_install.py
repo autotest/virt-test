@@ -12,7 +12,7 @@ from autotest.client import utils
 from virttest import virt_vm, utils_misc, utils_disk
 from virttest import qemu_monitor, remote, syslog_server
 from virttest import http_server, data_dir, utils_net, utils_test
-from virttest import funcatexit
+from virttest import funcatexit, storage
 
 
 # Whether to print all shell commands called
@@ -1001,10 +1001,10 @@ def run(test, params, env):
             error.context("Copy image from NFS Server")
             utils_test.run_image_copy(test, params, env)
 
-    image = '%s.%s' % (params['image_name'], params['image_format'])
-    image_name = os.path.basename(image)
     src = params.get('images_good')
-    dst = '%s/%s' % (data_dir.get_data_dir(), image)
+    base_dir = params.get("images_base_dir", data_dir.get_data_dir())
+    dst = storage.get_image_filename(params, base_dir)
+    image_name = os.path.basename(dst)
     mount_point = params.get("dst_dir")
     if mount_point and src:
         funcatexit.register(env, params.get("type"), copy_file_from_nfs, src,
