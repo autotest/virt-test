@@ -2135,3 +2135,72 @@ class VM(virt_vm.BaseVM):
         else:
             logging.error(jobresult)
         return False
+
+    def get_pci_devices(self, device_str=None):
+        """
+        Get PCI devices in vm accroding to given device character.
+
+        :param device_str: a string to identify device.
+        """
+        session = self.wait_for_login()
+        if device_str is None:
+            cmd = "lspci -D"
+        else:
+            cmd = "lspci -D | grep %s" % device_str
+        lines = session.cmd_output(cmd)
+        session.close()
+        pci_devices = []
+        for line in lines.splitlines():
+            pci_devices.append(line.split()[0])
+        return pci_devices
+
+    def get_disks(self, diskname=None):
+        """
+        Get disks in vm.
+
+        :param diskname: Specify disk to be listed,
+                         used for checking given disk.
+        """
+        cmd = "lsblk --nodeps -n"
+        if diskname:
+            cmd += " | grep %s" % diskname
+        session = self.wait_for_login()
+        lines = session.cmd_output(cmd)
+        session.close()
+        disks = []
+        for line in lines.splitlines():
+            if line.count(" disk "):
+                disks.append("/dev/%s" % line.split()[0])
+        return disks
+
+    def get_interfaces(self):
+        """
+        Get available interfaces in vm.
+        """
+        cmd = "cat /proc/net/dev"
+        session = self.wait_for_login()
+        lines = session.cmd_output(cmd)
+        session.close()
+        interfaces = []
+        for line in lines.splitlines():
+            if len(line.split(':')) != 2:
+                continue
+            interfaces.append(line.split(':')[0].strip())
+        return interfaces
+
+    def get_interface_mac(self, interface):
+        """
+        Get mac address of interface by given name.
+        """
+        if interface not in self.get_interfaces():
+            return None
+        cmd = "cat /sys/class/net/%s/address" % interface
+        session = self.wait_for_login()
+        try:
+            mac = session.cmd_output(cmd)
+        except Exception, detail:
+            session.close()
+            logging.error(str(detail))
+            return None
+        session.close()
+        return mac.strip()

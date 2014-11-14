@@ -2562,3 +2562,264 @@ def rm_ker_cmd(kernel_cmdline, kernel_param):
         kernel_cmdline = re.sub(" %s " % kernel_param, " ",
                                 kernel_cmdline_cmp).strip()
     return kernel_cmdline
+
+
+def check_module(module_name, submodules=[]):
+    """
+    Check whether module and its submodules work.
+    """
+    module_info = utils.loaded_module_info(module_name)
+    logging.debug(module_info)
+    # Return if module is not loaded.
+    if not len(module_info):
+        logging.debug("Module %s was not loaded.", module_name)
+        return False
+
+    module_work = True
+    l_sub = module_info.get('submodules')
+    for submodule in submodules:
+        if submodule not in l_sub:
+            logging.debug("Submodule %s of %s is not loaded.",
+                          submodule, module_name)
+            module_work = False
+    return module_work
+
+
+def get_pci_devices_in_group(str_flag=""):
+    """
+    Get PCI Devices. Classify pci devices accroding its bus
+    and slot, devices with same bus and slot will be put together.
+    The format will be {'domain:bus:slot': 'device_function',...}
+
+    :param str_flag: the match string to filter devices.
+    """
+    d_lines = utils.run("lspci -bDnn | grep \"%s\"" % str_flag).stdout
+
+    devices = {}
+    for line in d_lines.splitlines():
+        pci_id = line.strip().split()[0]
+        # It's a string with format: domain:bus:slot -> 0000:00:12
+        pci_slot = pci_id.split('.')[0]
+        # The function of pci device
+        pci_function = pci_id.split('.')[1]
+        pci_list = devices.get(pci_slot, [])
+        pci_list.append(pci_id)
+        devices[pci_slot] = pci_list
+    return devices
+
+
+def get_pci_group_by_id(pci_id, device_type=""):
+    """
+    Fit pci_id to a group list which has same domain:bus:slot.
+
+    :param pci_id: pci id of a device:
+                        domain:bus:slot.function or domain:bus:slot
+                        even bus:slot
+    :param device_type: string which can stand device
+                        like 'Ethernet', 'Fibre'
+    """
+    if len(pci_id.split(':')) < 2:
+        logging.error("Please provide formal pci id.")
+        # Informal pci_id, no matched list
+        return []
+    devices = get_pci_devices_in_group(device_type)
+    for device_key, device_value in devices.items():
+        for value in device_value:
+            if value.count(pci_id):
+                return devices[device_key]
+    # No matched devices
+    return []
+
+
+def get_pci_vendor_device(pci_id):
+    """
+    Get vendor and device number by pci id.
+
+    :return: a 'vendor device' list include all matched devices
+    """
+    matched_pci = utils.run("lspci -n -s %s" % pci_id,
+                            ignore_status=True).stdout
+    pci_vd = []
+    for line in matched_pci.splitlines():
+        for string in line.split():
+            vd = re.match("\w\w\w\w:\w\w\w\w", string)
+            if vd is not None:
+                pci_vd.append(vd.group(0))
+                break
+    return pci_vd
+
+
+def bind_device_driver(pci_id, driver_type):
+    """
+    Bind device driver.
+
+    :param driver_type: Supported drivers: igb, lpfc, vfio-pci
+    """
+    vd_list = get_pci_vendor_device(pci_id)
+    if len(vd_list) == 0:
+        logging.error("Can't find device matched.")
+        return False
+    bind_file = "/sys/bus/pci/drivers/%s/new_id" % driver_type
+    vendor = vd_list[0].split(':')[0]
+    device = vd_list[0].split(':')[1]
+    bind_cmd = "echo %s %s > %s" % (vendor, device, bind_file)
+    if utils.run(bind_cmd, ignore_status=True).exit_status:
+        return False
+    return True
+
+
+def unbind_device_driver(pci_id):
+    """
+    Unbind device current driver.
+    """
+    vd_list = get_pci_vendor_device(pci_id)
+    if len(vd_list) == 0:
+        logging.error("Can't find device matched.")
+        return False
+    unbind_file = "/sys/bus/pci/devices/%s/driver/unbind" % pci_id
+    unbind_cmd = "echo %s > %s" % (pci_id, unbind_file)
+    unbind_ret = utils.run(unbind_cmd, ignore_status=True)
+    if unbind_ret.exit_status:
+        logging.error(unbind_ret)
+        return False
+    return True
+
+
+def check_device_driver(pci_id, driver_type):
+    """
+    Check whether device's driver is same as expected.
+    """
+    device_driver = "/sys/bus/pci/devices/%s/driver" % pci_id
+    if not os.path.isdir(device_driver):
+        logging.debug("Make sure %s has binded driver.")
+        return False
+    driver = utils.run("readlink %s" % device_driver,
+                       ignore_status=True).stdout.strip()
+    driver = os.path.basename(driver)
+    logging.debug("Current %s driver is %s", pci_id, driver)
+    logging.debug("Expected %s driver is %s", pci_id, driver_type)
+    if driver == driver_type:
+        return True
+    return False
+
+
+class VFIOError(Exception):
+
+    def __init__(self, err):
+        Exception.__init__(self, err)
+        self.error = err
+
+    def __str__(self):
+        return self.error
+
+
+class VFIOController(object):
+
+    """Control Virtual Function for testing"""
+
+    def __init__(self, load_modules=True, allow_unsafe_interrupts=True):
+        """
+        Initalize prerequisites for enabling VFIO.
+
+        """
+        # Step1: Check whether kernel add parameter of iommu
+        self.check_iommu()
+
+        # Step2: Check whether modules have been probed
+        # Necessary modules for vfio and their submodules.
+        self.vfio_modules = {'vfio': [],
+                             'vfio_pci': [],
+                             'vfio_iommu_type1': []}
+        # Used for checking modules
+        modules_error = []
+        for key, value in self.vfio_modules.items():
+            if check_module(key, value):
+                continue
+            elif load_modules:
+                try:
+                    utils.load_module(key)
+                except error.CmdError, detail:
+                    modules_error.append("Load module %s failed: %s"
+                                         % (key, detail))
+            else:
+                modules_error.append("Module %s does not work." % key)
+        if len(modules_error):
+            raise VFIOError(str(modules_error))
+
+        # Step3: Enable the interrupt remapping support
+        lnk = "/sys/module/vfio_iommu_type1/parameters/allow_unsafe_interrupts"
+        if allow_unsafe_interrupts:
+            try:
+                utils.run("echo Y > %s" % lnk)
+            except error.CmdError, detail:
+                raise VFIOError(str(detail))
+
+    def check_iommu(self):
+        """
+        Check whether iommu group is available.
+        """
+        grub_file = "/etc/grub2.cfg"
+        if utils.run("ls %s" % grub_file, ignore_status=True).exit_status:
+            grub_file = "/etc/grub.cfg"
+
+        grub_content = utils.run("cat %s" % grub_file).stdout
+        for line in grub_content.splitlines():
+            if re.search("vmlinuz.*intel_iommu=on", line):
+                return
+        raise VFIOError("Please add 'intel_iommu=on' to kernel and "
+                        "reboot to effect it.")
+
+    def get_pci_iommu_group_id(self, pci_id, device_type=""):
+        """
+        Get pci devices iommu group id
+        """
+        pci_group_devices = get_pci_group_by_id(pci_id, device_type)
+        if len(pci_group_devices) == 0:
+            raise error.TestError("Can't find device in provided pci group: %s"
+                                  % pci_id)
+        readlink_cmd = ("readlink /sys/bus/pci/devices/%s/iommu_group"
+                        % pci_group_devices[0])
+        try:
+            group_id = int(os.path.basename(utils.run(readlink_cmd).stdout))
+        except ValueError, detail:
+            raise error.TestError("Get iommu group id failed:%s" % detail)
+        return group_id
+
+    def get_iommu_group_devices(self, group_id):
+        """
+        Get all devices in one group by its id.
+        """
+        output = utils.run("ls /sys/kernel/iommu_groups/%s/devices/"
+                           % group_id).stdout
+        group_devices = []
+        for line in output.splitlines():
+            devices = line.split()
+            group_devices += devices
+        return group_devices
+
+    def bind_device_to_iommu_group(self, pci_id):
+        """
+        Bind device to iommu group.
+        """
+        return bind_device_driver(pci_id, "vfio-pci")
+
+    def add_device_to_iommu_group(self, pci_id):
+        """
+        Add one single device to iommu group.
+        """
+        unbind_device_driver(pci_id)
+        if not self.bind_device_to_iommu_group(pci_id):
+            logging.debug('Bind vfio driver for %s failed.', pci_id)
+            return False
+        if not check_device_driver(pci_id, "vfio-pci"):
+            logging.debug("Awesome, driver does not match after binding.")
+            return False
+        return True
+
+    def check_vfio_id(self, group_id):
+        """
+        Check whether given vfio group has been established.
+        """
+        if os.path.exists("/dev/vfio/%s" % group_id):
+            return True
+        return False
