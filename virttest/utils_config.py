@@ -89,6 +89,8 @@ class SectionlessConfig(object):
     def __init__(self, path):
         self.path = path
         self.parser = ConfigParser.ConfigParser()
+        # Prevent of converting option names to lower case
+        self.parser.optionxform = str
         self.backup_content = open(path, 'r').read()
         read_fp = StringIO.StringIO('[root]\n' + self.backup_content)
         self.parser.readfp(read_fp)
@@ -427,4 +429,21 @@ class LibvirtdSysConfig(LibvirtConfigCommon):
         'QEMU_AUDIO_DRV': 'string',
         'SDL_AUDIODRIVER': 'string',
         'LIBVIRTD_NOFILES_LIMIT': 'int',
+    }
+
+
+class LibvirtGuestsConfig(LibvirtConfigCommon):
+
+    """
+    Class for sysconfig libvirt-guests config file.
+    """
+    conf_path = '/etc/sysconfig/libvirt-guests'
+    __option_types__ = {
+        'URIS': 'string',
+        'ON_BOOT': 'string',
+        'START_DELAY': 'int',
+        'ON_SHUTDOWN': 'string',
+        'PARALLEL_SHUTDOWN': 'int',
+        'SHUTDOWN_TIMEOUT': 'int',
+        'BYPASS_CACHE': 'boolean'
     }
