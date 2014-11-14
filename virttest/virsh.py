@@ -208,9 +208,9 @@ class VirshSession(aexpect.ShellSession):
                 return 1, out
         return 0, out
 
-    def cmd_result(self, cmd, ignore_status=False, debug=False):
+    def cmd_result(self, cmd, ignore_status=False, debug=False, timeout=60):
         """Mimic utils.run()"""
-        exit_status, stdout = self.cmd_status_output(cmd)
+        exit_status, stdout = self.cmd_status_output(cmd, timeout=timeout)
         stderr = ''  # no way to retrieve this separately
         result = utils.CmdResult(cmd, stdout, stderr, exit_status)
         if not ignore_status and exit_status:
@@ -618,6 +618,7 @@ def command(cmd, **dargs):
     session_id = dargs.get('session_id', None)
     readonly = dargs.get('readonly', False)
     unprivileged_user = dargs.get('unprivileged_user', None)
+    timeout = dargs.get('timeout', None)
 
     # Check if this is a VirshPersistent method call
     if session_id:
@@ -629,11 +630,21 @@ def command(cmd, **dargs):
     if debug:
         logging.debug("Running virsh command: %s", cmd)
 
+    if timeout:
+        try:
+            timeout = int(timeout)
+        except ValueError:
+            logging.error("Ignore the invalid timeout value: %s", timeout)
+            timeout = None
+
     if session:
         # Utilize persistent virsh session, not suit for readonly mode
         if readonly:
             logging.debug("Ignore readonly flag for this virsh session")
-        ret = session.cmd_result(cmd, ignore_status, debug)
+        if timeout is None:
+            timeout = 60
+        ret = session.cmd_result(cmd, ignore_status=ignore_status,
+                                 debug=debug, timeout=timeout)
         # Mark return value with session it came from
         ret.from_session_id = session_id
     else:
@@ -655,7 +666,8 @@ def command(cmd, **dargs):
             cmd = "su - %s -c '%s'" % (unprivileged_user, cmd)
 
         # Raise exception if ignore_status is False
-        ret = utils.run(cmd, verbose=debug, ignore_status=ignore_status)
+        ret = utils.run(cmd, timeout=timeout, verbose=debug,
+                        ignore_status=ignore_status)
         # Mark return as not coming from persistent virsh session
         ret.from_session_id = None
 
