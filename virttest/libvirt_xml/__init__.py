@@ -51,3 +51,5 @@ from virttest.libvirt_xml.vol_xml import VolXML
 from virttest.libvirt_xml.nwfilter_xml import NwfilterXML
 
 from virttest.libvirt_xml.sysinfo_xml import SysinfoXML
+
+from virttest.libvirt_xml.snapshot_xml import SnapshotXML
