@@ -742,34 +742,44 @@ class Bridge(object):
         """
         Get bridge list.
         """
-        ebr_i = re.compile(r"^(\S+).*?\s+$", re.MULTILINE)
-        br_i = re.compile(r"^(\S+).*?(\S+)$", re.MULTILINE)
+        ebr_i = re.compile(r"^(\S+).*?(\S+)$", re.MULTILINE)
+        br_i = re.compile(r"^(\S+).*?(\S+)\s+(\S+)$", re.MULTILINE)
         nbr_i = re.compile(r"^\s+(\S+)$", re.MULTILINE)
         out_line = (utils.run(r"brctl show", verbose=False).stdout.splitlines())
         result = dict()
         bridge = None
-        iface = None
 
         for line in out_line[1:]:
-            br_line = ebr_i.findall(line)
-            if br_line:
-                (tmpbr) = br_line[0]
+            iface_var = None
+            stp_var = None
+            if len(line.split()) == 3:
+                # virbr0 8000.fe54005e05e0 [no|yes][\s+]
+                (tmpbr, stp_var) = ebr_i.findall(line.strip())[0]
                 bridge = tmpbr
-                result[bridge] = []
+                br_attrs = dict()
+                if stp_var:
+                    br_attrs["stp"] = stp_var
+                br_attrs["iface"] = []
+                result[bridge] = br_attrs
             else:
                 br_line = br_i.findall(line)
                 if br_line:
-                    (tmpbr, iface) = br_i.findall(line)[0]
+                    # virbr0 8000.fe54005e05e0 yes vnet0
+                    (tmpbr, stp_var, iface_var) = br_line[0]
                     bridge = tmpbr
-                    result[bridge] = []
+                    br_attrs = dict()
+                    if stp_var:
+                        br_attrs["stp"] = stp_var
+                    br_attrs["iface"] = []
+                    result[bridge] = br_attrs
                 else:
+                    #   virbr0 8000.fe54005e05e0 yes vnet0
+                    # >                              vnet1
                     if_line = nbr_i.findall(line)
                     if if_line:
-                        iface = if_line[0]
-
-            if iface and iface not in ['yes', 'no']:  # add interface to bridge
-                result[bridge].append(iface)
-
+                        iface_var = if_line[0]
+            if iface_var and iface_var not in ['yes', 'no']:  # add interface to bridge
+                br_attrs["iface"].append(iface_var)
         return result
 
     def list_br(self):
@@ -780,9 +790,10 @@ class Bridge(object):
         Return all interfaces used by bridge.
         """
         interface_list = []
-        for value in self.get_structure().values():
-            interface_list += value
-        return list(set(interface_list))
+        for br in self.list_br():
+            for (value) in self.get_structure()[br]['iface']:
+                interface_list.append(value)
+        return interface_list
 
     def port_to_br(self, port_name):
         """
@@ -792,8 +803,8 @@ class Bridge(object):
         :return: Bridge name or None if there is no bridge which contain port.
         """
         bridge = None
-        for (br, ifaces) in self.get_structure().iteritems():
-            if port_name in ifaces:
+        for br in self.list_br():
+            if port_name in self.get_structure()[br]['iface']:
                 bridge = br
         return bridge
 
@@ -845,6 +856,17 @@ class Bridge(object):
         ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
         fcntl.ioctl(ctrl_sock, arch.SIOCBRDELBR, brname)
         ctrl_sock.close()
+
+    def get_stp_status(self, brname):
+        """
+        get STP status
+        """
+        bridge_stp = None
+        try:
+            bridge_stp = self.get_structure()[brname]['stp']
+        except KeyError:
+            logging.error("Not find bridge %s", brname)
+        return bridge_stp
 
 
 def __init_openvswitch(func):
