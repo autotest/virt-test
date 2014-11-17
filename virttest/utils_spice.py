@@ -37,6 +37,30 @@ def wait_timeout(timeout=10):
     time.sleep(timeout)
 
 
+def kill_app(vm_name, app_name, params, env):
+    """
+    Kill selected app on selected VM
+
+    :params vm_name - VM name in parameters
+    :params app_name - name of application
+    """
+    vm = env.get_vm(params[vm_name])
+
+    vm.verify_alive()
+    vm_session = vm.wait_for_login(
+        timeout=int(params.get("login_timeout", 360)))
+
+    logging.info("Try to kill %s", app_name)
+    if vm.params.get("os_type") == "linux":
+        vm_session.cmd("pkill %s" % app_name
+                       .split(os.path.sep)[-1])
+    elif vm.params.get("os_type") == "windows":
+        vm_session.cmd_output("taskkill /F /IM %s" % app_name
+                              .split('\\')[-1])
+    vm.verify_alive()
+    vm_session.close()
+
+
 def verify_established(client_vm, host, port, rv_binary,
                        tls_port=None, secure_channels=None):
     """
@@ -166,8 +190,8 @@ def verify_vdagent(guest_session, test_timeout):
     try:
         guest_session.cmd(cmd, print_func=logging.info, timeout=test_timeout)
     finally:
-        logging.debug("----------- End of guest check to see if vdagent package"
-                      " is available ------------")
+        logging.debug("----------- End of guest check to see if vdagent "
+                      "package is available ------------")
     wait_timeout(3)
 
 
@@ -203,7 +227,6 @@ def verify_virtio(guest_session, test_timeout):
     :param guest_session: ssh session of the VM
     :param test_timeout: timeout time for the cmds
     """
-    #cmd = "lsmod | grep virtio_console"
     cmd = "ls /dev/virtio-ports/"
     try:
         guest_session.cmd(cmd, print_func=logging.info, timeout=test_timeout)
@@ -225,24 +248,62 @@ def install_rv_win(client, host_path, client_path='C:\\virt-viewer.msi'):
         timeout=int(client.params.get("login_timeout", 360)))
     client.copy_files_to(host_path, client_path)
     try:
-        session.cmd_output(client_path + " /S")
+        session.cmd_output('start /wait msiexec /i ' + client_path +
+                           ' INSTALLDIR="C:\\virt-viewer"')
+    except:
+        pass
+
+
+def install_usbclerk_win(client, host_path, client_path="C:\\usbclerk.msi"):
+    """
+    Install remote-viewer on a windows client
+
+    @param client:      VM object
+    @param host_path:   Location of installer on host
+    @param client_path: Location of installer after copying
+    """
+    session = client.wait_for_login(timeout=int(
+                                    client.params.get("login_timeout", 360)))
+    client.copy_files_to(host_path, client_path)
+    try:
+        session.cmd_output("start /wait msiexec /i " + client_path + " /qn")
     except:
         pass
 
 
 def clear_interface(vm, login_timeout=360, timeout=5):
     """
-    Clears user interface of a vm without restart
+    Clears user interface of a vm without reboot
 
     :param vm:      VM where cleaning is required
+    """
+#   kill remote-viewer window if it is open
+    if vm.params.get("os_type") == "windows":
+        session = vm.wait_for_login()
+        try:
+            session.cmd("taskkill /F /IM remote-viewer.exe")
+        except:
+            logging.info("Remote-viewer not running")
+    else:
+        clear_interface_linux(vm, login_timeout, timeout)
+
+
+def clear_interface_linux(vm, login_timeout, timeout):
+    """
+    Clears user interface of a vm without reboot
+
+    @param vm:      VM where cleaning is required
     """
     logging.info("restarting X on: %s", vm.name)
     session = vm.wait_for_login(username="root", password="123456",
                                 timeout=login_timeout)
-    pid = session.cmd("pgrep Xorg")
-    session.cmd("killall Xorg")
-
-    utils_misc.wait_for(lambda: _is_pid_alive(session, pid), 10, timeout, 0.2)
+    try:
+        pid = session.cmd("pgrep Xorg")
+        session.cmd("killall Xorg")
+        utils_misc.wait_for(lambda: _is_pid_alive(session, pid), 10,
+                            timeout, 0.2)
+    except:
+        pass
 
     try:
         session.cmd("ps -C Xorg")
@@ -301,14 +362,15 @@ def gen_rv_file(params, guest_vm, host_subj=None, cacert=None):
                   "host=%s\n" % utils_net.get_host_ip_address(params) +
                   "port=%s\n" % guest_vm.get_spice_var("spice_port"))
 
-    ticket = params.get("spice_password")
-    ticket_send = params.get("spice_password_send")
-    qemu_ticket = params.get("qemu_password")
+    ticket = params.get("spice_password", None)
+    ticket_send = params.get("spice_password_send", None)
+    qemu_ticket = params.get("qemu_password", None)
     if ticket_send:
         ticket = ticket_send
     if qemu_ticket:
         ticket = qemu_ticket
-    rv_file.write("password=%s\n" % ticket)
+    if ticket:
+        rv_file.write("password=%s\n" % ticket)
 
     if guest_vm.get_spice_var("spice_ssl") == "yes":
         rv_file.write("tls-port=%s\n" %
