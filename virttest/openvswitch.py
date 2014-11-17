@@ -169,7 +169,7 @@ class OpenVSwitchControl(object):
         try:
             result = utils.run(os_dep.command("ovs-vswitchd"),
                                args=["--version"])
-            pattern = "ovs-vswitchd \(Open vSwitch\) (.+)"
+            pattern = "ovs-vswitchd \(Open vSwitch\) (\d+\.\d+\.\d+).*"
             version = re.search(pattern, result.stdout).group(1)
         except error.CmdError:
             logging.debug("OpenVSwitch is not available in system.")
