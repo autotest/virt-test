@@ -23,11 +23,6 @@ class Interface(base.TypedDeviceBase):
                                  forbidden=None,
                                  parent_xpath='/',
                                  tag_name='source')
-        accessors.XMLElementDict(property_name="driver",
-                                 libvirtxml=self,
-                                 forbidden=None,
-                                 parent_xpath='/',
-                                 tag_name='driver')
         accessors.XMLAttribute(property_name="mac_address",
                                libvirtxml=self,
                                forbidden=None,
@@ -44,6 +39,12 @@ class Interface(base.TypedDeviceBase):
                                  parent_xpath='/',
                                  tag_name='bandwidth',
                                  subclass=self.Bandwidth,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
+        accessors.XMLElementNest("driver", self,
+                                 parent_xpath='/',
+                                 tag_name='driver',
+                                 subclass=self.Driver,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
         accessors.XMLAttribute(property_name="model",
@@ -64,6 +65,15 @@ class Interface(base.TypedDeviceBase):
         Return a new interafce banwidth instance from dargs
         """
         new_one = self.Bandwidth(virsh_instance=self.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
+
+    def new_driver(self, **dargs):
+        """
+        Return a new interafce driver instance from dargs
+        """
+        new_one = self.Driver(virsh_instance=self.virsh)
         for key, value in dargs.items():
             setattr(new_one, key, value)
         return new_one
@@ -89,3 +99,29 @@ class Interface(base.TypedDeviceBase):
                                      tag_name="outbound")
             super(self.__class__, self).__init__(virsh_instance=virsh_instance)
             self.xml = '<bandwidth/>'
+
+    class Driver(base.base.LibvirtXMLBase):
+
+        """
+        Interface Driver xml class.
+
+        Properties:
+
+        driver:
+            dict.
+        host:
+            dict. Keys: csum, gso, tso4, tso6, ecn, ufo
+        guest:
+            dict. Keys: csum, gso, tso4, tso6, ecn, ufo
+        """
+        __slots__ = ("driver_attr", "driver_host", "driver_guest")
+
+        def __init__(self, virsh_instance=base.base.virsh):
+            accessors.XMLElementDict("driver_attr", self, parent_xpath="/",
+                                     tag_name="driver")
+            accessors.XMLElementDict("driver_host", self, parent_xpath="/",
+                                     tag_name="host")
+            accessors.XMLElementDict("driver_guest", self, parent_xpath="/",
+                                     tag_name="guest")
+            super(self.__class__, self).__init__(virsh_instance=virsh_instance)
+            self.xml = '<driver/>'
