@@ -62,6 +62,31 @@ def iscsi_login(target_name):
     return target_login
 
 
+def iscsi_node_del(target_name=None):
+    """
+    Delete target node record, if the target name is not set then delete
+    all target node records.
+
+    :params target_name: Name of the target.
+    """
+    node_list = iscsi_get_nodes()
+    cmd = ''
+    if target_name:
+        for node_tup in node_list:
+            if target_name in node_tup:
+                cmd = "iscsiadm -m node -o delete -T %s " % target_name
+                cmd += "--portal %s" % node_tup[0]
+                utils.system(cmd)
+        if not cmd:
+            logging.error("The target '%s' for delete is not in target node"
+                          " record", target_name)
+    else:
+        for node_tup in node_list:
+            cmd = "iscsiadm -m node -o delete -T %s " % node_tup[1]
+            cmd += "--portal %s" % node_tup[0]
+            utils.system(cmd)
+
+
 def iscsi_logout(target_name=None):
     """
     Logout from a target. If the target name is not set then logout all
@@ -417,6 +442,7 @@ class Iscsi(object):
         Clean up env after iscsi used.
         """
         self.logout()
+        iscsi_node_del(self.target)
         if os.path.isfile("/etc/iscsi/initiatorname.iscsi-%s" % self.id):
             cmd = " mv /etc/iscsi/initiatorname.iscsi-%s" % self.id
             cmd += " /etc/iscsi/initiatorname.iscsi"
