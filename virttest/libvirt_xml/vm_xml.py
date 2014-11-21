@@ -1239,6 +1239,18 @@ class VMXML(VMXMLBase):
         vmxml.mb = mb_xml
         vmxml.sync()
 
+    @staticmethod
+    def del_memoryBacking_tag(vm_name, virsh_instance=base.virsh):
+        """
+        Remove the memoryBacking tag from a domain
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        try:
+            vmxml.xmltreefile.remove_by_xpath("/memoryBacking")
+            vmxml.sync()
+        except (AttributeError, TypeError):
+            pass  # Element already doesn't exist
+
 
 class VMCPUXML(base.LibvirtXMLBase):
 
