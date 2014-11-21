@@ -2712,3 +2712,29 @@ def virt_inspector(disk_or_domain, is_disk=False, ignore_status=True,
     else:
         cmd += " -d %s" % disk_or_domain
     return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_sysprep_operations():
+    """Get virt-sysprep support operation"""
+    sys_list_cmd = "virt-sysprep --list-operations"
+    result = lgf_command(sys_list_cmd, ignore_status=False)
+    oper_info = result.stdout.strip()
+    oper_dict = {}
+    for oper_item in oper_info.splitlines():
+        oper = oper_item.split("*")[0].strip()
+        desc = oper_item.split("*")[-1].strip()
+        oper_dict[oper] = desc
+    return oper_dict
+
+
+def virt_cmd_contain_opt(virt_cmd, opt):
+    """ Check if opt is supported by virt-command"""
+    if lgf_cmd_check(virt_cmd) is None:
+        raise LibguestfsCmdError
+    if not opt.startswith('-'):
+        raise ValueError("Format should be '--a' or '-a', not '%s'" % opt)
+    virt_help_cmd = virt_cmd + " --help"
+    result = lgf_command(virt_help_cmd, ignore_status=False)
+    # "--add" will not equal to "--addxxx"
+    opt = " " + opt.strip() + " "
+    return (result.stdout.count(opt) != 0)
