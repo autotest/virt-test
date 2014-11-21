@@ -18,13 +18,13 @@ class iscsi_test(unittest.TestCase):
 
     def setup_stubs_init(self):
         os_dep.command.expect_call("iscsiadm")
-        utils.system_output.expect_call("hostname").and_return("localhost")
         os_dep.command.expect_call("tgtadm")
 
     def setup_stubs_login(self, iscsi_obj):
         c_cmd = "dd if=/dev/zero of=/tmp/iscsitest count=1024 bs=1K"
         lg_cmd = "iscsiadm --mode node --login --targetname "
         lg_cmd += "%s" % iscsi_obj.target
+        lg_cmd += " --portal %s" % iscsi_obj.portal_ip
         self.setup_stubs_portal_visible(iscsi_obj)
         os.path.isfile.expect_call(iscsi_obj.emulated_image).and_return(False)
         utils.system.expect_call(c_cmd)

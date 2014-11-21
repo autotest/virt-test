@@ -46,13 +46,15 @@ def iscsi_get_nodes():
     return nodes
 
 
-def iscsi_login(target_name):
+def iscsi_login(target_name, portal):
     """
     Login to a target with the target name
 
     :param target_name: Name of the target
+    :params portal: Hostname/Ip for iscsi server
     """
     cmd = "iscsiadm --mode node --login --targetname %s" % target_name
+    cmd += " --portal %s" % portal
     output = utils.system_output(cmd)
 
     target_login = ""
@@ -113,7 +115,7 @@ class Iscsi(object):
         if params.get("portal_ip"):
             self.portal_ip = params.get("portal_ip")
         else:
-            self.portal_ip = utils.system_output("hostname")
+            self.portal_ip = "localhost"
         if params.get("iscsi_thread_id"):
             self.id = params.get("iscsi_thread_id")
         else:
@@ -192,7 +194,7 @@ class Iscsi(object):
                 login_flag = True
 
         if login_flag:
-            iscsi_login(self.target)
+            iscsi_login(self.target, self.portal_ip)
 
     def get_device_name(self):
         """
