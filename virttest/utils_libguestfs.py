@@ -2738,3 +2738,29 @@ def virt_cmd_contain_opt(virt_cmd, opt):
     # "--add" will not equal to "--addxxx"
     opt = " " + opt.strip() + " "
     return (result.stdout.count(opt) != 0)
+
+
+def virt_ls_cmd(disk_or_domain, file_dir_path, is_disk=False, options=None,
+                extra=None, connect_uri=None, ignore_status=True,
+                debug=False, timeout=60):
+    """
+    Execute virt-ls command to check whether file exists.
+
+    :param disk_or_domain: a img path or a domain name.
+    :param file_dir_path: the file or directory need to check.
+    """
+    # disk_or_domain and file_dir_path are necessary parameters.
+    cmd = "virt-ls"
+    if connect_uri is not None:
+        cmd += " -c %s" % connect_uri
+    if is_disk:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
+    cmd += " %s" % file_dir_path
+    if options is not None:
+        cmd += " %s" % options
+    if extra is not None:
+        cmd += " %s" % extra
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
