@@ -427,6 +427,10 @@ def setup_or_cleanup_gluster(is_setup, vol_name, brick_path="", pool_name="",
     :param brick_path: Dir for create glusterfs
     :return: ip_addr or nothing
     """
+    try:
+        utils_misc.find_command("gluster")
+    except ValueError:
+        raise error.TestError("Missing command 'gluster'")
     if not brick_path:
         tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
         brick_path = os.path.join(tmpdir, pool_name)
@@ -879,7 +883,6 @@ class PoolVolumeTest(object):
             hostip = setup_or_cleanup_gluster(True, source_name,
                                               pool_name=pool_name)
             logging.debug("hostip is %s", hostip)
-            cleanup_gluster = True
             extra = "--source-host %s --source-path %s --source-name %s" % \
                     (hostip, source_path, source_name)
 
