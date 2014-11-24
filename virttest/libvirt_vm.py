@@ -950,9 +950,9 @@ class VM(virt_vm.BaseVM):
             logging.debug(e)
         else:
             try:
-                grub = "/etc/grub.cfg"
-                if not session.cmd_status("ls /etc/grub2.cfg"):
-                    grub = "/etc/grub2.cfg"
+                grub = "/boot/grub/grub.conf"
+                if not session.cmd_status("ls /boot/grub2/grub.cfg"):
+                    grub = "/boot/grub2/grub.cfg"
                 kernel_params = "console=%s" % device
                 if speed is not None:
                     kernel_params += ",%s" % speed
@@ -960,12 +960,12 @@ class VM(virt_vm.BaseVM):
                 output = session.cmd_output("cat %s" % grub)
                 if not re.search("console=%s" % device, output):
                     if not remove:
-                        session.sendline("sed -i -e \'s/vmlinuz-.*/& %s/g\' %s"
-                                         % (kernel_params, grub))
+                        session.sendline("sed -i -e \'s/vmlinuz-.*/& %s/g\'"
+                                         " %s; sync" % (kernel_params, grub))
                 else:
                     if remove:
                         session.sendline("sed -i -e \'s/console=%s\w*\s//g\'"
-                                         " %s" % (device, grub))
+                                         " %s; sync" % (device, grub))
                 logging.debug("Set kernel params for %s successfully.", device)
                 return True
             finally:
