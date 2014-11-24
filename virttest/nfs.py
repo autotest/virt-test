@@ -4,10 +4,13 @@ nfs mount and the local nfs set up and mount.
 """
 import re
 import os
+import shutil
 import logging
+import commands
 from autotest.client import os_dep
 from autotest.client.shared import utils, error
 from virttest import utils_misc
+from virttest.utils_conn import SSHConnection
 
 from virttest.staging import service
 
@@ -146,6 +149,7 @@ class Nfs(object):
         self.mount_src = params.get("nfs_mount_src")
         self.nfs_setup = False
         os_dep.command("mount")
+        self.mk_mount_dir = False
         self.unexportfs_in_clean = False
 
         if params.get("setup_local_nfs") == "yes":
@@ -209,6 +213,7 @@ class Nfs(object):
 
         if not os.path.isdir(self.mount_dir):
             os.makedirs(self.mount_dir)
+            self.mk_mount_dir = True
         self.mount()
 
     def cleanup(self):
@@ -221,3 +226,113 @@ class Nfs(object):
         self.umount()
         if self.nfs_setup and self.unexportfs_in_clean:
             self.exportfs.reset_export()
+        if self.mk_mount_dir and os.path.isdir(self.mount_dir):
+            shutil.rmtree(self.mount_dir)
+
+
+class NFSClient(object):
+
+    """
+    NFSClient class for handle nfs remotely mount and umount.
+    """
+
+    def __init__(self, params):
+        # Setup SSH connection
+        self.ssh_obj = SSHConnection(params)
+        self.ssh_obj.conn_setup()
+
+        self.mkdir_mount_remote = False
+        self.mount_dir = params.get("nfs_mount_dir")
+        self.mount_options = params.get("nfs_mount_options")
+        self.mount_src = params.get("nfs_mount_src")
+        self.nfs_client_ip = params.get("nfs_client_ip")
+        self.nfs_server_ip = params.get("nfs_server_ip")
+        self.ssh_user = params.get("ssh_username", "root")
+        self.remote_nfs_mount = params.get("remote_nfs_mount", "yes")
+
+    def is_mounted(self):
+        """
+        Check the NFS is mounted or not.
+
+        :return: If the src is mounted as expect
+        :rtype: Boolean
+        """
+        ssh_cmd = "ssh %s@%s " % (self.ssh_user, self.nfs_client_ip)
+        find_mountpoint_cmd = "mount | grep -E '.*%s.*%s.*'" % (self.mount_src,
+                                                                self.mount_dir)
+        cmd = ssh_cmd + "'%s'" % find_mountpoint_cmd
+        logging.debug("The command: %s", cmd)
+        status, output = commands.getstatusoutput(cmd)
+        if status:
+            logging.debug("The command result: <%s:%s>", status, output)
+            return False
+
+        return True
+
+    def setup(self):
+        """
+        Setup NFS client.
+        """
+        # Mount sharing directory to local host
+        # it has been covered by class Nfs
+
+        # Mount sharing directory to remote host
+        if self.remote_nfs_mount == "yes":
+            self.setup_remote()
+
+    def cleanup(self):
+        """
+        Cleanup NFS client.
+        """
+        ssh_cmd = "ssh %s@%s " % (self.ssh_user, self.nfs_client_ip)
+        logging.debug("Umount %s from %s" % (self.mount_dir, self.nfs_server_ip))
+        umount_cmd = ssh_cmd + "'umount -l %s'" % self.mount_dir
+        try:
+            utils.system(umount_cmd, verbose=True)
+        except error.CmdError:
+            raise error.TestFail("Failed to run: %s", umount_cmd)
+
+        if self.mkdir_mount_remote:
+            rmdir_cmd = ssh_cmd + "'rm -rf %s'" % self.mount_dir
+            try:
+                utils.system(rmdir_cmd, verbose=True)
+            except error.CmdError:
+                raise error.TestFail("Failed to run: %s", rmdir_cmd)
+
+        if self.is_mounted():
+            raise error.TestFail("Failed to umount %s", self.mount_dir)
+
+        # Recover SSH connection
+        self.ssh_obj.auto_recover = True
+        del self.ssh_obj
+
+    def setup_remote(self):
+        """
+        Mount sharing directory to remote host.
+        """
+        ssh_cmd = "ssh %s@%s " % (self.ssh_user, self.nfs_client_ip)
+        check_mount_dir_cmd = ssh_cmd + "'ls -d %s'" % self.mount_dir
+        logging.debug("To check if the %s exists", self.mount_dir)
+        output = commands.getoutput(check_mount_dir_cmd)
+        if re.findall("No such file or directory", output, re.M):
+            mkdir_cmd = ssh_cmd + "'mkdir -p %s'" % self.mount_dir
+            logging.debug("Prepare to create %s", self.mount_dir)
+            s, o = commands.getstatusoutput(mkdir_cmd)
+            if s != 0:
+                raise error.TestFail("Failed to run %s: %s", mkdir_cmd, o)
+            self.mkdir_mount_remote = True
+
+        self.mount_src = "%s:%s" % (self.nfs_server_ip, self.mount_src)
+        logging.debug("Mount %s to %s" % (self.mount_src, self.mount_dir))
+        mount_cmd = ssh_cmd + "'mount -t nfs %s %s -o %s'" % (self.mount_src,
+                                                              self.mount_dir,
+                                                              self.mount_options)
+        try:
+            utils.system(mount_cmd, verbose=True)
+        except error.CmdError:
+            raise error.TestFail("Failed to run: %s", mount_cmd)
+
+        # Check if the sharing directory is mounted
+        if not self.is_mounted():
+            raise error.TestFail("Failed to mount from %s to %s",
+                                 self.mount_src, self.mount_dir)
