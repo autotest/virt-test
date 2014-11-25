@@ -1582,7 +1582,10 @@ def set_cpu_status(cpu_num, enable=True):
     if cpu_status == -1:
         return False
     cpu_file = "/sys/devices/system/cpu/cpu%s/online" % cpu_num
-    cpu_enable = 1 if enable else 0
+    if enable:
+        cpu_enable = 1
+    else:
+        cpu_enable = 0
     if cpu_status == cpu_enable:
         logging.debug("No need to set, %s has already been '%s'"
                       % (cpu_file, cpu_enable))

@@ -104,7 +104,7 @@ class QemuImg(storage.QemuImg):
                 if encrypted != "off":
                     qemu_img_cmd += "encryption=%s," % encrypted
 
-                if image_cluster_size is not None:
+                if image_cluster_size:
                     qemu_img_cmd += "cluster_size=%s," % image_cluster_size
 
                 if has_backing_file == "yes":
