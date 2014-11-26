@@ -1118,7 +1118,8 @@ def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4",
         if os_type == "linux":
             nic_ifname = get_linux_ifname(session, mac_addr)
             info_cmd = "ifconfig -a; ethtool -S %s" % nic_ifname
-            nic_address = get_net_if_addrs(nic_ifname, session.cmd)
+            nic_address = get_net_if_addrs(nic_ifname,
+                                           session.cmd_output)
         elif os_type == "windows":
             info_cmd = "ipconfig /all"
             nic_address = get_net_if_addrs_win(session, mac_addr)
@@ -1127,12 +1128,17 @@ def get_guest_ip_addr(session, mac_addr, os_type="linux", ip_version="ipv4",
             raise IPAddrGetError(mac_addr, "Unknown os type")
 
         if ip_version == "ipv4":
-            return nic_address["ipv4"][-1]
+            if nic_address["ipv4"]:
+                return nic_address["ipv4"][-1]
+            else:
+                return None
         else:
             global_address = [x for x in nic_address["ipv6"]
                               if not x.lower().startswith("fe80")]
             if global_address:
                 return global_address[0]
+            else:
+                return None
     except Exception, err:
         logging.debug(session.cmd_output(info_cmd))
         raise IPAddrGetError(mac_addr, err)
