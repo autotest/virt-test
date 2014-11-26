@@ -47,12 +47,13 @@ class IPXML(base.LibvirtXMLBase):
     IP address block, optionally containing DHCP range information
 
     Properties:
-        dhcp_ranges: RangeList instances (list-like)
+        dhcp_ranges: Dict. keys: start, end
+        host_attr: host mac, name and ip information
         address: string IP address
         netmask: string IP's netmask
     """
 
-    __slots__ = ('dhcp_ranges', 'address', 'netmask')
+    __slots__ = ('dhcp_ranges', 'address', 'netmask', 'hosts')
 
     def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
                  virsh_instance=base.virsh):
@@ -65,49 +66,34 @@ class IPXML(base.LibvirtXMLBase):
         accessors.XMLAttribute(
             'netmask', self, parent_xpath='/', tag_name='ip',
             attribute='netmask')
+        accessors.XMLElementDict('dhcp_ranges', self,
+                                 parent_xpath='/dhcp',
+                                 tag_name='range')
+        accessors.XMLElementList('hosts', self, parent_xpath='/dhcp',
+                                 marshal_from=self.marshal_from_host,
+                                 marshal_to=self.marshal_to_host)
         super(IPXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<ip address='%s' netmask='%s'></ip>" % (address, netmask)
 
-    def get_dhcp_ranges(self):
-        """
-        Returns all XML described DHCP ranges as a RangeList object
-        """
-        xmltreefile = self.__dict_get__('xml')
-        newlist = []
-        for element in xmltreefile.findall('/ip/dhcp/range'):
-            start = element.get('start')  # attribute of range tag
-            end = element.get('end')
-            newlist.append((start, end, ))
-        return RangeList(newlist)
+    @staticmethod
+    def marshal_from_host(item, index, libvirtxml):
+        """Convert a dictionary into a tag + attributes"""
+        del index           # not used
+        del libvirtxml      # not used
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of host "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('host', dict(item))  # return copy of dict, not reference
 
-    def set_dhcp_ranges(self, value):
-        """
-        Sets XML described DHCP ranges from a RangeList object
-        """
-        if not issubclass(type(value), RangeList) or value is not None:
-            raise xcepts.LibvirtXMLError("Value is not a RangeList or subclassa"
-                                         " instance.")
-        # Always start from clean-slate
-        self.del_dhcp_ranges()
-        if value is None:
-            return  # ip element has no dhcp block
-        xmltreefile = self.__dict_get__('xml')
-        dhcp = xml_utils.ElementTree.Element('dhcp')
-        ip_elem = xmltreefile.find('/ip')
-        if ip_elem is None:
-            raise xcepts.LibvirtXMLError("Network contains no IP element")
-        ip_elem.append(dhcp)
-        value.append_to_element(dhcp)
-        xmltreefile.write()
-
-    def del_dhcp_ranges(self):
-        """
-        Removes all DHCP ranges from XML
-        """
-        xmltreefile = self.__dict_get__('xml')
-        element = xmltreefile.find('/dhcp')
-        if element is not None:
-            xmltreefile.remove(element)
+    @staticmethod
+    def marshal_to_host(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes into a dictionary"""
+        del index                    # not used
+        del libvirtxml               # not used
+        if tag != 'host':
+            return None              # skip this one
+        return dict(attr_dict)       # return copy of dict, not reference
 
 
 class PortgroupXML(base.LibvirtXMLBase):
@@ -219,7 +205,8 @@ class NetworkXMLBase(base.LibvirtXMLBase):
 
     __slots__ = ('name', 'uuid', 'bridge', 'defined', 'active',
                  'autostart', 'persistent', 'forward', 'mac', 'ip',
-                 'bandwidth_inbound', 'bandwidth_outbound', 'portgroup')
+                 'bandwidth_inbound', 'bandwidth_outbound', 'portgroup',
+                 'dns_forward', 'domain_name')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
         'defined', 'active',
@@ -244,6 +231,10 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         accessors.XMLElementDict('bandwidth_outbound', self,
                                  parent_xpath='/bandwidth',
                                  tag_name='outbound')
+        accessors.XMLAttribute('dns_forward', self, parent_xpath='/',
+                               tag_name='dns', attribute='forwardPlainNames')
+        accessors.XMLAttribute('domain_name', self, parent_xpath='/',
+                               tag_name='domain', attribute='name')
         super(NetworkXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def __check_undefined__(self, errmsg):
