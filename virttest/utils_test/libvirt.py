@@ -1818,3 +1818,25 @@ def get_all_vol_paths():
         for path in pv.list_volumes().values():
             vol_path.append(path)
     return set(vol_path)
+
+
+def clone_vm(src_vm, dst_vm, auto_clone=True,
+             disk_file=None, mac=None):
+    """
+    Clone vm from src_vm by virt-clone command.
+    """
+    clone_cmd = "virt-clone"
+    try:
+        utils_misc.find_command(clone_cmd)
+    except ValueError:
+        raise error.TestNAError("Missing command 'virt-clone'")
+    option = ""
+    if auto_clone:
+        option += " --auto-clone"
+    if disk_file:
+        option += " --file %s" % disk_file
+    if mac:
+        option += " --mac %s" % mac
+    cmd = ("%s --original=%s --name=%s %s"
+           % (clone_cmd, src_vm, dst_vm, option))
+    utils.run(cmd)
