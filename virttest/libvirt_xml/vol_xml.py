@@ -4,6 +4,7 @@ http://libvirt.org/formatstorage.html#StorageVol
 """
 
 from virttest.libvirt_xml import base, accessors
+from virttest.libvirt_xml.xcepts import LibvirtXMLNotFoundError
 
 
 class VolXMLBase(base.LibvirtXMLBase):
@@ -135,9 +136,12 @@ class VolXML(VolXMLBase):
                                               virsh_instance)
         volume_xml['key'] = vol_xml.key
         volume_xml['path'] = vol_xml.path
-        volume_xml['format'] = vol_xml.format
         volume_xml['capacity'] = vol_xml.capacity
         volume_xml['allocation'] = vol_xml.allocation
+        try:
+            volume_xml['format'] = vol_xml.format
+        except LibvirtXMLNotFoundError:
+            volume_xml['format'] = None
         return volume_xml
 
     @staticmethod
