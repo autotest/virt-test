@@ -1818,3 +1818,50 @@ def get_all_vol_paths():
         for path in pv.list_volumes().values():
             vol_path.append(path)
     return set(vol_path)
+
+
+def do_migration(vm_name, uri, extra, auth_pwd, auth_user="root",
+                 options="--verbose", virsh_patterns=".*100\s%.*"):
+    """
+    Migrate VM to target host.
+    """
+    patterns_yes_no = r".*[Yy]es.*[Nn]o.*"
+    patterns_auth_name = r".*name:.*"
+    patterns_auth_pwd = r".*[Pp]assword.*"
+
+    command = "%s virsh migrate %s %s %s" % (extra, vm_name, options, uri)
+    logging.info("Execute %s", command)
+    # setup shell session
+    session = aexpect.ShellSession(command, echo=True)
+
+    try:
+        # requires access authentication
+        match_list = [patterns_yes_no, patterns_auth_name,
+                      patterns_auth_pwd, virsh_patterns]
+        while True:
+            match, text = session.read_until_any_line_matches(match_list,
+                                                              timeout=30,
+                                                              internal_timeout=1)
+            if match == -4:
+                logging.info("Matched 'yes/no', details: <%s>", text)
+                session.sendline("yes")
+            elif match == -3:
+                logging.info("Matched 'username', details: <%s>", text)
+                session.sendline(auth_user)
+            elif match == -2:
+                logging.info("Matched 'password', details: <%s>", text)
+                session.sendline(auth_pwd)
+            elif match == -1:
+                logging.info("Expected output of virsh migrate: <%s>", text)
+                break
+            else:
+                logging.error("The real prompt text: <%s>", text)
+                break
+
+        session.close()
+        return True
+    except (aexpect.ShellError, aexpect.ExpectError), details:
+        log = session.get_output()
+        session.close()
+        logging.error("Failed to migrate %s: %s\n%s", vm_name, details, log)
+        return False
