@@ -103,7 +103,8 @@ class PoolXMLBase(base.LibvirtXMLBase):
     """
 
     __slots__ = ('pool_type', 'name', 'uuid', 'capacity',
-                 'allocation', 'available', 'source', 'target_path')
+                 'allocation', 'available', 'source', 'target_path',
+                 'mode', 'owner', 'group')
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
     __schema_name__ = "pool"
@@ -138,6 +139,18 @@ class PoolXMLBase(base.LibvirtXMLBase):
                                  libvirtxml=self,
                                  parent_xpath='/target',
                                  tag_name='path')
+        accessors.XMLElementText(property_name='mode',
+                                 libvirtxml=self,
+                                 parent_xpath='/target/permissions',
+                                 tag_name='mode')
+        accessors.XMLElementInt(property_name='owner',
+                                libvirtxml=self,
+                                parent_xpath='/target/permissions',
+                                tag_name='owner')
+        accessors.XMLElementInt(property_name='group',
+                                libvirtxml=self,
+                                parent_xpath='/target/permissions',
+                                tag_name='group')
         super(PoolXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def get_source(self):
