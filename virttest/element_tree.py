@@ -455,10 +455,11 @@ def Element(tag, attrib={}, **extra):
 # @defreturn Element
 
 
-def SubElement(parent, tag, attrib={}, **extra):
+def SubElement(parent, tag, attrib={}, text=None, **extra):
     attrib = attrib.copy()
     attrib.update(extra)
     element = parent.makeelement(tag, attrib)
+    element.text = text
     parent.append(element)
     return element
 

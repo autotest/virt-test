@@ -796,9 +796,13 @@ class XMLElementList(AccessorGeneratorBase):
                                                 index,
                                                 str(item)))
                     raise xcepts.LibvirtXMLAccessorError(msg)
+                text = None
+                if len(element_tuple) == 3:
+                    text = element_tuple[2]
                 xml_utils.ElementTree.SubElement(parent,
                                                  element_tuple[0],
-                                                 element_tuple[1])
+                                                 element_tuple[1],
+                                                 text)
                 index += 1
             self.xmltreefile().write()
 
