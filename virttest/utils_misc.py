@@ -2142,6 +2142,104 @@ def get_winutils_vol(session, label="WIN_UTILS"):
     return device.group(1)
 
 
+def format_windows_disk(session, did, mountpoint, size, fstype="ntfs"):
+    """
+    Create a partition on disk in windows guest and format it.
+
+    :param session: session object to guest.
+    :param did: disk index which show in 'diskpart list disk'.
+    :param mountpoint: mount point for the disk.
+    :param fstype: filesystem type for the disk.
+    :param ostype: guest os type 'windows' or 'linux'.
+    :return Boolean: disk usable or not.
+    """
+    list_disk_cmd = "echo list disk > disk && "
+    list_disk_cmd += "echo exit >> disk && diskpart /s disk"
+    size = int(float(normalize_data_size(size, order_magnitude="M")))
+    disks = session.cmd_output(list_disk_cmd)
+    for disk in disks.splitlines():
+        if re.search(r"DISK %s" % did, disk, re.I | re.M):
+            cmd_header = 'echo list disk > disk &&'
+            cmd_header += 'echo select disk %s >> disk &&' % did
+            cmd_footer = '&& echo exit>> disk && diskpart /s disk'
+            cmd_footer += '&& del /f disk'
+            detail_cmd = 'echo detail disk >> disk'
+            detail_cmd = ' '.join([cmd_header, detail_cmd, cmd_footer])
+            logging.debug("Detail for 'Disk%s'" % did)
+            details = session.cmd_output(detail_cmd)
+            if re.search("Status.*Offline", details, re.I | re.M):
+                online_cmd = 'echo online disk>> disk'
+                online_cmd = ' '.join([cmd_header, online_cmd, cmd_footer])
+                logging.info("Online 'Disk%s'" % did)
+                session.cmd(online_cmd)
+            if re.search("Read.*Yes", details, re.I | re.M):
+                set_rw_cmd = 'echo attributes disk clear readonly>> disk'
+                set_rw_cmd = ' '.join([cmd_header, set_rw_cmd, cmd_footer])
+                logging.info("Clear readonly bit on 'Disk%s'" % did)
+                session.cmd(set_rw_cmd)
+            mkpart_cmd = 'echo create partition primary size=%s >> disk' % size
+            mkpart_cmd = ' '.join([cmd_header, mkpart_cmd, cmd_footer])
+            logging.info("Create partition on 'Disk%s'" % did)
+            session.cmd(mkpart_cmd)
+            logging.info("Format the 'Disk%s' to %s" % (did, fstype))
+            format_cmd = 'echo list partition >> disk && '
+            format_cmd += 'echo select partition 1 >> disk && '
+            format_cmd += 'echo assign letter=%s >> disk && ' % mountpoint
+            format_cmd += 'echo format fs=%s quick >> disk ' % fstype
+            format_cmd = ' '.join([cmd_header, format_cmd, cmd_footer])
+            session.cmd(format_cmd)
+            return True
+
+    return False
+
+
+def format_linux_disk(session, did, mountpoint, size, fstype="ext3"):
+    """
+    Create a partition on disk in linux guest and format and mount it.
+
+    :param session: session object to guest.
+    :param did: disk serial, kname or wwn.
+    :param mountpoint: mount point for the disk.
+    :param fstype: filesystem type for the disk.
+    :param ostype: guest os type 'windows' or 'linux'.
+    :return Boolean: disk usable or not.
+    """
+    list_disk_cmd = "lsblk -p -oKNAME,MOUNTPOINT,SERIAL,SIZE,MODEL,WWN"
+    disks = session.cmd_output(list_disk_cmd)
+    logging.debug("Disks detail: %s" % disks)
+    for disk in disks.splitlines():
+        if did in disk:
+            kname = disk.split()[0]
+            logging.info("Create partition on disk '%s'" % kname)
+            mkpart_cmd = "parted -s %s  mkpart primary 0 %s" % (kname, size)
+            session.cmd(mkpart_cmd)
+            logging.info("Format partition to '%s'" % fstype)
+            format_cmd = "yes|mkfs -t %s %s" % (kname, fstype)
+            session.cmd(format_cmd)
+            logging.info("Mount the disk to '%s'" % mountpoint)
+            mount_cmd = "mount -t %s %s %s" % (fstype, kname, mountpoint)
+            session.cmd(mount_cmd)
+            return True
+
+    return False
+
+
+def format_guest_disk(session, did, mountpoint, size, fstype, ostype):
+    """
+    Create a partition on disk in guest and format and mount it.
+
+    :param session: session object to guest.
+    :param did: disk ID in guest.
+    :param mountpoint: mount point for the disk.
+    :param fstype: filesystem type for the disk.
+    :param ostype: guest os type 'windows' or 'linux'.
+    :return Boolean: disk usable or not.
+    """
+    if ostype == "windows":
+        return format_windows_disk(session, did, mountpoint, size, fstype)
+    return format_linux_disk(session, did, mountpoint, size, fstype)
+
+
 def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
     """
     Divide the valued options into key and value
