@@ -986,14 +986,19 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
-        def add_boot(devices, boot_order, boot_once, boot_menu):
+        def add_boot(devices, boot_order, boot_once, boot_menu, boot_strict):
             cmd = " -boot"
-            pattern = "boot \[order=drives\]\[,once=drives\]\[,menu=on\|off\]"
+            patterns = ["order", "once", "menu", "strict"]
+            options = []
+            for p in patterns:
+                pattern = "boot .*?(\[,?%s=(.*?)\]|\s+)" % p
+                if devices.has_option(pattern):
+                    option = locals()["boot_%s" % p]
+                    options.append("%s=%s" % (p, option))
             if devices.has_option("boot \[a\|c\|d\|n\]"):
                 cmd += " %s" % boot_once
-            elif devices.has_option(pattern):
-                cmd += (" order=%s,once=%s,menu=%s" %
-                        (boot_order, boot_once, boot_menu))
+            elif options:
+                cmd += " %s" % ",".join(options)
             else:
                 cmd = ""
             return cmd
@@ -1718,7 +1723,8 @@ class VM(virt_vm.BaseVM):
             boot_order = params.get("boot_order", "cdn")
             boot_once = params.get("boot_once", "c")
             boot_menu = params.get("boot_menu", "off")
-            cmd = add_boot(devices, boot_order, boot_once, boot_menu)
+            boot_strict = params.get("boot_strict", "off")
+            cmd = add_boot(devices, boot_order, boot_once, boot_menu, boot_strict)
             devices.insert(StrDev('bootmenu', cmdline=cmd))
 
         p9_export_dir = params.get("9p_export_dir")
