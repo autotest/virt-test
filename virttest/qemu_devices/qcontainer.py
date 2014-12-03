@@ -1074,7 +1074,7 @@ class DevContainer(object):
                     bus_params = {'id': _bus_name, 'driver': atype}
                     if num_queues is not None and int(num_queues) > 1:
                         bus_params['num_queues'] = num_queues
-                    if bus_extra_params is not None:
+                    if bus_extra_params:
                         for extra_param in bus_extra_params.split(","):
                             key, value = extra_param.split('=')
                             bus_params[key] = value
