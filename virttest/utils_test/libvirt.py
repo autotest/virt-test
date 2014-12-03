@@ -1127,6 +1127,48 @@ def check_exit_status(result, expect_error=False):
         raise error.TestFail("Expect fail, but run successfully.")
 
 
+def get_interface_details(vm_name):
+    """
+    Get the interface details from virsh domiflist command output
+
+    :return: list of all interfaces details
+    """
+    # Parse the domif-list command output
+    domiflist_out = virsh.domiflist(vm_name).stdout
+    # Regular expression for the below output
+    #   vnet0    bridge    virbr0   virtio  52:54:00:b2:b3:b4
+    rg = re.compile(r"^(\w+)\s+(\w+)\s+(\w+)\s+(\S+)\s+"
+                    "(([a-fA-F0-9]{2}:?){6})")
+
+    iface_cmd = {}
+    ifaces_cmd = []
+    for line in domiflist_out.split('\n'):
+        match_obj = rg.search(line)
+        # Due to the extra space in the list
+        if match_obj is not None:
+            iface_cmd['interface'] = match_obj.group(1)
+            iface_cmd['type'] = match_obj.group(2)
+            iface_cmd['source'] = match_obj.group(3)
+            iface_cmd['model'] = match_obj.group(4)
+            iface_cmd['mac'] = match_obj.group(5)
+            ifaces_cmd.append(iface_cmd)
+            iface_cmd = {}
+    return ifaces_cmd
+
+
+def get_ifname_host(vm_name, mac):
+    """
+    Get the vm interface name on host
+
+    :return: interface name, None if not exist
+    """
+    ifaces = get_interface_details(vm_name)
+    for iface in ifaces:
+        if iface["mac"] == mac:
+            return iface["interface"]
+    return None
+
+
 def check_iface(iface_name, checkpoint, extra="", **dargs):
     """
     Check interface with specified checkpoint.
