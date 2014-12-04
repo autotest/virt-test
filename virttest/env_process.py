@@ -677,6 +677,10 @@ def preprocess(test, params, env):
         ksm = test_setup.KSMConfig(params, env)
         ksm.setup(env)
 
+    if params.get("setup_egd") == "yes":
+        egd = test_setup.EGDConfig(params, env)
+        egd.setup()
+
     if vm_type == "libvirt":
         if params.get("setup_libvirt_polkit") == "yes":
             pol = test_setup.LibvirtPolkitConfig(params)
@@ -977,6 +981,14 @@ def postprocess(test, params, env):
             ksm.cleanup(env)
         except Exception, details:
             err += "\nKSM cleanup: %s" % str(details).replace('\\n', '\n  ')
+            logging.error(details)
+
+    if params.get("setup_egd") == "yes" and params.get("kill_vm") == "yes":
+        try:
+            egd = test_setup.EGDConfig(params, env)
+            egd.cleanup()
+        except Exception, details:
+            err += "\negd.pl cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
 
     if vm_type == "libvirt":

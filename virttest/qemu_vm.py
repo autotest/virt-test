@@ -733,6 +733,54 @@ class VM(virt_vm.BaseVM):
                 logging.warn(msg)
             devices.insert(dev)
 
+        def add_virtio_rng(devices, rng_params, parent_bus="pci.0"):
+            """
+            Add virtio-rng device.
+
+            :param devices: qcontainer object to contain devices.
+            :param rng_params: dict include virtio_rng device params.
+            :param parent_bus: parent bus for virtio-rng-pci.
+            """
+            def set_dev_params(dev, dev_params,
+                               dev_backend, backend_type):
+                """
+                Set QCustomDevice properties by user params dict.
+                """
+                for pro, val in dev_params.iteritems():
+                    suffix = "_%s" % backend_type
+                    if pro.endswith(suffix):
+                        idx = len(suffix)
+                        dev.set_param(pro[:-idx], val)
+                if dev_backend:
+                    dev.set_param("backend", dev_backend)
+                dev_id = utils_misc.generate_random_string(8)
+                dev_id = "%s-%s" % (backend_type, dev_id)
+                dev.set_param("id", dev_id)
+
+            dev_type = "virtio-rng-pci"
+            if devices.has_device(dev_type):
+                rng_pci = QDevice(dev_type, parent_bus=parent_bus)
+                set_dev_params(rng_pci, rng_params, None, dev_type)
+
+                rng_dev = qdevices.QCustomDevice(dev_type="object",
+                                                 backend="backend")
+                backend = rng_params["backend"]
+                backend_type = rng_params["backend_type"]
+                set_dev_params(rng_dev, rng_params, backend, backend_type)
+
+                if backend_type == "chardev":
+                    backend = rng_params["chardev_backend"]
+                    backend_type = rng_params["%s_type" % backend]
+                    char_dev = qdevices.QCustomDevice(dev_type="chardev",
+                                                      backend="backend")
+                    set_dev_params(char_dev, rng_params,
+                                   backend, backend_type)
+                    rng_dev.set_param("chardev", char_dev.get_qid())
+                    devices.insert(char_dev)
+                devices.insert(rng_dev)
+                rng_pci.set_param("rng", rng_dev.get_qid())
+                devices.insert(rng_pci)
+
         def add_spice_rhel5(devices, spice_params, port_range=(3100, 3199)):
             """
             processes spice parameters on rhel5 host.
@@ -1276,6 +1324,11 @@ class VM(virt_vm.BaseVM):
                                   port_params.get('virtio_port_params', ''))
             devices.insert(StrDev('VIO-%s' % port_name, cmdline=cmd))
             no_virtio_ports += 1
+
+        # Add virtio-rng devices
+        for virtio_rng in params.objects("virtio_rngs"):
+            virtio_rng_params = params.object_params(virtio_rng)
+            add_virtio_rng(devices, virtio_rng_params, pci_bus)
 
         # Add logging
         devices.insert(StrDev('isa-log', cmdline=add_log_seabios(devices)))
