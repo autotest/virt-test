@@ -1011,7 +1011,8 @@ class DevContainer(object):
                                    pci_addr=None, scsi_hba=None, x_data_plane=None,
                                    blk_extra_params=None, scsi=None,
                                    pci_bus='pci.0', drv_extra_params=None,
-                                   num_queues=None, bus_extra_params=None):
+                                   num_queues=None, bus_extra_params=None,
+                                   force_fmt=None):
         """
         Creates related devices by variables
         :note: To skip the argument use None, to disable it use False
@@ -1020,6 +1021,7 @@ class DevContainer(object):
         :param filename: Path to the disk file
         :param index: drive index (used for generating names)
         :param fmt: drive subsystem type (ide, scsi, virtio, usb2, ...)
+        :param force_fmt: Force to use specific drive format
         :param cache: disk cache (none, writethrough, writeback)
         :param werror: What to do when write error occurs (stop, ...)
         :param rerror: What to do when read error occurs (stop, ...)
@@ -1315,6 +1317,9 @@ class DevContainer(object):
         else:
             logging.warn('Using default device handling (disk %s)', name)
             devices[-1].set_param('driver', fmt)
+        if force_fmt:
+            logging.info("Force to use %s for the device" % force_fmt)
+            devices[-1].set_param('driver', force_fmt)
         # Get the supported options
         options = self.execute_qemu("-device %s,?" % devices[-1]['driver'])
         devices[-1].set_param('id', name)
@@ -1404,7 +1409,8 @@ class DevContainer(object):
                                                image_params.get('pci_bus', 'pci.0'),
                                                image_params.get("drv_extra_params"),
                                                image_params.get("num_queues"),
-                                               image_params.get("bus_extra_params"))
+                                               image_params.get("bus_extra_params"),
+                                               image_params.get("force_drive_format"))
 
     def cdroms_define_by_params(self, name, image_params, media=None,
                                 index=None, image_boot=None,
@@ -1484,7 +1490,8 @@ class DevContainer(object):
                                                image_params.get('pci_bus', 'pci.0'),
                                                image_params.get("drv_extra_params"),
                                                None,
-                                               image_params.get("bus_extra_params"))
+                                               image_params.get("bus_extra_params"),
+                                               image_params.get("force_drive_format"))
 
     def pcic_by_params(self, name, params):
         """
