@@ -12,6 +12,9 @@ from virttest.staging import service
 from autotest.client.shared import error, utils
 from autotest.client import os_dep
 import utils_misc
+import versionable_class
+import openvswitch
+import utils_net
 
 try:
     from virttest.staging import utils_memory
@@ -601,13 +604,27 @@ class PrivateBridgeConfig(object):
         if self.brname not in brctl_output:
             raise PrivateBridgeError(self.brname)
 
+    def _get_bridge_info(self):
+        return utils.system_output("brctl show")
+
+    def _br_exist(self):
+        return self.brname in self._get_bridge_info()
+
+    def _br_in_use(self):
+        output = self._get_bridge_info()
+        for line in output.split("\n"):
+            if line.startswith(self.brname):
+                # len == 4 means there is a TAP using the bridge
+                # so don't try to clean it up
+                if len(line.split()) < 4:
+                    return False
+        return True
+
     def setup(self):
-        brctl_output = utils.system_output("brctl show")
-        if self.brname in brctl_output and self.force_create:
+        if self._br_exist() and self.force_create:
             self._bring_bridge_down()
             self._remove_bridge()
-            brctl_output = utils.system_output("brctl show")
-        if self.brname not in brctl_output:
+        if not self._br_exist():
             logging.info("Configuring KVM test private bridge %s", self.brname)
             try:
                 self._add_bridge()
@@ -674,22 +691,46 @@ class PrivateBridgeConfig(object):
         utils.system("brctl delbr %s" % self.brname, ignore_status=True)
 
     def cleanup(self):
-        brctl_output = utils.system_output("brctl show")
-        cleanup = False
-        for line in brctl_output.split("\n"):
-            if line.startswith(self.brname):
-                # len == 4 means there is a TAP using the bridge
-                # so don't try to clean it up
-                if len(line.split()) < 4:
-                    cleanup = True
-                    break
-        if cleanup:
+        if not self._br_in_use():
             logging.debug(
                 "Cleaning up KVM test private bridge %s", self.brname)
             self._stop_dhcp_server()
             self._disable_nat()
             self._bring_bridge_down()
             self._remove_bridge()
+
+
+class PrivateOvsBridgeConfig(PrivateBridgeConfig):
+
+    def __init__(self, params=None):
+        super(PrivateOvsBridgeConfig, self).__init__(params)
+        ovs = versionable_class.factory(openvswitch.OpenVSwitchSystem)()
+        ovs.init_system()
+        self.ovs = ovs
+
+    def _get_bridge_info(self):
+        return self.ovs.status()
+
+    def _br_exist(self):
+        return "Bridge \"%s\"" % self.brname in self._get_bridge_info()
+
+    def _br_in_use(self):
+        output = self._get_bridge_info()
+        for br_info in output.split("Bridge"):
+            br_info = br_info.strip()
+            if (br_info and re.match(self.brname, br_info)
+                    and len(re.findall("Port\s+", br_info)) == 1):
+                return False
+        return True
+
+    def _verify_bridge(self):
+        self.ovs.check()
+
+    def _add_bridge(self):
+        self.ovs.add_br(self.brname)
+
+    def _remove_bridge(self):
+        self.ovs.del_br(self.brname)
 
 
 class PciAssignable(object):
