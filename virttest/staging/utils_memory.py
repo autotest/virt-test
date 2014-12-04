@@ -80,8 +80,13 @@ def get_num_huge_pages_rsvd():
     return read_from_meminfo('HugePages_Rsvd')
 
 
-def get_num_anon_huge_pages(pid):
-    return read_from_smaps(pid, 'AnonHugePages')
+def get_num_anon_huge_pages(pid=0):
+    if int(pid) > 1:
+        # get AnonHugePages usage of specified process
+        return read_from_smaps(pid, 'AnonHugePages')
+    else:
+        # invalid pid, so return AnonHugePages of the host
+        return read_from_meminfo('AnonHugePages')
 
 
 def get_transparent_hugepage():
