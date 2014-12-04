@@ -31,7 +31,7 @@ class Params(UserDict.IterableUserDict):
         :param key: The name of the key whose value lists the objects
                 (e.g. 'nics').
         """
-        return self.get(key, "").split()
+        return self.get(key, "").strip('"').split()
 
     def object_params(self, obj_name):
         """
