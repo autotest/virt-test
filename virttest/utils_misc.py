@@ -2924,3 +2924,133 @@ class VFIOController(object):
         if os.path.exists("/dev/vfio/%s" % group_id):
             return True
         return False
+
+
+class SELinuxBoolean(object):
+
+    """
+    SELinuxBoolean class for managing SELinux boolean value.
+    """
+
+    def __init__(self, params):
+        # Setup SSH connection
+        from utils_conn import SSHConnection
+        self.ssh_obj = SSHConnection(params)
+        self.ssh_obj.conn_setup()
+
+        self.cleanup_local = True
+        self.cleanup_remote = True
+        self.ssh_user = params.get("server_user", "root")
+        self.server_ip = params.get("server_ip")
+        self.set_bool_local = params.get("set_sebool_local", "no")
+        self.set_bool_remote = params.get("set_sebool_remote", "no")
+        self.local_bool_var = params.get("local_boolean_varible")
+        self.remote_bool_var = params.get("remote_boolean_varible",
+                                          self.local_bool_var)
+        self.local_bool_value = params.get("local_boolean_value")
+        self.remote_bool_value = params.get("remote_boolean_value",
+                                            self.local_bool_value)
+
+    def get_sebool_local(self):
+        """
+        Get SELinux boolean value from local host.
+        """
+        get_sebool_cmd = "getsebool %s | awk -F'-->' '{print $2}'" % (
+            self.local_bool_var)
+        logging.debug("The command: %s", get_sebool_cmd)
+        result = utils.run(get_sebool_cmd)
+        return result.stdout.strip()
+
+    def get_sebool_remote(self):
+        """
+        Get SELinux boolean value from remote host.
+        """
+        ssh_cmd = "ssh %s@%s " % (self.ssh_user, self.server_ip)
+        get_sebool_cmd = "getsebool %s" % self.remote_bool_var
+        cmd = ssh_cmd + "'%s'" % get_sebool_cmd + "| awk -F'-->' '{print $2}'"
+        logging.debug("The command: %s", cmd)
+        result = utils.run(cmd)
+        return result.stdout.strip()
+
+    def setup(self):
+        """
+        Set SELinux boolean value.
+        """
+        # Change SELinux boolean value on local host
+        if self.set_bool_local == "yes":
+            self.setup_local()
+
+        # Change SELinux boolean value on remote host
+        if self.set_bool_remote == "yes":
+            self.setup_remote()
+
+    def cleanup(self, keep_authorized_keys=False):
+        """
+        Cleanup SELinux boolean value.
+        """
+        self.ssh_obj.auto_recover = True
+
+        # Recover local SELinux boolean value
+        if self.cleanup_local:
+            result = utils.run("setsebool %s %s" % (self.local_bool_var,
+                                                    self.local_boolean_orig))
+            if result.exit_status:
+                raise error.TestError(result.stderr.strip())
+
+        # Recover remote SELinux boolean value
+        if self.cleanup_remote:
+            ssh_cmd = "ssh %s@%s " % (self.ssh_user, self.server_ip)
+            cmd = ssh_cmd + "'setsebool %s %s'" % (self.remote_bool_var,
+                                                   self.remote_boolean_orig)
+            result = utils.run(cmd)
+            if result.exit_status:
+                raise error.TestError(result.stderr.strip())
+
+        # Recover SSH connection
+        if self.ssh_obj.auto_recover and not keep_authorized_keys:
+            del self.ssh_obj
+
+    def setup_local(self):
+        """
+        Set SELinux boolean value on the local
+        """
+        # Get original SELinux boolean value, nothing to do if it
+        # equals to specified value
+        self.local_boolean_orig = self.get_sebool_local()
+        if self.local_bool_value == self.local_boolean_orig:
+            self.cleanup_local = False
+            return
+
+        result = utils.run("setsebool %s %s" % (self.local_bool_var,
+                                                self.local_bool_value))
+        if result.exit_status:
+            raise error.TestNAError(result.stderr.strip())
+
+        boolean_curr = self.get_sebool_local()
+        logging.debug("To check local boolean value: %s", boolean_curr)
+        if boolean_curr != self.local_bool_value:
+            raise error.TestFail(result.stderr.strip())
+
+    def setup_remote(self):
+        """
+        Set SELinux boolean value on remote host.
+        """
+        # Get original SELinux boolean value, nothing to do if it
+        # equals to specified value
+        self.remote_boolean_orig = self.get_sebool_remote()
+        if self.remote_bool_value == self.remote_boolean_orig:
+            self.cleanup_remote = False
+            return
+
+        ssh_cmd = "ssh %s@%s " % (self.ssh_user, self.server_ip)
+        set_boolean_cmd = ssh_cmd + "'setsebool %s %s'" % (
+            self.remote_bool_var, self.remote_bool_value)
+
+        result = utils.run(set_boolean_cmd)
+        if result.exit_status:
+            raise error.TestNAError(result.stderr.strip())
+
+        boolean_curr = self.get_sebool_remote()
+        logging.debug("To check remote boolean value: %s", boolean_curr)
+        if boolean_curr != self.remote_bool_value:
+            raise error.TestFail(result.stderr.strip())
