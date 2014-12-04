@@ -87,12 +87,6 @@ class VM(virt_vm.BaseVM):
     # By default we inherit all timeouts from the base VM class except...
     CLOSE_SESSION_TIMEOUT = 30
 
-    # Because we've seen qemu taking longer than 5 seconds to initialize
-    # itself completely, including creating the monitor sockets files
-    # which are used on create(), this timeout is considerably larger
-    # than the one on the base vm class
-    CREATE_TIMEOUT = 20
-
     def __init__(self, name, params, root_dir, address_cache, state=None):
         """
         Initialize the object and set a few attributes.
@@ -1961,7 +1955,7 @@ class VM(virt_vm.BaseVM):
 
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None,
-               timeout=CREATE_TIMEOUT, migration_mode=None,
+               timeout=20, migration_mode=None,
                migration_exec_cmd=None, migration_fd=None,
                mac_source=None):
         """

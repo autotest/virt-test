@@ -499,7 +499,6 @@ class BaseVM(object):
     COPY_FILES_TIMEOUT = 600
     MIGRATE_TIMEOUT = 3600
     REBOOT_TIMEOUT = 240
-    CREATE_TIMEOUT = 5
 
     def __init__(self, name, params):
         self.name = name
