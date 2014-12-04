@@ -1865,3 +1865,37 @@ def do_migration(vm_name, uri, extra, auth_pwd, auth_user="root",
         session.close()
         logging.error("Failed to migrate %s: %s\n%s", vm_name, details, log)
         return False
+
+
+def update_vm_disk_source(vm_name, disk_source_path, source_type="file"):
+    """
+    Update disk source path of the VM
+
+    :param source_type: it may be 'dev' or 'file' type, which is default
+    """
+    if not os.path.isdir(disk_source_path):
+        logging.error("Require disk source path!!")
+        return False
+    # Prepare to update VM first disk source file
+    vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
+    devices = vmxml.devices
+    disk_index = devices.index(devices.by_device_tag('disk')[0])
+    disks = devices[disk_index]
+    disk_source = disks.source.get_attrs().get(source_type)
+    logging.debug("The disk source file of the VM: %s", disk_source)
+    if not os.path.exists(disk_source):
+        logging.error("The disk source doesn't exist!!")
+        return False
+
+    vm_name_with_format = os.path.basename(disk_source)
+    new_disk_source = os.path.join(disk_source_path, vm_name_with_format)
+    logging.debug("The new disk source file of the VM: %s", new_disk_source)
+
+    # Update VM disk source file
+    disks.source = disks.new_disk_source(**{'attrs': {'%s' % source_type:
+                                                      "%s" % new_disk_source}})
+    # SYNC VM XML change
+    vmxml.devices = devices
+    logging.debug("The new VM XML:\n%s", vmxml.xmltreefile)
+    vmxml.sync()
+    return True
