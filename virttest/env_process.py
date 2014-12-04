@@ -695,8 +695,8 @@ def preprocess(test, params, env):
                         int(params.get("pre_command_timeout", "600")),
                         params.get("pre_command_noncritical") == "yes")
 
-    kernel_extra_params_add = params.get("kernel_extra_params_add")
-    kernel_extra_params_remove = params.get("kernel_extra_params_remove")
+    kernel_extra_params_add = params.get("kernel_extra_params_add", "")
+    kernel_extra_params_remove = params.get("kernel_extra_params_remove", "")
     if params.get("disable_pci_msi"):
         disable_pci_msi = params.get("disable-pci_msi")
         if disable_pci_msi == "yes":
