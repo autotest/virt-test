@@ -2127,6 +2127,49 @@ def normalize_data_size(value_str, order_magnitude="M", factor="1024"):
     return str(data)
 
 
+def get_free_disk(session, mount):
+    """
+    Get FreeSpace for given mount point.
+
+    :parm session: shell Object.
+    :parm mount: mount point(eg. C:, /mnt)
+
+    :return string: freespace M-bytes
+    """
+    if re.match(r"[a-zA-Z]:", mount):
+        cmd = "wmic logicaldisk where \"DeviceID='%s'\" " % mount
+        cmd += "get FreeSpace"
+        output = session.cmd_output(cmd)
+        free = "%sK" % re.findall(r"\d+", output)[0]
+    else:
+        cmd = "df -h %s" % mount
+        output = session.cmd_output(cmd)
+        free = re.findall(r"\b([\d.]+[BKMGPETZ])\b",
+                          output, re.M | re.I)[2]
+    free = float(normalize_data_size(free, order_magnitude="M"))
+    return int(free)
+
+
+def get_free_mem(session, os_type):
+    """
+    Get Free memory for given OS.
+
+    :parm session: shell Object.
+    :parm os_type: os type (eg. linux or windows)
+
+    :return string: freespace M-bytes
+    """
+    if os_type != "windows":
+        cmd = "grep 'MemFree:' /proc/meminfo"
+        output = session.cmd_output(cmd)
+        free = re.findall(r"\d+\s\w", output)[0]
+    else:
+        output = session.cmd_output("wmic OS get FreePhysicalMemory")
+        free = "%sK" % re.findall("\d+", output)[0]
+    free = float(normalize_data_size(free, order_magnitude="M"))
+    return int(free)
+
+
 def verify_running_as_root():
     """
     Verifies whether we're running under UID 0 (root).
