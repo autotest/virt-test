@@ -1248,7 +1248,24 @@ class GuestSuspend(object):
     def verify_guest_support_suspend(self, **args):
         s, _ = self._check_guest_suspend_log(**args)
         if s:
-            raise error.TestError("Guest doesn't support suspend.")
+            session = self._get_session()
+            free_mem = utils_misc.get_free_mem(session, self.os_type)
+
+            if self.os_type == "windows":
+                free_disk = utils_misc.get_free_disk(session, "C:")
+            else:
+                free_disk = utils_misc.get_free_disk(session, "swap")
+
+            mem_size = self.vm.get_memory_size()
+
+            if params.get('guestname') == "Win7" and free_disk < mem_size * 1024 * 0.75:
+                error_info = "Failed because Windows 7 hibernation requires free disk"
+                error_info += " space more than 75% of size of guest memory in default"
+            else:
+                error_info = ""
+            raise error.TestError("Guest doesn't support suspend."
+                                  " FreeMem=%sM, FreeDisk=%sK, Mem=%sM, %s" %
+                                  (free_mem, free_disk, mem_size, error_info))
 
     @error.context_aware
     def start_suspend(self, **args):
