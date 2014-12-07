@@ -10,6 +10,9 @@ import traceback
 import signal
 import optparse
 import logging
+import tools.parallel
+import virttest.data_dir
+import time
 
 
 class StreamProxy(object):
@@ -340,6 +343,23 @@ class VirtTestRunParser(optparse.OptionParser):
                            help=("Don't clean up tmp files or VM processes at "
                                  "the end of a virt-test execution (useful "
                                  "for debugging)"))
+
+        general.add_option("--jobs-file", action="store",
+                           dest="jobs_file",
+                           help=("Full path to file with "
+                                 "GUEST;TEST1 [TEST2] [TEST3]"
+                                 "list for parallel execution"))
+
+        general.add_option("--jobs-max", action="store",
+                           dest="jobs",
+                           type="int",
+                           help=("Max number of parallel jobs"))
+
+        general.add_option("--job-id", action="store",
+                           dest="job_id",
+                           default=None,
+                           type="int",
+                           help=("Job number, for internal use only!"))
 
         self.add_option_group(general)
 
@@ -996,4 +1016,55 @@ class VirtTestApp(object):
 
 if __name__ == '__main__':
     app = VirtTestApp()
-    app.main()
+
+    if app.options.jobs_file:
+      if not os.path.exists(app.options.jobs_file):
+        print "There is no",app.options.jobs_file
+        exit(1)
+      parent_logdir = os.path.join(virttest.data_dir.get_root_dir(),
+                                    'logs',
+                                    'parallel-run-' + \
+                                    time.strftime('%Y-%m-%d-%H.%M.%S'))
+      os.makedirs(parent_logdir)
+      subprocess_job_id = 1
+      cmd_lines = []
+      input_lines = [line.strip() for line in open(app.options.jobs_file,'r')]
+      for line in input_lines:
+        value = line.split(';')
+        if len(value) > 4:
+          extra_opts = value[4]
+        else:
+          extra_opts = ""
+        subprocess_cmd_line = ''.join([__file__,
+                                      ' -t ', value[0],
+                                      ' -g ', value[1],
+                                      ' --machine-type=',value[2],
+                                      ' --tests=',value[3],
+                                      ' --job-id ',str(subprocess_job_id),
+                                      ' --logs-dir ', parent_logdir,
+                                      ' ', extra_opts
+                                      ])
+
+        cmd_lines.append(subprocess_cmd_line)
+        subprocess_job_id = subprocess_job_id + 1
+
+      try:
+        dargs = {}
+        if app.options.jobs:
+          dargs['max_simultaneous_procs'] = app.options.jobs
+        else:
+          dargs['max_simultaneous_procs'] = 1
+        dargs['list_of_functions'] = False
+        pe = tools.parallel.ParallelExecute(cmd_lines, **dargs)
+        pe.run_until_completion()
+        print "That's all, folks!"
+        from virttest import standalone_test
+        standalone_test.cleanup_env(app.cartesian_parser, app.options)
+        print "Environment was cleaned."
+      except tools.parallel.ParallelError, err:
+        print "Parallel Run Exception!"
+        sys.exit(1)
+
+      sys.exit(0)
+    else:
+      app.main()

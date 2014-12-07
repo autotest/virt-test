@@ -36,6 +36,29 @@ class QemuImg(storage.QemuImg):
                              verbose=False)
         self.help_text = q_result.stdout
 
+    def _get_image_size_info(self, params, file_name=None):
+        if file_name is None:
+            file_name = self.image_filename
+        cmd = utils_misc.get_qemu_img_binary(params)
+        cmd += " info"
+        cmd += " %s" % file_name
+
+        try:
+            output = utils.system_output(cmd)
+        except error.CmdError, err:
+            logging.error("Get info of image '%s' failed: %s", file_name, str(err))
+            return None
+
+        sub_info = "virtual size" + ": (.*)"
+        matches = re.findall(sub_info, output)
+        if matches:
+            size_line = matches[0].split(':')
+            img_size = size_line[0].split(' ')
+            return img_size[0]
+        else:
+            return self.img_size
+
+
     @error.context_aware
     def create(self, params, ignore_errors=False):
         """
@@ -95,6 +118,7 @@ class QemuImg(storage.QemuImg):
             encrypted = params.get("encrypted", "off")
             image_extra_params = params.get("image_extra_params", "")
             has_backing_file = params.get('has_backing_file')
+            new_image_size = self.size
 
             qemu_img_cmd += " -o "
             if self.image_format == "qcow2":
@@ -115,6 +139,7 @@ class QemuImg(storage.QemuImg):
                     qemu_img_cmd += "backing_file=%s," % backing_file
 
                     qemu_img_cmd += "backing_fmt=%s," % backing_fmt
+                    new_image_size = self._get_image_size_info(params,backing_file)
 
             if image_extra_params:
                 qemu_img_cmd += "%s," % image_extra_params
@@ -129,7 +154,7 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " %s" % self.image_filename
 
-            qemu_img_cmd += " %s" % self.size
+            qemu_img_cmd += " %s" % new_image_size
 
         if (params.get("image_backend", "filesystem") == "filesystem"):
             image_dirname = os.path.dirname(self.image_filename)

@@ -721,6 +721,22 @@ def preprocess(test, params, env):
         else:
             kernel_extra_params_remove += " pci=nomsi"
 
+    # Create new image for specific job with backing_file option
+    if params.get('job_id') != "":
+        base_dir = data_dir.get_data_dir()
+        image_filename = storage.get_image_filename(params, base_dir)
+        if params.get('subtest') == "io-github-autotest-qemu.unattended_install":
+            params["image_size"] = "50G"
+        else:
+            params["has_backing_file"] = "yes"
+            params["image_name_backing_file"] = params.get('image_name')
+            params["image_format_backing_file"] = params.get("image_format", "qcow2")
+        params["image_name"] = params.get('image_name') + "_job_" + str(params.get('job_id'))
+        new_job_image = qemu_storage.QemuImg(params, base_dir, '')
+        job_image_filename, create_result = new_job_image.create(params)
+        if create_result.exit_status != 0:
+            raise error.TestError("Failed to create backing image")
+
     if kernel_extra_params_add or kernel_extra_params_remove:
         global kernel_cmdline, kernel_modified
         image_filename = storage.get_image_filename(params,

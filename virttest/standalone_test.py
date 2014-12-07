@@ -65,6 +65,8 @@ class Test(object):
         self.logfile = None
         self.file_handler = None
         self.background_errors = Queue.Queue()
+        if options.job_id:
+            self.job_id = options.job_id
 
     def set_debugdir(self, debugdir):
         self.debugdir = os.path.join(debugdir, self.tag)
@@ -107,6 +109,11 @@ class Test(object):
     def run_once(self):
         params = self.params
 
+        if hasattr(self, 'job_id'):
+            params['job_id'] = str(self.job_id)
+        else:
+            params['job_id'] = ""
+
         # If a dependency test prior to this test has failed, let's fail
         # it right away as TestNA.
         if params.get("dependency_failed") == 'yes':
@@ -132,7 +139,7 @@ class Test(object):
         # Open the environment file
         env_filename = os.path.join(
             data_dir.get_backend_dir(params.get("vm_type")),
-            params.get("env", "env"))
+            (params.get("env", "env") + params.get('job_id')))
         env = utils_env.Env(env_filename, self.env_version)
 
         test_passed = False
@@ -447,7 +454,7 @@ def configure_console_logging(loglevel=logging.DEBUG):
     return stream_handler
 
 
-def configure_file_logging(logfile, loglevel=logging.DEBUG):
+def configure_file_logging(logfile, loglevel=logging.DEBUG, infofile=None):
     """
     Simple helper for adding a file logger to the root logger.
     """
@@ -460,6 +467,12 @@ def configure_file_logging(logfile, loglevel=logging.DEBUG):
 
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+
+    if infofile:
+        info_handler = logging.FileHandler(filename=infofile)
+        info_handler.setLevel(logging.INFO)
+        info_handler.setFormatter(formatter)
+        logger.addHandler(info_handler)
 
     return file_handler
 
@@ -736,13 +749,24 @@ def cleanup_env(parser, options):
                      "files and VM processes...")
         logging.info("")
     else:
+        logging.info("Cleaning env files...")
+        if parser is not None:
+            d = parser.get_dicts().next()
+            if hasattr(options, 'job_id'):
+                job_id_str = str(options.job_id)
+            else:
+                job_id_str = ""
+            env_filename = os.path.join(data_dir.get_root_dir(),
+                                        options.type, (d.get("env", "env") + job_id_str))
+            env = utils_env.Env(filename=env_filename, version=Test.env_version)
+            env.destroy()
+        # Kill all tail_threads which env constructor recreate, for standalone test only
+        if hasattr(options,'job_id'):
+            if options.job_id is not None:
+                logging.info("Don't clean tmp files per job...")
+                return
+
         logging.info("Cleaning tmp files and VM processes...")
-        d = parser.get_dicts().next()
-        env_filename = os.path.join(data_dir.get_root_dir(),
-                                    options.type, d.get("env", "env"))
-        env = utils_env.Env(filename=env_filename, version=Test.env_version)
-        env.destroy()
-        # Kill all tail_threads which env constructor recreate.
         aexpect.kill_tail_threads()
         aexpect.clean_tmp_files()
         utils_net.clean_tmp_files()
@@ -751,7 +775,7 @@ def cleanup_env(parser, options):
         logging.info("")
 
 
-def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
+def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed, job_id = None):
     """
     Print to stdout and run log stats of our test job.
 
@@ -760,6 +784,12 @@ def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
     :param n_tests_skipped: Total Number of tests skipped.
     :param n_tests_passed: Number of tests that passed.
     """
+
+    if job_id is not None:
+        job_id_header = "[ JOB %d ]" % job_id
+    else:
+        job_id_header = ''
+
     minutes, seconds = divmod(job_elapsed_time, 60)
     hours, minutes = divmod(minutes, 60)
 
@@ -774,7 +804,7 @@ def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
     if hours or minutes:
         total_time_str += " (%s)" % pretty_time
 
-    print_header(total_time_str)
+    print_header(job_id_header + total_time_str)
     logging.info("Job total elapsed time: %.2f s", job_elapsed_time)
 
     n_tests_passed = n_tests - n_tests_skipped - n_tests_failed
@@ -783,11 +813,11 @@ def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
         success_rate = ((float(n_tests_passed) /
                          float(n_tests - n_tests_skipped)) * 100)
 
-    print_header("TESTS PASSED: %d" % n_tests_passed)
-    print_header("TESTS FAILED: %d" % n_tests_failed)
+    print_header(job_id_header + "TESTS PASSED: %d" % n_tests_passed)
+    print_header(job_id_header + "TESTS FAILED: %d" % n_tests_failed)
     if n_tests_skipped:
-        print_header("TESTS SKIPPED: %d" % n_tests_skipped)
-    print_header("SUCCESS RATE: %.2f %%" % success_rate)
+        print_header(job_id_header + "TESTS SKIPPED: %d" % n_tests_skipped)
+    print_header(job_id_header + "SUCCESS RATE: %.2f %%" % success_rate)
 
     logging.info("Tests passed: %d", n_tests_passed)
     logging.info("Tests failed: %d", n_tests_failed)
@@ -807,7 +837,11 @@ def run_tests(parser, options):
     """
     test_start_time = time.strftime('%Y-%m-%d-%H.%M.%S')
     logdir = options.logdir or os.path.join(data_dir.get_root_dir(), 'logs')
-    debugbase = 'run-%s' % test_start_time
+    debugbase = '%s-%s-%s' % (test_start_time,
+                                options.guest_os,
+                                options.tests,)
+    if options.job_id:
+        debugbase = '%d' % options.job_id + '-' + debugbase
     debugdir = os.path.join(logdir, debugbase)
     latestdir = os.path.join(logdir, "latest")
     if not os.path.isdir(debugdir):
@@ -819,8 +853,12 @@ def run_tests(parser, options):
     os.symlink(debugbase, latestdir)
 
     debuglog = os.path.join(debugdir, "debug.log")
+    if options.job_id:
+        brieflog = os.path.join(debugdir, "info.log")
+    else:
+        brieflog = None
     loglevel = options.log_level
-    configure_file_logging(debuglog, loglevel)
+    configure_file_logging(debuglog, loglevel, brieflog)
 
     print_stdout(bcolors.HEADER +
                  "DATA DIR: %s" % data_dir.get_backing_data_dir() +
@@ -1005,6 +1043,6 @@ def run_tests(parser, options):
 
     job_end_time = time.time()
     job_elapsed_time = job_end_time - job_start_time
-    _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed)
+    _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed, options.job_id)
 
     return not failed
