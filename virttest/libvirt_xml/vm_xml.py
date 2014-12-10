@@ -1041,6 +1041,29 @@ class VMXML(VMXMLBase):
             nets[dev] = node
         return nets
 
+    @staticmethod
+    def set_multiqueues(vm_name, queues, index=0):
+        """
+        Set multiqueues for interface.
+
+        :param queues: the count of queues for interface
+        :param index: the index of interface
+        """
+        driver_params = {'name': "vhost", 'queues': queues}
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        nets = vmxml.__dict_get__('xml').find('devices').findall('interface')
+        if index >= len(nets):
+            raise xcepts.LibvirtXMLError("Couldn't find %s-th interface for %s"
+                                         % (index, vm_name))
+        net = nets[index]
+        iface = vmxml.get_device_class('interface').new_from_element(net)
+        iface.model = "virtio"
+        iface.driver = iface.new_driver(driver_attr=driver_params)
+        # Update devices: Remove all interfaces and attach new one
+        vmxml.__dict_get__('xml').find('devices').remove(net)
+        vmxml.devices = vmxml.devices.append(iface)
+        vmxml.sync()
+
     # TODO re-visit this method after the libvirt_xml.devices.interface module
     #     is implemented
     @staticmethod
