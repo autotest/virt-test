@@ -904,22 +904,17 @@ class VM(virt_vm.BaseVM):
 
             return " -spice %s" % (",".join(spice_opts))
 
-        def add_qxl(qxl_nr, qxl_memory=None):
+        def add_qxl(qxl_nr, base_addr=29):
             """
-            adds extra qxl devices + sets memory to -vga qxl and extra qxls
+            adds extra qxl devices
+
             :param qxl_nr total number of qxl devices
-            :param qxl_memory sets memory to individual devices
+            :param base_addr: base address of extra qxl device
             """
             qxl_str = ""
-            vram_help = ""
-
-            if qxl_memory:
-                vram_help = "vram_size=%d" % qxl_memory
-                qxl_str += " -global qxl-vga.%s" % (vram_help)
-
             for index in range(1, qxl_nr):
-                qxl_str += " -device qxl,id=video%d,%s"\
-                    % (index, vram_help)
+                addr = base_addr + index
+                qxl_str += " -device qxl,id=video%d,addr=0x%x" % (index, addr)
             return qxl_str
 
         def add_vga(vga):
@@ -1170,14 +1165,15 @@ class VM(virt_vm.BaseVM):
                 devices.insert(StrDev('VGA-%s' % vga,
                                       cmdline=add_vga(vga),
                                       parent_bus={'aobject': 'pci.0'}))
+                if vga == 'qxl':
+                    qxl_dev_nr = int(params.get("qxl_dev_nr", 1))
+                    if qxl_dev_nr > 1:
+                        addr = int(params.get("qxl_base_addr", 29))
+                        cmdline = add_qxl(qxl_dev_nr, addr)
+                        devices.insert(StrDev('qxl', cmdline=cmdline))
             else:
                 devices.insert(StrDev('VGA-none', cmdline=add_vga(vga)))
 
-            if vga == "qxl":
-                qxl_dev_memory = int(params.get("qxl_dev_memory", 0))
-                qxl_dev_nr = int(params.get("qxl_dev_nr", 1))
-                devices.insert(StrDev('qxl',
-                                      cmdline=add_qxl(qxl_dev_nr, qxl_dev_memory)))
         elif params.get('defaults', 'no') != 'no':  # by default add cirrus
             devices.insert(StrDev('VGA-cirrus',
                                   cmdline=add_vga(vga),
@@ -1959,6 +1955,42 @@ class VM(virt_vm.BaseVM):
                                                                 netdev_id))
                 devs[0].params.update(net_params)
 
+    def update_vga_global_default(self, params, migrate=None):
+        """
+        Update VGA global default settings
+
+        :param params: dict for create vm
+        :param migrate: is vm create for migration
+        """
+        if not self.devices:
+            return
+
+        vga_mapping = {'VGA-std': 'VGA',
+                       'VGA-cirrus': 'cirrus-vga',
+                       'VGA-qxl': 'qxl-vga',
+                       'qxl': 'qxl',
+                       'VGA-none': None}
+        for device in self.devices:
+            if not isinstance(device, qdevices.QStringDevice):
+                continue
+
+            vga_type = vga_mapping.get(device.type)
+            if not vga_type:
+                continue
+
+            help_cmd = '%s -device %s,\? 2>&1' % (self.qemu_binary, vga_type)
+            help_info = utils.system_output(help_cmd)
+            for pro in re.findall(r'%s.(\w+)=' % vga_type, help_info):
+                key = [vga_type.lower(), pro]
+                if migrate:
+                    key.append('dst')
+                key = '_'.join(key)
+                val = params.get(key)
+                if not val:
+                    continue
+                qdev = qdevices.QGlobal(vga_type, pro, val)
+                self.devices.insert(qdev)
+
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None,
                timeout=CREATE_TIMEOUT, migration_mode=None,
@@ -2188,6 +2220,7 @@ class VM(virt_vm.BaseVM):
             # Make qemu command
             try:
                 self.devices = self.make_create_command()
+                self.update_vga_global_default(params, migration_mode)
                 logging.debug(self.devices.str_short())
                 logging.debug(self.devices.str_bus_short())
                 qemu_command = self.devices.cmdline()
