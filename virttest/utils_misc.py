@@ -27,6 +27,7 @@ from autotest.client.shared import error, logging_config
 from autotest.client.shared import git, base_job
 import data_dir
 import utils_selinux
+import aexpect
 try:
     from staging import utils_koji
 except ImportError:
@@ -3182,3 +3183,111 @@ class SELinuxBoolean(object):
         logging.debug("To check remote boolean value: %s", boolean_curr)
         if boolean_curr != self.remote_bool_value:
             raise error.TestFail(result.stderr.strip())
+
+
+class NMapError(Exception):
+    pass
+
+
+class NMap(object):
+
+    """nmap tool manager"""
+
+    def __init__(self):
+        """
+        Check tool nmap.
+        """
+        try:
+            self.nmap_path = os_dep.command("nmap")
+        except ValueError:
+            logging.warning("Tool nmap is not found on path.")
+            raise NMapError
+        # A list to contain nmap jobs
+        self._nmaps = []
+        # Got ip mac pairs
+        self.address_cache = {}
+
+    def scan_port(self, target, options=None):
+        """
+        scan network accroding given target.
+        """
+        cmd = self.nmap_path
+        if options is not None:
+            cmd += " %s" % options
+        cmd += " %s" % target
+        output = utils.run(cmd).stdout
+        for line in output.splitlines():
+            self._nmap_handler(line)
+        return self.address_cache
+
+    def nmap_mac(self, mac, target, options=None, timeout=60):
+        """
+        Used to check whether the ip for mac is available.
+        """
+        def scan_func():
+            if mac.upper() in self.scan_port(target, options).keys():
+                return True
+            return False
+        wait_for(func=scan_func, timeout=timeout, step=5,
+                 text="Trying to get ip of %s" % mac)
+        return scan_func()
+
+    def _nmap_handler(self, line):
+        """
+        Parse output to get ip mac pairs.
+        """
+        # Put ip-mac to dict
+        if line.count("report for"):
+            self.ip = re.search("\d+.\d+.\d+.\d+", line).group(0)
+        elif line.count("MAC"):
+            self.mac = re.search("\w+:\w+:\w+:\w+:\w+:\w+", line).group(0)
+            self.address_cache[self.mac] = self.ip
+            # Clear for next round
+            self.ip = None
+            self.mac = None
+
+    def _start_nmaps(self, ifaces=[]):
+        """
+        Start nmaps to explore available ip for host.
+        Currently, it supports only local host.
+
+        :param ifaces: the interfaces need to be checked
+        """
+        def get_network(if_name):
+            cmd = "ip addr show %s" % (if_name)
+            result = utils.run(cmd, verbose=False)
+            ipv4 = re.findall("inet (.+?/..?)", result.stdout, re.MULTILINE)
+            if len(ipv4):
+                return ipv4[0]
+
+        cmd_template = "%s -n -sP -PI -PT %s"
+        networks = []
+        for iface in ifaces:
+            network = get_network(iface)
+            networks.append(network)
+
+        for network in networks:
+            cmd = cmd_template % (self.nmap_path, network)
+            self._nmaps.append(aexpect.Tail(command=cmd,
+                                            output_func=self._nmap_handler))
+
+    def start_nmap(self, ifaces=[], timeout=60):
+        if len(self._nmaps):
+            self.stop_nmap()
+        self._start_nmaps(ifaces)
+
+        def nmap_alive():
+            for nmap in self._nmaps:
+                if nmap:
+                    return True
+            return False
+        if timeout:
+            wait_for(lambda: not nmap_alive(), timeout, 0.1, 5.0)
+            self.stop_nmap()
+
+    def stop_nmap(self):
+        for nmap in self._nmaps:
+            if nmap:
+                nmap.close()
+                del nmap
+        self._nmaps = []
