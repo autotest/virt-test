@@ -6,6 +6,7 @@ import re
 import time
 
 import utils_misc
+import utils_net
 import virt_vm
 import aexpect
 import remote
@@ -145,6 +146,7 @@ class Env(UserDict.IterableUserDict):
         empty = {"version": version}
         self._filename = filename
         self._tcpdump = None
+        self._nmap = None
         self._params = None
         self.save_lock = threading.RLock()
         if filename:
@@ -369,3 +371,27 @@ class Env(UserDict.IterableUserDict):
             self._tcpdump.close()
             del self._tcpdump
             self._tcpdump = None
+
+    def _start_nmap(self):
+        """
+        Start nmaps to explore available ip for host.
+        Currently, it supports only local host.
+        """
+        ifaces = self._params.objects('nmap_interfaces')
+        skip_ifaces = self._params.objects('nmap_skip_interfaces')
+        self._nmap = utils_misc.NMap()
+
+        # Get bridges if ifaces is empty
+        if not ifaces:
+            ifaces = utils_net.Bridge().list_br()
+        for iface in skip_ifaces:
+            if iface in ifaces:
+                ifaces.remove(iface)
+        self._nmap.start_nmap(ifaces, timeout=None)
+
+    def start_nmap(self, params):
+        self._params = params
+        self._start_nmap()
+
+    def stop_nmap(self):
+        self._nmap.stop_nmap()

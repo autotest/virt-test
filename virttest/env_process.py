@@ -593,6 +593,8 @@ def preprocess(test, params, env):
     # The fact it has to be started here is so that the test params
     # have to be honored.
     env.start_tcpdump(params)
+    if params.get("run_nmap") == "yes":
+        env.start_nmap(params)
 
     # Add migrate_vms to vms
     migrate_vms = params.objects("migrate_vms")
@@ -937,6 +939,8 @@ def postprocess(test, params, env):
 
     # Terminate the tcpdump thread
     env.stop_tcpdump()
+    if params.get("run_nmap") == "yes":
+        env.stop_nmap()
 
     # Kill all aexpect tail threads
     aexpect.kill_tail_threads()
