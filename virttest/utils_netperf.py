@@ -75,9 +75,11 @@ class NetperfPackage(remote.Remote_Package):
         if client == "nc":
             self.prompt = r"^\w:\\.*>\s*$"
             self.linesep = "\r\n"
+            self.status_test_command = "echo %errorlevel%"
         else:
             self.prompt = "^\[.*\][\#\$]\s*$"
             self.linesep = "\n"
+            self.status_test_command = "echo $?"
             if self.netperf_source.endswith("tar.bz2"):
                 self.pack_suffix = ".tar.bz2"
                 self.decomp_cmd = "tar jxvf"
@@ -102,7 +104,8 @@ class NetperfPackage(remote.Remote_Package):
         self.session = remote.remote_login(self.client, self.address,
                                            self.port, self.username,
                                            self.password, self.prompt,
-                                           self.linesep, timeout=360)
+                                           self.linesep, timeout=360,
+                                           status_test_command=self.status_test_command)
 
     def __del__(self):
         self.env_cleanup()
@@ -192,9 +195,11 @@ class Netperf(object):
         if client == "nc":
             self.prompt = r"^\w:\\.*>\s*$"
             self.linesep = "\r\n"
+            self.status_test_command = "echo %errorlevel%"
         else:
             self.prompt = "^\[.*\][\#\$]\s*$"
             self.linesep = "\n"
+            self.status_test_command = "echo $?"
 
         self.package = NetperfPackage(address, netperf_path, md5sum,
                                       netperf_source, client, port, username,
@@ -204,16 +209,20 @@ class Netperf(object):
         logging.debug("Create remote session")
         self.session = remote.remote_login(client, address, port, username,
                                            password, self.prompt,
-                                           self.linesep, timeout=360)
+                                           self.linesep, timeout=360,
+                                           status_test_command=self.status_test_command)
 
     def is_target_running(self, target):
         if self.client == "nc":
-            check_reg = re.compile(r"%s.*EXE" % target.upper(), re.I)
-            if check_reg.findall(self.session.cmd_output("tasklist")):
+            list_cmd = "wmic process where name='%s' list" % target
+            status, output = self.session.cmd_status_output(list_cmd)
+            check_reg = re.compile(r"%s" % target, re.I)
+            if check_reg.findall(output):
                 return True
         else:
-            status_cmd = "pidof %s" % target
-            if not self.session.cmd_status(status_cmd):
+            status_cmd = "ps -C %s" % target
+            status, output = self.session.cmd_status_output(status_cmd)
+            if not status:
                 return True
         return False
 
@@ -263,9 +272,9 @@ class NetperfServer(Netperf):
         logging.info("Start netserver ...")
         server_cmd = ""
         if self.client == "nc":
-            server_cmd += "start /b %s" % self.netserver_path
+            server_cmd += "start /b %s > null" % self.netserver_path
         else:
-            server_cmd = self.netserver_path
+            server_cmd = "%s > /dev/null" % self.netserver_path
 
         if restart:
             self.stop()
@@ -278,10 +287,10 @@ class NetperfServer(Netperf):
         logging.info("Netserver start successfully")
 
     def is_server_running(self):
-        return self.is_target_running("netserver")
+        return self.is_target_running(os.path.basename(self.netserver_path))
 
     def stop(self):
-        super(NetperfServer, self).stop("netserver")
+        super(NetperfServer, self).stop(os.path.basename(self.netserver_path))
 
 
 class NetperfClient(Netperf):
@@ -375,7 +384,7 @@ class NetperfClient(Netperf):
                 self.session.cmd_output_safe("%s &" % netperf_cmd)
 
     def is_netperf_running(self):
-        return self.is_target_running("netperf")
+        return self.is_target_running(os.path.basename(self.netperf_path))
 
     def stop(self):
-        super(NetperfClient, self).stop("netperf")
+        super(NetperfClient, self).stop(os.path.basename(self.netperf_path))

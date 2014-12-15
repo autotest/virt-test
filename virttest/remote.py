@@ -198,7 +198,8 @@ def handle_prompts(session, username, password, prompt, timeout=10,
 
 
 def remote_login(client, host, port, username, password, prompt, linesep="\n",
-                 log_filename=None, timeout=10, interface=None):
+                 log_filename=None, timeout=10, interface=None,
+                 status_test_command="echo $?"):
     """
     Log into a remote host (guest) using SSH/Telnet/Netcat.
 
@@ -216,6 +217,10 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
             or the password prompt)
     :interface: The interface the neighbours attach to (only use when using ipv6
                 linklocal address.)
+    :param status_test_command: Command to be used for getting the last
+            exit status of commands run inside the shell (used by
+            cmd_status_output() and friends).
+
     :raise LoginError: If using ipv6 linklocal but not assign a interface that
                        the neighbour attache
     :raise LoginBadClientError: If an unknown client is requested
@@ -240,7 +245,8 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
         raise LoginBadClientError(client)
 
     logging.debug("Login command: '%s'", cmd)
-    session = aexpect.ShellSession(cmd, linesep=linesep, prompt=prompt)
+    session = aexpect.ShellSession(cmd, linesep=linesep, prompt=prompt,
+                                   status_test_command=status_test_command)
     try:
         handle_prompts(session, username, password, prompt, timeout)
     except Exception:
