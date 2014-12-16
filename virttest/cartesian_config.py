@@ -1930,24 +1930,26 @@ class Parser(object):
 
 def print_dicts_default(options, dicts):
     """Print dictionaries in the default mode"""
-    for i, d in enumerate(dicts):
+    for count, dic in enumerate(dicts):
+        postfix_parse(dic)
         if options.fullname:
-            print "dict %4d:  %s" % (i + 1, d["name"])
+            print "dict %4d:  %s" % (count + 1, dic["name"])
         else:
-            print "dict %4d:  %s" % (i + 1, d["shortname"])
+            print "dict %4d:  %s" % (count + 1, dic["shortname"])
         if options.contents:
-            keys = d.keys()
+            keys = dic.keys()
             keys.sort()
             for key in keys:
-                print "    %s = %s" % (key, d[key])
+                print "    %s = %s" % (key, dic[key])
 
 
 # pylint: disable=W0613
 def print_dicts_repr(options, dicts):
     import pprint
     print "["
-    for d in dicts:
-        print "%s," % (pprint.pformat(d))
+    for dic in dicts:
+        postfix_parse(dic)
+        print "%s," % (pprint.pformat(dic))
     print "]"
 
 
@@ -1956,6 +1958,77 @@ def print_dicts(options, dicts):
         print_dicts_repr(options, dicts)
     else:
         print_dicts_default(options, dicts)
+
+
+def convert_data_size(size, default_sufix='B'):
+    '''
+    Convert data size from human readable units to an int of arbitrary size.
+
+    @param size: Human readable data size representation (string).
+    @param default_sufix: Default sufix used to represent data.
+    @return: Int with data size in the appropriate order of magnitude.
+    '''
+    orders = {'B': 1,
+              'K': 1024,
+              'M': 1024 * 1024,
+              'G': 1024 * 1024 * 1024,
+              'T': 1024 * 1024 * 1024 * 1024,
+              }
+
+    order = re.findall("([BbKkMmGgTt])", size[-1])
+    if not order:
+        size += default_sufix
+        order = [default_sufix]
+
+    return int(float(size[0:-1]) * orders[order[0].upper()])
+
+
+def compare_string(str1, str2):
+    """
+    Compare two int string and return -1, 0, 1.
+    It can compare two memory value even in sufix
+
+    @param str1: The first string
+    @param str2: The second string
+
+    @Return: Rteurn -1, when str1<  str2
+                     0, when str1 = str2
+                     1, when str1>  str2
+    """
+    order1 = re.findall("([BbKkMmGgTt])", str1)
+    order2 = re.findall("([BbKkMmGgTt])", str2)
+    if order1 or order2:
+        value1 = convert_data_size(str1, "M")
+        value2 = convert_data_size(str2, "M")
+    else:
+        value1 = int(str1)
+        value2 = int(str2)
+    if value1 < value2:
+        return -1
+    elif value1 == value2:
+        return 0
+    else:
+        return 1
+
+
+def postfix_parse(dic):
+    tmp_dict = {}
+    for key in dic:
+        if key.endswith("_max"):
+            tmp_key = key.split("_max")[0]
+            if (not dic.has_key(tmp_key) or
+                    compare_string(dic[tmp_key], dic[key]) > 0):
+                tmp_dict[tmp_key] = dic[key]
+        elif key.endswith("_min"):
+            tmp_key = key.split("_min")[0]
+            if (not dic.has_key(tmp_key) or
+                    compare_string(dic[tmp_key], dic[key]) < 0):
+                tmp_dict[tmp_key] = dic[key]
+        elif key.endswith("_fixed"):
+            tmp_key = key.split("_fixed")[0]
+            tmp_dict[tmp_key] = dic[key]
+    for key in tmp_dict:
+        dic[key] = tmp_dict[key]
 
 
 if __name__ == "__main__":
