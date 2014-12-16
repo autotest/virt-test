@@ -38,6 +38,7 @@ from virttest.utils_libvirtd import service_libvirtd_control
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
+from virttest.libvirt_xml import network_xml
 from virttest.libvirt_xml import xcepts
 from virttest.libvirt_xml import NetworkXML
 from virttest.libvirt_xml import IPXML
@@ -1344,6 +1345,116 @@ def create_disk_xml(params):
     utils_misc.wait_for(file_exists, 5)
 
     return diskxml.xml
+
+
+def create_net_xml(net_name, params):
+    """
+    Create a new network or update an existed network xml
+    """
+    dns_dict = {}
+    host_dict = {}
+    net_bridge = params.get("net_bridge", '{}')
+    net_forward = params.get("net_forward", '{}')
+    net_dns_forward = params.get("net_dns_forward")
+    net_dns_txt = params.get("net_dns_txt")
+    net_dns_srv = params.get("net_dns_srv")
+    net_dns_forwarders = params.get("net_dns_forwarders", "").split()
+    net_dns_hostip = params.get("net_dns_hostip")
+    net_dns_hostnames = params.get("net_dns_hostnames", "").split()
+    net_domain = params.get("net_domain")
+    net_bandwidth_inbound = params.get("net_bandwidth_inbound", "{}")
+    net_bandwidth_outbound = params.get("net_bandwidth_outbound", "{}")
+    net_ip_family = params.get("net_ip_family")
+    net_ip_address = params.get("net_ip_address")
+    net_ip_netmask = params.get("net_ip_netmask", "255.255.255.0")
+    net_ipv6_address = params.get("net_ipv6_address")
+    net_ipv6_prefix = params.get("net_ipv6_prefix", "64")
+    nat_port = params.get("nat_port")
+    guest_name = params.get("guest_name")
+    guest_ipv4 = params.get("guest_ipv4")
+    guest_ipv6 = params.get("guest_ipv6")
+    guest_mac = params.get("guest_mac")
+    dhcp_start_ipv4 = params.get("dhcp_start_ipv4", "192.168.122.2")
+    dhcp_end_ipv4 = params.get("dhcp_end_ipv4", "192.168.122.254")
+    dhcp_start_ipv6 = params.get("dhcp_start_ipv6")
+    dhcp_end_ipv6 = params.get("dhcp_end_ipv6")
+    try:
+        if net_name == "default":
+            # Default network should always exist
+            netxml = network_xml.NetworkXML.new_from_net_dumpxml(net_name)
+            netxml.del_ip()
+        else:
+            netxml = network_xml.NetworkXML(net_name)
+        if net_dns_forward:
+            dns_dict["dns_forward"] = net_dns_forward
+        if net_dns_txt:
+            dns_dict["txt"] = eval(net_dns_txt)
+        if net_dns_srv:
+            dns_dict["srv"] = eval(net_dns_srv)
+        if net_dns_forwarders:
+            dns_dict["forwarders"] = [eval(x) for x in
+                                      net_dns_forwarders]
+        if net_dns_hostip:
+            host_dict["host_ip"] = net_dns_hostip
+        if net_dns_hostnames:
+            host_dict["hostnames"] = net_dns_hostnames
+
+        dns_obj = netxml.new_dns(**dns_dict)
+        if host_dict:
+            host = dns_obj.new_host(**host_dict)
+            dns_obj.host = host
+        netxml.dns = dns_obj
+        bridge = eval(net_bridge)
+        if bridge:
+            netxml.bridge = bridge
+        forward = eval(net_forward)
+        if forward:
+            netxml.forward = forward
+        if nat_port:
+            netxml.nat_port = eval(nat_port)
+        if net_domain:
+            netxml.domain_name = net_domain
+        net_inbound = eval(net_bandwidth_inbound)
+        net_outbound = eval(net_bandwidth_outbound)
+        if net_inbound:
+            netxml.bandwidth_inbound = net_inbound
+        if net_outbound:
+            netxml.bandwidth_outbound = net_outbound
+
+        if net_ip_family == "ipv6":
+            # Add ipv6 sections in xml
+            ipxml = network_xml.IPXML()
+            ipxml.family = net_ip_family
+            ipxml.prefix = net_ipv6_prefix
+            del ipxml.netmask
+            if net_ipv6_address:
+                ipxml.address = net_ipv6_address
+            if dhcp_start_ipv6 and dhcp_end_ipv6:
+                ipxml.dhcp_ranges = {"start": dhcp_start_ipv6,
+                                     "end": dhcp_end_ipv6}
+            if guest_name and guest_ipv6 and guest_mac:
+                ipxml.hosts = [{"name": guest_name,
+                                "ip": guest_ipv6}]
+            netxml.set_ip(ipxml)
+        if net_ip_address:
+            # Add ipv4 sections in xml
+            ipxml = network_xml.IPXML(net_ip_address,
+                                      net_ip_netmask)
+            if dhcp_start_ipv4 and dhcp_end_ipv4:
+                ipxml.dhcp_ranges = {"start": dhcp_start_ipv4,
+                                     "end": dhcp_end_ipv4}
+            if guest_name and guest_ipv4 and guest_mac:
+                ipxml.hosts = [{"mac": guest_mac,
+                                "name": guest_name,
+                                "ip": guest_ipv4}]
+            netxml.set_ip(ipxml)
+        logging.debug("New network xml file: %s", netxml)
+        netxml.xmltreefile.write()
+        netxml.sync()
+
+    except Exception, detail:
+        utils.log_last_traceback()
+        raise error.TestFail("Fail to create network XML: %s" % detail)
 
 
 def set_domain_state(vm, vm_state):
