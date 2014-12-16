@@ -53,7 +53,8 @@ class IPXML(base.LibvirtXMLBase):
         netmask: string IP's netmask
     """
 
-    __slots__ = ('dhcp_ranges', 'address', 'netmask', 'hosts')
+    __slots__ = ('dhcp_ranges', 'address', 'netmask', 'hosts',
+                 'family', 'prefix')
 
     def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
                  virsh_instance=base.virsh):
@@ -66,6 +67,12 @@ class IPXML(base.LibvirtXMLBase):
         accessors.XMLAttribute(
             'netmask', self, parent_xpath='/', tag_name='ip',
             attribute='netmask')
+        accessors.XMLAttribute(
+            'family', self, parent_xpath='/', tag_name='ip',
+            attribute='family')
+        accessors.XMLAttribute(
+            'prefix', self, parent_xpath='/', tag_name='ip',
+            attribute='prefix')
         accessors.XMLElementDict('dhcp_ranges', self,
                                  parent_xpath='/dhcp',
                                  tag_name='range')
@@ -105,7 +112,7 @@ class DNSXML(base.LibvirtXMLBase):
         txt:
             Dict. keys: name, value
         forwarder:
-            List of forwarder dict
+            List
         srv:
             Dict. keys: service, protocol, domain,
             tartget, port, priority, weight
@@ -287,6 +294,8 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             string operate on ip/dhcp ranges as IPXML instances
         forward:
             dict, operates on forward tag
+        nat_port:
+            dict, operates on nat tag
         bridge:
             dict, operates on bridge attributes
         bandwidth_inbound:
@@ -295,6 +304,10 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             dict, operates on outbound under bandwidth.
         portgroup:
             PortgroupXML instance to access portgroup tag.
+        domain_name:
+            string, operates on name attribute of domain tag
+        dns:
+            DNSXML instance to access dns tag.
 
         defined:
             virtual boolean, callout to virsh methods
@@ -336,7 +349,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
     __slots__ = ('name', 'uuid', 'bridge', 'defined', 'active',
                  'autostart', 'persistent', 'forward', 'mac', 'ip',
                  'bandwidth_inbound', 'bandwidth_outbound', 'portgroup',
-                 'dns', 'domain_name')
+                 'dns', 'domain_name', 'nat_port')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
         'defined', 'active',
@@ -353,6 +366,8 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                tag_name='mac', attribute='address')
         accessors.XMLElementDict('forward', self, parent_xpath='/',
                                  tag_name='forward')
+        accessors.XMLElementDict('nat_port', self, parent_xpath='/forward/nat',
+                                 tag_name='port')
         accessors.XMLElementDict('bridge', self, parent_xpath='/',
                                  tag_name='bridge')
         accessors.XMLElementDict('bandwidth_inbound', self,
@@ -480,8 +495,6 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         if not issubclass(type(value), IPXML):
             raise xcepts.LibvirtXMLError("value must be a IPXML or subclass")
         xmltreefile = self.__dict_get__('xml')
-        # nuke any existing IP block
-        self.del_ip()
         # IPXML root element is whole IP element tree
         root = xmltreefile.getroot()
         root.append(value.xmltreefile.getroot())
