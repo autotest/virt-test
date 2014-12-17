@@ -222,7 +222,7 @@ class QtreeDisk(QtreeDev):
         self.params['drive_format'] = self.qtree.get('type')
 
     def get_qname(self):
-        return self.qtree.get('drive')
+        return re.sub("['\"]", "", self.qtree.get('drive'))
 
 
 class QtreeContainer(object):
