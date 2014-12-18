@@ -971,8 +971,13 @@ def get_loss_ratio(output):
     try:
         return int(re.findall('(\d+)% packet loss', output)[0])
     except IndexError:
-        logging.debug(output)
-        return -1
+        pass
+    try:
+        return int(re.findall('Lost = (\d+)', output)[0])
+    except IndexError:
+        pass
+    logging.debug(output)
+    return -1
 
 
 def raw_ping(command, timeout, session, output_func):
@@ -1031,7 +1036,7 @@ def raw_ping(command, timeout, session, output_func):
 def ping(dest=None, count=None, interval=None, interface=None,
          packetsize=None, ttl=None, hint=None, adaptive=False,
          broadcast=False, flood=False, timeout=0,
-         output_func=logging.debug, session=None):
+         output_func=logging.debug, session=None, os_type="linux"):
     """
     Wrapper of ping.
 
@@ -1047,40 +1052,59 @@ def ping(dest=None, count=None, interval=None, interface=None,
     :param flood: Flood ping flag.
     :param timeout: Timeout for the ping command.
     :param output_func: Function used to log the result of ping.
-    :param session: Local executon hint or session to execute the ping command.
+    :param session: Local executon hint or session to execute the
+                    ping command.
+    :param os_type: Guest type running ping command. windows or linux
     """
     command = "ping"
-    if ":" in dest:
-        command = "ping6"
-    if dest is not None:
-        command += " %s " % dest
+    if session and os_type == "windows":
+        if dest:
+            command += " %s " % dest
+        else:
+            command += " localhost "
+        if count:
+            command += " -n %s" % count
+        if packetsize:
+            command += " -l %s" % packetsize
+        if ttl:
+            command += " -i %s" % ttl
+        if interface:
+            command += " -S %s" % interface
+        if flood:
+            command += " -t"
     else:
-        command += " localhost "
-    if count is not None:
-        command += " -c %s" % count
-    if interval is not None:
-        command += " -i %s" % interval
-    if interface is not None:
-        command += " -I %s" % interface
-    else:
-        if dest.upper().startswith("FE80"):
-            err_msg = "Using ipv6 linklocal must assigne interface"
-            raise error.TestNAError(err_msg)
-    if packetsize is not None:
-        command += " -s %s" % packetsize
-    if ttl is not None:
-        command += " -t %s" % ttl
-    if hint is not None:
-        command += " -M %s" % hint
-    if adaptive:
-        command += " -A"
-    if broadcast:
-        command += " -b"
-    if flood:
-        command += " -f -q"
-        command = "sleep %s && kill -2 `pidof ping` & %s" % (timeout, command)
-        output_func = None
-        timeout += 1
+        if ":" in dest:
+            command = "ping6"
+        if dest:
+            command += " %s " % dest
+        else:
+            command += " localhost "
+        if count:
+            command += " -c %s" % count
+        if interval:
+            command += " -i %s" % interval
+        if interface:
+            command += " -I %s" % interface
+        else:
+            if dest.upper().startswith("FE80"):
+                err_msg = "Using ipv6 linklocal must assigne interface"
+                raise error.TestNAError(err_msg)
+        if packetsize:
+            command += " -s %s" % packetsize
+        if ttl:
+            command += " -t %s" % ttl
+        if hint:
+            command += " -M %s" % hint
+        if adaptive:
+            command += " -A"
+        if broadcast:
+            command += " -b"
+        if flood:
+            command += " -f -q"
+            command = "sleep %s && kill -2 `pidof ping` & %s" % (timeout,
+                                                                 command)
+            output_func = None
+            timeout += 1
 
     return raw_ping(command, timeout, session, output_func)
 
