@@ -1003,9 +1003,26 @@ class BaseVM(object):
                 when remote login (ssh, rss) failed.
         :return: A ShellSession object.
         """
+        def _run_nmap(nmap, stop=False):
+            if stop:
+                nmap.stop_nmap()
+                return
+            nmap.start_nmap(utils_net.Bridge().list_br(), timeout=None)
+            mac = self.get_mac_address(nic_index)
+            try:
+                ip = nmap.address_cache[mac.upper()]
+                self.address_cache[mac.lower()] = ip
+            except KeyError:
+                pass   # No need to deal with it, try again if not timeout
+
         error_messages = []
+        run_nmap = "yes" == self.params.get("run_nmap_to_login")
         logging.debug("Attempting to log into '%s' (timeout %ds)", self.name,
                       timeout)
+        # Start nmap for get_address
+        if run_nmap:
+            nmap = utils_misc.NMap()
+            _run_nmap(nmap)
         end_time = time.time() + timeout
         while time.time() < end_time:
             try:
@@ -1017,8 +1034,13 @@ class BaseVM(object):
                 if e not in error_messages:
                     logging.debug(e)
                     error_messages.append(e)
+                if run_nmap:
+                    _run_nmap(nmap)
             time.sleep(2)
         # Timeout expired
+        # Stop nmap first
+        if run_nmap:
+            _run_nmap(nmap, stop=True)
         logging.info("Try to get guest network status.")
         s_session = self.wait_for_serial_login(30, internal_timeout,
                                                username=username,
