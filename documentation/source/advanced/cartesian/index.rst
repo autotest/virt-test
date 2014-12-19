@@ -11,3 +11,4 @@ Contents:
 
    CartesianConfigParametersIntro
    CartesianConfigReference
+   CartesianConfigTricks
