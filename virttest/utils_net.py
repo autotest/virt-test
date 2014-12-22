@@ -2130,6 +2130,8 @@ class ParamsNet(VMNet):
             # nic name is only in params scope
             nic_dict = {'nic_name': nic_name}
             nic_params = self.params.object_params(nic_name)
+            # set default values for the nic
+            nic_params = self.__set_default_params__(nic_name, nic_params)
             # avoid processing unsupported properties
             proplist = list(self.container_class().__all_slots__)
             # nic_name was already set, remove from __slots__ list copy
@@ -2145,6 +2147,28 @@ class ParamsNet(VMNet):
                 nic_dict[propertea] = nic_params.get(propertea, existing_value)
             result_list.append(nic_dict)
         VMNet.__init__(self, self.container_class, result_list)
+
+    def __set_default_params__(self, nic_name, nic_params):
+        """
+        Use params to overwrite defaults from  DbParams
+
+        param: nic_name: nic name (string)
+        param: nic_params: params contain nic properties(like dict)
+        """
+        default_params = {}
+        default_params['queues'] = 1
+        default_params['tftp'] = None
+        default_params['romfile'] = None
+        default_params['nic_extra_params'] = ''
+        default_params['netdev_extra_params'] = ''
+        nic_name_list = self.params.objects('nics')
+        default_params['vlan'] = str(nic_name_list.index(nic_name))
+        if nic_params.get('enable_misx_vectors') == 'yes':
+            default_params['vectors'] = 2 * 1 + 2
+        for key, val in default_params.items():
+            nic_params.setdefault(key, val)
+
+        return nic_params
 
     def mac_index(self):
         """
