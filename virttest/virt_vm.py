@@ -562,6 +562,9 @@ class BaseVM(object):
         Verifies whether the current virt_install commandline matches the
         requested one, based on the test parameters.
         """
+        if not self.is_alive():
+            return True
+
         try:
             need_restart = (self.make_create_command() !=
                             self.make_create_command(name, params, basedir))
