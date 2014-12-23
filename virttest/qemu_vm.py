@@ -2096,7 +2096,9 @@ class VM(virt_vm.BaseVM):
             iso = cdrom_params.get("cdrom")
             if iso:
                 iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
-                if not os.path.exists(iso):
+                if (not os.path.exists(iso) and
+                        not ("gluster:" in self.image_filename or
+                                 "iscsi:" in self.image_filename)):
                     raise virt_vm.VMImageMissingError(iso)
                 compare = False
                 if cdrom_params.get("skip_hash"):
