@@ -184,6 +184,16 @@ class Guestfish(LibguestfsBase):
         if run_mode not in ['remote', 'interactive']:
             raise AssertionError("run_mode should be remote or interactive")
 
+        # unset GUESTFISH_XXX environment parameters
+        # to avoid color of guestfish shell session for testing
+        color_envs = ["GUESTFISH_PS1", "GUESTFISH_OUTPUT",
+                      "GUESTFISH_RESTORE", "GUESTFISH_INIT"]
+        unset_cmd = ""
+        for env in color_envs:
+            unset_cmd += "unset %s;" % env
+        if unset_cmd:
+            utils.run(unset_cmd, ignore_status=True)
+
         if run_mode == "remote":
             guestfs_exec += " --listen"
         else:
