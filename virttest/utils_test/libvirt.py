@@ -1356,6 +1356,7 @@ def set_vm_disk(vm, params, tmp_dir=None):
     pool_name = params.get("pool_name", "gluster-pool")
     transport = params.get("transport", "")
     brick_path = os.path.join(tmp_dir, pool_name)
+    image_convert = "yes" == params.get("image_convert", 'yes')
 
     if vm.is_alive():
         vm.destroy(gracefully=False)
@@ -1398,9 +1399,14 @@ def set_vm_disk(vm, params, tmp_dir=None):
         logging.debug("host ip: %s " % host_ip)
         dist_img = "gluster.%s" % disk_format
 
-        # Convert first disk to gluster disk path
-        disk_cmd = ("qemu-img convert -f %s -O %s %s /mnt/%s" %
-                    (src_disk_format, disk_format, blk_source, dist_img))
+        if image_convert:
+            # Convert first disk to gluster disk path
+            disk_cmd = ("qemu-img convert -f %s -O %s %s /mnt/%s" %
+                        (src_disk_format, disk_format, blk_source, dist_img))
+        else:
+            # create another disk without convert
+            disk_cmd = "qemu-img create -f %s /mnt/%s 10M" % (src_disk_format,
+                                                              dist_img)
 
         # Mount the gluster disk and create the image.
         utils.run("mount -t glusterfs %s:%s /mnt; %s; umount /mnt"
@@ -1437,7 +1443,9 @@ def set_vm_disk(vm, params, tmp_dir=None):
     # Delete disk elements
     disks = vmxml.get_devices(device_type="disk")
     for disk_ in disks:
-        vmxml.del_device(disk_)
+        if disk_.target['dev'] == disk_target:
+            vmxml.del_device(disk_)
+
     # New disk xml
     new_disk = disk.Disk(type_name=disk_type)
     new_disk.new_disk_source(attrs={'file': blk_source})
