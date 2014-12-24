@@ -49,10 +49,6 @@ d-i debian-installer/exit/poweroff boolean true
 d-i preseed/late_command string \
 echo "start on stopped rc or RUNLEVEL=[2345]" > /target/etc/init/ttyS0.conf; \
 echo "stop on runlevel [!2345]" >> /target/etc/init/ttyS0.conf; \
-echo "respawn" >> /target/etc/init/ttyS0.conf; \
-echo "exec /sbin/getty -L 115200 ttyS0 vt102" >> /target/etc/init/ttyS0.conf; \
+echo "respawn exec /sbin/getty -L 115200 ttyS0 vt102" >> /target/etc/init/ttyS0.conf; \
 echo "GRUB_RECORDFAIL_TIMEOUT=0" >> /target/etc/default/grub; \
-echo "#!/bin/sh -e" > /target/etc/rc.local; \
-echo "/usr/sbin/update-grub" >> /target/etc/rc.local; \
-echo "exit 0" >> /target/etc/rc.local; \
-sed -i "s/ alias/ #alias/g" /target/root/.bashrc
+sed -i "s/ alias/ #alias/g" /target/root/.bashrc; in-target update-grub
