@@ -337,11 +337,11 @@ class NetperfClient(Netperf):
                 for p_size in package_sizes.split():
                     cmd = netperf_cmd + " -- -m %s" % p_size
                     logging.info("Start netperf with cmd: '%s'" % cmd)
-                    output += self.session.cmd_output_safe(netperf_cmd,
+                    output += self.session.cmd_output_safe(cmd,
                                                            timeout=timeout)
             else:
                 logging.info("Start netperf with cmd: '%s'" % netperf_cmd)
-                output = self.session.cmd_output_safe(cmd,
+                output = self.session.cmd_output_safe(netperf_cmd,
                                                       timeout=timeout)
         except aexpect.ShellError, err:
             raise NetperfTestError("Run netperf error. %s" % str(err))
