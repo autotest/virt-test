@@ -1138,6 +1138,9 @@ def create_disk_xml(params):
     target_bus = params.get("target_bus", "virtio")
     diskxml = disk.Disk(type_name)
     diskxml.device = params.get("device_type", "disk")
+    snapshot_attr = params.get('disk_snapshot_attr')
+    if snapshot_attr:
+        diskxml.snapshot = snapshot_attr
     source_attrs = {}
     source_host = []
     auth_attrs = {}
@@ -1327,6 +1330,7 @@ def set_vm_disk(vm, params, tmp_dir=None):
     vmxml = vm_xml.VMXML.new_from_inactive_dumpxml(vm.name)
     logging.debug("original xml is: %s", vmxml.xmltreefile)
     disk_device = params.get("disk_device", "disk")
+    disk_snapshot_attr = params.get("disk_snapshot_attr")
     disk_type = params.get("disk_type")
     disk_target = params.get("disk_target", 'vda')
     disk_target_bus = params.get("disk_target_bus", "virtio")
@@ -1342,6 +1346,7 @@ def set_vm_disk(vm, params, tmp_dir=None):
     disk_xml = vmxml.devices.by_device_tag('disk')[0]
     src_disk_format = disk_xml.xmltreefile.find('driver').get('type')
     disk_params = {'device_type': disk_device,
+                   'disk_snapshot_attr': disk_snapshot_attr,
                    'type_name': disk_type,
                    'target_dev': disk_target,
                    'target_bus': disk_target_bus,
