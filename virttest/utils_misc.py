@@ -2310,6 +2310,19 @@ def format_guest_disk(session, did, mountpoint, size, fstype, ostype):
     return format_linux_disk(session, did, mountpoint, size, fstype)
 
 
+def get_windows_drive_letters(session):
+    """
+    Get drive letters has been assigned
+
+    :param session: session object to guest
+    :return list: letters has been assigned
+    """
+    list_letters_cmd = "fsutil fsinfo drives"
+    drive_letters = re.findall(r'(\w+):\\', session.cmd_output(list_letters_cmd), re.M)
+
+    return drive_letters
+
+
 def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
     """
     Divide the valued options into key and value
