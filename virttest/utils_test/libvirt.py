@@ -758,6 +758,23 @@ def get_parts_list(session=None):
     return parts
 
 
+def yum_install(pkg_list, session=None):
+    """
+    Try to install packages on system
+    """
+    if not isinstance(pkg_list, list):
+        raise error.TestError("Parameter error.")
+    yum_cmd = "rpm -q {0} || yum -y install {0}"
+    for pkg in pkg_list:
+        if session:
+            status = session.cmd_status(yum_cmd.format(pkg))
+        else:
+            status = utils.run(yum_cmd.format(pkg)).exit_status
+        if status:
+            raise error.TestFail("Failed to install package: %s"
+                                 % pkg)
+
+
 def check_actived_pool(pool_name):
     """
     Check if pool_name exist in active pool list
@@ -1353,6 +1370,7 @@ def create_net_xml(net_name, params):
     """
     dns_dict = {}
     host_dict = {}
+    net_name = params.get("net_name", "default")
     net_bridge = params.get("net_bridge", '{}')
     net_forward = params.get("net_forward", '{}')
     net_dns_forward = params.get("net_dns_forward")
@@ -1378,6 +1396,8 @@ def create_net_xml(net_name, params):
     dhcp_end_ipv4 = params.get("dhcp_end_ipv4", "192.168.122.254")
     dhcp_start_ipv6 = params.get("dhcp_start_ipv6")
     dhcp_end_ipv6 = params.get("dhcp_end_ipv6")
+    tftp_root = params.get("tftp_root")
+    bootp_file = params.get("bootp_file")
     try:
         if net_name == "default":
             # Default network should always exist
@@ -1422,7 +1442,6 @@ def create_net_xml(net_name, params):
             netxml.bandwidth_outbound = net_outbound
 
         if net_ip_family == "ipv6":
-            # Add ipv6 sections in xml
             ipxml = network_xml.IPXML()
             ipxml.family = net_ip_family
             ipxml.prefix = net_ipv6_prefix
@@ -1437,12 +1456,15 @@ def create_net_xml(net_name, params):
                                 "ip": guest_ipv6}]
             netxml.set_ip(ipxml)
         if net_ip_address:
-            # Add ipv4 sections in xml
             ipxml = network_xml.IPXML(net_ip_address,
                                       net_ip_netmask)
             if dhcp_start_ipv4 and dhcp_end_ipv4:
                 ipxml.dhcp_ranges = {"start": dhcp_start_ipv4,
                                      "end": dhcp_end_ipv4}
+            if tftp_root:
+                ipxml.tftp_root = tftp_root
+            if bootp_file:
+                ipxml.dhcp_bootp = bootp_file
             if guest_name and guest_ipv4 and guest_mac:
                 ipxml.hosts = [{"mac": guest_mac,
                                 "name": guest_name,
@@ -1454,7 +1476,7 @@ def create_net_xml(net_name, params):
 
     except Exception, detail:
         utils.log_last_traceback()
-        raise error.TestFail("Fail to create network XML: %s" % detail)
+        raise error.TestFail("Fail to create disk XML: %s" % detail)
 
 
 def set_domain_state(vm, vm_state):
