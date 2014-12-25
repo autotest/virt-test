@@ -54,7 +54,7 @@ class IPXML(base.LibvirtXMLBase):
     """
 
     __slots__ = ('dhcp_ranges', 'address', 'netmask', 'hosts',
-                 'family', 'prefix')
+                 'family', 'prefix', 'tftp_root', 'dhcp_bootp')
 
     def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
                  virsh_instance=base.virsh):
@@ -73,6 +73,12 @@ class IPXML(base.LibvirtXMLBase):
         accessors.XMLAttribute(
             'prefix', self, parent_xpath='/', tag_name='ip',
             attribute='prefix')
+        accessors.XMLAttribute(
+            'tftp_root', self, parent_xpath='/', tag_name='tftp',
+            attribute='root')
+        accessors.XMLAttribute(
+            'dhcp_bootp', self, parent_xpath='/dhcp', tag_name='bootp',
+            attribute='file')
         accessors.XMLElementDict('dhcp_ranges', self,
                                  parent_xpath='/dhcp',
                                  tag_name='range')
