@@ -2697,6 +2697,33 @@ def monotonic_time():
         return monotonic_time_os()
 
 
+def verify_host_dmesg(dmesg_log_file=None, trace_re=None):
+    """
+    Find host call trace in dmesg log.
+
+    :param dmesg_log_file: The file used to save host dmesg. If None, will save
+                           host dmesg to logging.debug.
+    :param trace_re: re string used to filter call trace.
+    """
+    panic_re = [r"BUG:.*---\[ end trace .* \]---"]
+    panic_re.append(r"----------\[ cut here.* BUG .*\[ end trace .* \]---")
+    panic_re.append(r"general protection fault:.* RSP.*>")
+    panic_re = "|".join(panic_re)
+    dmesg = utils.system_output("dmesg", timeout=30, ignore_status=True)
+    if dmesg:
+        match = re.search(panic_re, dmesg, re.DOTALL | re.MULTILINE | re.I)
+        if match is not None:
+            err = "Found call trace in host dmesg."
+            d_log = "Host dmesg log:\n%s" % dmesg
+            if dmesg_log_file:
+                file(dmesg_log_file, "w+").write(d_log)
+                err += " Please check host dmesg log %s." % dmesg_log_file
+            else:
+                err += " Please check host dmesg log in debug log."
+                logging.debug(d_log)
+            raise error.TestError(err)
+
+
 def add_ker_cmd(kernel_cmdline, kernel_param, remove_similar=False):
     """
     Add a parameter to kernel command line content
