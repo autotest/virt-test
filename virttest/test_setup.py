@@ -845,7 +845,7 @@ class PciAssignable(object):
         pf_id = None
         if self.pf_vf_info:
             for pf in self.pf_vf_info:
-                if "ethname" in pf and name == pf["ethname"]:
+                if name and "ethname" in pf and name == pf["ethname"]:
                     pf["occupied"] = True
                     pf_id = pf["pf_id"]
                     break
@@ -856,6 +856,37 @@ class PciAssignable(object):
                         pf_id = pf["pf_id"]
                         break
         return pf_id
+
+    def _get_vf_pci_id(self, name=None):
+        """
+        Get the VF PCI ID according to name.
+        It returns the first free vf, if no name matched.
+
+        :param name: Name of the PCI device.
+        :type name: string
+        :return: pci id of the VF device.
+        :rtype: string
+        """
+        vf_id = None
+        if self.pf_vf_info:
+            for pf in self.pf_vf_info:
+                if name and "ethname" in pf and name == pf["ethname"]:
+                    for vf in pf["vf_ids"]:
+                        vf_id = vf["vf_id"]
+                        if (not vf["occupied"] and
+                                not self.is_binded_to_stub(vf_id)):
+                            vf["occupied"] = True
+                            return vf_id
+            if vf_id is None:
+                for pf in self.pf_vf_info:
+                    if pf["occupied"]:
+                        continue
+                    for vf in pf["vf_ids"]:
+                        vf_id = vf["vf_id"]
+                        if (not vf["occupied"] and
+                                not self.is_binded_to_stub(vf_id)):
+                            vf["occupied"] = True
+                            return vf_id
 
     @error.context_aware
     def _release_dev(self, pci_id):
@@ -873,33 +904,26 @@ class PciAssignable(object):
         drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
         if self.device_driver in os.readlink(drv_path):
             error.context("Release device %s to host" % pci_id, logging.info)
-            driver = self.dev_unbind_drivers[pci_id]
-            cmd = "echo '%s' > %s/new_id" % (vendor_id, driver)
-            logging.info("Run command in host: %s" % cmd)
-            try:
-                output = utils.system_output(cmd, timeout=60)
-            except error.CmdError:
-                msg = "Command %s fail with output %s" % (cmd, output)
-                logging.error(msg)
-                return False
 
             stub_path = os.path.join(base_dir,
                                      "drivers/%s" % self.device_driver)
             cmd = "echo '%s' > %s/unbind" % (pci_id, stub_path)
             logging.info("Run command in host: %s" % cmd)
             try:
+                output = None
                 output = utils.system_output(cmd, timeout=60)
-            except error.CmdError:
+            except Exception:
                 msg = "Command %s fail with output %s" % (cmd, output)
                 logging.error(msg)
                 return False
 
-            driver = self.dev_unbind_drivers[pci_id]
-            cmd = "echo '%s' > %s/bind" % (pci_id, driver)
+            drivers_probe = os.path.join(base_dir, "drivers_probe")
+            cmd = "echo '%s' > %s" % (pci_id, drivers_probe)
             logging.info("Run command in host: %s" % cmd)
             try:
+                output = None
                 output = utils.system_output(cmd, timeout=60)
-            except error.CmdError:
+            except Exception:
                 msg = "Command %s fail with output %s" % (cmd, output)
                 logging.error(msg)
                 return False
@@ -936,9 +960,10 @@ class PciAssignable(object):
         :return: PF device name and vf num.
         :rtype: string
         """
-        for pf in self.pf_vf_info:
-            if vf_id in pf.get('vf_ids'):
-                return pf['ethname'], pf["vf_ids"].index(vf_id)
+        for pf_info in self.pf_vf_info:
+            for vf_info in pf_info.get('vf_ids'):
+                if vf_id == vf_info["vf_id"]:
+                    return pf_info['ethname'], pf_info["vf_ids"].index(vf_info)
         raise ValueError("Could not find vf id '%s' in '%s'" % (vf_id,
                                                                 self.pf_vf_info))
 
@@ -978,7 +1003,10 @@ class PciAssignable(object):
             for path in paths:
                 f_path = os.path.join(d_link, path)
                 vf_id = os.path.basename(os.path.realpath(f_path))
-                vf_ids.append(vf_id)
+                vf_info = {}
+                vf_info["vf_id"] = vf_id
+                vf_info["occupied"] = False
+                vf_ids.append(vf_info)
             pf_info["vf_ids"] = vf_ids
             pf_vf_dict.append(pf_info)
         if_out = utils.system_output("ifconfig -a")
@@ -993,23 +1021,30 @@ class PciAssignable(object):
                     pf["ethname"] = eth
         return pf_vf_dict
 
-    def get_vf_devs(self):
+    def get_vf_devs(self, devices=None):
         """
         Get all unused VFs PCI IDs.
 
+        :param devices: List of device dict that contain PF VF information.
+        :type devices: List of dict
         :return: List of all available PCI IDs for Virtual Functions.
         :rtype: List of string
         """
         vf_ids = []
-        for pf in self.pf_vf_info:
-            if pf["occupied"]:
-                continue
-            for vf_id in pf["vf_ids"]:
-                if not self.is_binded_to_stub(vf_id):
-                    vf_ids.append(vf_id)
+        if not devices:
+            devices = self.devices
+        logging.info("devices = %s", devices)
+        for device in devices:
+            if device['type'] == 'vf':
+                name = device.get('name', None)
+                vf_id = self._get_vf_pci_id(name)
+                logging.info("vf_id = %s", vf_id)
+                if not vf_id:
+                    continue
+                vf_ids.append(vf_id)
         return vf_ids
 
-    def get_pf_devs(self):
+    def get_pf_devs(self, devices=None):
         """
         Get PFs PCI IDs requested by self.devices.
         It will try to get PF by device name.
@@ -1017,11 +1052,15 @@ class PciAssignable(object):
         Please set unoccupied device name. If not sure, please just do not
         set device name. It will return unused PF list.
 
+        :param devices: List of device dict that contain PF VF information.
+        :type devices: List of dict
         :return: List with all PCI IDs for the physical hardware requested
         :rtype: List of string
         """
         pf_ids = []
-        for device in self.devices:
+        if not devices:
+            devices = self.devices
+        for device in devices:
             if device['type'] == 'pf':
                 name = device.get('name', None)
                 pf_id = self._get_pf_pci_id(name)
@@ -1042,12 +1081,15 @@ class PciAssignable(object):
         base_dir = "/sys/bus/pci"
         if not devices:
             devices = self.devices
-        pf_ids = self.get_pf_devs()
-        vf_ids = self.get_vf_devs()
-        vf_ids.sort()
-        dev_ids = []
         if isinstance(devices, dict):
             devices = [devices]
+        pf_ids = self.get_pf_devs(devices)
+        logging.info("pf_ids = %s", pf_ids)
+        vf_ids = self.get_vf_devs(devices)
+        logging.info("vf_ids = %s", vf_ids)
+        vf_ids.sort()
+        dev_ids = []
+
         for device in devices:
             d_type = device.get("type", "vf")
             if d_type == "vf":
@@ -1149,7 +1191,7 @@ class PciAssignable(object):
                 if self.auai_path and self.kvm_params[self.auai_path] == "Y":
                     kvm_re_probe = False
         # Try to re probe kvm module with interrupt remapping support
-        if kvm_re_probe:
+        if kvm_re_probe and self.auai_path:
             cmd = "echo Y > %s" % self.auai_path
             error.context("enable PCI passthrough with '%s'" % cmd,
                           logging.info)
@@ -1200,7 +1242,6 @@ class PciAssignable(object):
             logging.info("Log dmesg after loading '%s' to '%s'.", self.driver,
                          file_name)
             utils_misc.log_line(file_name, dmesg)
-            utils.system("/etc/init.d/network restart", ignore_status=True)
             if status:
                 return False
             self.setup = None
@@ -1249,7 +1290,6 @@ class PciAssignable(object):
                 msg = "Loading the driver '%s' without option" % self.driver
                 error.context(msg, logging.info)
                 status = utils.system(cmd, ignore_status=True)
-                utils.system("/etc/init.d/network restart", ignore_status=True)
                 if status:
                     return False
             return True
@@ -1294,10 +1334,12 @@ class PciAssignable(object):
                     stub_new_id = os.path.join(stub_path, 'new_id')
                     unbind_dev = os.path.join(drv_path, 'unbind')
                     stub_bind = os.path.join(stub_path, 'bind')
+                    stub_remove_id = os.path.join(stub_path, 'remove_id')
 
                     info_write_to_files = [(vendor_id, stub_new_id),
                                            (pci_id, unbind_dev),
-                                           (pci_id, stub_bind)]
+                                           (pci_id, stub_bind),
+                                           (vendor_id, stub_remove_id)]
 
                     for content, f_name in info_write_to_files:
                         try:
