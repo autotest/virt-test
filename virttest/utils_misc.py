@@ -655,6 +655,23 @@ def get_vendor_from_pci_id(pci_id):
     return re.sub(":", " ", commands.getoutput(cmd))
 
 
+def get_dev_pts_max_id():
+    """
+    Get the maxi ID of pseudoterminal interfaces for /dev/pts
+
+    :param None
+    """
+    cmd = "ls /dev/pts/ | grep '^[0-9]*$' | sort -n"
+    try:
+        max_id = utils.run(cmd, verbose=False).stdout.strip().split("\n")[-1]
+    except IndexError:
+        return None
+    pts_file = "/dev/pts/%s" % max_id
+    if not os.path.exists(pts_file):
+        return None
+    return max_id
+
+
 def get_archive_tarball_name(source_dir, tarball_name, compression):
     '''
     Get the name for a tarball file, based on source, name and compression
