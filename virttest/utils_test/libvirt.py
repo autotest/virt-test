@@ -39,6 +39,8 @@ from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
 from virttest.libvirt_xml import xcepts
+from virttest.libvirt_xml import NetworkXML
+from virttest.libvirt_xml import IPXML
 from virttest.libvirt_xml.devices import disk
 from virttest.libvirt_xml.devices import hostdev
 from virttest.libvirt_xml.devices import controller
@@ -47,6 +49,72 @@ try:
     from autotest.client import lv_utils
 except ImportError:
     from virttest.staging import lv_utils
+
+
+class LibvirtNetwork(object):
+
+    """
+    Class to create a temporary network for testing.
+    """
+
+    def create_vnet_xml(self):
+        """
+        Create XML for a virtual network.
+        """
+        net_xml = NetworkXML()
+        net_xml.name = self.name
+        ip = IPXML(address=self.address)
+        net_xml.ip = ip
+        return self.address, net_xml
+
+    def create_macvtap_xml(self):
+        """
+        Create XML for a macvtap network.
+        """
+        net_xml = NetworkXML()
+        net_xml.name = self.name
+        net_xml.forward = {'mode': 'bridge', 'dev': self.iface}
+        ip = utils_net.get_ip_address_by_interface(self.iface)
+        return ip, net_xml
+
+    def create_bridge_xml(self):
+        """
+        Create XML for a bridged network.
+        """
+        net_xml = NetworkXML()
+        net_xml.name = self.name
+
+        net_xml.forward = {'mode': 'bridge'}
+        net_xml.bridge = {'name': self.iface}
+        ip = utils_net.get_ip_address_by_interface(self.iface)
+        return ip, net_xml
+
+    def __init__(self, net_type, address=None, iface=None):
+        self.name = 'virt-test-%s' % net_type
+        self.address = address
+        self.iface = iface
+
+        if net_type == 'vnet':
+            if not self.address:
+                raise error.TestError('Create vnet need address be set')
+            self.ip, net_xml = self.create_vnet_xml()
+        elif net_type == 'macvtap':
+            if not self.iface:
+                raise error.TestError('Create macvtap need iface be set')
+            self.ip, net_xml = self.create_macvtap_xml()
+        elif net_type == 'bridge':
+            if not self.iface:
+                raise error.TestError('Create bridge need iface be set')
+            self.ip, net_xml = self.create_bridge_xml()
+        else:
+            raise error.TestError('Unknown libvirt network type %s' % net_type)
+        net_xml.create()
+
+    def destroy(self):
+        """
+        Clear up created network.
+        """
+        return virsh.net_destroy(self.name)
 
 
 def cpus_parser(cpulist):

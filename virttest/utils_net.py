@@ -14,7 +14,6 @@ import commands
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 import propcan
-import remote
 import utils_misc
 import arch
 import aexpect
@@ -640,6 +639,103 @@ class Macvtap(Interface):
             return os.open(device, os.O_RDWR)
         except OSError, e:
             raise TAPModuleError(device, "open", e)
+
+
+class IPAddress(object):
+
+    """
+    Class to manipulate IPv4 or IPv6 address.
+    """
+
+    def __init__(self, ip_str='', info=''):
+        self.addr = ''
+        self.iface = ''
+        self.scope = 0
+        self.packed_addr = None
+
+        if info:
+            try:
+                self.iface = info['iface']
+                self.addr = info['addr']
+                self.version = info['version']
+                self.scope = info['scope']
+            except KeyError:
+                pass
+
+        if ip_str:
+            self.canonicalize(ip_str)
+
+    def __str__(self):
+        if self.version == 'ipv6':
+            return "%s%%%s" % (self.addr, self.scope)
+        else:
+            return self.addr
+
+    def canonicalize(self, ip_str):
+        """
+        Parse an IP string for listen to IPAddress content.
+        """
+        try:
+            if ':' in ip_str:
+                self.version = 'ipv6'
+                if '%' in ip_str:
+                    ip_str, scope = ip_str.split('%')
+                    self.scope = int(scope)
+                self.packed_addr = socket.inet_pton(socket.AF_INET6, ip_str)
+                self.addr = socket.inet_ntop(socket.AF_INET6, self.packed_addr)
+            else:
+                self.version = 'ipv4'
+                self.packed_addr = socket.inet_pton(socket.AF_INET, ip_str)
+                self.addr = socket.inet_ntop(socket.AF_INET, self.packed_addr)
+        except socket.error, detail:
+            if 'illegal IP address' in str(detail):
+                self.addr = ip_str
+                self.version = 'hostname'
+
+    def listening_on(self, port, max_retry=30):
+        """
+        Check whether a port is used for listening.
+        """
+
+        def test_connection(self, port):
+            """
+            Try connect to a port and return the connect result as error no.
+            """
+
+            port = int(port)
+            if self.version == 'ipv6':
+                sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+                sock.settimeout(1.0)
+                result = sock.connect_ex((self.addr, port, 0, self.scope))
+            else:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1.0)
+                result = sock.connect_ex((self.addr, port))
+            return result
+
+        retry = 0
+        while True:
+            if retry == max_retry:
+                return False
+
+            result = test_connection(self, port)
+
+            if result == 0:
+                return True
+            elif result == 11:  # Resource temporarily unavailable.
+                time.sleep(0.1)
+                retry += 1
+            else:
+                return False
+
+    def __eq__(self, other_ip):
+        if self.version != other_ip.version:
+            return False
+        if self.addr != other_ip.addr:
+            return False
+        if self.iface and other_ip.iface and self.iface != other_ip.iface:
+            return False
+        return True
 
 
 def get_macvtap_base_iface(base_interface=None):
@@ -2605,6 +2701,45 @@ def get_host_ip_address(params):
         logging.warning("No IP address of host was provided, using IP address"
                         " on %s interface", str(params.get('netdst')))
     return host_ip
+
+
+def get_all_ips():
+    """
+    Get all IPv4 and IPv6 addresses from all interfaces.
+    """
+    ips = []
+
+    # Get all ipv4 IPs.
+    for iface in get_host_iface():
+        try:
+            ip_addr = get_ip_address_by_interface(iface)
+        except NetError:
+            pass
+        else:
+            if ip_addr is not None:
+                ip_info = {
+                    'iface': iface,
+                    'addr': ip_addr,
+                    'version': 'ipv4',
+                }
+                ips.append(IPAddress(info=ip_info))
+
+    # Get all ipv6 IPs.
+    if_inet6_fp = open('/proc/net/if_inet6', 'r')
+    for line in if_inet6_fp.readlines():
+        # ipv6_ip, dev_no, len_prefix, scope, iface_flag, iface
+        ipv6_ip, dev_no, _, _, _, iface = line.split()
+        ipv6_ip = ":".join([ipv6_ip[i:i + 4] for i in range(0, 32, 4)])
+        ip_info = {
+            'iface': iface,
+            'addr': ipv6_ip,
+            'version': 'ipv6',
+            'scope': int(dev_no, 16)
+        }
+        ips.append(IPAddress(info=ip_info))
+    if_inet6_fp.close()
+
+    return ips
 
 
 def get_correspond_ip(remote_ip):
