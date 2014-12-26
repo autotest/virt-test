@@ -984,6 +984,7 @@ def raw_ping(command, timeout, session, output_func):
     :param session: Local executon hint or session to execute the ping command.
     """
     if session is None:
+        logging.info("The command of Ping is: %s", command)
         process = aexpect.run_bg(command, output_func=output_func,
                                  timeout=timeout)
 
