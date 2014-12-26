@@ -431,7 +431,7 @@ class Rawdev(object):
         """
         host_set_flag = params.get("host_setup_flag")
         if host_set_flag is not None:
-            self.exec_cleanup = host_set_flag & 2 == 2
+            self.exec_cleanup = int(host_set_flag) & 2 == 2
         else:
             self.exec_cleanup = False
         if params.get("force_cleanup") == "yes":
