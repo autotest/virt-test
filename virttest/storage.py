@@ -104,12 +104,16 @@ def get_image_filename(params, root_dir):
     :raise VMDeviceError: When no matching disk found (in indirect method).
     """
     enable_gluster = params.get("enable_gluster", "no") == "yes"
-    if enable_gluster:
-        image_name = params.get("image_name", "image")
-        image_format = params.get("image_format", "qcow2")
-        return gluster.get_image_filename(params, image_name, image_format)
+    image_name = params.get("image_name")
+    if image_name:
+        if enable_gluster:
+            image_name = params.get("image_name", "image")
+            image_format = params.get("image_format", "qcow2")
+            return gluster.get_image_filename(params, image_name, image_format)
 
-    return get_image_filename_filesytem(params, root_dir)
+        return get_image_filename_filesytem(params, root_dir)
+    else:
+        logging.warn("image_name parameter not set.")
 
 
 def get_image_filename_filesytem(params, root_dir):
