@@ -1598,9 +1598,8 @@ class EGDConfig(object):
 
     def __get_tarball(self):
         tarball = "egd-0.9.tar.gz"
-        deps_dir = data_dir.get_deps_dir()
         tarball = self.params.get("egd_source_tarball", tarball)
-        return utils_misc.get_path(deps_dir, tarball)
+        return utils_misc.get_path(data_dir.DEPS_DIR, tarball)
 
     def __extra_tarball(self):
         tmp_dir = data_dir.get_tmp_dir()
