@@ -3208,9 +3208,9 @@ class VM(virt_vm.BaseVM):
                 self.get_spice_var("spice_seamless_migration") == "on"):
             s = self.monitor.info("spice")
             if isinstance(s, str):
-                ret = "migrated: true" in s
+                ret = len(re.findall("migrated: true", s, re.I)) > 0
             else:
-                ret = s.get("migrated") == "true"
+                ret = len(re.findall("true", str(s.get("migrated")), re.I)) > 0
         o = self.monitor.info("migrate")
         if isinstance(o, str):
             return ret and ("status: active" not in o)
