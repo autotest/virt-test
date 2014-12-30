@@ -2274,9 +2274,9 @@ def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
     return lgf_command(cmd, ignore_status, debug, timeout)
 
 
-def virt_edit_cmd(disk_or_domain, file_path, is_disk=False, options=None,
-                  extra=None, expr=None, connect_uri=None, ignore_status=True,
-                  debug=False, timeout=60):
+def virt_edit_cmd(disk_or_domain, file_path, is_disk=False, disk_format=None,
+                  options=None, extra=None, expr=None, connect_uri=None,
+                  ignore_status=True, debug=False, timeout=60):
     """
     Execute virt-edit command to check whether it is ok.
 
@@ -2285,6 +2285,8 @@ def virt_edit_cmd(disk_or_domain, file_path, is_disk=False, options=None,
 
     :param disk_or_domain: a img path or a domain name.
     :param file_path: the file need to be edited in img file.
+    :param is_disk: whether disk_or_domain is disk or domain
+    :param disk_format: when is_disk is true, add a format if it is set.
     :param options: the options of virt-edit.
     :param extra: additional suffix of command.
     :return: a session of executing virt-edit command.
@@ -2294,6 +2296,9 @@ def virt_edit_cmd(disk_or_domain, file_path, is_disk=False, options=None,
     if connect_uri is not None:
         cmd += " -c %s" % connect_uri
     if is_disk:
+        # For latest version, --format must exist before -a
+        if disk_format is not None:
+            cmd += " --format=%s" % disk_format
         cmd += " -a %s" % disk_or_domain
     else:
         cmd += " -d %s" % disk_or_domain
