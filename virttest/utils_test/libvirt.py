@@ -45,6 +45,7 @@ from virttest.libvirt_xml import IPXML
 from virttest.libvirt_xml.devices import disk
 from virttest.libvirt_xml.devices import hostdev
 from virttest.libvirt_xml.devices import controller
+from virttest.libvirt_xml.devices import seclabel
 from __init__ import ping
 try:
     from autotest.client import lv_utils
@@ -1287,6 +1288,7 @@ def create_disk_xml(params):
         diskxml.snapshot = snapshot_attr
     source_attrs = {}
     source_host = []
+    source_seclabel = []
     auth_attrs = {}
     driver_attrs = {}
     try:
@@ -1320,7 +1322,25 @@ def create_disk_xml(params):
         source_startupPolicy = params.get("source_startupPolicy")
         if source_startupPolicy:
             source_attrs['startupPolicy'] = source_startupPolicy
+
+        sec_model = params.get("sec_model")
+        relabel = params.get("relabel")
+        label = params.get("sec_label")
+        if sec_model or relabel:
+            sec_dict = {}
+            sec_xml = seclabel.Seclabel()
+            if sec_model:
+                sec_dict.update({'model': sec_model})
+            if relabel:
+                sec_dict.update({'relabel': relabel})
+            if label:
+                sec_dict.update({'label': label})
+            sec_xml.update(sec_dict)
+            logging.debug("The sec xml is %s", sec_xml.xmltreefile)
+            source_seclabel.append(sec_xml)
+
         diskxml.source = diskxml.new_disk_source(attrs=source_attrs,
+                                                 seclabels=source_seclabel,
                                                  hosts=source_host)
         auth_user = params.get("auth_user")
         secret_type = params.get("secret_type")
