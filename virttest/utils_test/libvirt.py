@@ -796,7 +796,8 @@ class PoolVolumeTest(object):
                 if not sp.delete_pool(pool_name):
                     raise error.TestFail("Delete pool %s failed" % pool_name)
         finally:
-            if pool_type == "netfs":
+            source_format = self.params.get("source_format")
+            if pool_type == "netfs" and source_format != 'glusterfs':
                 nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
                 nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
                 setup_or_cleanup_nfs(is_setup=False, export_dir=nfs_path,
@@ -823,7 +824,7 @@ class PoolVolumeTest(object):
                 pool_target = os.path.join(self.tmpdir, pool_target)
                 if os.path.exists(pool_target):
                     shutil.rmtree(pool_target)
-            if pool_type == "gluster":
+            if pool_type == "gluster" or source_format == 'glusterfs':
                 setup_or_cleanup_gluster(False, source_name)
 
     def pre_pool(self, pool_name, pool_type, pool_target, emulated_image,
@@ -889,20 +890,30 @@ class PoolVolumeTest(object):
             cmd_lv = "lvcreate --name default_lv --size 1M %s" % vg_name
             utils.run(cmd_lv)
         elif pool_type == "netfs":
-            nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
-            nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
-            if not os.path.exists(nfs_path):
-                os.mkdir(nfs_path)
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
                 os.mkdir(pool_target)
-            res = setup_or_cleanup_nfs(is_setup=True,
-                                       export_options=export_options,
-                                       export_dir=nfs_path)
-            self.selinux_bak = res["selinux_status_bak"]
-            source_host = self.params.get("source_host", "localhost")
-            extra = "--source-host %s --source-path %s" % (source_host,
-                                                           nfs_path)
+            source_format = self.params.get("source_format")
+            if source_format == 'glusterfs':
+                hostip = setup_or_cleanup_gluster(True, source_name,
+                                                  pool_name=pool_name)
+                logging.debug("hostip is %s", hostip)
+                extra = "--source-host %s --source-path %s" % (hostip,
+                                                               source_name)
+                extra += " --source-format %s" % source_format
+                utils.system("setsebool virt_use_fusefs on")
+            else:
+                nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
+                nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
+                if not os.path.exists(nfs_path):
+                    os.mkdir(nfs_path)
+                res = setup_or_cleanup_nfs(is_setup=True,
+                                           export_options=export_options,
+                                           export_dir=nfs_path)
+                self.selinux_bak = res["selinux_status_bak"]
+                source_host = self.params.get("source_host", "localhost")
+                extra = "--source-host %s --source-path %s" % (source_host,
+                                                               nfs_path)
         elif pool_type == "iscsi":
             setup_or_cleanup_iscsi(is_setup=True,
                                    emulated_image=emulated_image,
@@ -959,9 +970,14 @@ class PoolVolumeTest(object):
             re_v = virsh.pool_create(scsi_xml_file)
         else:
             re_v = virsh.pool_create_as(pool_name, pool_type,
-                                        pool_target, extra)
+                                        pool_target, extra, debug=True)
+
         if not re_v:
             raise error.TestFail("Create pool failed.")
+
+        ret = virsh.pool_dumpxml(pool_name)
+        logging.debug("The created pool xml is: %s" % ret)
+
         # Check the created pool
         check_actived_pool(pool_name)
 
