@@ -2093,6 +2093,8 @@ class VM(virt_vm.BaseVM):
         # Verify the md5sum of the ISO images
         for cdrom in params.objects("cdroms"):
             cdrom_params = params.object_params(cdrom)
+            if cdrom_params.get("enable_gluster") == "yes":
+                continue
             iso = cdrom_params.get("cdrom")
             if iso:
                 iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
