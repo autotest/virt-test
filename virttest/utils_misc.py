@@ -2404,11 +2404,12 @@ def get_image_info(image_file):
         cmd = "qemu-img info %s" % image_file
         image_info = utils.run(cmd, ignore_status=False).stdout.strip()
         image_info_dict = {}
+        vsize = None
         if image_info:
             for line in image_info.splitlines():
                 if line.find("file format") != -1:
                     image_info_dict['format'] = line.split(':')[-1].strip()
-                elif line.find("virtual size") != -1:
+                elif line.find("virtual size") != -1 and vsize is None:
                     # Use the value in (xxxxxx bytes) since it's the more
                     # realistic value. For a "1000k" disk, qemu-img will
                     # show 1.0M and 1024000 bytes. The 1.0M will translate
