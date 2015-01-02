@@ -1020,8 +1020,11 @@ class BaseVM(object):
         logging.debug("Attempting to log into '%s' (timeout %ds)", self.name,
                       timeout)
         # Start nmap for get_address
-        if run_nmap:
+        try:
             nmap = utils_misc.NMap()
+        except utils_misc.NMapError:   # Check Nmap before using it
+            run_nmap = False
+        if run_nmap:
             _run_nmap(nmap)
         end_time = time.time() + timeout
         while time.time() < end_time:

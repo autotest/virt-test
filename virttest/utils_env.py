@@ -379,7 +379,10 @@ class Env(UserDict.IterableUserDict):
         """
         ifaces = self._params.objects('nmap_interfaces')
         skip_ifaces = self._params.objects('nmap_skip_interfaces')
-        self._nmap = utils_misc.NMap()
+        try:
+            self._nmap = utils_misc.NMap()
+        except utils_misc.NMapError:
+            return
 
         # Get bridges if ifaces is empty
         if not ifaces:
@@ -394,4 +397,5 @@ class Env(UserDict.IterableUserDict):
         self._start_nmap()
 
     def stop_nmap(self):
-        self._nmap.stop_nmap()
+        if self._nmap is not None:
+            self._nmap.stop_nmap()
