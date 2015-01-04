@@ -3479,7 +3479,7 @@ class VM(virt_vm.BaseVM):
 
     @error.context_aware
     def reboot(self, session=None, method="shell", nic_index=0,
-               timeout=virt_vm.BaseVM.REBOOT_TIMEOUT):
+               timeout=virt_vm.BaseVM.REBOOT_TIMEOUT, serial=False):
         """
         Reboot the VM and wait for it to come back up by trying to log in until
         timeout expires.
@@ -3492,19 +3492,26 @@ class VM(virt_vm.BaseVM):
         :param timeout: Time to wait for login to succeed (after rebooting).
         :return: A new shell session object.
         """
+        def __rebooting(session):
+            """
+            Check guest rebooting.
+            """
+            if self.params["os_type"] == "windows":
+                timeout = self.CLOSE_SESSION_TIMEOUT
+                return not session.is_responsive(timeout=timeout)
+            return session.read_until_any_line_matches("Rebooting")
+
         error.base_context("rebooting '%s'" % self.name, logging.info)
         error.context("before reboot")
         error.context()
 
         if method == "shell":
-            session = session or self.login()
+            login = serial and self.serial_login or self.login
+            session = session or login()
             session.sendline(self.params.get("reboot_command"))
             error.context("waiting for guest to go down", logging.info)
             if not utils_misc.wait_for(
-                lambda:
-                    not session.is_responsive(
-                        timeout=self.CLOSE_SESSION_TIMEOUT),
-                    timeout / 2, 0, 1):
+                    lambda: __rebooting(session), timeout / 2, 0, 1):
                 raise virt_vm.VMRebootError("Guest refuses to go down")
             session.close()
 
@@ -3531,6 +3538,8 @@ class VM(virt_vm.BaseVM):
             utils_net.update_mac_ip_address(self, self.params)
 
         error.context("logging in after reboot", logging.info)
+        if serial:
+            return self.wait_for_serial_login(timeout=timeout)
         return self.wait_for_login(nic_index, timeout=timeout)
 
     def send_key(self, keystr):
