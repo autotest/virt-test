@@ -802,15 +802,35 @@ class XMLElementList(AccessorGeneratorBase):
                                                 index,
                                                 str(item)))
                     raise xcepts.LibvirtXMLAccessorError(msg)
+
+                # Handle element text values in element_tuple[1].
                 text = None
-                # To support text in element, marshal_from may return
-                # an additional text value, check the length of element tuple
+                new_dict = element_tuple[1].copy()
+                if 'text' in element_tuple[1].keys():
+                    del new_dict['text']
+
+                # To support text in element, marshal_from may return an
+                # additional text value, check the length of element tuple
                 if len(element_tuple) == 3:
                     text = element_tuple[2]
-                xml_utils.ElementTree.SubElement(parent,
-                                                 element_tuple[0],
-                                                 element_tuple[1],
-                                                 text)
+                parent_element = xml_utils.ElementTree.SubElement(
+                    parent,
+                    element_tuple[0],
+                    new_dict,
+                    text)
+
+                # To support child element contains text, create sub element
+                # with text under new created parent element.
+                if 'text' in element_tuple[1].keys():
+                    text_dict = element_tuple[1]['text']
+                    attr_dict = {}
+                    for text_key, text_val in text_dict.items():
+                        xml_utils.ElementTree.SubElement(
+                            parent_element,
+                            text_key,
+                            attr_dict,
+                            text_val)
+
                 index += 1
             self.xmltreefile().write()
 
