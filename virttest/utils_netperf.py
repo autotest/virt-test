@@ -361,13 +361,15 @@ class NetperfClient(Netperf):
 
         """
         if self.client == "nc":
-            netperf_cmd = "start /b %s %s -H %s %s " % (cmd_prefix,
-                                                        self.netperf_path,
-                                                        server_address,
-                                                        test_option)
+            netperf_cmd = "start /b %s %s -H %s %s > null " % (cmd_prefix,
+                                                               self.netperf_path,
+                                                               server_address,
+                                                               test_option)
         else:
-            netperf_cmd = "%s %s -H %s %s " % (cmd_prefix, self.netperf_path,
-                                               server_address, test_option)
+            netperf_cmd = "%s %s -H %s %s > /dev/null " % (cmd_prefix,
+                                                           self.netperf_path,
+                                                           server_address,
+                                                           test_option)
         if package_sizes:
             for p_size in package_sizes.split():
                 cmd = netperf_cmd + " -- -m %s" % p_size
