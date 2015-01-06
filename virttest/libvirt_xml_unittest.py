@@ -528,6 +528,64 @@ class AccessorsTest(LibvirtXMLTestBase):
         self.assertEqual(test[1].secret_sauce, 'None')
         self.assertEqual(test[2].secret_sauce, 'None')
 
+    def test_XMLElementList_Text(self):
+        class Whatchamacallit(base.LibvirtXMLBase):
+            __slots__ = ('text',)
+
+            def __init__(self, virsh_instance, text=None):
+                accessors.XMLElementText('text', self, parent_xpath='/',
+                                         tag_name='whatchamacallit')
+                # pylint: disable=E1003
+                super(Whatchamacallit, self).__init__(virsh_instance=virsh_instance)
+                self.xml = "<whatchamacallit></whatchamacallit>"
+                self.text = str(text)
+
+        class Foo(base.LibvirtXMLBase):
+            __slots__ = ('bar',)
+
+            def __init__(self, virsh_instance):
+                accessors.XMLElementList('bar', self, parent_xpath='/bar',
+                                         marshal_from=self.from_it,
+                                         marshal_to=self.to_it)
+                # pylint: disable=E1003
+                super(Foo, self).__init__(virsh_instance=virsh_instance)
+                self.xml = """<foo><bar>
+                                  <notone>notext</notone>
+                                  <whatchamacallit>test_text1</whatchamacallit>
+                                  <whatchamacallit>test_text2</whatchamacallit>
+                              </bar></foo>"""
+
+            @staticmethod
+            def from_it(item, index, lvxml):
+                if not isinstance(item, Whatchamacallit):
+                    raise ValueError
+                return ('whatchamacallit',
+                        {}, item.text)
+
+            @staticmethod
+            def to_it(tag, attrs, index, lvxml, text):
+                if not tag.startswith('whatchamacallit'):
+                    return None
+                else:
+                    return Whatchamacallit(lvxml.virsh, text)
+
+        foo = Foo(virsh_instance=self.dummy_virsh)
+        existing = foo.bar
+        self.assertEqual(len(existing), 2)
+        self.assertEqual(existing[0].text, 'test_text1')
+        self.assertEqual(existing[1].text, 'test_text2')
+        foo.bar = existing
+        existing[0].text = existing[1].text = None
+        # No value change
+        self.assertEqual(foo.bar[0].text, 'test_text1')
+        self.assertEqual(foo.bar[1].text, 'test_text2')
+        existing.append(Whatchamacallit(self.dummy_virsh, 'None'))
+        foo.bar = existing  # values changed
+        test = foo.bar
+        self.assertEqual(test[0].text, 'None')
+        self.assertEqual(test[1].text, 'None')
+        self.assertEqual(test[2].text, 'None')
+
 
 class TestLibvirtXML(LibvirtXMLTestBase):
 
