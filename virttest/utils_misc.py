@@ -2240,7 +2240,7 @@ def format_windows_disk(session, did, mountpoint, size, fstype="ntfs"):
 
     :param session: session object to guest.
     :param did: disk index which show in 'diskpart list disk'.
-    :param mountpoint: mount point for the disk.
+    :param mountpoint: mount point for the disk, letter or empty folder.
     :param fstype: filesystem type for the disk.
     :param ostype: guest os type 'windows' or 'linux'.
     :return Boolean: disk usable or not.
@@ -2276,7 +2276,12 @@ def format_windows_disk(session, did, mountpoint, size, fstype="ntfs"):
             logging.info("Format the 'Disk%s' to %s" % (did, fstype))
             format_cmd = 'echo list partition >> disk && '
             format_cmd += 'echo select partition 1 >> disk && '
-            format_cmd += 'echo assign letter=%s >> disk && ' % mountpoint
+            if re.match("(^[a-z]$)", mountpoint, re.I):
+                format_cmd += 'echo assign letter=%s >> disk && ' % mountpoint
+            else:
+                session.cmd("mkdir %s" % mountpoint, ignore_all_errors=True)
+                format_cmd += 'echo assign mount=%s >> disk &&' % mountpoint
+
             format_cmd += 'echo format fs=%s quick >> disk ' % fstype
             format_cmd = ' '.join([cmd_header, format_cmd, cmd_footer])
             session.cmd(format_cmd)
@@ -2339,10 +2344,52 @@ def get_windows_drive_letters(session):
     :param session: session object to guest
     :return list: letters has been assigned
     """
-    list_letters_cmd = "fsutil fsinfo drives"
-    drive_letters = re.findall(r'(\w+):\\', session.cmd_output(list_letters_cmd), re.M)
+    list_letters_cmd = "wmic logicaldisk get name"
+    drive_letters = re.findall(r'(\w+):', session.cmd_output(list_letters_cmd), re.M)
 
     return drive_letters
+
+
+def get_windows_free_drive_letter(session):
+    """
+    Get one free drive letter
+
+    :param session: session object to guest
+    :return: a free drive letter
+    """
+    assigned_drive_letters = get_windows_drive_letters(session)
+    all_drive_letters = list(string.ascii_uppercase)
+    drive_letters_free = list(set(all_drive_letters) - set(assigned_drive_letters))
+
+    try:
+        new_drive_letter = drive_letters_free.pop()
+    except KeyError:
+        raise error.TestError("No available drive letter assign to new partition.")
+
+    return new_drive_letter
+
+
+def mount_windows_disk(session, did, size, fstype, mountpoint=None):
+    """
+    Mount disk for windows guest
+
+    :param session: session object to guest
+    :param did: disk index which show in 'diskpart list disk'.
+    :param mountpoint: mount point for the disk.
+    :param size: disk size or partition size
+    :param fstype: filesystem type for the disk.
+    :return Boolean: mount successful or not
+    """
+    partition_size = normalize_data_size(size, "M")
+    partition_size = str(int(partition_size[:-2]) - 2) + "M"
+
+    if not mountpoint:
+        mountpoint = get_windows_free_drive_letter(session)
+
+    if format_guest_disk(session, did, mountpoint, partition_size, fstype, "windows"):
+        return True
+
+    raise error.TestFail("Mount guest disk failed.")
 
 
 def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
