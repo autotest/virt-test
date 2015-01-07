@@ -361,24 +361,32 @@ class NetperfClient(Netperf):
 
         """
         if self.client == "nc":
-            netperf_cmd = "start /b %s %s -H %s %s > null " % (cmd_prefix,
-                                                               self.netperf_path,
-                                                               server_address,
-                                                               test_option)
+            netperf_cmd = "start /b %s %s -H %s %s " % (cmd_prefix,
+                                                        self.netperf_path,
+                                                        server_address,
+                                                        test_option)
         else:
-            netperf_cmd = "%s %s -H %s %s > /dev/null " % (cmd_prefix,
-                                                           self.netperf_path,
-                                                           server_address,
-                                                           test_option)
+            netperf_cmd = "%s %s -H %s %s " % (cmd_prefix,
+                                               self.netperf_path,
+                                               server_address,
+                                               test_option)
         if package_sizes:
             for p_size in package_sizes.split():
                 cmd = netperf_cmd + " -- -m %s" % p_size
+                if self.client == "nc":
+                    cmd = "%s > null " % cmd
+                else:
+                    cmd = "%s > /dev/null" % cmd
                 txt = "Start %s sessions netperf background" % session_num
                 txt += " with cmd: '%s' " % cmd
                 logging.info(txt)
                 for num in xrange(int(session_num)):
                     self.session.cmd_output_safe("%s &" % cmd)
         else:
+            if self.client == "nc":
+                netperf_cmd = "%s > null " % netperf_cmd
+            else:
+                netperf_cmd = "%s > /dev/null " % netperf_cmd
             txt = "Start %s sessions netperf background" % session_num
             txt += " with cmd: '%s' " % netperf_cmd
             logging.info(txt)
