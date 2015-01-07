@@ -184,7 +184,9 @@ class Guestfish(LibguestfsBase):
         if run_mode not in ['remote', 'interactive']:
             raise AssertionError("run_mode should be remote or interactive")
 
-        if run_mode == "remote":
+        if run_mode == "interactive":
+            guestfs_exec = "export GUESTFISH_OUTPUT=''; " + guestfs_exec
+        elif run_mode == "remote":
             guestfs_exec += " --listen"
         else:
             if uri:
