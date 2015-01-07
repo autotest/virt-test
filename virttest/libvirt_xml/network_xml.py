@@ -200,13 +200,14 @@ class DNSXML(base.LibvirtXMLBase):
                                              " not a %s" % str(item))
 
         @staticmethod
-        def marshal_to_hostname(tag, attr, index, libvirtxml):
+        def marshal_to_hostname(tag, attr, index, libvirtxml, text):
             """Convert a tag + attributes into a HostnameXML instance"""
+            del attr                     # not used
             del index                    # not used
             if tag != 'hostname':
                 return None     # Don't convert this item
             newone = DNSXML.HostnameXML(virsh_instance=libvirtxml.virsh)
-            newone.hostname = attr
+            newone.hostname = text
             return newone
 
     def new_host(self, **dargs):
