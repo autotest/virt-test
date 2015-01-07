@@ -1155,7 +1155,7 @@ def get_interface_details(vm_name):
     domiflist_out = virsh.domiflist(vm_name).stdout
     # Regular expression for the below output
     #   vnet0    bridge    virbr0   virtio  52:54:00:b2:b3:b4
-    rg = re.compile(r"^(\w+)\s+(\w+)\s+(\w+)\s+(\S+)\s+"
+    rg = re.compile(r"^(\w+|-)\s+(\w+)\s+(\w+)\s+(\S+)\s+"
                     "(([a-fA-F0-9]{2}:?){6})")
 
     iface_cmd = {}
@@ -1399,8 +1399,8 @@ def create_net_xml(net_name, params):
     tftp_root = params.get("tftp_root")
     bootp_file = params.get("bootp_file")
     try:
-        if net_name == "default":
-            # Default network should always exist
+        if not virsh.net_info(net_name, ignore_status=True).exit_status:
+            # Edit an existed network
             netxml = network_xml.NetworkXML.new_from_net_dumpxml(net_name)
             netxml.del_ip()
         else:
@@ -1476,7 +1476,7 @@ def create_net_xml(net_name, params):
 
     except Exception, detail:
         utils.log_last_traceback()
-        raise error.TestFail("Fail to create disk XML: %s" % detail)
+        raise error.TestFail("Fail to create network XML: %s" % detail)
 
 
 def set_domain_state(vm, vm_state):
