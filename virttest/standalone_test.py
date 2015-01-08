@@ -212,7 +212,8 @@ class Test(object):
                         env.save()
 
                     # Run the test function
-                    for t_type, test_module in test_modules.items():
+                    for t_type in t_types:
+                        test_module = test_modules[t_type]
                         run_func = utils_misc.get_test_entrypoint_func(
                             t_type, test_module)
                         try:
