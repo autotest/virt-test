@@ -3490,6 +3490,7 @@ class VM(virt_vm.BaseVM):
         :param nic_index: Index of NIC to access in the VM, when logging in
                 after rebooting.
         :param timeout: Time to wait for login to succeed (after rebooting).
+        :param serial: Serial login or not (default is False).
         :return: A new shell session object.
         """
         def __rebooting(session):

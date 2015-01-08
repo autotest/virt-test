@@ -1370,7 +1370,7 @@ class BaseVM(object):
         raise NotImplementedError
 
     def reboot(self, session=None, method="shell", nic_index=0,
-               timeout=REBOOT_TIMEOUT):
+               timeout=REBOOT_TIMEOUT, serial=False):
         """
         Reboot the VM and wait for it to come back up by trying to log in until
         timeout expires.
@@ -1381,6 +1381,7 @@ class BaseVM(object):
         :param nic_index: Index of NIC to access in the VM, when logging in
                 after rebooting.
         :param timeout: Time to wait for login to succeed (after rebooting).
+        :param serial: Serial port login or not (default is False).
         :return: A new shell session object.
         """
         raise NotImplementedError
