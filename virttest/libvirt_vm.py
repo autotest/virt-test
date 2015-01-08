@@ -1793,7 +1793,8 @@ class VM(virt_vm.BaseVM):
         pass  # Just a stub for now
 
     @error.context_aware
-    def reboot(self, session=None, method="shell", nic_index=0, timeout=240):
+    def reboot(self, session=None, method="shell", nic_index=0, timeout=240,
+               serial=False):
         """
         Reboot the VM and wait for it to come back up by trying to log in until
         timeout expires.
@@ -1804,6 +1805,7 @@ class VM(virt_vm.BaseVM):
         :param nic_index: Index of NIC to access in the VM, when logging in
                 after rebooting.
         :param timeout: Time to wait for login to succeed (after rebooting).
+        :param serial: Just use to unify api in virt_vm module.
         :return: A new shell session object.
         """
         error.base_context("rebooting '%s'" % self.name, logging.info)
