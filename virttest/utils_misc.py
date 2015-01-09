@@ -1282,6 +1282,31 @@ def get_cpu_info(session=None):
     return cpu_info
 
 
+def yum_install(pkg_list, session=None):
+    """
+    Try to install packages on system
+
+    :param pkg_list: list of packages
+    :session: session Object
+    :return: True if all packages installed, False if any error
+    """
+    if not isinstance(pkg_list, list):
+        logging.error("Parameter error.")
+        return False
+    yum_cmd = "rpm -q {0} || yum -y install {0}"
+    for pkg in pkg_list:
+        if session:
+            status = session.cmd_status(yum_cmd.format(pkg))
+        else:
+            status = utils.run(yum_cmd.format(pkg),
+                               ignore_status=False).exit_status
+        if status:
+            logging.error("Failed to install package: %s"
+                          % pkg)
+            return False
+    return True
+
+
 class NumaInfo(object):
 
     """

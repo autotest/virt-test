@@ -38,6 +38,7 @@ from virttest.utils_libvirtd import service_libvirtd_control
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest.libvirt_xml import vm_xml
+from virttest.libvirt_xml import network_xml
 from virttest.libvirt_xml import xcepts
 from virttest.libvirt_xml import NetworkXML
 from virttest.libvirt_xml import IPXML
@@ -757,6 +758,23 @@ def get_parts_list(session=None):
     return parts
 
 
+def yum_install(pkg_list, session=None):
+    """
+    Try to install packages on system
+    """
+    if not isinstance(pkg_list, list):
+        raise error.TestError("Parameter error.")
+    yum_cmd = "rpm -q {0} || yum -y install {0}"
+    for pkg in pkg_list:
+        if session:
+            status = session.cmd_status(yum_cmd.format(pkg))
+        else:
+            status = utils.run(yum_cmd.format(pkg)).exit_status
+        if status:
+            raise error.TestFail("Failed to install package: %s"
+                                 % pkg)
+
+
 def check_actived_pool(pool_name):
     """
     Check if pool_name exist in active pool list
@@ -1127,6 +1145,48 @@ def check_exit_status(result, expect_error=False):
         raise error.TestFail("Expect fail, but run successfully.")
 
 
+def get_interface_details(vm_name):
+    """
+    Get the interface details from virsh domiflist command output
+
+    :return: list of all interfaces details
+    """
+    # Parse the domif-list command output
+    domiflist_out = virsh.domiflist(vm_name).stdout
+    # Regular expression for the below output
+    #   vnet0    bridge    virbr0   virtio  52:54:00:b2:b3:b4
+    rg = re.compile(r"^(\w+|-)\s+(\w+)\s+(\w+)\s+(\S+)\s+"
+                    "(([a-fA-F0-9]{2}:?){6})")
+
+    iface_cmd = {}
+    ifaces_cmd = []
+    for line in domiflist_out.split('\n'):
+        match_obj = rg.search(line)
+        # Due to the extra space in the list
+        if match_obj is not None:
+            iface_cmd['interface'] = match_obj.group(1)
+            iface_cmd['type'] = match_obj.group(2)
+            iface_cmd['source'] = match_obj.group(3)
+            iface_cmd['model'] = match_obj.group(4)
+            iface_cmd['mac'] = match_obj.group(5)
+            ifaces_cmd.append(iface_cmd)
+            iface_cmd = {}
+    return ifaces_cmd
+
+
+def get_ifname_host(vm_name, mac):
+    """
+    Get the vm interface name on host
+
+    :return: interface name, None if not exist
+    """
+    ifaces = get_interface_details(vm_name)
+    for iface in ifaces:
+        if iface["mac"] == mac:
+            return iface["interface"]
+    return None
+
+
 def check_iface(iface_name, checkpoint, extra="", **dargs):
     """
     Check interface with specified checkpoint.
@@ -1302,6 +1362,121 @@ def create_disk_xml(params):
     utils_misc.wait_for(file_exists, 5)
 
     return diskxml.xml
+
+
+def create_net_xml(net_name, params):
+    """
+    Create a new network or update an existed network xml
+    """
+    dns_dict = {}
+    host_dict = {}
+    net_name = params.get("net_name", "default")
+    net_bridge = params.get("net_bridge", '{}')
+    net_forward = params.get("net_forward", '{}')
+    net_dns_forward = params.get("net_dns_forward")
+    net_dns_txt = params.get("net_dns_txt")
+    net_dns_srv = params.get("net_dns_srv")
+    net_dns_forwarders = params.get("net_dns_forwarders", "").split()
+    net_dns_hostip = params.get("net_dns_hostip")
+    net_dns_hostnames = params.get("net_dns_hostnames", "").split()
+    net_domain = params.get("net_domain")
+    net_bandwidth_inbound = params.get("net_bandwidth_inbound", "{}")
+    net_bandwidth_outbound = params.get("net_bandwidth_outbound", "{}")
+    net_ip_family = params.get("net_ip_family")
+    net_ip_address = params.get("net_ip_address")
+    net_ip_netmask = params.get("net_ip_netmask", "255.255.255.0")
+    net_ipv6_address = params.get("net_ipv6_address")
+    net_ipv6_prefix = params.get("net_ipv6_prefix", "64")
+    nat_port = params.get("nat_port")
+    guest_name = params.get("guest_name")
+    guest_ipv4 = params.get("guest_ipv4")
+    guest_ipv6 = params.get("guest_ipv6")
+    guest_mac = params.get("guest_mac")
+    dhcp_start_ipv4 = params.get("dhcp_start_ipv4", "192.168.122.2")
+    dhcp_end_ipv4 = params.get("dhcp_end_ipv4", "192.168.122.254")
+    dhcp_start_ipv6 = params.get("dhcp_start_ipv6")
+    dhcp_end_ipv6 = params.get("dhcp_end_ipv6")
+    tftp_root = params.get("tftp_root")
+    bootp_file = params.get("bootp_file")
+    try:
+        if not virsh.net_info(net_name, ignore_status=True).exit_status:
+            # Edit an existed network
+            netxml = network_xml.NetworkXML.new_from_net_dumpxml(net_name)
+            netxml.del_ip()
+        else:
+            netxml = network_xml.NetworkXML(net_name)
+        if net_dns_forward:
+            dns_dict["dns_forward"] = net_dns_forward
+        if net_dns_txt:
+            dns_dict["txt"] = eval(net_dns_txt)
+        if net_dns_srv:
+            dns_dict["srv"] = eval(net_dns_srv)
+        if net_dns_forwarders:
+            dns_dict["forwarders"] = [eval(x) for x in
+                                      net_dns_forwarders]
+        if net_dns_hostip:
+            host_dict["host_ip"] = net_dns_hostip
+        if net_dns_hostnames:
+            host_dict["hostnames"] = net_dns_hostnames
+
+        dns_obj = netxml.new_dns(**dns_dict)
+        if host_dict:
+            host = dns_obj.new_host(**host_dict)
+            dns_obj.host = host
+        netxml.dns = dns_obj
+        bridge = eval(net_bridge)
+        if bridge:
+            netxml.bridge = bridge
+        forward = eval(net_forward)
+        if forward:
+            netxml.forward = forward
+        if nat_port:
+            netxml.nat_port = eval(nat_port)
+        if net_domain:
+            netxml.domain_name = net_domain
+        net_inbound = eval(net_bandwidth_inbound)
+        net_outbound = eval(net_bandwidth_outbound)
+        if net_inbound:
+            netxml.bandwidth_inbound = net_inbound
+        if net_outbound:
+            netxml.bandwidth_outbound = net_outbound
+
+        if net_ip_family == "ipv6":
+            ipxml = network_xml.IPXML()
+            ipxml.family = net_ip_family
+            ipxml.prefix = net_ipv6_prefix
+            del ipxml.netmask
+            if net_ipv6_address:
+                ipxml.address = net_ipv6_address
+            if dhcp_start_ipv6 and dhcp_end_ipv6:
+                ipxml.dhcp_ranges = {"start": dhcp_start_ipv6,
+                                     "end": dhcp_end_ipv6}
+            if guest_name and guest_ipv6 and guest_mac:
+                ipxml.hosts = [{"name": guest_name,
+                                "ip": guest_ipv6}]
+            netxml.set_ip(ipxml)
+        if net_ip_address:
+            ipxml = network_xml.IPXML(net_ip_address,
+                                      net_ip_netmask)
+            if dhcp_start_ipv4 and dhcp_end_ipv4:
+                ipxml.dhcp_ranges = {"start": dhcp_start_ipv4,
+                                     "end": dhcp_end_ipv4}
+            if tftp_root:
+                ipxml.tftp_root = tftp_root
+            if bootp_file:
+                ipxml.dhcp_bootp = bootp_file
+            if guest_name and guest_ipv4 and guest_mac:
+                ipxml.hosts = [{"mac": guest_mac,
+                                "name": guest_name,
+                                "ip": guest_ipv4}]
+            netxml.set_ip(ipxml)
+        logging.debug("New network xml file: %s", netxml)
+        netxml.xmltreefile.write()
+        netxml.sync()
+
+    except Exception, detail:
+        utils.log_last_traceback()
+        raise error.TestFail("Fail to create network XML: %s" % detail)
 
 
 def set_domain_state(vm, vm_state):
