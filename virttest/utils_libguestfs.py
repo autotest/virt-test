@@ -191,10 +191,9 @@ class Guestfish(LibguestfsBase):
         unset_cmd = ""
         for env in color_envs:
             unset_cmd += "unset %s;" % env
-        if unset_cmd:
-            utils.run(unset_cmd, ignore_status=True)
-
-        if run_mode == "remote":
+        if run_mode == "interactive" and unset_cmd:
+            guestfs_exec = unset_cmd + " " + guestfs_exec
+        elif run_mode == "remote":
             guestfs_exec += " --listen"
         else:
             if uri:
