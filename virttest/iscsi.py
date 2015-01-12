@@ -38,7 +38,7 @@ def iscsi_get_nodes():
     """
     cmd = "iscsiadm --mode node"
 
-    output = utils.system_output(cmd)
+    output = utils.system_output(cmd, ignore_status=True)
     pattern = r"(\d+\.\d+\.\d+\.\d+|\W:{2}\d\W):\d+,\d+\s+([\w\.\-:\d]+)"
     nodes = []
     if "No records found" not in output:
