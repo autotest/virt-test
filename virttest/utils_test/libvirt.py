@@ -1624,13 +1624,19 @@ def set_vm_disk(vm, params, tmp_dir=None):
     blk_source = first_disk['source']
     disk_xml = vmxml.devices.by_device_tag('disk')[0]
     src_disk_format = disk_xml.xmltreefile.find('driver').get('type')
+    sec_model = params.get('sec_model')
+    relabel = params.get('relabel')
+    sec_label = params.get('sec_label')
     disk_params = {'device_type': disk_device,
                    'disk_snapshot_attr': disk_snapshot_attr,
                    'type_name': disk_type,
                    'target_dev': disk_target,
                    'target_bus': disk_target_bus,
                    'driver_type': disk_format,
-                   'driver_cache': 'none'}
+                   'driver_cache': 'none',
+                   'sec_model': sec_model,
+                   'relabel': relabel,
+                   'sec_label': sec_label}
 
     if not tmp_dir:
         tmp_dir = data_dir.get_tmp_dir()
@@ -1721,8 +1727,8 @@ def set_vm_disk(vm, params, tmp_dir=None):
         src_file_path = "%s/%s" % (mnt_path, dist_img)
         disk_params_src = {'source_file': src_file_path}
     else:
-        raise error.TestNAError("Disk source protocol %s not supported in "
-                                "current test" % disk_src_protocol)
+        # use current source file with update params
+        disk_params_src = {'source_file': blk_source}
 
     # Delete disk elements
     disks = vmxml.get_devices(device_type="disk")
