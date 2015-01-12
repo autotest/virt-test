@@ -2246,7 +2246,7 @@ class GuestfishPersistent(Guestfish):
         daemon) that runs inside the hypervisor.
         """
         return self.inner_cmd("debug %s %s" % (subcmd, extraargs))
-    
+
     def set_e2uuid(self, device, uuid):
         """
         set-e2uuid - set the ext2/3/4 filesystem UUID
@@ -2361,6 +2361,7 @@ class GuestfishPersistent(Guestfish):
         This sets the ext2 file generation of a file.
         """
         return self.inner_cmd("set_e2generation %s %s" % (file, generation))
+
     def get_e2generation(self, file):
         """
         get-e2generation - get ext2 file generation of a file
@@ -2390,10 +2391,10 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("tune2fs_l %s" % (device))
 
-    def tune2fs(self, device, force = None, maxmountcount = None, mountcount = None,
-                errorbehavior = None, group = None, intervalbetweenchecks = None,
-                reservedblockspercentage = None, lastmounteddirectory = None,
-                reservedblockscount = None, user = None):
+    def tune2fs(self, device, force=None, maxmountcount=None, mountcount=None,
+                errorbehavior=None, group=None, intervalbetweenchecks=None,
+                reservedblockspercentage=None, lastmounteddirectory=None,
+                reservedblockscount=None, user=None):
         """
         tune2fs - adjust ext2/ext3/ext4 filesystem parameters
 
@@ -2401,76 +2402,30 @@ class GuestfishPersistent(Guestfish):
         ext2/ext3/ext4 filesystem called "device".
         """
         cmd = "tune2fs %s" % device
-        
+
         if force:
-            cmd+=' force:%s' % force
+            cmd += ' force:%s' % force
         if maxmountcount:
-            cmd+=' maxmountcount:%s' % maxmountcount
+            cmd += ' maxmountcount:%s' % maxmountcount
         if mountcount:
-            cmd+=' mountcount:%s' % mountcount
+            cmd += ' mountcount:%s' % mountcount
         if errorbehavior:
-            cmd+=' errorbehavior:%s' % errorbehavior
+            cmd += ' errorbehavior:%s' % errorbehavior
         if group:
-            cmd+=' group:%s' % group
+            cmd += ' group:%s' % group
         if intervalbetweenchecks:
-            cmd+=' intervalbetweenchecks:%s' % intervalbetweenchecks
+            cmd += ' intervalbetweenchecks:%s' % intervalbetweenchecks
         if reservedblockspercentage:
-            cmd+=' reservedblockspercentage:%s' % reservedblockspercentage
+            cmd += ' reservedblockspercentage:%s' % reservedblockspercentage
         if lastmounteddirectory:
-            cmd+=' lastmounteddirectory:%s' % lastmounteddirectory
+            cmd += ' lastmounteddirectory:%s' % lastmounteddirectory
         if reservedblockscount:
-            cmd+=' reservedblockscount:%s' % reservedblockscount
+            cmd += ' reservedblockscount:%s' % reservedblockscount
         if user:
-            cmd+=' user:%s' % user
+            cmd += ' user:%s' % user
         return self.inner_cmd(cmd)
 
-    def vfs_type(self, mountable):
-        """
-        vfs-type - get the Linux VFS type corresponding to a mounted device
-
-        This command gets the filesystem type corresponding to the filesystem on
-        "mountable".
-        """
-        return self.inner_cmd("vfs_type %s" % (mountable))
-
-    def fsck(self, fstype, device):
-        """
-        fsck - run the filesystem checker
-
-        This runs the filesystem checker (fsck) on "device" which should have
-        filesystem type "fstype".
-        """
-        return self.inner_cmd("fsck %s %s" % (fstype, device))
-
-    def mkfs(self, fstype, device, blocksize = None, features = None,
-             inode = None, sectorsize = None):
-        """
-        mkfs - make a filesystem
-
-        This function creates a filesystem on "device". The filesystem type is
-        "fstype", for example "ext3".
-        """
-        cmd = 'mkfs %s %s' % (fstype, device)
-        if blocksize:
-            cmd += ' blocksize:%s ' % blocksize
-        if features:
-            cmd += ' features:%s ' % features
-        if inode:
-            cmd += ' inode:%s ' % inode
-        if sectorsize:
-            cmd += ' sectorsize:%s ' % sectorsize
-
-        return self.inner_cmd(cmd)
-
-    def mkfs_opts(self, fstype, device, blocksize = None, features = None,
-             inode = None, sectorsize = None):
-        """
-        same with mkfs
-        """
-        return self.mkfs(fstype, device, blocksize, features,\
-                         inode, sectorsize)
-
-    def umount(self, pathordevice, force = None, lazyunmount = None):
+    def umount(self, pathordevice, force=None, lazyunmount=None):
         """
         umount - unmount a filesystem
 
@@ -2505,7 +2460,7 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("filesystem_available %s" % filesystem)
 
-    def e2fsck(self, device, correct = None, forceall = None):
+    def e2fsck(self, device, correct=None, forceall=None):
         """
         e2fsck - check an ext2/ext3 filesystem
 
@@ -2519,16 +2474,6 @@ class GuestfishPersistent(Guestfish):
             cmd += ' forceall:%s ' % forceall
         return self.inner_cmd(cmd)
 
-    def list_filesystems(self):
-        """
-        list-filesystems - list filesystems
-
-        This inspection command looks for filesystems on partitions, block
-        devices and logical volumes, returning a list of "mountables" containing
-        filesystems and their type.
-        """
-        return self.inner_cmd('list_filesystems')
-
     def mkfifo(self, mode, path):
         """
         mkfifo - make FIFO (named pipe)
@@ -2538,33 +2483,15 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd('mkfifo %s %s' % (mode, path))
 
-    def sync(self):
-        """
-        sync - sync disks, writes are flushed through to the disk image
-
-        This syncs the disk, so that any writes are flushed through to the
-        underlying disk image.
-        """
-        return self.inner_cmd('sync')
-
     def mklost_and_found(self, mountpoint):
         """
         mklost-and-found - make lost+found directory on an ext2/3/4 filesystem
-        
+
         Make the "lost+found" directory, normally in the root directory of an
         ext2/3/4 filesystem. "mountpoint" is the directory under which we try to
         create the "lost+found" directory.
         """
         return self.inner_cmd('mklost_and_found %s' % mountpoint)
-
-    def mknod(self, mode, devmajor, devminor, path):
-        """
-        mknod - make block, character or FIFO devices
-
-        This call creates block or character special devices, or named pipes
-       (FIFOs).
-        """
-        return self.inner_cmd('mknod %s %s %s %s' %(mode, devmajor, devminor, path))
 
     def mknod_b(self, mode, devmajor, devminor, path):
         """
@@ -2574,7 +2501,7 @@ class GuestfishPersistent(Guestfish):
         device major/minor "devmajor" and "devminor". It is just a convenient
         wrapper around "mknod".
         """
-        return self.inner_cmd('mknod_b %s %s %s %s' %(mode, devmajor, devminor, path))
+        return self.inner_cmd('mknod_b %s %s %s %s' % (mode, devmajor, devminor, path))
 
     def mknod_c(self, mode, devmajor, devminor, path):
         """
@@ -2584,9 +2511,9 @@ class GuestfishPersistent(Guestfish):
         device major/minor "devmajor" and "devminor". It is just a convenient
         wrapper around "mknod".
         """
-        return self.inner_cmd('mknod_c %s %s %s %s' %(mode, devmajor, devminor, path))
+        return self.inner_cmd('mknod_c %s %s %s %s' % (mode, devmajor, devminor, path))
 
-    def ntfsresize_opts(self, device, size = None, force = None):
+    def ntfsresize_opts(self, device, size=None, force=None):
         """
         ntfsresize - resize an NTFS filesystem
 
