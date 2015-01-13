@@ -175,12 +175,14 @@ class Monitor:
         self.name = name
         self.filename = filename
         self._lock = threading.RLock()
+        self._log_lock = threading.RLock()
         self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._socket.settimeout(self.CONNECT_TIMEOUT)
         self._passfd = None
         self._supported_cmds = []
         self.debug_log = False
         self.log_file = os.path.basename(self.filename + ".log")
+        self.open_log_files = {}
 
         try:
             self._socket.connect(filename)
@@ -192,7 +194,18 @@ class Monitor:
         # Automatically close the connection when the instance is garbage
         # collected
         self._close_sock()
-        utils_misc.close_log_file(self.log_file)
+        if not self._acquire_lock(lock=self._log_lock):
+            raise MonitorLockError("Could not acquire exclusive lock to access"
+                                   " %s " % self.open_log_files)
+        try:
+            del_logs = []
+            for log in self.open_log_files:
+                self.open_log_files[log].close()
+                del_logs.append(log)
+            for log in del_logs:
+                self.open_log_files.pop(log)
+        finally:
+            self._log_lock.release()
 
     # The following two functions are defined to make sure the state is set
     # exclusively by the constructor call as specified in __getinitargs__().
@@ -214,10 +227,12 @@ class Monitor:
             pass
         self._socket.close()
 
-    def _acquire_lock(self, timeout=ACQUIRE_LOCK_TIMEOUT):
+    def _acquire_lock(self, timeout=ACQUIRE_LOCK_TIMEOUT, lock=None):
         end_time = time.time() + timeout
+        if not lock:
+            lock = self._lock
         while time.time() < end_time:
-            if self._lock.acquire(False):
+            if lock.acquire(False):
                 return True
             time.sleep(0.05)
         return False
@@ -270,11 +285,23 @@ class Monitor:
         """
         Record monitor cmd/output in log file.
         """
+        if not self._acquire_lock(lock=self._log_lock):
+            raise MonitorLockError("Could not acquire exclusive lock to access"
+                                   " %s" % self.open_log_files)
         try:
-            for l in log_str.splitlines():
-                utils_misc.log_line(self.log_file, l)
-        except Exception:
-            pass
+            log_file_dir = utils_misc.get_log_file_dir()
+            log = utils_misc.get_path(log_file_dir, self.log_file)
+            timestr = time.strftime("%Y-%m-%d %H:%M:%S")
+            try:
+                if log not in self.open_log_files:
+                    self.open_log_files[log] = open(log, "w")
+                for line in log_str.splitlines():
+                    self.open_log_files[log].write("%s: %s\n" % (timestr, line))
+            except Exception:
+                self.open_log_files[log].close()
+                self.open_log_files.pop(log)
+        finally:
+            self._log_lock.release()
 
     def correct(self, cmd):
         """
@@ -504,7 +531,18 @@ class Monitor:
         Close the connection to the monitor and its log file.
         """
         self._close_sock()
-        utils_misc.close_log_file(self.log_file)
+        if not self._acquire_lock(lock=self._log_lock):
+            raise MonitorLockError("Could not acquire exclusive lock to access"
+                                   " %s" % self.open_log_files)
+        try:
+            del_logs = []
+            for log in self.open_log_files:
+                self.open_log_files[log].close()
+                del_logs.append(log)
+            for log in del_logs:
+                self.open_log_files.pop(log)
+        finally:
+            self._log_lock.release()
 
 
 class HumanMonitor(Monitor):
@@ -544,6 +582,16 @@ class HumanMonitor(Monitor):
                                            "Output so far: %r" % o)
 
             self._get_supported_cmds()
+
+            # set_link in RHEL5 host use "up|down" instead of "on|off" which is
+            # used in RHEL6 host and Fedora host. So here find out the string
+            # this monitor accept.
+            o = self.cmd("help set_link")
+            try:
+                self.on_str, self.off_str = re.findall("(\w+)\|(\w+)", o)[0]
+            except IndexError:
+                # take a default value if can't get on/off string from monitor.
+                self.on_str, self.off_str = "on", "off"
 
         except MonitorError, e:
             self._close_sock()
@@ -588,7 +636,6 @@ class HumanMonitor(Monitor):
         if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to send "
                                    "monitor command '%s'" % cmd)
-
         try:
             try:
                 self._socket.sendall(cmd + "\n")
@@ -596,7 +643,6 @@ class HumanMonitor(Monitor):
             except socket.error, e:
                 raise MonitorSocketError("Could not send monitor command %r" %
                                          cmd, e)
-
         finally:
             self._lock.release()
 
@@ -670,7 +716,6 @@ class HumanMonitor(Monitor):
                 msg = ("Could not find (qemu) prompt after command '%s'. "
                        "Output so far: %r" % (cmd, o))
                 raise MonitorProtocolError(msg)
-
         finally:
             self._lock.release()
 
@@ -789,22 +834,10 @@ class HumanMonitor(Monitor):
         :param up: Bool value, True=set up this link, False=Set down this link
         :return: The response to the command
         """
-        set_link_cmd = "set_link"
-
-        # set_link in RHEL5 host use "up|down" instead of "on|off" which is
-        # used in RHEL6 host and Fedora host. So here find out the string
-        # this monitor accept.
-        o = self.cmd("help %s" % set_link_cmd)
-        try:
-            on_str, off_str = re.findall("(\w+)\|(\w+)", o)[0]
-        except IndexError:
-            # take a default value if can't get on/off string from monitor.
-            on_str, off_str = "on", "off"
-
-        status = off_str
+        status = self.off_str
         if up:
-            status = on_str
-        return self.cmd("%s %s %s" % (set_link_cmd, name, status))
+            status = self.on_str
+        return self.cmd("set_link %s %s" % (name, status))
 
     def live_snapshot(self, device, snapshot_file, snapshot_format="qcow2"):
         """
