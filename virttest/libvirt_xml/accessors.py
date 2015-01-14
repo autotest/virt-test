@@ -708,10 +708,10 @@ class XMLElementList(AccessorGeneratorBase):
         :param parent_xpath: XPath string of parent element
         :param marshal_from: Callable, passed the item, index, and
                               libvirtxml instance.  Must return tuple
-                              of tag-name, and an attribute-dict or raise
-                              ValueError exception.
-        :param marshal_to: Callable. Passed a the item tag, attribute-dict.,
-                            index, and libvirtxml instance.  Returns
+                              of tag-name, an attribute-dict, and an optional
+                              text or raise ValueError exception.
+        :param marshal_to: Callable. Passed a the item tag, attribute-dict, index,
+                            libvirtxml, and optional text instance.  Returns
                             item value accepted by marshal_from or None to skip
         """
         if not callable(marshal_from) or not callable(marshal_to):
@@ -749,8 +749,14 @@ class XMLElementList(AccessorGeneratorBase):
             for child in parent.getchildren():
                 # Call user-defined helper to translate Element
                 # into simple pre-defined format.
-                item = self.marshal_to(child.tag, dict(child.items()),
-                                       index, self.libvirtxml)
+                try:
+                    # To support an optional text parameter, compatible
+                    # with no text parameter.
+                    item = self.marshal_to(child.tag, dict(child.items()),
+                                           index, self.libvirtxml, child.text)
+                except TypeError:
+                    item = self.marshal_to(child.tag, dict(child.items()),
+                                           index, self.libvirtxml)
                 if item is not None:
                     result.append(item)
                 # Always use absolute index (even if item was None)
@@ -796,9 +802,15 @@ class XMLElementList(AccessorGeneratorBase):
                                                 index,
                                                 str(item)))
                     raise xcepts.LibvirtXMLAccessorError(msg)
+                text = None
+                # To support text in element, marshal_from may return
+                # an additional text value, check the length of element tuple
+                if len(element_tuple) == 3:
+                    text = element_tuple[2]
                 xml_utils.ElementTree.SubElement(parent,
                                                  element_tuple[0],
-                                                 element_tuple[1])
+                                                 element_tuple[1],
+                                                 text)
                 index += 1
             self.xmltreefile().write()
 
@@ -819,8 +831,14 @@ class XMLElementList(AccessorGeneratorBase):
             todel = []
             index = 0
             for child in parent.getchildren():
-                item = self.marshal_to(child.tag, dict(child.items()),
-                                       index, self.libvirtxml)
+                try:
+                    # To support an optional text parameter, compatible
+                    # with no text parameter.
+                    item = self.marshal_to(child.tag, dict(child.items()),
+                                           index, self.libvirtxml, child.text)
+                except TypeError:
+                    item = self.marshal_to(child.tag, dict(child.items()),
+                                           index, self.libvirtxml)
                 # Always use absolute index (even if item was None)
                 index += 1
                 # Account for case where child elements are mixed in
