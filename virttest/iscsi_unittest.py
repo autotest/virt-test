@@ -55,7 +55,8 @@ class iscsi_test(unittest.TestCase):
         utils.system_output.expect_call(out_cmd).and_return("successful")
         out_cmd = "iscsiadm --mode node"
         ret_str = "127.0.0.1:3260,1 %s" % iscsi_obj.target
-        utils.system_output.expect_call(out_cmd
+        utils.system_output.expect_call(out_cmd,
+                                        ignore_status=True
                                         ).and_return(ret_str)
         out_cmd = "iscsiadm -m node -o delete -T %s " % iscsi_obj.target
         out_cmd += "--portal 127.0.0.1"
