@@ -640,7 +640,10 @@ class GuestfishTools(lgf.GuestfishPersistent):
             vg_name = self.params.get("vg_name", "vol_test")
             lv_name = self.params.get("lv_name", "vol_file")
             mount_point = "/dev/%s/%s" % (vg_name, lv_name)
-            lv_size = int(image_size.replace('G', '')) * 1000
+            if 'G' in image_size:
+                lv_size = int(image_size.replace('G', '')) * 1000
+            else:
+                lv_size = int(image_size.replace('M', '')) - 10
 
             self.pvcreate(pv_name)
             self.vgcreate(vg_name, pv_name)

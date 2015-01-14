@@ -1539,23 +1539,32 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("part-list %s" % device)
 
-    def mkfs(self, fstype, device):
+    def mkfs(self, fstype, device, blocksize=None, features=None,
+             inode=None, sectorsize=None):
         """
         mkfs - make a filesystem
-
-        This creates a filesystem on "device" (usually a partition or LVM
-        logical volume). The filesystem type is "fstype", for example "ext3".
+        This function creates a filesystem on "device". The filesystem type is
+        "fstype", for example "ext3".
         """
-        return self.inner_cmd("mkfs %s %s" % (fstype, device))
+        cmd = 'mkfs %s %s' % (fstype, device)
+        if blocksize:
+            cmd += ' blocksize:%s ' % blocksize
+        if features:
+            cmd += ' features:%s ' % features
+        if inode:
+            cmd += ' inode:%s ' % inode
+        if sectorsize:
+            cmd += ' sectorsize:%s ' % sectorsize
 
-    def mkfs_opts(self, fstype, device, opts):
-        """
-        mkfs-opts - make a filesystem with optional arguments
+        return self.inner_cmd(cmd)
 
-        This creates a filesystem on "device" (usually a partition or LVM
-        logical volume). The filesystem type is "fstype", for example "ext3".
+    def mkfs_opts(self, fstype, device, blocksize=None, features=None,
+                  inode=None, sectorsize=None):
         """
-        return self.inner_cmd("mkfs %s %s %s" % (fstype, device, opts))
+        same with mkfs
+        """
+        return self.mkfs(fstype, device, blocksize, features,
+                         inode, sectorsize)
 
     def part_disk(self, device, parttype):
         """
@@ -2554,6 +2563,17 @@ class GuestfishPersistent(Guestfish):
         specify the new size (in bytes) explicitly.
         """
         return self.inner_cmd('resize2fs_size %s %s' % (device, size))
+
+    def e2fsck_f(self, device):
+        """
+        e2fsck-f - check an ext2/ext3 filesystem
+
+        This runs "e2fsck -p -f device", ie. runs the ext2/ext3 filesystem
+        checker on "device", noninteractively (*-p*), even if the filesystem
+        appears to be clean (*-f*).
+        """
+        return self.inner_cmd('e2fsck_f %s' % (device))
+
 
 # libguestfs module functions follow #####
 
