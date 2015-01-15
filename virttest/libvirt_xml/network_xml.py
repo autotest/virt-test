@@ -301,6 +301,8 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             string operate on ip/dhcp ranges as IPXML instances
         forward:
             dict, operates on forward tag
+        forward_interface:
+            list, operates on forward/interface tag
         nat_port:
             dict, operates on nat tag
         bridge:
@@ -356,7 +358,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
     __slots__ = ('name', 'uuid', 'bridge', 'defined', 'active',
                  'autostart', 'persistent', 'forward', 'mac', 'ip',
                  'bandwidth_inbound', 'bandwidth_outbound', 'portgroup',
-                 'dns', 'domain_name', 'nat_port')
+                 'dns', 'domain_name', 'nat_port', 'forward_interface')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
         'defined', 'active',
@@ -373,6 +375,9 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                tag_name='mac', attribute='address')
         accessors.XMLElementDict('forward', self, parent_xpath='/',
                                  tag_name='forward')
+        accessors.XMLElementList('forward_interface', self, parent_xpath='/forward',
+                                 marshal_from=self.marshal_from_forward_iface,
+                                 marshal_to=self.marshal_to_forward_iface)
         accessors.XMLElementDict('nat_port', self, parent_xpath='/forward/nat',
                                  tag_name='port')
         accessors.XMLElementDict('bridge', self, parent_xpath='/',
@@ -547,6 +552,26 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             setattr(new_one, key, value)
         return new_one
 
+    @staticmethod
+    def marshal_from_forward_iface(item, index, libvirtxml):
+        """Convert a dictionary into a tag + attributes"""
+        del index           # not used
+        del libvirtxml      # not used
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of interface "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('interface', dict(item))  # return copy of dict, not reference
+
+    @staticmethod
+    def marshal_to_forward_iface(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes into a dictionary"""
+        del index                    # not used
+        del libvirtxml               # not used
+        if tag != 'interface':
+            return None              # skip this one
+        return dict(attr_dict)       # return copy of dict, not reference
+
 
 class NetworkXML(NetworkXMLBase):
 
@@ -583,7 +608,7 @@ class NetworkXML(NetworkXMLBase):
         return result
 
     @staticmethod
-    def new_from_net_dumpxml(network_name, virsh_instance=base.virsh):
+    def new_from_net_dumpxml(network_name, virsh_instance=base.virsh, extra=""):
         """
         Return new NetworkXML instance from virsh net-dumpxml command
 
@@ -592,7 +617,8 @@ class NetworkXML(NetworkXMLBase):
         :return: New initialized NetworkXML instance
         """
         netxml = NetworkXML(virsh_instance=virsh_instance)
-        netxml['xml'] = virsh_instance.net_dumpxml(network_name).stdout.strip()
+        netxml['xml'] = virsh_instance.net_dumpxml(network_name,
+                                                   extra).stdout.strip()
         return netxml
 
     @staticmethod
