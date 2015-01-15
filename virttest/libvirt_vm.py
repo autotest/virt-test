@@ -2249,3 +2249,126 @@ class VM(virt_vm.BaseVM):
             return None
         session.close()
         return mac.strip()
+
+    def install_package(self, name):
+        """
+        Install a package on VM.
+        ToDo: Support multiple package manager.
+
+        :param name: Name of package to be installed
+        """
+        session = self.wait_for_login()
+        try:
+            # Install the package if it does not exists
+            cmd = "rpm -q %s || yum install -y %s" % (name, name)
+            status, output = session.cmd_status_output(cmd, timeout=300)
+            if status != 0:
+                raise virt_vm.VMError("Installation of package %s failed:\n%s" %
+                                      (name, output))
+        finally:
+            session.close()
+
+    def remove_package(self, name):
+        """
+        Remove a package from VM.
+        ToDo: Support multiple package manager.
+
+        :param name: Name of package to be removed
+        """
+        session = self.wait_for_login()
+        try:
+            # Remove the package if it exists
+            cmd = "! rpm -q %s || rpm -e %s" % (name, name)
+            status, output = session.cmd_status_output(cmd, timeout=300)
+            if status != 0:
+                raise virt_vm.VMError("Removal of package %s failed:\n%s" %
+                                      (name, output))
+        finally:
+            session.close()
+
+    def prepare_guest_agent(self, prepare_xml=True, channel=True, start=True):
+        """
+        Prepare qemu guest agent on the VM.
+
+        :param prepare_xml: Whether change VM's XML
+        :param channel: Whether add agent channel in VM. Only valid if
+                        prepare_xml is True
+        :param start: Whether install and start the qemu-ga service
+        """
+        if prepare_xml:
+            vmxml = libvirt_xml.VMXML.new_from_inactive_dumpxml(self.name)
+            # Check if we need to change XML of VM.
+            if channel != bool(vmxml.get_agent_channels()):
+                if self.is_alive():
+                    self.destroy()
+                if channel:
+                    vmxml.set_agent_channel()
+                else:
+                    vmxml.remove_agent_channels()
+                vmxml.sync()
+
+        if not self.is_alive():
+            self.start()
+
+        self.install_package('qemu-guest-agent')
+
+        session = self.wait_for_login()
+        try:
+            # Start/stop qemu-guest-agent
+            if start:
+                cmd = "pgrep qemu-ga || service qemu-guest-agent start"
+            else:
+                cmd = "service qemu-guest-agent stop"
+            status, output = session.cmd_status_output(cmd)
+            if status != 0:
+                raise virt_vm.VMError("Start/stop of qemu-guest-agent "
+                                      "failed:\n%s" % output)
+        finally:
+            session.close()
+
+    def getenforce(self):
+        """
+        Set SELinux mode in the VM.
+
+        :return: SELinux mode [Enforcing|Permissive|Disabled]
+        """
+        self.install_package('libselinux-utils')
+        session = self.wait_for_login()
+        try:
+            status, output = session.cmd_status_output("getenforce")
+            if status != 0:
+                raise virt_vm.VMError("Get SELinux mode failed:\n%s" % output)
+            return output.strip()
+        finally:
+            session.close()
+
+    def setenforce(self, mode):
+        """
+        Set SELinux mode in the VM.
+
+        :param mode: SELinux mode [Enforcing|Permissive|1|0]
+        """
+        self.install_package('libselinux-utils')
+        try:
+            if int(mode) == 1:
+                target_mode = 'Enforcing'
+            elif int(mode) == 0:
+                target_mode = 'Permissive'
+        except ValueError:
+            pass
+
+        session = self.wait_for_login()
+        try:
+            current_mode = self.getenforce()
+            if current_mode == 'Disabled':
+                logging.warning("VM SELinux disabled. Can't set mode.")
+                return
+            elif current_mode != target_mode:
+                cmd = "setenforce %s" % mode
+                status, output = session.cmd_status_output(cmd)
+                if status != 0:
+                    raise virt_vm.VMError("Set SELinux mode failed:\n%s" % output)
+            else:
+                logging.debug("VM SELinux mode don't need change.")
+        finally:
+            session.close()

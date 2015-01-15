@@ -892,55 +892,47 @@ class VMXML(VMXMLBase):
         vmxml.undefine()
         vmxml.define()
 
-    @staticmethod
-    def set_agent_channel(vm_name):
+    def get_agent_channels(self):
         """
-        Add channel for guest agent running
-
-        :param vm_name: Name of defined vm to set agent channel
+        Get all qemu guest agent channels
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        channels = self.xmltreefile.findall("./devices/channel")
+        ga_channels = []
+        for channel in channels:
+            target = channel.find('./target')
+            if target is not None:
+                name = target.get('name')
+                if name and name.startswith("org.qemu.guest_agent"):
+                    ga_channels.append(channel)
+        return ga_channels
 
-        try:
-            exist = vmxml.__dict_get__('xml').find('devices').findall('channel')
-            findc = 0
-            for ec in exist:
-                if ec.find('target').get('name') == "org.qemu.guest_agent.0":
-                    findc = 1
-                    break
-            if findc == 0:
-                raise AttributeError("Cannot find guest agent channel")
-        except AttributeError:
-            channel = vmxml.get_device_class('channel')(type_name='unix')
-            channel.add_source(mode='bind',
-                               path='/var/lib/libvirt/qemu/guest.agent')
-            channel.add_target(type='virtio',
-                               name='org.qemu.guest_agent.0')
-            vmxml.devices = vmxml.devices.append(channel)
-            vmxml.define()
-
-    @staticmethod
-    def remove_agent_channel(vm_name):
+    def set_agent_channel(self, src_path=None,
+                          tgt_name='org.qemu.guest_agent.0',
+                          ignore_exist=False):
         """
-        Delete channel for guest agent
+        Add a channel for guest agent if non exists.
 
-        :param vm_name: Name of defined vm to remove agent channel
+        :param src_path: Source path of the channel
+        :param tgt_name: Target name of the channel
+        :param ignore_exist: Whether add a channel even if another already exists.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        if not ignore_exist and self.get_agent_channels():
+            logging.debug("Guest agent channel already exists")
+            return
 
-        try:
-            exist = vmxml.__dict_get__('xml').find('devices').findall('channel')
-            for ec in exist:
-                if ec.find('target').get('name') == "org.qemu.guest_agent.0":
-                    channel = vmxml.get_device_class('channel')(type_name='unix')
-                    channel.add_source(mode='bind',
-                                       path=ec.find('source').get('path'))
-                    channel.add_target(type='virtio',
-                                       name=ec.find('target').get('name'))
-                    vmxml.del_device(channel)
-            vmxml.define()
-        except AttributeError:
-            raise xcepts.LibvirtXMLError("Fail to remove agent channel!")
+        if not src_path:
+            src_path = '/var/lib/libvirt/qemu/%s-guest.agent' % self.vm_name
+        channel = self.get_device_class('channel')(type_name='unix')
+        channel.add_source(mode='bind', path=src_path)
+        channel.add_target(type='virtio', name=tgt_name)
+        self.devices = self.devices.append(channel)
+
+    def remove_agent_channels(self):
+        """
+        Delete all channels for guest agent
+        """
+        for channel in self.get_agent_channels():
+            self.xmltreefile.remove(channel)
 
     def get_iface_all(self):
         """
