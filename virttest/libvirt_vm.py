@@ -1969,6 +1969,48 @@ class VM(virt_vm.BaseVM):
                 "VM should not be %s after restore." % self.state())
         self.create_serial_console()
 
+    def managedsave(self):
+        """
+        Managed save of VM's state
+        """
+        if self.is_dead():
+            raise virt_vm.VMStatusError("Cannot save a VM that is %s" % self.state())
+        logging.debug("Managed saving VM %s" % self.name)
+        result = virsh.managedsave(self.name, uri=self.connect_uri)
+        if result.exit_status:
+            raise virt_vm.VMError("Managed save VM failed.\n"
+                                  "Detail: %s." % result.stderr)
+        if self.is_alive():
+            raise virt_vm.VMStatusError("VM not shut off after managed save")
+        self.cleanup_serial_console()
+
+    def pmsuspend(self, target='mem', duration=0):
+        """
+        Suspend a domain gracefully using power management functions
+        """
+        if self.is_dead():
+            raise virt_vm.VMStatusError("Cannot pmsuspend a VM that is %s" % self.state())
+        logging.debug("PM suspending VM %s" % self.name)
+        result = virsh.dompmsuspend(self.name, target=target,
+                                    duration=duration, uri=self.connect_uri)
+        if result.exit_status:
+            raise virt_vm.VMError("PM suspending VM failed.\n"
+                                  "Detail: %s." % result.stderr)
+        self.cleanup_serial_console()
+
+    def pmwakeup(self):
+        """
+        Wakeup a domain from pmsuspended state
+        """
+        if self.is_dead():
+            raise virt_vm.VMStatusError("Cannot pmwakeup a VM that is %s" % self.state())
+        logging.debug("PM waking up VM %s" % self.name)
+        result = virsh.dompmwakeup(self.name, uri=self.connect_uri)
+        if result.exit_status:
+            raise virt_vm.VMError("PM waking up VM failed.\n"
+                                  "Detail: %s." % result.stderr)
+        self.create_serial_console()
+
     def vcpupin(self, vcpu, cpu_list, options=""):
         """
         To pin vcpu to cpu_list
