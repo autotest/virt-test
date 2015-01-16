@@ -208,7 +208,16 @@ class Disk(base.TypedDeviceBase):
             del libvirtxml      # not used
             root = item.xmltreefile.getroot()
             if root.tag == 'seclabel':
-                return (root.tag, dict(root.items))
+                new_dict = dict(root.items())
+                text_dict = {}
+                # Put element text into dict under key 'text'
+                for key in ('label', 'baselabel'):
+                    text_val = item.xmltreefile.findtext(key)
+                    if text_val:
+                        text_dict.update({key: text_val})
+                if text_dict:
+                    new_dict['text'] = text_dict
+                return (root.tag, new_dict)
             else:
                 raise xcepts.LibvirtXMLError("Expected a list of seclabel "
                                              "instances, not a %s" % str(item))

@@ -45,6 +45,7 @@ from virttest.libvirt_xml import IPXML
 from virttest.libvirt_xml.devices import disk
 from virttest.libvirt_xml.devices import hostdev
 from virttest.libvirt_xml.devices import controller
+from virttest.libvirt_xml.devices import seclabel
 from __init__ import ping
 try:
     from autotest.client import lv_utils
@@ -1287,6 +1288,7 @@ def create_disk_xml(params):
         diskxml.snapshot = snapshot_attr
     source_attrs = {}
     source_host = []
+    source_seclabel = []
     auth_attrs = {}
     driver_attrs = {}
     try:
@@ -1320,7 +1322,25 @@ def create_disk_xml(params):
         source_startupPolicy = params.get("source_startupPolicy")
         if source_startupPolicy:
             source_attrs['startupPolicy'] = source_startupPolicy
+
+        sec_model = params.get("sec_model")
+        relabel = params.get("relabel")
+        label = params.get("sec_label")
+        if sec_model or relabel:
+            sec_dict = {}
+            sec_xml = seclabel.Seclabel()
+            if sec_model:
+                sec_dict.update({'model': sec_model})
+            if relabel:
+                sec_dict.update({'relabel': relabel})
+            if label:
+                sec_dict.update({'label': label})
+            sec_xml.update(sec_dict)
+            logging.debug("The sec xml is %s", sec_xml.xmltreefile)
+            source_seclabel.append(sec_xml)
+
         diskxml.source = diskxml.new_disk_source(attrs=source_attrs,
+                                                 seclabels=source_seclabel,
                                                  hosts=source_host)
         auth_user = params.get("auth_user")
         secret_type = params.get("secret_type")
@@ -1604,13 +1624,19 @@ def set_vm_disk(vm, params, tmp_dir=None):
     blk_source = first_disk['source']
     disk_xml = vmxml.devices.by_device_tag('disk')[0]
     src_disk_format = disk_xml.xmltreefile.find('driver').get('type')
+    sec_model = params.get('sec_model')
+    relabel = params.get('relabel')
+    sec_label = params.get('sec_label')
     disk_params = {'device_type': disk_device,
                    'disk_snapshot_attr': disk_snapshot_attr,
                    'type_name': disk_type,
                    'target_dev': disk_target,
                    'target_bus': disk_target_bus,
                    'driver_type': disk_format,
-                   'driver_cache': 'none'}
+                   'driver_cache': 'none',
+                   'sec_model': sec_model,
+                   'relabel': relabel,
+                   'sec_label': sec_label}
 
     if not tmp_dir:
         tmp_dir = data_dir.get_tmp_dir()
@@ -1701,8 +1727,8 @@ def set_vm_disk(vm, params, tmp_dir=None):
         src_file_path = "%s/%s" % (mnt_path, dist_img)
         disk_params_src = {'source_file': src_file_path}
     else:
-        raise error.TestNAError("Disk source protocol %s not supported in "
-                                "current test" % disk_src_protocol)
+        # use current source file with update params
+        disk_params_src = {'source_file': blk_source}
 
     # Delete disk elements
     disks = vmxml.get_devices(device_type="disk")
