@@ -1451,9 +1451,9 @@ def _adu_device(action, domainarg=None, filearg=None,
     # N/B: Parameter order is significant: RH BZ 1018369
     cmd = action
     if domain_opt is not None:
-        cmd += " --domain %s" % domain_opt
+        cmd += " %s" % domain_opt
     if domainarg is not None:
-        cmd += " %s" % domainarg
+        cmd += " --domain %s" % domainarg
     if file_opt is not None:
         cmd += " --file %s" % file_opt
     if filearg is not None:
