@@ -42,6 +42,7 @@ from virttest.libvirt_xml import network_xml
 from virttest.libvirt_xml import xcepts
 from virttest.libvirt_xml import NetworkXML
 from virttest.libvirt_xml import IPXML
+from virttest.libvirt_xml import pool_xml
 from virttest.libvirt_xml.devices import disk
 from virttest.libvirt_xml.devices import hostdev
 from virttest.libvirt_xml.devices import controller
@@ -799,11 +800,13 @@ class PoolVolumeTest(object):
         self.selinux_bak = ""
 
     def cleanup_pool(self, pool_name, pool_type, pool_target, emulated_image,
-                     source_name=None):
+                     **kwargs):
         """
         Delete vols, destroy the created pool and restore the env
         """
         sp = libvirt_storage.StoragePool()
+        source_format = kwargs.get('source_format')
+        source_name = kwargs.get('source_name')
         try:
             if sp.pool_exists(pool_name):
                 pv = libvirt_storage.PoolVolume(pool_name)
@@ -815,7 +818,6 @@ class PoolVolumeTest(object):
                 if not sp.delete_pool(pool_name):
                     raise error.TestFail("Delete pool %s failed" % pool_name)
         finally:
-            source_format = self.params.get("source_format")
             if pool_type == "netfs" and source_format != 'glusterfs':
                 nfs_server_dir = self.params.get("nfs_server_dir", "nfs-server")
                 nfs_path = os.path.join(self.tmpdir, nfs_server_dir)
@@ -834,9 +836,7 @@ class PoolVolumeTest(object):
                 setup_or_cleanup_iscsi(is_setup=False,
                                        emulated_image=emulated_image)
                 if pool_type == "scsi":
-                    scsi_xml_file = self.params.get("scsi_xml_file")
-                    if not os.path.exists(scsi_xml_file):
-                        scsi_xml_file = os.path.join(self.tmpdir, scsi_xml_file)
+                    scsi_xml_file = self.params.get("scsi_xml_file", "")
                     if os.path.exists(scsi_xml_file):
                         os.remove(scsi_xml_file)
             if pool_type in ["dir", "fs", "netfs"]:
@@ -847,43 +847,44 @@ class PoolVolumeTest(object):
                 setup_or_cleanup_gluster(False, source_name)
 
     def pre_pool(self, pool_name, pool_type, pool_target, emulated_image,
-                 image_size="100M", pre_disk_vol=[], source_name=None,
-                 source_path=None, export_options="rw,async,no_root_squash"):
+                 **kwargs):
         """
-        Preapare the specific type pool
-
-        Note:
-            1. For scsi type pool, it only could be created from xml file
-            2. Other type pools can be created by pool_creat_as function
-            3. Disk pool will not allow to create volume with virsh commands
-               So we can prepare it before pool created
+        Prepare(define or create) the specific type pool
 
         :param pool_name: created pool name
         :param pool_type: dir, disk, logical, fs, netfs or else
         :param pool_target: target of storage pool
         :param emulated_image: use an image file to simulate a scsi disk
-                               it could be used for disk, logical pool
-        :param image_size: the size for emulated image
-        :param pre_disk_vol: a list include partition size to be created
-                             no more than 4 partition because msdos label
+                               it could be used for disk, logical pool, etc
+        :param kwargs: key words for specific pool
         """
         extra = ""
+        image_size = kwargs.get('image_size', "100M")
+        source_format = kwargs.get('source_format')
+        source_name = kwargs.get('source_name', None)
+        persistent = kwargs.get('persistent', False)
         if pool_type == "dir":
-            logging.info("Pool path:%s", self.tmpdir)
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
                 os.mkdir(pool_target)
         elif pool_type == "disk":
+            # Disk pool does not allow to create volume by virsh command,
+            # so introduce parameter 'pre_disk_vol' to create partition(s)
+            # by 'parted' command, the parameter is a list of partition size,
+            # and the max number of partitions is 4. If pre_disk_vol is None,
+            # disk pool will have no volume
+            pre_disk_vol = kwargs.get('pre_disk_vol', None)
             device_name = setup_or_cleanup_iscsi(is_setup=True,
                                                  emulated_image=emulated_image,
                                                  image_size=image_size)
-            # If pre_vol is None, disk pool will have no volume
             if type(pre_disk_vol) == list and len(pre_disk_vol):
                 for vol in pre_disk_vol:
                     mk_part(device_name, vol)
             else:
                 mk_label(device_name, "gpt")
             extra = " --source-dev %s" % device_name
+            if source_format:
+                extra += " --source-format %s" % source_format
         elif pool_type == "fs":
             device_name = setup_or_cleanup_iscsi(is_setup=True,
                                                  emulated_image=emulated_image,
@@ -909,10 +910,11 @@ class PoolVolumeTest(object):
             cmd_lv = "lvcreate --name default_lv --size 1M %s" % vg_name
             utils.run(cmd_lv)
         elif pool_type == "netfs":
+            export_options = kwargs.get('export_options',
+                                        "rw,async,no_root_squash")
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
                 os.mkdir(pool_target)
-            source_format = self.params.get("source_format")
             if source_format == 'glusterfs':
                 hostip = setup_or_cleanup_gluster(True, source_name,
                                                   pool_name=pool_name)
@@ -934,71 +936,78 @@ class PoolVolumeTest(object):
                 extra = "--source-host %s --source-path %s" % (source_host,
                                                                nfs_path)
         elif pool_type == "iscsi":
+            ip_protocal = kwargs.get('ip_protocal', "ipv4")
             setup_or_cleanup_iscsi(is_setup=True,
                                    emulated_image=emulated_image,
                                    image_size=image_size)
-            # Verify if expected iscsi device has been set
             iscsi_sessions = iscsi.iscsi_get_sessions()
-            iscsi_device = ()
+            iscsi_target = None
             for iscsi_node in iscsi_sessions:
                 if iscsi_node[1].count(emulated_image):
-                    # Remove port for pool operations
-                    ip_addr = iscsi_node[0].split(":3260")[0]
-                    iscsi_device = (ip_addr, iscsi_node[1])
+                    iscsi_target = iscsi_node[1]
                     break
-            if iscsi_device == ():
-                raise error.TestFail("No matched iscsi device.")
-            if "::" in iscsi_device[0]:
-                iscsi_device = ('localhost', iscsi_device[1])
-            extra = " --source-host %s  --source-dev %s" % iscsi_device
+            iscsi.iscsi_logout(iscsi_target)
+            if ip_protocal == "ipv6":
+                ip_addr = "::1"
+            else:
+                ip_addr = "127.0.0.1"
+            extra = " --source-host %s  --source-dev %s" % (ip_addr,
+                                                            iscsi_target)
         elif pool_type == "scsi":
-            scsi_xml_file = self.params.get("scsi_xml_file")
+            scsi_xml_file = self.params.get("scsi_xml_file", "")
             if not os.path.exists(scsi_xml_file):
-                scsi_xml_file = os.path.join(self.tmpdir, scsi_xml_file)
-                logical_device = setup_or_cleanup_iscsi(is_setup=True,
-                                                        emulated_image=emulated_image,
-                                                        image_size=image_size)
+                logical_device = setup_or_cleanup_iscsi(
+                    is_setup=True,
+                    emulated_image=emulated_image,
+                    image_size=image_size)
                 cmd = ("iscsiadm -m session -P 3 |grep -B3 %s| grep Host|awk "
                        "'{print $3}'" % logical_device.split('/')[2])
                 scsi_host = utils.system_output(cmd)
-                scsi_xml = """
-<pool type='scsi'>
-  <name>%s</name>
-   <source>
-    <adapter type='scsi_host' name='host%s'/>
-  </source>
-  <target>
-    <path>/dev/disk/by-path</path>
-  </target>
-</pool>
-""" % (pool_name, scsi_host)
-                logging.debug("Prepare the scsi pool xml: %s", scsi_xml)
-                xml_object = open(scsi_xml_file, 'w')
-                xml_object.write(scsi_xml)
-                xml_object.close()
+                scsi_pool_xml = pool_xml.PoolXML()
+                scsi_pool_xml.name = pool_name
+                scsi_pool_xml.pool_type = "scsi"
+                scsi_pool_xml.target_path = pool_target
+                scsi_pool_source_xml = pool_xml.SourceXML()
+                scsi_pool_source_xml.adp_type = 'scsi_host'
+                scsi_pool_source_xml.adp_name = "host" + scsi_host
+                scsi_pool_xml.set_source(scsi_pool_source_xml)
+                logging.debug("SCSI pool XML %s:\n%s", scsi_pool_xml.xml,
+                              str(scsi_pool_xml))
+                scsi_xml_file = scsi_pool_xml.xml
+                self.params['scsi_xml_file'] = scsi_xml_file
         elif pool_type == "gluster":
-            # Prepare gluster service and create volume
+            source_path = kwargs.get('source_path')
             hostip = setup_or_cleanup_gluster(True, source_name,
                                               pool_name=pool_name)
-            logging.debug("hostip is %s", hostip)
+            logging.debug("Gluster host ip address: %s", hostip)
             extra = "--source-host %s --source-path %s --source-name %s" % \
                     (hostip, source_path, source_name)
 
-        # Create pool
+        func = virsh.pool_create_as
         if pool_type == "scsi":
-            re_v = virsh.pool_create(scsi_xml_file)
+            func = virsh.pool_create
+        if persistent:
+            func = virsh.pool_define_as
+            if pool_type == "scsi":
+                func = virsh.pool_define
+
+        # Create/define pool
+        if pool_type == "scsi":
+            result = func(scsi_xml_file, debug=True)
         else:
-            re_v = virsh.pool_create_as(pool_name, pool_type,
-                                        pool_target, extra, debug=True)
-
+            result = func(pool_name, pool_type, pool_target, extra, debug=True)
+        # Here, virsh.pool_create_as return a boolean value and all other 3
+        # functions return CmdResult object
+        if isinstance(result, bool):
+            re_v = result
+        else:
+            re_v = result.exit_status == 0
         if not re_v:
-            raise error.TestFail("Create pool failed.")
-
-        ret = virsh.pool_dumpxml(pool_name)
-        logging.debug("The created pool xml is: %s" % ret)
-
-        # Check the created pool
-        check_actived_pool(pool_name)
+            self.cleanup_pool(pool_name, pool_type, pool_target,
+                              emulated_image, **kwargs)
+            raise error.TestFail("Prepare pool failed")
+        xml_str = virsh.pool_dumpxml(pool_name)
+        logging.debug("New prepared pool XML: %s", xml_str)
 
     def pre_vol(self, vol_name, vol_format, capacity, allocation, pool_name):
         """
