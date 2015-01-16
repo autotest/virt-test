@@ -1282,7 +1282,7 @@ def get_cpu_info(session=None):
     return cpu_info
 
 
-def yum_install(pkg_list, session=None):
+def yum_install(pkg_list, session=None, timeout=300):
     """
     Try to install packages on system
 
@@ -1296,9 +1296,11 @@ def yum_install(pkg_list, session=None):
     yum_cmd = "rpm -q {0} || yum -y install {0}"
     for pkg in pkg_list:
         if session:
-            status = session.cmd_status(yum_cmd.format(pkg))
+            status = session.cmd_status(yum_cmd.format(pkg),
+                                        timeout=timeout)
         else:
             status = utils.run(yum_cmd.format(pkg),
+                               timeout=timeout,
                                ignore_status=False).exit_status
         if status:
             logging.error("Failed to install package: %s"
