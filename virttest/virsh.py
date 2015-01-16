@@ -3580,6 +3580,66 @@ def domfstrim(name, minimum=None, mountpoint=None, options="", **dargs):
     return command(cmd, **dargs)
 
 
+def domfsfreeze(name, mountpoint=None, options="", **dargs):
+    """
+    Freeze domain's mounted filesystems
+
+    :param name: name of domain
+    :param mountpoint: specific mountpoints to be frozen
+    :param options: extra options to domfsfreeze cmd.
+    :return: CmdResult object
+    """
+    cmd = "domfsfreeze %s" % name
+    if mountpoint is not None:
+        cmd += " --mountpoint %s" % mountpoint
+
+    cmd += " %s" % options
+    return command(cmd, **dargs)
+
+
+def domfsthaw(name, mountpoint=None, options="", **dargs):
+    """
+    Thaw domain's mounted filesystems
+
+    :param name: name of domain
+    :param mountpoint: specific mountpoints to be thawed
+    :param options: extra options to domfsfreeze cmd.
+    :return: CmdResult object
+    """
+    cmd = "domfsthaw %s" % name
+    if mountpoint is not None:
+        cmd += " --mountpoint %s" % mountpoint
+
+    cmd += " %s" % options
+    return command(cmd, **dargs)
+
+
+def domtime(name, now=False, pretty=False, sync=False, time=None,
+            options="", **dargs):
+    """
+    Get/Set domain's time
+
+    :param name: name of domain
+    :param now: set to the time of the host running virsh
+    :param pretty: print domain's time in human readable form
+    :param sync: instead of setting given time, synchronize from domain's RTC
+    :param time: integer time to set
+    :return: CmdResult object
+    """
+    cmd = "domtime %s" % name
+    if now:
+        cmd += " --now"
+    if pretty:
+        cmd += " --pretty"
+    if sync:
+        cmd += " --sync"
+    if time is not None:
+        cmd += " --time %s" % time
+
+    cmd += " %s" % options
+    return command(cmd, **dargs)
+
+
 def nwfilter_dumpxml(name, options="", to_file=None, **dargs):
     """
     Do dumpxml for network filter.
