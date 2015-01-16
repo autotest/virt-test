@@ -869,7 +869,8 @@ class VM(virt_vm.BaseVM):
 
         :param name: The serial port name.
         """
-        return "serial-%s-%s.log" % (name, self.name)
+        return "serial-%s-%s-%s.log" % (name, self.name,
+                                        utils_misc.generate_random_string(4))
 
     def get_serial_console_filenames(self):
         """
