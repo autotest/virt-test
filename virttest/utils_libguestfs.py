@@ -2574,6 +2574,52 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd('e2fsck_f %s' % (device))
 
+    def mkmountpoint(self, exemptpath):
+        """
+        mkmountpoint - create a mountpoint
+
+        "mkmountpoint" and "rmmountpoint" are specialized calls that can be used
+        to create extra mountpoints before mounting the first filesystem.
+        """
+        return self.inner_cmd('mkmountpoint %s' % (exemptpath))
+
+    def readdir(self, dir):
+        """
+        readdir - read directories entries
+
+        This returns the list of directory entries in directory "dir"
+        """
+        return self.inner_cmd('readdir %s' % (dir))
+
+    def mount_loop(self, file, mountpoint):
+        """
+        mount-loop - mount a file using the loop device
+
+        This command lets you mount "file" (a filesystem image in a file) on a
+        mount point. It is entirely equivalent to the command "mount -o loop
+        file mountpoint".
+        """
+        return self.inner_cmd('mount_loop %s %s' % (file, mountpoint))
+
+    def rmmountpoint(self, exemptpath):
+        """
+        rmmountpoint - remove a mountpoint
+
+        This calls removes a mountpoint that was previously created with
+        "mkmountpoint". See "mkmountpoint" for full details.
+        """
+        return self.inner_cmd('rmmountpoint %s' % (exemptpath))
+
+    def mount_vfs(self, options, vfstype, mountable, mountpoint):
+        """
+        mount-vfs - mount a guest disk with mount options and vfstype
+
+        This is the same as the "mount" command, but it allows you to set both
+        the mount options and the vfstype as for the mount(8) *-o* and *-t*
+        flags.
+        """
+        return self.inner_cmd('mount_vfs %s %s %s %s' % (options, vfstype, mountable, mountpoint))
+
 
 # libguestfs module functions follow #####
 
