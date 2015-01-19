@@ -900,6 +900,15 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("mkdir %s" % path)
 
+    def mkdir_p(self, path):
+        """
+        mkdir-p - create a directory and parents
+
+        Create a directory named "path", creating any parent directories as necessary.
+        This is like the "mkdir -p" shell command.
+        """
+        return self.inner_cmd("mkdir-p %s" % path)
+
     def mkdir_mode(self, path, mode):
         """
         mkdir-mode - create a directory with a particular mode
@@ -2257,6 +2266,163 @@ class GuestfishPersistent(Guestfish):
         return self.inner_cmd("debug %s %s" % (subcmd, extraargs))
 
 # libguestfs module functions follow #####
+    def aug_init(self, root, flags):
+        """
+        aug-init - create a new Augeas handle
+
+        Create a new Augeas handle for editing configuration files. If
+        there was any previous Augeas handle associated with this guestfs
+        session, then it is closed.
+        """
+        return self.inner_cmd("aug-init %s %s" % (root, flags))
+
+    def aug_clear(self, augpath):
+        """
+        aug-clear - clear Augeas path
+
+        Set the value associated with "path" to "NULL". This is the same as the
+        augtool(1) "clear" command.
+
+        """
+        return self.inner_cmd("aug-clear %s" % augpath)
+
+    def aug_set(self, augpath, val):
+        """
+        aug-set - set Augeas path to value
+
+        Set the value associated with "path" to "val".
+
+        In the Augeas API, it is possible to clear a node by setting the value
+        to NULL. Due to an oversight in the libguestfs API you cannot do that
+        with this call. Instead you must use the "aug_clear" call.
+        """
+        return self.inner_cmd("aug-set %s %s" % (augpath, val))
+
+    def aug_get(self, augpath):
+        """
+        aug-get - look up the value of an Augeas path
+
+        Look up the value associated with "path". If "path" matches exactly one
+        node, the "value" is returned.
+        """
+        return self.inner_cmd("aug-get %s" % augpath)
+
+    def aug_close(self):
+        """
+        aug-close - close the current Augeas handle and free up any resources
+        used by it.
+
+        After calling this, you have to call "aug_init" again before you can
+        use any other Augeas functions.
+        """
+        return self.inner_cmd("aug-close")
+
+    def aug_defnode(self, node, expr, value):
+        """
+        aug-defnode - defines a variable "name" whose value is the result
+        of evaluating "expr".
+
+        If "expr" evaluates to an empty nodeset, a node is created, equivalent
+        to calling "aug_set" "expr", "value". "name" will be the nodeset
+        containing that single node.
+
+        On success this returns a pair containing the number of nodes in the
+        nodeset, and a boolean flag if a node was created.
+        """
+        return self.inner_cmd("aug-defnode %s %s %s" % (node, expr, value))
+
+    def aug_defvar(self, name, expr):
+        """
+        aug-defvar - define an Augeas variable
+
+        Defines an Augeas variable "name" whose value is the result of evaluating "expr".
+        If "expr" is NULL, then "name" is undefined.
+
+        On success this returns the number of nodes in "expr", or 0 if "expr" evaluates to
+        something which is not a nodeset.
+        """
+        return self.inner_cmd("aug-defvar %s %s" % (name, expr))
+
+    def aug_ls(self, augpath):
+        """
+        aug-ls - list Augeas nodes under augpath
+
+        This is just a shortcut for listing "aug_match" "path/*" and sorting the resulting nodes
+        into alphabetical order.
+        """
+        return self.inner_cmd("aug-ls %s" % augpath)
+
+    def aug_insert(self, augpath, label, before):
+        """
+        aug-insert - insert a sibling Augeas node
+
+        Create a new sibling "label" for "path", inserting it into the tree before or after
+        "path" (depending on the boolean flag "before").
+
+        "path" must match exactly one existing node in the tree, and "label"
+        must be a label, ie. not contain "/", "*" or end with a bracketed index "[N]".
+        """
+        return self.inner_cmd("aug-insert %s %s %s" % (augpath, label, before))
+
+    def aug_match(self, augpath):
+        """
+        aug-match - return Augeas nodes which match augpath
+
+        Returns a list of paths which match the path expression "path". The returned
+        paths are sufficiently qualified so that they match exactly one node in the current tree.
+        """
+        return self.inner_cmd("aug-match %s" % augpath)
+
+    def aug_mv(self, src, dest):
+        """
+        aug-mv - move Augeas node
+
+        Move the node "src" to "dest". "src" must match exactly one node. "dest" is overwritten
+        if it exists.
+        """
+        return self.inner_cmd("aug-mv %s %s" % (src, dest))
+
+    def aug_rm(self, augpath):
+        """
+        aug-rm - remove an Augeas path
+
+        Remove "path" and all of its children.
+        On success this returns the number of entries which were removed.
+        """
+        return self.inner_cmd("aug-rm %s" % augpath)
+
+    def aug_label(self, augpath):
+        """
+        aug-label - return the label from an Augeas path expression
+
+        The label (name of the last element) of the Augeas path expression "augpath" is returned.
+        "augpath" must match exactly one node, else this function returns an error.
+        """
+        return self.inner_cmd("aug-label %s" % augpath)
+
+    def aug_setm(self, base, sub, val):
+        """
+        aug-setm - set multiple Augeas nodes
+        """
+        return self.inner_cmd("aug-setm %s %s %s" % (base, sub, val))
+
+    def aug_load(self):
+        """
+        aug-load - load files into the tree
+
+        Load files into the tree.
+        See "aug_load" in the Augeas documentation for the full gory details.
+        """
+        return self.inner_cmd("aug-load")
+
+    def aug_save(self):
+        """
+        aug-save - write all pending Augeas changes to disk
+
+        This writes all pending changes to disk.
+        The flags which were passed to "aug_init" affect exactly how files are saved.
+        """
+        return self.inner_cmd("aug-save")
 
 
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
