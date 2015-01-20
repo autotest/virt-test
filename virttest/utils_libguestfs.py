@@ -2583,6 +2583,160 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd('e2fsck_f %s' % (device))
 
+    def mkmountpoint(self, exemptpath):
+        """
+        mkmountpoint - create a mountpoint
+
+        "mkmountpoint" and "rmmountpoint" are specialized calls that can be used
+        to create extra mountpoints before mounting the first filesystem.
+        """
+        return self.inner_cmd('mkmountpoint %s' % (exemptpath))
+
+    def readdir(self, dir):
+        """
+        readdir - read directories entries
+
+        This returns the list of directory entries in directory "dir"
+        """
+        return self.inner_cmd('readdir %s' % (dir))
+
+    def mount_loop(self, file, mountpoint):
+        """
+        mount-loop - mount a file using the loop device
+
+        This command lets you mount "file" (a filesystem image in a file) on a
+        mount point. It is entirely equivalent to the command "mount -o loop
+        file mountpoint".
+        """
+        return self.inner_cmd('mount_loop %s %s' % (file, mountpoint))
+
+    def rmmountpoint(self, exemptpath):
+        """
+        rmmountpoint - remove a mountpoint
+
+        This calls removes a mountpoint that was previously created with
+        "mkmountpoint". See "mkmountpoint" for full details.
+        """
+        return self.inner_cmd('rmmountpoint %s' % (exemptpath))
+
+    def mount_vfs(self, options, vfstype, mountable, mountpoint):
+        """
+        mount-vfs - mount a guest disk with mount options and vfstype
+
+        This is the same as the "mount" command, but it allows you to set both
+        the mount options and the vfstype as for the mount(8) *-o* and *-t*
+        flags.
+        """
+        return self.inner_cmd('mount_vfs %s %s %s %s' % (options, vfstype, mountable, mountpoint))
+
+    def mkswap(self, device, label=None, uuid=None):
+        """
+        mkswap - create a swap partition
+
+        Create a Linux swap partition on "device"
+        """
+        cmd = 'mkswap %s ' % device
+        if label:
+            cmd += ' label:%s ' % label
+        if uuid:
+            cmd += ' uuid:%s ' % uuid
+        return self.inner_cmd(cmd)
+
+    def swapon_device(self, device):
+        """
+        swapon-device - enable swap on device
+
+        This command enables the libguestfs appliance to use the swap device or
+        partition named "device". The increased memory is made available for all
+        commands, for example those run using "command" or "sh".
+        """
+        return self.inner_cmd('swapon_device %s' % device)
+
+    def swapoff_device(self, device):
+        """
+        swapoff-device - disable swap on device
+
+        This command disables the libguestfs appliance swap device or partition
+        named "device". See "swapon_device".
+        """
+        return self.inner_cmd('swapoff_device %s' % device)
+
+    def mkswap_L(self, label, device):
+        """
+        mkswap-L - create a swap partition with a label
+
+        Create a swap partition on "device" with label "label".
+        """
+        return self.inner_cmd('mkswap_L %s %s' % (label, device))
+
+    def swapon_label(self, label):
+        """
+        swapon-label - enable swap on labeled swap partition
+
+        This command enables swap to a labeled swap partition. See
+        "swapon_device" for other notes.
+        """
+        return self.inner_cmd("swapon_label %s" % label)
+
+    def swapoff_label(self, label):
+        """
+        swapoff-label - disable swap on labeled swap partition
+
+        This command disables the libguestfs appliance swap on labeled swap
+        partition.
+        """
+        return self.inner_cmd("swapoff_label %s" % label)
+
+    def mkswap_U(self, uuid, device):
+        """
+        mkswap-U - create a swap partition with an explicit UUID
+
+        Create a swap partition on "device" with UUID "uuid".
+        """
+        return self.inner_cmd('mkswap_U %s %s' % (uuid, device))
+
+    def swapon_uuid(self, uuid):
+        """
+        swapon-uuid - enable swap on swap partition by UUID
+
+        This command enables swap to a swap partition with the given UUID. See
+        "swapon_device" for other notes.
+        """
+        return self.inner_cmd('swapon_uuid %s' % uuid)
+
+    def swapoff_uuid(self, uuid):
+        """
+        swapoff-uuid - disable swap on swap partition by UUID
+
+        This command disables the libguestfs appliance swap partition with the
+        given UUID.
+        """
+        return self.inner_cmd('swapoff_uuid %s' % uuid)
+
+    def mkswap_file(self, file):
+        """
+        mkswap-file - create a swap file
+
+        Create a swap file.
+        """
+        return self.inner_cmd("mkswap_file %s" % file)
+
+    def swapon_file(self, file):
+        """
+        swapon-file - enable swap on file
+
+        This command enables swap to a file. See "swapon_device" for other
+        notes.
+        """
+        return self.inner_cmd('swapon_file %s' % file)
+
+    def swapoff_file(self, file):
+        """
+        swapoff-file - disable swap on file
+
+        This command disables the libguestfs appliance swap on file.
+        """
+        return self.inner_cmd('swapoff_file %s' % file)
 
 # libguestfs module functions follow #####
 
