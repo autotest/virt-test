@@ -2347,7 +2347,7 @@ class GuestfishPersistent(Guestfish):
         """
         aug-ls - list Augeas nodes under augpath
 
-        This is just a shortcut for listing "aug_match" "path/*" and sorting the resulting nodes
+        This is just a shortcut for listing "aug_match" "path/\*" and sorting the resulting nodes
         into alphabetical order.
         """
         return self.inner_cmd("aug-ls %s" % augpath)
