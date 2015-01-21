@@ -1548,12 +1548,15 @@ def set_guest_agent(vm):
 
     :param vm: the vm object
     """
+    logging.warning("This function is going to be deprecated. "
+                    "Please use vm.prepare_guest_agent() instead.")
     # reset domain state
     if vm.is_alive():
         vm.destroy(gracefully=False)
     vmxml = vm_xml.VMXML.new_from_inactive_dumpxml(vm.name)
     logging.debug("Attempting to set guest agent channel")
-    vmxml.set_agent_channel(vm.name)
+    vmxml.set_agent_channel()
+    vmxml.sync()
     vm.start()
     session = vm.wait_for_login()
     # Check if qemu-ga already started automatically
