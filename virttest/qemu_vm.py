@@ -3507,8 +3507,11 @@ class VM(virt_vm.BaseVM):
         error.context()
 
         if method == "shell":
-            login = serial and self.serial_login or self.login
-            session = session or login()
+            if not session:
+                if serial:
+                    session = self.serial_login()
+                else:
+                    session = self.login(nic_index=nic_index)
             session.sendline(self.params.get("reboot_command"))
             error.context("waiting for guest to go down", logging.info)
             if not utils_misc.wait_for(
