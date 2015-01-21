@@ -501,7 +501,7 @@ class GuestfishPersistent(Guestfish):
         """
         cmd = "add-drive-opts %s" % filename
 
-        if readonly:
+        if readonly and readonly != 'no':
             cmd += " readonly:true"
         else:
             cmd += " readonly:false"
