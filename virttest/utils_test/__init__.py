@@ -1389,11 +1389,14 @@ class VMStress(object):
         def _parameters_filter(stress_type):
             """Set parameters according stress_type"""
             _control_files = {'unixbench': "unixbench5.control",
-                              'stress': "stress.control"}
+                              'stress': "stress.control",
+                              'iozone': "iozone.control"}
             _check_cmds = {'unixbench': "pidof -s ./Run",
-                           'stress': "pidof -s stress"}
+                           'stress': "pidof -s stress",
+                           'iozone': "pidof -s iozone"}
             _stop_cmds = {'unixbench': "killall ./Run",
-                          'stress': "killall stress"}
+                          'stress': "killall stress",
+                          'iozone': "killall iozone"}
             try:
                 control_file = _control_files[stress_type]
                 self.control_path = os.path.join(data_dir.get_root_dir(),
@@ -1410,7 +1413,7 @@ class VMStress(object):
         self.params = vm.params
         self.timeout = 60
         self.stress_type = stress_type
-        if stress_type not in ["stress", "unixbench"]:
+        if stress_type not in ["stress", "unixbench", "iozone"]:
             raise StressError("Stress %s is not supported now." % stress_type)
 
         _parameters_filter(stress_type)
@@ -1561,11 +1564,11 @@ def load_stress(stress_type, vms, params):
     :param vms: Used when it's stress in vms
     """
     fail_info = []
-    # Add stress tool in vms
-    if stress_type == "stress_in_vms":
+    # Add stress/iozone tool in vms
+    if stress_type in ['stress_in_vms', 'iozone_in_vms']:
         for vm in vms:
             try:
-                vstress = VMStress(vm, "stress")
+                vstress = VMStress(vm, stress_type.split('_')[0])
                 vstress.load_stress_tool()
             except StressError, detail:
                 fail_info.append("Launch stress in %s failed: %s"
