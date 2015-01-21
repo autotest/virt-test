@@ -1181,6 +1181,18 @@ class VMXML(VMXMLBase):
             pass  # Element already doesn't exist
         self.xmltreefile.write()
 
+    def remove_all_device_by_type(self, device_type):
+        """
+        Remove all devices of a given type.
+
+        :param type: Type name for devices should be removed.
+        """
+        try:
+            self.xmltreefile.remove_by_xpath('/devices/%s' % device_type)
+        except (AttributeError, TypeError):
+            pass  # Element already doesn't exist
+        self.xmltreefile.write()
+
     def add_hostdev(self, source_address, mode='subsystem',
                     hostdev_type='pci',
                     managed='yes'):
