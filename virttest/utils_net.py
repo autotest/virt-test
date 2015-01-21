@@ -1603,7 +1603,7 @@ def openflow_manager(br_name, command, flow_options=None, ovs=None):
     manager_cmd = "ovs-ofctl %s %s" % (command, br_name)
     if flow_options:
         manager_cmd += " %s" % flow_options
-    utils.run(manager_cmd)
+    return utils.run(manager_cmd)
 
 
 def bring_up_ifname(ifname):
