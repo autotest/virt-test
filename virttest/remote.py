@@ -194,7 +194,7 @@ def handle_prompts(session, username, password, prompt, timeout=10,
         except aexpect.ExpectProcessTerminatedError, e:
             raise LoginProcessTerminatedError(e.status, e.output)
 
-        return output
+    return output
 
 
 def remote_login(client, host, port, username, password, prompt, linesep="\n",
