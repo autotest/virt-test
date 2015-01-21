@@ -1003,11 +1003,11 @@ class BaseVM(object):
                 when remote login (ssh, rss) failed.
         :return: A ShellSession object.
         """
-        def _run_nmap(nmap, stop=False):
+        def _run_nmap(nmap, ifaces, stop=False):
             if stop:
                 nmap.stop_nmap()
                 return
-            nmap.start_nmap(utils_net.Bridge().list_br(), timeout=None)
+            nmap.start_nmap(ifaces, timeout=None)
             mac = self.get_mac_address(nic_index)
             try:
                 ip = nmap.address_cache[mac.upper()]
@@ -1017,6 +1017,16 @@ class BaseVM(object):
 
         error_messages = []
         run_nmap = "yes" == self.params.get("run_nmap_to_login")
+        nmap_ifaces = self.params.objects('nmap_interfaces')
+        skip_ifaces = self.params.objects('nmap_skip_interfaces')
+        # Get bridges if nmap_ifaces is empty
+        if not nmap_ifaces:
+            # TODO: Contain all available bridges, such as ovs...
+            nmap_ifaces = utils_net.Bridge().list_br()
+        for iface in skip_ifaces:
+            if iface in nmap_ifaces:
+                nmap_ifaces.remove(iface)
+
         logging.debug("Attempting to log into '%s' (timeout %ds)", self.name,
                       timeout)
         # Start nmap for get_address
@@ -1025,7 +1035,7 @@ class BaseVM(object):
         except utils_misc.NMapError:   # Check Nmap before using it
             run_nmap = False
         if run_nmap:
-            _run_nmap(nmap)
+            _run_nmap(nmap, nmap_ifaces)
         end_time = time.time() + timeout
         while time.time() < end_time:
             try:
@@ -1038,12 +1048,12 @@ class BaseVM(object):
                     logging.debug(e)
                     error_messages.append(e)
                 if run_nmap:
-                    _run_nmap(nmap)
+                    _run_nmap(nmap, nmap_ifaces)
             time.sleep(2)
         # Timeout expired
         # Stop nmap first
         if run_nmap:
-            _run_nmap(nmap, stop=True)
+            _run_nmap(nmap, nmap_ifaces, stop=True)
         logging.info("Try to get guest network status.")
         s_session = self.wait_for_serial_login(30, internal_timeout,
                                                username=username,
