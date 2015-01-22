@@ -1139,6 +1139,48 @@ class MigrationTest(object):
         vm.connect_uri = srcuri
 
 
+def check_result(result, expected_fails=[], skip_if=[], any_error=False):
+    """
+    Check the result of a command and check command error message against
+    expectation.
+
+    :param result: Command result instance.
+    :param expected_fails: list of regex of expected stderr patterns. The check
+                           will pass if any of these patterns matches.
+    :param skip_if: list of regex of expected patterns. The check will raise a
+                    TestNAError if any of these patterns matches.
+    :param any_error: Whether expect on any error message. Setting to True will
+                      will override expected_fails
+    """
+    logging.debug("Command result:\n%s" % result)
+    if skip_if:
+        for patt in skip_if:
+            if re.search(patt, result.stderr):
+                raise error.TestNAError("Test skipped: found '%s' in test "
+                                        "result:\n%s" %
+                                        (patt, result.stderr))
+    if any_error:
+        if result.exit_status:
+            return
+        else:
+            raise error.TestFail("Expect should fail but got:\n%s" % result)
+
+    if result.exit_status:
+        if expected_fails:
+            if not any(re.search(patt, result.stderr)
+                       for patt in expected_fails):
+                raise error.TestFail("Expect should fail with one of %s, "
+                                     "but failed with:\n%s" %
+                                     (expected_fails, result))
+        else:
+            raise error.TestFail("Expect should succeed, but got:\n%s" % result)
+    else:
+        if expected_fails:
+            raise error.TestFail("Expect should fail with one of %s, "
+                                 "but succeeded:\n%s" %
+                                 (expected_fails, result))
+
+
 def check_exit_status(result, expect_error=False):
     """
     Check the exit status of virsh commands.
