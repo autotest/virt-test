@@ -483,7 +483,9 @@ class GuestfishPersistent(Guestfish):
         return self.inner_cmd("add-drive %s" % filename)
 
     def add_drive_opts(self, filename, readonly=False, format=None,
-                       iface=None, name=None):
+                       iface=None, name=None, label=None, protocol=None,
+                       server=None, username=None, secret=None,
+                       cachemode=None, discard=None, copyonread=False):
         """
         add-drive-opts - add an image to examine or modify.
 
@@ -502,6 +504,24 @@ class GuestfishPersistent(Guestfish):
             cmd += " iface:%s" % iface
         if name:
             cmd += " name:%s" % name
+        if label:
+            cmd += " label:%s" % label
+        if protocol:
+            cmd += " protocol:%s" % protocol
+        if server:
+            cmd += " server:%s" % server
+        if username:
+            cmd += " username:%s" % username
+        if secret:
+            cmd += " secret:%s" % secret
+        if cachemode:
+            cmd += " cachemode:%s" % cachemode
+        if discard:
+            cmd += " discard:%s" % discard
+        if copyonread:
+            cmd += " copyonread:true"
+        else:
+            cmd += " copyonread:false"
 
         return self.inner_cmd(cmd)
 
@@ -2728,6 +2748,218 @@ class GuestfishPersistent(Guestfish):
         This command disables the libguestfs appliance swap on file.
         """
         return self.inner_cmd('swapoff_file %s' % file)
+
+    def alloc(self, filename, size):
+        """
+        alloc - allocate and add a disk file
+
+        This creates an empty (zeroed) file of the given size, and then adds so
+        it can be further examined.
+        """
+        return self.inner_cmd('alloc %s %s' % (filename, size))
+
+    def list_disk_labels(self):
+        """
+        list-disk-labels - mapping of disk labels to devices
+
+        If you add drives using the optional "label" parameter of
+        "add_drive_opts", you can use this call to map between disk labels, and
+        raw block device and partition names (like "/dev/sda" and "/dev/sda1").
+        """
+        return self.inner_cmd('list_disk_labels')
+
+    def add_drive_ro_with_if(self, filename, iface):
+        """
+        add-drive-ro-with-if - add a drive read-only specifying the QEMU block
+        emulation to use
+
+        This is the same as "add_drive_ro" but it allows you to specify the QEMU
+        interface emulation to use at run time.
+        """
+        return self.inner_cmd('add_drive_ro_with_if %s %s' % (filename, iface))
+
+    def add_drive_with_if(self, filename, iface):
+        """
+        add-drive-with-if - add a drive specifying the QEMU block emulation to
+        use
+
+        This is the same as "add_drive" but it allows you to specify the QEMU
+        interface emulation to use at run time.
+        """
+        return self.inner_cmd('add_drive_with_if %s %s' % (filename, iface))
+
+    def available(self, groups):
+        """
+        available - test availability of some parts of the API
+
+        This command is used to check the availability of some groups of
+        functionality in the appliance, which not all builds of the libguestfs
+        appliance will be able to provide.
+        """
+        return self.inner_cmd('available %s' % groups)
+
+    def available_all_groups(self):
+        """
+        available-all-groups - return a list of all optional groups
+
+        This command returns a list of all optional groups that this daemon
+        knows about. Note this returns both supported and unsupported groups. To
+        find out which ones the daemon can actually support you have to call
+        "available" / "feature_available" on each member of the returned list.
+        """
+        return self.inner_cmd('available_all_groups')
+
+    def help(self, orcmd=None):
+        """
+        help - display a list of commands or help on a command
+        """
+        cmd = 'help'
+        if orcmd:
+            cmd += ' %s' % orcmd
+        return self.inner_cmd(cmd)
+
+    def quit(self):
+        """
+        quit - quit guestfish
+        """
+        return self.inner_cmd('quit')
+
+    def echo(self, params=None):
+        """
+        echo - display a line of text
+
+        This echos the parameters to the terminal.
+        """
+        cmd = 'echo'
+        if params:
+            cmd += ' %s' % params
+        return self.inner_cmd(cmd)
+
+    def echo_daemon(self, words):
+        """
+        echo-daemon - echo arguments back to the client
+
+        This command concatenates the list of "words" passed with single spaces
+        between them and returns the resulting string.
+        """
+        return self.inner_cmd('echo_daemon %s' % words)
+
+    def launch(self):
+        """
+        launch - launch the backend
+
+        You should call this after configuring the handle (eg. adding drives)
+        but before performing any actions.
+        """
+        return self.inner_cmd('launch')
+
+    def dmesg(self):
+        """
+        dmesg - return kernel messages
+
+        This returns the kernel messages ("dmesg" output) from the guest kernel.
+        This is sometimes useful for extended debugging of problems.
+        """
+        return self.inner_cmd('dmesg')
+
+    def version(self):
+        """
+        version - get the library version number
+
+        Return the libguestfs version number that the program is linked against.
+        """
+        return self.inner_cmd('version')
+
+    def sparse(self, filename, size):
+        """
+        sparse - create a sparse disk image and add
+
+        This creates an empty sparse file of the given size, and then adds so it
+        can be further examined.
+        """
+        return self.inner_cmd('sparse %s %s' % (filename, size))
+
+    def modprobe(self, modulename):
+        """
+        modprobe - load a kernel module
+
+        This loads a kernel module in the appliance.
+        """
+        return self.inner_cmd('modprobe %s' % modulename)
+
+    def ping_daemon(self):
+        """
+        ping-daemon - ping the guest daemon
+
+        This is a test probe into the guestfs daemon running inside the
+        hypervisor. Calling this function checks that the daemon responds to the
+        ping message, without affecting the daemon or attached block device(s)
+        in any other way.
+        """
+        return self.inner_cmd('ping_daemon')
+
+    def sleep(self, secs):
+        """
+        sleep - sleep for some seconds
+
+        Sleep for "secs" seconds.
+        """
+        return self.inner_cmd('sleep %s' % secs)
+
+    def reopen(self):
+        """
+        reopen - close and reopen libguestfs handle
+
+        Close and reopen the libguestfs handle. It is not necessary to use this
+        normally, because the handle is closed properly when guestfish exits.
+        However this is occasionally useful for testing.
+        """
+        return self.inner_cmd('reopen')
+
+    def time(self, command, args):
+        """
+        time - print elapsed time taken to run a command
+
+        Run the command as usual, but print the elapsed time afterwards. This
+        can be useful for benchmarking operations.
+        """
+        return self.inner_cmd('time %s %s' % (command, args))
+
+    def config(self, hvparam, hvvalue):
+        """
+        config - add hypervisor parameters
+
+        This can be used to add arbitrary hypervisor parameters of the form
+        *-param value*. Actually it's not quite arbitrary - we prevent you from
+        setting some parameters which would interfere with parameters that we
+        use.
+        """
+        return self.inner_cmd('config %s %s' % (hvparam, hvvalue))
+
+    def kill_subprocess(self):
+        """
+        kill-subprocess - kill the hypervisor
+
+        This kills the hypervisor.
+        """
+        return self.inner_cmd('kill_subprocess')
+
+    def set_backend(self, backend):
+        """
+        set-backend - set the backend
+
+        Set the method that libguestfs uses to connect to the backend guestfsd
+        daemon.
+        """
+        return self.inner_cmd('set_backend %s' % backend)
+
+    def get_backend(self):
+        """
+        get-backend - get the backend
+
+        Return the current backend.
+        """
+        return self.inner_cmd('get_backend')
 
 # libguestfs module functions follow #####
 
