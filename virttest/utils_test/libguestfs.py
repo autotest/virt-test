@@ -658,7 +658,8 @@ class GuestfishTools(lgf.GuestfishPersistent):
             self.part_list(pv_name)
 
         self.params["mount_point"] = mount_point
-        if with_blocksize == "yes" and fs_type != "btrfs":
+
+        if with_blocksize == "yes" and fs_type != "btrfs" and fs_type != "no_fs":
             if blocksize:
                 self.mkfs_opts(fs_type, mount_point, "blocksize:%s" % (blocksize))
                 self.vfs_type(mount_point)
@@ -667,7 +668,7 @@ class GuestfishTools(lgf.GuestfishPersistent):
                 self.umount_all()
                 self.sync()
                 return (False, "with_blocksize is set but blocksize not given")
-        else:
+        elif fs_type != "no_fs":
             self.mkfs(fs_type, mount_point)
             self.vfs_type(mount_point)
 
