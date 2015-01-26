@@ -13,6 +13,7 @@ import aexpect
 import traceback
 import ppm_utils
 import data_dir
+import copy
 
 
 class VMError(Exception):
@@ -645,19 +646,22 @@ class BaseVM(object):
         if not nic.has_key('mac'):
             raise VMMACAddressMissingError(index)
         if self.ip_version == "ipv4":
-            # Get the IP address from arp cache, try upper and lower case
-            arp_ip = self.address_cache.get(nic.mac.upper())
+            # Get the IP address from arp cache
+            arp_ip = self.address_cache.get(nic.mac.lower())
             if not arp_ip:
-                arp_ip = self.address_cache.get(nic.mac.lower())
-
-            if not arp_ip and os.geteuid() != 0:
+                arp_ip = self.address_cache.get(nic.mac.upper())
+            if not arp_ip or os.geteuid() != 0:
                 # For non-root, tcpdump won't work for finding IP address,
-                # try arp
+                # or IP missed in address_cache, try to find it from arp table.
+                arping_bin = utils_misc.find_command("arping")
+                # Check IP not got DHCPACK packet to ensure no ip/mac
+                # table missed in address_cache.
+                for ip in copy.deepcopy(self.address_cache.get("ip_pool")):
+                    arping_cmd = "%s -f -c 5 " % arping_bin
+                    arping_cmd += "-I %s %s" % (nic.netdst, ip)
+                    utils.system(arping_cmd, ignore_status=True)
                 ip_map = utils_net.parse_arp()
                 arp_ip = ip_map.get(nic.mac.lower())
-                if arp_ip:
-                    self.address_cache[nic.mac.lower()] = arp_ip
-
             if not arp_ip:
                 raise VMIPAddressMissingError(nic.mac)
 
@@ -683,6 +687,9 @@ class BaseVM(object):
 
             logging.debug('Found/Verified IP %s for VM %s NIC %s',
                           arp_ip, self.name, str(index))
+            # Update address_cache since ip/mac releation ship verify pass
+            self.address_cache[nic.mac.lower()] = arp_ip
+            self.address_cache["ip_pool"].discard(arp_ip)
             return arp_ip
 
         elif self.ip_version == "ipv6":
