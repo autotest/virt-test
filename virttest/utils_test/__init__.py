@@ -448,7 +448,6 @@ def run_file_transfer(test, params, env):
 
     dir_name = test.tmpdir
     transfer_timeout = int(params.get("transfer_timeout"))
-    transfer_type = params.get("transfer_type")
     tmp_dir = params.get("tmp_dir", "/tmp/")
     clean_cmd = params.get("clean_cmd", "rm -f")
     filesize = int(params.get("filesize", 4000))
@@ -466,10 +465,6 @@ def run_file_transfer(test, params, env):
     try:
         error.context("Creating %dMB file on host" % filesize, logging.info)
         utils.run(cmd)
-
-        if transfer_type != "remote":
-            raise error.TestError("Unknown test file transfer mode %s" %
-                                  transfer_type)
 
         error.context("Transferring file host -> guest,"
                       " timeout: %ss" % transfer_timeout, logging.info)
