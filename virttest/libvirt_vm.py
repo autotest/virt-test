@@ -1904,22 +1904,6 @@ class VM(virt_vm.BaseVM):
         """
         self.uuid = virsh.domuuid(self.name,
                                   uri=self.connect_uri).stdout.strip()
-        # Pull in mac addresses from libvirt guest definition
-        for index, nic in enumerate(self.virtnet):
-            try:
-                mac = self.get_virsh_mac_address(index)
-                if not nic.has_key('mac'):
-                    logging.debug("Updating nic %d with mac %s on vm %s"
-                                  % (index, mac, self.name))
-                    nic.mac = mac
-                elif nic.mac != mac:
-                    logging.warning("Requested mac %s doesn't match mac %s "
-                                    "as defined for vm %s", nic.mac, mac,
-                                    self.name)
-                # TODO: Checkout/Set nic_model, nettype, netdst also
-            except virt_vm.VMMACAddressMissingError:
-                logging.warning("Nic %d requested by test but not defined for"
-                                " vm %s" % (index, self.name))
 
         logging.debug("Starting vm '%s'", self.name)
         result = virsh.start(self.name, uri=self.connect_uri)
@@ -1938,6 +1922,23 @@ class VM(virt_vm.BaseVM):
                 self.create_serial_console()
         else:
             raise virt_vm.VMStartError(self.name, result.stderr.strip())
+
+        # Pull in mac addresses from libvirt guest definition
+        for index, nic in enumerate(self.virtnet):
+            try:
+                mac = self.get_virsh_mac_address(index)
+                if not nic.has_key('mac'):
+                    logging.debug("Updating nic %d with mac %s on vm %s"
+                                  % (index, mac, self.name))
+                    nic.mac = mac
+                elif nic.mac != mac:
+                    logging.warning("Requested mac %s doesn't match mac %s "
+                                    "as defined for vm %s", nic.mac, mac,
+                                    self.name)
+                # TODO: Checkout/Set nic_model, nettype, netdst also
+            except virt_vm.VMMACAddressMissingError:
+                logging.warning("Nic %d requested by test but not defined for"
+                                " vm %s" % (index, self.name))
 
     def wait_for_shutdown(self, count=60):
         """
