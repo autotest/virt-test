@@ -709,7 +709,7 @@ class GuestfishPersistent(Guestfish):
         This call creates a file called "path". The content of the file
         is the string "content" (which can contain any 8 bit data).
         """
-        return self.inner_cmd("write '%s' '%s'" % (path, content))
+        return self.inner_cmd("write '%s' \"%s\"" % (path, content))
 
     def write_append(self, path, content):
         """
@@ -718,7 +718,7 @@ class GuestfishPersistent(Guestfish):
         This call appends "content" to the end of file "path".
         If "path" does not exist, then a new file is created.
         """
-        return self.inner_cmd("write-append '%s' '%s'" % (path, content))
+        return self.inner_cmd("write-append '%s' \"%s\"" % (path, content))
 
     def inspect_os(self):
         """
@@ -1229,7 +1229,7 @@ class GuestfishPersistent(Guestfish):
 
     def is_whole_device(self, device):
         """
-        is-symlink - test if symbolic link
+        is_whole_device - test if a device is a whole device
 
         This returns "true" if and only if "device" refers to a whole block
         device. That is, not a partition or a logical device.
@@ -2612,15 +2612,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd('e2fsck_f %s' % (device))
 
-    def mkmountpoint(self, exemptpath):
-        """
-        mkmountpoint - create a mountpoint
-
-        "mkmountpoint" and "rmmountpoint" are specialized calls that can be used
-        to create extra mountpoints before mounting the first filesystem.
-        """
-        return self.inner_cmd('mkmountpoint %s' % (exemptpath))
-
     def readdir(self, dir):
         """
         readdir - read directories entries
@@ -2638,15 +2629,6 @@ class GuestfishPersistent(Guestfish):
         file mountpoint".
         """
         return self.inner_cmd('mount_loop %s %s' % (file, mountpoint))
-
-    def rmmountpoint(self, exemptpath):
-        """
-        rmmountpoint - remove a mountpoint
-
-        This calls removes a mountpoint that was previously created with
-        "mkmountpoint". See "mkmountpoint" for full details.
-        """
-        return self.inner_cmd('rmmountpoint %s' % (exemptpath))
 
     def mount_vfs(self, options, vfstype, mountable, mountpoint):
         """
@@ -3371,16 +3353,344 @@ class GuestfishPersistent(Guestfish):
             cmd += ' label:%s' % label
         return self.inner_cmd(cmd)
 
+    def drop_caches(self, whattodrop):
+        """
+        drop-caches - drop kernel page cache, dentries and inodes
+
+        The "drop-caches" command instructs the guest kernel to drop its page
+        cache, and/or dentries and inode caches. The parameter "whattodrop"
+        tells the kernel what precisely to drop.
+        """
+        return self.inner_cmd("drop-caches %s" % whattodrop)
+
+    def case_sensitive_path(self, path):
+        """
+        case-sensitive-path - return true path on case-insensitive filesystem
+
+        The "drop-caches" command can be used to resolve case insensitive
+        paths on a filesystem which is case sensitive. The use case is to
+        resolve paths which you have read from Windows configuration files or
+        the Windows Registry, to the true path.
+        """
+        return self.inner_cmd("case-sensitive-path '%s'" % path)
+
+    def command(self, cmd):
+        """
+        command - run a command from the guest filesystem
+
+        This call runs a command from the guest filesystem. The filesystem must
+        be mounted, and must contain a compatible operating system (ie.
+        something Linux, with the same or compatible processor architecture).
+        """
+        return self.inner_cmd("command '%s'" % cmd)
+
+    def command_lines(self, cmd):
+        """
+        command-lines - run a command, returning lines
+
+        This is the same as "command", but splits the result into a list of
+        lines.
+        """
+        return self.inner_cmd("command-lines '%s'" % cmd)
+
+    def sh(self, cmd):
+        """
+        sh - run a command via the shell
+
+        This call runs a command from the guest filesystem via the guest's
+        "/bin/sh".
+        """
+        return self.inner_cmd("sh '%s'" % cmd)
+
+    def sh_lines(self, cmd):
+        """
+        sh-lines - run a command via the shell returning lines
+
+        This is the same as "sh", but splits the result into a list of
+        lines.
+        """
+        return self.inner_cmd("sh-lines '%s'" % cmd)
+
     def zero(self, device):
         """
         zero - write zeroes to the device
 
         This command writes zeroes over the first few blocks of "device".
         """
-        return self.inner_cmd('zero %s' % device)
+        return self.inner_cmd("zero '%s'" % device)
 
+    def zero_device(self, device):
+        """
+        zero-device - write zeroes to an entire device
 
-# libguestfs module functions follow #####
+        This command writes zeroes over the entire "device". Compare with "zero"
+        which just zeroes the first few blocks of a device.
+        """
+        return self.inner_cmd("zero-device '%s'" % device)
+
+    def grep(self, regex, path):
+        """
+        grep - return lines matching a pattern
+
+        This calls the external "grep" program and returns the matching lines.
+        """
+        return self.inner_cmd("grep '%s' '%s'" % (regex, path))
+
+    def grepi(self, regex, path):
+        """
+        grepi - return lines matching a pattern
+
+        This calls the external "grep -i" program and returns the matching lines.
+        """
+        return self.inner_cmd("grepi '%s' '%s'" % (regex, path))
+
+    def fgrep(self, pattern, path):
+        """
+        fgrep - return lines matching a pattern
+
+        This calls the external "fgrep" program and returns the matching lines.
+        """
+        return self.inner_cmd("fgrep '%s' '%s'" % (pattern, path))
+
+    def fgrepi(self, pattern, path):
+        """
+        fgrepi - return lines matching a pattern
+
+        This calls the external "fgrep -i" program and returns the matching lines.
+        """
+        return self.inner_cmd("fgrepi '%s' '%s'" % (pattern, path))
+
+    def egrep(self, regex, path):
+        """
+        egrep - return lines matching a pattern
+
+        This calls the external "egrep" program and returns the matching lines.
+        """
+        return self.inner_cmd("egrep '%s' '%s'" % (regex, path))
+
+    def egrepi(self, regex, path):
+        """
+        egrepi - return lines matching a pattern
+
+        This calls the external "egrep -i" program and returns the matching lines.
+        """
+        return self.inner_cmd("egrepi '%s' '%s'" % (regex, path))
+
+    def zgrep(self, regex, path):
+        """
+        zgrep - return lines matching a pattern
+
+        This calls the external "zgrep" program and returns the matching lines.
+        """
+        return self.inner_cmd("zgrep '%s' '%s'" % (regex, path))
+
+    def zgrepi(self, regex, path):
+        """
+        zgrepi - return lines matching a pattern
+
+        This calls the external "zgrep -i" program and returns the matching lines.
+        """
+        return self.inner_cmd("zgrepi '%s' '%s'" % (regex, path))
+
+    def zfgrep(self, pattern, path):
+        """
+        zfgrep - return lines matching a pattern
+
+        This calls the external "zfgrep" program and returns the matching lines.
+        """
+        return self.inner_cmd("zfgrep '%s' '%s'" % (pattern, path))
+
+    def zfgrepi(self, pattern, path):
+        """
+        zfgrepi - return lines matching a pattern
+
+        This calls the external "zfgrep -i" program and returns the matching lines.
+        """
+        return self.inner_cmd("zfgrepi '%s' '%s'" % (pattern, path))
+
+    def zegrep(self, regex, path):
+        """
+        zegrep - return lines matching a pattern
+
+        This calls the external "zegrep" program and returns the matching lines.
+        """
+        return self.inner_cmd("zegrep '%s' '%s'" % (regex, path))
+
+    def zegrepi(self, regex, path):
+        """
+        zegrepi - return lines matching a pattern
+
+        This calls the external "zegrep -i" program and returns the matching lines.
+        """
+        return self.inner_cmd("zegrepi '%s' '%s'" % (regex, path))
+
+    def compress_out(self, ctype, file, zfile):
+        """
+        compress-out - output compressed file
+
+        This command compresses "file" and writes it out to the local file
+        "zfile".
+
+        The compression program used is controlled by the "ctype" parameter.
+        Currently this includes: "compress", "gzip", "bzip2", "xz" or "lzop".
+        Some compression types may not be supported by particular builds of
+        libguestfs, in which case you will get an error containing the substring
+        "not supported".
+
+        The optional "level" parameter controls compression level. The meaning
+        and default for this parameter depends on the compression program being
+        used.
+        """
+        return self.inner_cmd("compress-out '%s' '%s' '%s'" % (ctype, file, zfile))
+
+    def compress_device_out(self, ctype, device, zdevice):
+        """
+        compress-device-out - output compressed device
+
+        This command compresses "device" and writes it out to the local file
+        "zdevice".
+
+        The "ctype" and optional "level" parameters have the same meaning as in
+        "compress_out".
+        """
+        return self.inner_cmd("compress-device-out '%s' '%s' '%s'" % (ctype, device, zdevice))
+
+    def glob(self, command, args):
+        """
+        glob - expand wildcards in command
+
+        Expand wildcards in any paths in the args list, and run "command"
+        repeatedly on each matching path.
+        """
+        return self.inner_cmd("glob '%s' '%s'" % (command, args))
+
+    def glob_expand(self, path):
+        """
+        glob-expand - expand a wildcard path
+
+        This command searches for all the pathnames matching "pattern" according
+        to the wildcard expansion rules used by the shell.
+        """
+        return self.inner_cmd("glob-expand '%s'" % path)
+
+    def mkmountpoint(self, exemptpath):
+        """
+        mkmountpoint - create a mountpoint
+
+        "mkmountpoint" and "rmmountpoint" are specialized calls that can be used
+        to create extra mountpoints before mounting the first filesystem.
+        """
+        return self.inner_cmd("mkmountpoint '%s'" % exemptpath)
+
+    def rmmountpoint(self, exemptpath):
+        """
+        rmmountpoint - remove a mountpoint
+
+        This calls removes a mountpoint that was previously created with
+        "mkmountpoint". See "mkmountpoint" for full details.
+        """
+        return self.inner_cmd("rmmountpoint '%s'" % exemptpath)
+
+    def parse_environment(self):
+        """
+        parse-environment - parse the environment and set handle flags
+        accordingly
+
+        Parse the program's environment and set flags in the handle accordingly.
+        For example if "LIBGUESTFS_DEBUG=1" then the 'verbose' flag is set in
+        the handle.
+        """
+        return self.inner_cmd("parse_environment")
+
+    def parse_environment_list(self, environment):
+        """
+        parse-environment-list - parse the environment and set handle flags
+        accordingly
+
+        Parse the list of strings in the argument "environment" and set flags in
+        the handle accordingly. For example if "LIBGUESTFS_DEBUG=1" is a string
+        in the list, then the 'verbose' flag is set in the handle.
+        """
+        return self.inner_cmd("parse_environment_list '%s'" % environment)
+
+    def rsync(self, src, dest, args):
+        """
+        rsync - synchronize the contents of two directories
+
+        This call may be used to copy or synchronize two directories under the
+        same libguestfs handle. This uses the rsync(1) program which uses a fast
+        algorithm that avoids copying files unnecessarily.
+        """
+        return self.inner_cmd("rsync %s %s %s" % (src, dest, args))
+
+    def rsync_in(self, src, dest, args):
+        """
+        rsync-in - synchronize host or remote filesystem with filesystem
+
+        This call may be used to copy or synchronize the filesystem on the host
+        or on a remote computer with the filesystem within libguestfs. This uses
+        the rsync(1) program which uses a fast algorithm that avoids copying
+        files unnecessarily.
+        """
+        return self.inner_cmd("rsync-in %s %s %s" % (src, dest, args))
+
+    def rsync_out(self, src, dest, args):
+        """
+        rsync-out - synchronize filesystem with host or remote filesystem
+
+        This call may be used to copy or synchronize the filesystem within
+        libguestfs with a filesystem on the host or on a remote computer. This
+        uses the rsync(1) program which uses a fast algorithm that avoids
+        copying files unnecessarily.
+        """
+        return self.inner_cmd("rsync-out %s %s %s" % (src, dest, args))
+
+    def utimens(self, path, atsecs, atnsecs, mtsecs, mtnsecs):
+        """
+        utimens - set timestamp of a file with nanosecond precision
+
+        This command sets the timestamps of a file with nanosecond precision.
+        """
+        return self.inner_cmd("utimens '%s' '%s' '%s' '%s' '%s'" % (path,
+                                                                    atsecs, atnsecs, mtsecs, mtnsecs))
+
+    def utsname(self):
+        """
+        utsname - appliance kernel version
+
+        This returns the kernel version of the appliance, where this is
+        available. This information is only useful for debugging. Nothing in the
+        returned structure is defined by the API.
+        """
+        return self.inner_cmd("utsname")
+
+    def grub_install(self, root, device):
+        """
+        grub-install root device
+
+        This command installs GRUB 1 (the Grand Unified Bootloader) on "device",
+        with the root directory being "root".
+        """
+        return self.inner_cmd("grub-install %s %s" % (root, device))
+
+    def initrd_cat(self, initrdpath, filename):
+        """
+        initrd-cat - list the contents of a single file in an initrd
+
+        This command unpacks the file "filename" from the initrd file called
+        "initrdpath". The filename must be given *without* the initial "/"
+        character.
+        """
+        return self.inner_cmd("initrd-cat %s %s" % (initrdpath, filename))
+
+    def initrd_list(self, path):
+        """
+        initrd-list - list files in an initrd
+
+        This command lists out files contained in an initrd.
+        """
+        return self.inner_cmd("initrd-list %s" % path)
+
     def aug_init(self, root, flags):
         """
         aug-init - create a new Augeas handle
