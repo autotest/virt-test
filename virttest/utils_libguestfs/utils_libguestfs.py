@@ -9,8 +9,8 @@ import re
 
 from autotest.client import os_dep, utils
 from autotest.client.shared import error
-import aexpect
-import propcan
+from virttest import aexpect
+from virttest import propcan
 
 
 class LibguestfsCmdError(Exception):
