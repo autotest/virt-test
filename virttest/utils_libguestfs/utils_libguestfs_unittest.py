@@ -2,9 +2,9 @@
 import unittest
 import logging
 
-import common
+from virttest import common
 from autotest.client import os_dep
-import utils_libguestfs.utils_libguestfs as lgf
+import utils_libguestfs as lgf
 
 
 class LibguestfsTest(unittest.TestCase):
