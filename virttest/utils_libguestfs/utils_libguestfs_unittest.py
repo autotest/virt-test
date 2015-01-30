@@ -4,7 +4,7 @@ import logging
 
 from virttest import common
 from autotest.client import os_dep
-import utils_libguestfs as lgf
+import base_libguestfs as lgf
 
 
 class LibguestfsTest(unittest.TestCase):

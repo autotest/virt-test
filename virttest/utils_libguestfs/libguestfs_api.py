@@ -3,7 +3,7 @@ libguestfs tools test utility functions.
 """
 
 import logging
-import utils_libguestfs as lgf
+import base_libguestfs as lgf
 
 
 class GuestfishAPIs(lgf.GuestfishPersistent):
