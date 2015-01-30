@@ -47,12 +47,14 @@ class IPXML(base.LibvirtXMLBase):
     IP address block, optionally containing DHCP range information
 
     Properties:
-        dhcp_ranges: RangeList instances (list-like)
+        dhcp_ranges: Dict. keys: start, end
+        host_attr: host mac, name and ip information
         address: string IP address
         netmask: string IP's netmask
     """
 
-    __slots__ = ('dhcp_ranges', 'address', 'netmask')
+    __slots__ = ('dhcp_ranges', 'address', 'netmask', 'hosts',
+                 'family', 'prefix', 'tftp_root', 'dhcp_bootp')
 
     def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
                  virsh_instance=base.virsh):
@@ -65,49 +67,177 @@ class IPXML(base.LibvirtXMLBase):
         accessors.XMLAttribute(
             'netmask', self, parent_xpath='/', tag_name='ip',
             attribute='netmask')
+        accessors.XMLAttribute(
+            'family', self, parent_xpath='/', tag_name='ip',
+            attribute='family')
+        accessors.XMLAttribute(
+            'prefix', self, parent_xpath='/', tag_name='ip',
+            attribute='prefix')
+        accessors.XMLAttribute(
+            'tftp_root', self, parent_xpath='/', tag_name='tftp',
+            attribute='root')
+        accessors.XMLAttribute(
+            'dhcp_bootp', self, parent_xpath='/dhcp', tag_name='bootp',
+            attribute='file')
+        accessors.XMLElementDict('dhcp_ranges', self,
+                                 parent_xpath='/dhcp',
+                                 tag_name='range')
+        accessors.XMLElementList('hosts', self, parent_xpath='/dhcp',
+                                 marshal_from=self.marshal_from_host,
+                                 marshal_to=self.marshal_to_host)
         super(IPXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<ip address='%s' netmask='%s'></ip>" % (address, netmask)
 
-    def get_dhcp_ranges(self):
-        """
-        Returns all XML described DHCP ranges as a RangeList object
-        """
-        xmltreefile = self.__dict_get__('xml')
-        newlist = []
-        for element in xmltreefile.findall('/ip/dhcp/range'):
-            start = element.get('start')  # attribute of range tag
-            end = element.get('end')
-            newlist.append((start, end, ))
-        return RangeList(newlist)
+    @staticmethod
+    def marshal_from_host(item, index, libvirtxml):
+        """Convert a dictionary into a tag + attributes"""
+        del index           # not used
+        del libvirtxml      # not used
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of host "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('host', dict(item))  # return copy of dict, not reference
 
-    def set_dhcp_ranges(self, value):
-        """
-        Sets XML described DHCP ranges from a RangeList object
-        """
-        if not issubclass(type(value), RangeList) or value is not None:
-            raise xcepts.LibvirtXMLError("Value is not a RangeList or subclassa"
-                                         " instance.")
-        # Always start from clean-slate
-        self.del_dhcp_ranges()
-        if value is None:
-            return  # ip element has no dhcp block
-        xmltreefile = self.__dict_get__('xml')
-        dhcp = xml_utils.ElementTree.Element('dhcp')
-        ip_elem = xmltreefile.find('/ip')
-        if ip_elem is None:
-            raise xcepts.LibvirtXMLError("Network contains no IP element")
-        ip_elem.append(dhcp)
-        value.append_to_element(dhcp)
-        xmltreefile.write()
+    @staticmethod
+    def marshal_to_host(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes into a dictionary"""
+        del index                    # not used
+        del libvirtxml               # not used
+        if tag != 'host':
+            return None              # skip this one
+        return dict(attr_dict)       # return copy of dict, not reference
 
-    def del_dhcp_ranges(self):
+
+class DNSXML(base.LibvirtXMLBase):
+
+    """
+    IP address block, optionally containing DHCP range information
+
+    Properties:
+        txt:
+            Dict. keys: name, value
+        forwarder:
+            List
+        srv:
+            Dict. keys: service, protocol, domain,
+            tartget, port, priority, weight
+        hosts:
+            List of host name
+    """
+
+    __slots__ = ('dns_forward', 'txt', 'forwarders', 'srv',
+                 'host')
+
+    def __init__(self, virsh_instance=base.virsh):
         """
-        Removes all DHCP ranges from XML
+        Create new IPXML instance based on address/mask
         """
-        xmltreefile = self.__dict_get__('xml')
-        element = xmltreefile.find('/dhcp')
-        if element is not None:
-            xmltreefile.remove(element)
+        accessors.XMLElementDict('txt', self,
+                                 parent_xpath='/',
+                                 tag_name='txt')
+        accessors.XMLElementDict('srv', self,
+                                 parent_xpath='/',
+                                 tag_name='srv')
+        accessors.XMLElementList('forwarders', self, parent_xpath='/',
+                                 marshal_from=self.marshal_from_forwarder,
+                                 marshal_to=self.marshal_to_forwarder)
+        accessors.XMLAttribute('dns_forward', self, parent_xpath='/',
+                               tag_name='dns', attribute='forwardPlainNames')
+        accessors.XMLElementNest('host', self, parent_xpath='/',
+                                 tag_name='host', subclass=DNSXML.HostXML,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
+        super(DNSXML, self).__init__(virsh_instance=virsh_instance)
+        self.xml = u"<dns></dns>"
+
+    class HostnameXML(base.LibvirtXMLBase):
+
+        """
+        Hostname element of dns
+        """
+
+        __slots__ = ('hostname',)
+
+        def __init__(self, virsh_instance=base.virsh):
+            """
+            Create new HostnameXML instance
+            """
+            accessors.XMLElementText('hostname', self, parent_xpath='/',
+                                     tag_name='hostname')
+            super(DNSXML.HostnameXML, self).__init__(virsh_instance=virsh_instance)
+            self.xml = '<hostname/>'
+
+    class HostXML(base.LibvirtXMLBase):
+
+        """
+        Hostname element of dns
+        """
+
+        __slots__ = ('host_ip', 'hostnames',)
+
+        def __init__(self, virsh_instance=base.virsh):
+            """
+            Create new TimerXML instance
+            """
+            accessors.XMLAttribute('host_ip', self, parent_xpath='/',
+                                   tag_name='host', attribute='ip')
+            accessors.XMLElementList('hostnames', self, parent_xpath='/',
+                                     marshal_from=self.marshal_from_hostname,
+                                     marshal_to=self.marshal_to_hostname)
+            super(DNSXML.HostXML, self).__init__(virsh_instance=virsh_instance)
+            self.xml = '<host/>'
+
+        @staticmethod
+        def marshal_from_hostname(item, index, libvirtxml):
+            """Convert a HostnameXML instance into a tag + attributes"""
+            del index           # not used
+            del libvirtxml      # not used
+            if isinstance(item, str):
+                return ("hostname", {}, item)
+            else:
+                raise xcepts.LibvirtXMLError("Expected a str attributes,"
+                                             " not a %s" % str(item))
+
+        @staticmethod
+        def marshal_to_hostname(tag, attr, index, libvirtxml, text):
+            """Convert a tag + attributes into a HostnameXML instance"""
+            del attr                     # not used
+            del index                    # not used
+            if tag != 'hostname':
+                return None     # Don't convert this item
+            newone = DNSXML.HostnameXML(virsh_instance=libvirtxml.virsh)
+            newone.hostname = text
+            return newone
+
+    def new_host(self, **dargs):
+        """
+        Return a new disk IOTune instance and set properties from dargs
+        """
+        new_one = DNSXML.HostXML(virsh_instance=self.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
+
+    @staticmethod
+    def marshal_from_forwarder(item, index, libvirtxml):
+        """Convert a dictionary into a tag + attributes"""
+        del index           # not used
+        del libvirtxml      # not used
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of host "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('forwarder', dict(item))  # return copy of dict, not reference
+
+    @staticmethod
+    def marshal_to_forwarder(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes into a dictionary"""
+        del index                    # not used
+        del libvirtxml               # not used
+        if tag != 'forwarder':
+            return None              # skip this one
+        return dict(attr_dict)       # return copy of dict, not reference
 
 
 class PortgroupXML(base.LibvirtXMLBase):
@@ -171,6 +301,10 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             string operate on ip/dhcp ranges as IPXML instances
         forward:
             dict, operates on forward tag
+        forward_interface:
+            list, operates on forward/interface tag
+        nat_port:
+            dict, operates on nat tag
         bridge:
             dict, operates on bridge attributes
         bandwidth_inbound:
@@ -179,6 +313,10 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             dict, operates on outbound under bandwidth.
         portgroup:
             PortgroupXML instance to access portgroup tag.
+        domain_name:
+            string, operates on name attribute of domain tag
+        dns:
+            DNSXML instance to access dns tag.
 
         defined:
             virtual boolean, callout to virsh methods
@@ -219,7 +357,8 @@ class NetworkXMLBase(base.LibvirtXMLBase):
 
     __slots__ = ('name', 'uuid', 'bridge', 'defined', 'active',
                  'autostart', 'persistent', 'forward', 'mac', 'ip',
-                 'bandwidth_inbound', 'bandwidth_outbound', 'portgroup')
+                 'bandwidth_inbound', 'bandwidth_outbound', 'portgroup',
+                 'dns', 'domain_name', 'nat_port', 'forward_interface')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
         'defined', 'active',
@@ -236,6 +375,11 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                tag_name='mac', attribute='address')
         accessors.XMLElementDict('forward', self, parent_xpath='/',
                                  tag_name='forward')
+        accessors.XMLElementList('forward_interface', self, parent_xpath='/forward',
+                                 marshal_from=self.marshal_from_forward_iface,
+                                 marshal_to=self.marshal_to_forward_iface)
+        accessors.XMLElementDict('nat_port', self, parent_xpath='/forward/nat',
+                                 tag_name='port')
         accessors.XMLElementDict('bridge', self, parent_xpath='/',
                                  tag_name='bridge')
         accessors.XMLElementDict('bandwidth_inbound', self,
@@ -244,6 +388,12 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         accessors.XMLElementDict('bandwidth_outbound', self,
                                  parent_xpath='/bandwidth',
                                  tag_name='outbound')
+        accessors.XMLAttribute('domain_name', self, parent_xpath='/',
+                               tag_name='domain', attribute='name')
+        accessors.XMLElementNest('dns', self, parent_xpath='/',
+                                 tag_name='dns', subclass=DNSXML,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
         super(NetworkXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def __check_undefined__(self, errmsg):
@@ -357,8 +507,6 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         if not issubclass(type(value), IPXML):
             raise xcepts.LibvirtXMLError("value must be a IPXML or subclass")
         xmltreefile = self.__dict_get__('xml')
-        # nuke any existing IP block
-        self.del_ip()
         # IPXML root element is whole IP element tree
         root = xmltreefile.getroot()
         root.append(value.xmltreefile.getroot())
@@ -394,6 +542,35 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         if element is not None:
             self.xmltreefile.remove(element)
             self.xmltreefile.write()
+
+    def new_dns(self, **dargs):
+        """
+        Return a new dns instance and set properties from dargs
+        """
+        new_one = DNSXML(virsh_instance=self.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
+
+    @staticmethod
+    def marshal_from_forward_iface(item, index, libvirtxml):
+        """Convert a dictionary into a tag + attributes"""
+        del index           # not used
+        del libvirtxml      # not used
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of interface "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('interface', dict(item))  # return copy of dict, not reference
+
+    @staticmethod
+    def marshal_to_forward_iface(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes into a dictionary"""
+        del index                    # not used
+        del libvirtxml               # not used
+        if tag != 'interface':
+            return None              # skip this one
+        return dict(attr_dict)       # return copy of dict, not reference
 
 
 class NetworkXML(NetworkXMLBase):
@@ -431,7 +608,7 @@ class NetworkXML(NetworkXMLBase):
         return result
 
     @staticmethod
-    def new_from_net_dumpxml(network_name, virsh_instance=base.virsh):
+    def new_from_net_dumpxml(network_name, virsh_instance=base.virsh, extra=""):
         """
         Return new NetworkXML instance from virsh net-dumpxml command
 
@@ -440,7 +617,8 @@ class NetworkXML(NetworkXMLBase):
         :return: New initialized NetworkXML instance
         """
         netxml = NetworkXML(virsh_instance=virsh_instance)
-        netxml['xml'] = virsh_instance.net_dumpxml(network_name).stdout.strip()
+        netxml['xml'] = virsh_instance.net_dumpxml(network_name,
+                                                   extra).stdout.strip()
         return netxml
 
     @staticmethod
