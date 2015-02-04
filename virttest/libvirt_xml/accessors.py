@@ -507,7 +507,7 @@ class XMLAttribute(AccessorGeneratorBase):
                                              self.tag_name, create=False)
             value = element.get(self.attribute, None)
             if value is None:
-                raise xcepts.LibvirtXMLNotFoundError("Attribute %s not found"
+                raise xcepts.LibvirtXMLNotFoundError("Attribute %s not found "
                                                      "on element %s"
                                                      % (self.attribute,
                                                         element.tag))
