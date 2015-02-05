@@ -1436,7 +1436,7 @@ def create_disk_xml(params):
     return diskxml.xml
 
 
-def create_net_xml(net_name, params):
+def create_net_xml(net_name, params, define_error=False):
     """
     Create a new network or update an existed network xml
     """
@@ -1445,6 +1445,7 @@ def create_net_xml(net_name, params):
     net_name = params.get("net_name", "default")
     net_bridge = params.get("net_bridge", '{}')
     net_forward = params.get("net_forward", '{}')
+    forward_iface = params.get("forward_iface")
     net_dns_forward = params.get("net_dns_forward")
     net_dns_txt = params.get("net_dns_txt")
     net_dns_srv = params.get("net_dns_srv")
@@ -1501,7 +1502,33 @@ def create_net_xml(net_name, params):
             netxml.bridge = bridge
         forward = eval(net_forward)
         if forward:
+            net_ifs = utils_net.get_net_if(state="UP")
+            # Check forward device is valid or not,
+            # if it's not in host interface list, try to set
+            # forward device to first active interface of host
+            if (forward.has_key('mode') and forward['mode'] in
+                ['passthrough', 'private', 'bridge', 'macvtap'] and
+                forward.has_key('dev') and
+                    forward['dev'] not in net_ifs):
+                logging.warn("Forward device %s is not a interface"
+                             " of host, reset to %s",
+                             forward['dev'], net_ifs[0])
+                forward['dev'] = net_ifs[0]
             netxml.forward = forward
+        if forward_iface:
+            interface = [
+                {'dev': x} for x in forward_iface.split()]
+            net_ifs = utils_net.get_net_if(state="UP")
+            # The guest will use first interface of the list,
+            # check if it's valid or not
+            # if it's not in host interface list, try to set
+            # forward interface to first active interface of host
+            if interface[0]['dev'] not in net_ifs:
+                logging.warn("Forward interface %s is not a "
+                             " interface of host, reset to %s",
+                             interface[0]['dev'], net_ifs[0])
+            interface[0]['dev'] = net_ifs[0]
+            netxml.forward_interface = interface
         if nat_port:
             netxml.nat_port = eval(nat_port)
         if net_domain:
@@ -1545,6 +1572,12 @@ def create_net_xml(net_name, params):
         logging.debug("New network xml file: %s", netxml)
         netxml.xmltreefile.write()
         netxml.sync()
+    except xcepts.LibvirtXMLError, detail:
+        utils.log_last_traceback()
+        if define_error:
+            pass
+        else:
+            raise error.TestFail("Failed to define network: %s" % detail)
 
     except Exception, detail:
         utils.log_last_traceback()
