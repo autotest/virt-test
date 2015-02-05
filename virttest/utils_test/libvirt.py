@@ -43,6 +43,7 @@ from virttest.libvirt_xml import xcepts
 from virttest.libvirt_xml import NetworkXML
 from virttest.libvirt_xml import IPXML
 from virttest.libvirt_xml import pool_xml
+from virttest.libvirt_xml import nwfilter_xml
 from virttest.libvirt_xml.devices import disk
 from virttest.libvirt_xml.devices import hostdev
 from virttest.libvirt_xml.devices import controller
@@ -1548,6 +1549,123 @@ def create_net_xml(net_name, params):
     except Exception, detail:
         utils.log_last_traceback()
         raise error.TestFail("Fail to create network XML: %s" % detail)
+
+
+def create_nwfilter_xml(params):
+    """
+    Create a new network filter or update an existed network filter xml
+    """
+    filter_name = params.get("filter_name", "testcase")
+    exist_filter = params.get("exist_filter", "no-mac-spoofing")
+    filter_chain = params.get("filter_chain")
+    filter_priority = params.get("filter_priority", "")
+    filter_uuid = params.get("filter_uuid")
+
+    # process filterref_name
+    filterrefs_list = []
+    filterrefs_key = []
+    for i in params.keys():
+        if 'filterref_name_' in i:
+            filterrefs_key.append(i)
+    filterrefs_key.sort()
+    for i in filterrefs_key:
+        filterrefs_dict = {}
+        filterrefs_dict['filter'] = params[i]
+        filterrefs_list.append(filterrefs_dict)
+
+    # prepare rule and protocol attributes
+    protocol = {}
+    rule_dict = {}
+    rule_dict_tmp = {}
+    RULE_ATTR = ('rule_action', 'rule_direction', 'rule_priority',
+                 'rule_statematch')
+    PROTOCOL_TYPES = ['mac', 'vlan', 'stp', 'arp', 'rarp', 'ip', 'ipv6',
+                      'tcp', 'udp', 'sctp', 'icmp', 'igmp', 'esp', 'ah',
+                      'udplite', 'all', 'tcp-ipv6', 'udp-ipv6', 'sctp-ipv6',
+                      'icmpv6', 'esp-ipv6', 'ah-ipv6', 'udplite-ipv6',
+                      'all-ipv6']
+    # rule should end with 'EOL' as separator, multiple rules are supported
+    rule = params.get("rule")
+    if rule:
+        rule_list = rule.split('EOL')
+        for i in range(len(rule_list)):
+            if rule_list[i]:
+                attr = rule_list[i].split()
+                for j in range(len(attr)):
+                    attr_list = attr[j].split('=')
+                    rule_dict_tmp[attr_list[0]] = attr_list[1]
+                rule_dict[i] = rule_dict_tmp
+                rule_dict_tmp = {}
+
+        # process protocol parameter
+        for i in rule_dict.keys():
+            if 'protocol' not in rule_dict[i]:
+                # Set protocol as string 'None' as parse from cfg is
+                # string 'None'
+                protocol[i] = 'None'
+            else:
+                protocol[i] = rule_dict[i]['protocol']
+                rule_dict[i].pop('protocol')
+
+                if protocol[i] in PROTOCOL_TYPES:
+                    # replace '-' with '_' in ipv6 types as '-' is not
+                    # supposed to be in class name
+                    if '-' in protocol[i]:
+                        protocol[i] = protocol[i].replace('-', '_')
+                else:
+                    raise error.TestFail("Given protocol type %s" % protocol[i]
+                                         + " is not in supported list %s" %
+                                         PROTOCOL_TYPES)
+
+    try:
+        new_filter = nwfilter_xml.NwfilterXML()
+        filterxml = new_filter.new_from_filter_dumpxml(exist_filter)
+
+        # Set filter attribute
+        filterxml.filter_name = filter_name
+        filterxml.filter_priority = filter_priority
+        if filter_chain:
+            filterxml.filter_chain = filter_chain
+        if filter_uuid:
+            filterxml.uuid = filter_uuid
+        filterxml.filterrefs = filterrefs_list
+
+        # Set rule attribute
+        index_total = filterxml.get_rule_index()
+        rule = filterxml.get_rule(0)
+        rulexml = rule.backup_rule()
+        for i in index_total:
+            filterxml.del_rule()
+        for i in range(len(rule_dict.keys())):
+            rulexml.rule_action = rule_dict[i].get('rule_action')
+            rulexml.rule_direction = rule_dict[i].get('rule_direction')
+            rulexml.rule_priority = rule_dict[i].get('rule_priority')
+            rulexml.rule_statematch = rule_dict[i].get('rule_statematch')
+            for j in RULE_ATTR:
+                if j in rule_dict[i].keys():
+                    rule_dict[i].pop(j)
+
+            # set protocol attribute
+            if protocol[i] != 'None':
+                protocolxml = rulexml.get_protocol(protocol[i])
+                new_one = protocolxml.new_attr(**rule_dict[i])
+                protocolxml.attrs = new_one
+                rulexml.xmltreefile = protocolxml.xmltreefile
+            else:
+                rulexml.del_protocol()
+
+            filterxml.add_rule(rulexml)
+
+            # Reset rulexml
+            rulexml = rule.backup_rule()
+
+        filterxml.xmltreefile.write()
+        logging.info("The network filter xml is:\n%s" % filterxml)
+        return filterxml
+
+    except Exception, detail:
+        utils.log_last_traceback()
+        raise error.TestFail("Fail to create nwfilter XML: %s" % detail)
 
 
 def set_domain_state(vm, vm_state):
