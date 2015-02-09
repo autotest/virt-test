@@ -3493,31 +3493,41 @@ class VM(virt_vm.BaseVM):
         :param serial: Serial login or not (default is False).
         :return: A new shell session object.
         """
-        def __rebooting(session):
+        def __rebooting(session, timeout):
             """
             Check guest rebooting.
             """
             if self.params["os_type"] == "windows":
                 timeout = self.CLOSE_SESSION_TIMEOUT
                 return not session.is_responsive(timeout=timeout)
-            return session.read_until_any_line_matches("Rebooting")
+            # 2.6 kernel report restarting system, 3.0 kernel reports
+            # rebooting.
+            patterns = [r"[Rr]ebooting", r"[Rr]estarting system"]
+            return session.read_until_any_line_matches(patterns,
+                                                       timeout=timeout)
 
         error.base_context("rebooting '%s'" % self.name, logging.info)
         error.context("before reboot")
         error.context()
 
         if method == "shell":
+            internal_timeout = timeout / 2
+            s_session = self.wait_for_serial_login(timeout=internal_timeout)
+            # if session is None and  serial is False
+            if not (session or serial):
+                session = self.wait_for_login(timeout=internal_timeout,
+                                              nic_index=nic_index)
             if not session:
-                if serial:
-                    session = self.serial_login()
-                else:
-                    session = self.login(nic_index=nic_index)
+                session = s_session
+            # serial session used to check is guest in rebooting
             session.sendline(self.params.get("reboot_command"))
             error.context("waiting for guest to go down", logging.info)
             if not utils_misc.wait_for(
-                    lambda: __rebooting(session), timeout / 2, 0, 1):
+                    lambda: __rebooting(s_session, internal_timeout),
+                    internal_timeout, 0, 1):
                 raise virt_vm.VMRebootError("Guest refuses to go down")
             session.close()
+            s_session.close()
 
         elif method == "system_reset":
             # Clear the event list of all QMP monitors
@@ -3544,7 +3554,7 @@ class VM(virt_vm.BaseVM):
         error.context("logging in after reboot", logging.info)
         if serial:
             return self.wait_for_serial_login(timeout=timeout)
-        return self.wait_for_login(nic_index, timeout=timeout)
+        return self.wait_for_login(nic_index=nic_index, timeout=timeout)
 
     def send_key(self, keystr):
         """
