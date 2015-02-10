@@ -13,7 +13,6 @@ import select
 import socket
 import time
 from autotest.client.shared import error, utils
-import utils_test
 import data_dir
 
 

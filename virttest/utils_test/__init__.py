@@ -17,7 +17,6 @@ More specifically:
 """
 
 import commands
-import errno
 import glob
 import imp
 import locale
@@ -33,13 +32,10 @@ import subprocess
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
-from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net
+from virttest import aexpect, utils_misc, virt_vm, data_dir, utils_net
 from virttest import storage, asset, bootstrap, remote
 import virttest
 
-import libvirt
-import qemu
-import libguestfs
 
 try:
     from virttest.staging import utils_cgroup
