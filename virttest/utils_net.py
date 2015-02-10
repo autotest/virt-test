@@ -33,7 +33,9 @@ sockfd = None
 
 
 class NetError(Exception):
-    pass
+
+    def __init__(self, *args):
+        Exception.__init__(self, *args)
 
 
 class TAPModuleError(NetError):

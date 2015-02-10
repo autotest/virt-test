@@ -17,7 +17,9 @@ import copy
 
 
 class VMError(Exception):
-    pass
+
+    def __init__(self, *args):
+        Exception.__init__(self, *args)
 
 
 class VMCreateError(VMError):
