@@ -16,7 +16,6 @@ from virttest.qemu_devices import qdevices, qcontainer
 import utils_misc
 import virt_vm
 import test_setup
-import storage
 import qemu_monitor
 import aexpect
 import qemu_virtio_port
@@ -105,6 +104,7 @@ class VM(virt_vm.BaseVM):
             self.process = None
             self.serial_ports = []
             self.serial_console = None
+            self.virtio_console = None
             self.redirs = {}
             self.spice_options = {}
             self.vnc_port = 5900
@@ -287,13 +287,22 @@ class VM(virt_vm.BaseVM):
         return [self.get_serial_console_filename(_) for _ in
                 self.params.objects("isa_serials")]
 
+    def get_virtio_port_filenames(self):
+        """
+        Get socket file of virtio ports
+        """
+        return [_.hostfile for _ in self.virtio_ports]
+
     def cleanup_serial_console(self):
         """
         Close serial console and associated log file
         """
-        if self.serial_console is not None:
-            self.serial_console.close()
-            self.serial_console = None
+        for console_type in ["virtio_console", "serial_console"]:
+            if hasattr(self, console_type):
+                console = getattr(self, console_type)
+                if console:
+                    console.close()
+                    console = None
         if hasattr(self, "migration_file"):
             try:
                 os.unlink(self.migration_file)
@@ -1940,6 +1949,23 @@ class VM(virt_vm.BaseVM):
             prompt=self.params.get("shell_prompt", "[\#\$]"))
         del tmp_serial
 
+    def create_virtio_console(self):
+        """
+        Establish a session with the serial console.
+        """
+        for port in self.virtio_ports:
+            if isinstance(port, qemu_virtio_port.VirtioConsole):
+                logfile = "serial-%s-%s.log" % (port.name, self.name)
+                socat_cmd = "nc -U %s" % port.hostfile
+                self.virtio_console = aexpect.ShellSession(
+                        socat_cmd, auto_close=False,
+                        output_func=utils_misc.log_line,
+                        output_params=(logfile,),
+                        prompt=self.params.get("shell_prompt", "[\#\$]"))
+                return
+        logging.warn("Not virtio console created in VM.")
+        self.virtio_console = None
+
     def update_system_dependent_devs(self):
         # Networking
         devices = self.devices
@@ -2440,6 +2466,7 @@ class VM(virt_vm.BaseVM):
                         qemu_virtio_port.VirtioSerial(port, port_name,
                                                       filename))
                 i += 1
+            self.create_virtio_console()
 
             # Get the output so far, to see if we have any problems with
             # KVM modules or with hugepage setup.

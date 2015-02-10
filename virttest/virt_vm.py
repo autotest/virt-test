@@ -9,7 +9,6 @@ from autotest.client.shared import error
 import utils_misc
 import utils_net
 import remote
-import aexpect
 import traceback
 import ppm_utils
 import data_dir
@@ -1129,18 +1128,26 @@ class BaseVM(object):
         """
         raise NotImplementedError
 
+    def create_virtio_console(self):
+        """
+        Establish a session with the virtio console.
+        """
+        raise NotImplementedError
+
     @error.context_aware
     def serial_login(self, timeout=LOGIN_TIMEOUT,
-                     username=None, password=None):
+                     username=None, password=None, virtio=False):
         """
         Log into the guest via the serial console.
         If timeout expires while waiting for output from the guest (e.g. a
         password prompt or a shell prompt) -- fail.
 
         :param timeout: Time (seconds) before giving up logging into the guest.
+        :param virtio: is a console virtio console.
         :return: ShellSession object on success and None on failure.
         """
-        error.context("logging into '%s' via serial console" % self.name)
+        console_type = virtio and "virtio_console" or "serial_console"
+        error.context("logging into '%s' via %s" % (self.name, console_type))
         if not username:
             username = self.params.get("username", "")
         if not password:
@@ -1148,32 +1155,32 @@ class BaseVM(object):
         prompt = self.params.get("shell_prompt", "[\#\$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         status_test_command = self.params.get("status_test_command", "")
-
-        # Some times need recreate the serial_console.
-        if not (self.serial_console and
-                os.path.exists(self.serial_console.inpipe_filename)):
-            self.create_serial_console()
-
-        self.serial_console.set_linesep(linesep)
-        self.serial_console.set_status_test_command(status_test_command)
+        console = getattr(self, console_type)
+        # Some times need recreate the console.
+        if not (console and os.path.exists(console.inpipe_filename)):
+            create_console = getattr(self, "create_%s" % console_type)
+            create_console()
+            console = getattr(self, console_type)
+        console.set_linesep(linesep)
+        console.set_status_test_command(status_test_command)
 
         # Try to get a login prompt
-        self.serial_console.sendline()
+        console.sendline()
 
-        remote.handle_prompts(self.serial_console, username, password,
-                              prompt, timeout)
-        return self.serial_console
+        remote.handle_prompts(console, username, password, prompt, timeout)
+        return console
 
     def wait_for_serial_login(self, timeout=LOGIN_WAIT_TIMEOUT,
                               internal_timeout=LOGIN_TIMEOUT,
                               restart_network=False,
-                              username=None, password=None):
+                              username=None, password=None, virtio=False):
         """
         Make multiple attempts to log into the guest via serial console.
 
         :param timeout: Time (seconds) to keep trying to log in.
         :param internal_timeout: Timeout to pass to serial_login().
         :param restart_network: Whether try to restart guest's network.
+        :params virtio: is a virtio console.
         :return: A ShellSession object.
         """
         error_messages = []
@@ -1182,12 +1189,14 @@ class BaseVM(object):
         end_time = time.time() + timeout
         while time.time() < end_time:
             try:
-                session = self.serial_login(internal_timeout)
+                session = self.serial_login(internal_timeout, username,
+                                            password, virtio=virtio)
                 if restart_network:
                     os_type = self.params.get("os_type")
                     try:
                         logging.debug("Attempting to restart guest network")
-                        utils_net.restart_guest_network(session, os_type=os_type)
+                        utils_net.restart_guest_network(session,
+                                                        os_type=os_type)
                     except Exception:
                         pass
                 return session
@@ -1198,8 +1207,9 @@ class BaseVM(object):
                     logging.debug(e)
                     error_messages.append(e)
             time.sleep(2)
-        # Timeout expired; try one more time but don't catch exceptions
-        return self.serial_login(internal_timeout, username, password)
+        session = self.serial_login(internal_timeout, username,
+                                    password, virtio=virtio)
+        return session
 
     def get_uuid(self):
         """
