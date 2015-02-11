@@ -1651,8 +1651,10 @@ class EGDConfig(object):
         cmd = "lsof %s" % socket
         if socket.startswith("localhost:"):
             cmd = "lsof -i '@%s'" % socket
-        fuc = lambda: utils.system_output(cmd, ignore_status=True)
-        output = utils.wait_for(fuc, timeout=5)
+
+        def system_output_wrapper():
+            return utils.system_output(cmd, ignore_status=True)
+        output = utils.wait_for(system_output_wrapper, timeout=5)
         if not output:
             return 0
         pid = int(re.findall(r".*egd.pl\s+(\d+)\s+\w+", output, re.M)[-1])
