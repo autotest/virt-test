@@ -43,9 +43,8 @@ def FakeVirshFactory(preserve=None):
         if symbol in virsh.NOCLOSE + preserve:
             continue
         if isinstance(getattr(fake_virsh, symbol), virsh.VirshClosure):
-            xcpt = lambda *args, **dargs: raise_bogusVirshFailureException()
             # fake_virsh is a propcan, can't use setattr.
-            fake_virsh.__super_set__(symbol, xcpt)
+            fake_virsh.__super_set__(symbol, raise_bogusVirshFailureException)
     return fake_virsh
 
 
