@@ -1,11 +1,10 @@
 install
 KVM_TEST_MEDIUM
-graphical
 poweroff
 lang en_US.UTF-8
 keyboard us
 network --onboot yes --device eth0 --bootproto dhcp
-rootpw redhat
+rootpw 123456
 firewall --enabled --ssh
 selinux --enforcing
 timezone --utc America/New_York

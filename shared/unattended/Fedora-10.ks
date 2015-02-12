@@ -1,7 +1,6 @@
 install
 KVM_TEST_MEDIUM
 text
-reboot
 lang en_US.UTF-8
 keyboard us
 key --skip
@@ -15,7 +14,6 @@ bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
 zerombr
 clearpart --all --initlabel
 autopart
-reboot
 poweroff
 
 %packages

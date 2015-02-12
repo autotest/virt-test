@@ -12,7 +12,7 @@ firstboot --disable
 bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
 clearpart --all --initlabel
 autopart
-reboot
+poweroff
 mouse generic3ps/2
 skipx
 

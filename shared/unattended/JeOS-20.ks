@@ -1,7 +1,6 @@
 install
 KVM_TEST_MEDIUM
 text
-reboot
 lang en_US.UTF-8
 keyboard us
 network --onboot yes --device eth0 --bootproto dhcp --noipv6 --hostname atest-guest
