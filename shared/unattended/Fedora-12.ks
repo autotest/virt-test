@@ -25,13 +25,13 @@ ntpdate
 %end
 
 %post
-echo "OS install is completed" > /dev/ttyS0
+function ECHO { for TTY in `cat /proc/consoles | cut -f1 -d' '`; do echo "$*" > /dev/$TTY; done }
+ECHO "OS install is completed"
 grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
 dhclient
 chkconfig sshd on
 iptables -F
 echo 0 > /selinux/enforce
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
-echo 'Post set up finished' > /dev/ttyS0
-echo Post set up finished > /dev/hvc0
+ECHO 'Post set up finished'
 %end

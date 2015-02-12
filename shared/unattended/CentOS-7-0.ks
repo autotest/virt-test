@@ -48,32 +48,32 @@ prelink
 %end
 
 %post
-echo "OS install is completed" > /dev/ttyS0
-echo "remove rhgb quiet by grubby" > /dev/ttyS0
+function ECHO { for TTY in `cat /proc/consoles | cut -f1 -d' '`; do echo "$*" > /dev/$TTY; done }
+ECHO "OS install is completed"
+ECHO "remove rhgb quiet by grubby"
 grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
-echo "dhclient" > /dev/ttyS0
+ECHO "dhclient"
 dhclient
-echo "get repo" > /dev/ttyS0
+ECHO "get repo"
 wget http://fileshare.englab.nay.redhat.com/pub/section2/repo/epel/rhel-autotest.repo -O /etc/yum.repos.d/rhel-autotest.repo
-echo "yum makecache" > /dev/ttyS0
+ECHO "yum makecache"
 yum makecache
-echo "yum install -y stress" > /dev/ttyS0
+ECHO "yum install -y stress"
 yum install -y stress
-echo "chkconfig sshd on" > /dev/ttyS0
+ECHO "chkconfig sshd on"
 chkconfig sshd on
-echo "PermitRootLogin in /etc/ssh/sshd_config" > /dev/ttyS0
+ECHO "PermitRootLogin in /etc/ssh/sshd_config"
 sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/g' /etc/ssh/sshd_config
-echo "iptables -F" > /dev/ttyS0
+ECHO "iptables -F"
 iptables -F
-echo "echo 0 > selinux/enforce" > /dev/ttyS0
+ECHO "echo 0 > selinux/enforce"
 echo 0 > /selinux/enforce
-echo "chkconfig NetworkManager on" > /dev/ttyS0
+ECHO "chkconfig NetworkManager on"
 chkconfig NetworkManager on
-echo "update ifcfg-eth0" > /dev/ttyS0
+ECHO "update ifcfg-eth0"
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
 sed -i "s/^ONBOOT=.*/ONBOOT=yes/g" /etc/sysconfig/network-scripts/ifcfg-eth0
-echo "Disable lock cdrom udev rules" > /dev/ttyS0
+ECHO "Disable lock cdrom udev rules"
 sed -i "/--lock-media/s/^/#/" /usr/lib/udev/rules.d/60-cdrom_id.rules 2>/dev/null>&1
-echo 'Post set up finished' > /dev/ttyS0
-echo Post set up finished > /dev/hvc0
+ECHO 'Post set up finished'
 %end
