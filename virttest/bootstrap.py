@@ -810,7 +810,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
 
     if restore_image:
         logging.info("")
-        step += 2
+        step += 1
         logging.info("%s - Verifying (and possibly downloading) guest image",
                      step)
         for os_info in get_guest_os_info_list(test_name, guest_os):
