@@ -3970,3 +3970,173 @@ def blkdeviotune(name, device=None, options=None,
     if write_iops_sec:
         cmd += " --write-iops-sec %s" % write_iops_sec
     return command(cmd, **dargs)
+
+
+def domstats(domains="", options="", **dargs):
+    """
+    Get statistics about one or multiple domains
+
+    :param domains: List of domains
+    :param options: Extra options
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "domstats %s %s" % (domains, options)
+    return command(cmd, **dargs)
+
+
+def freepages(cellno=None, pagesize=None, options="", **dargs):
+    """
+    Display available free pages for the NUMA cell
+
+    :param cellno: NUMA cell number
+    :param pagesize: Page size (in kibibytes)
+    :param options: Extra options
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "freepages %s" % options
+    if cellno is not None:
+        cmd += " --cellno %s" % cellno
+    if pagesize is not None:
+        cmd += " --pagesize %s" % pagesize
+    return command(cmd, **dargs)
+
+
+def domcapabilities(virttype=None, emulatorbin=None, arch=None, machine=None,
+                    options="", **dargs):
+    """
+    Capabilities of emulator with respect to host and libvirt
+
+    :param virttype: Virtualization type (/domain/@type)
+    :param emulatorbin: Path to emulator binary (/domain/devices/emulator)
+    :param arch: Domain architecture (/domain/os/type/@arch)
+    :param machine: machine type (/domain/os/type/@machine)
+    :param options: Extra options
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "domcapabilities %s" % options
+    if virttype:
+        cmd += " --virttype %s" % virttype
+    if emulatorbin:
+        cmd += " --emulatorpin %s" % emulatorbin
+    if arch:
+        cmd += " --arch %s" % arch
+    if machine:
+        cmd += " --machine %s" % machine
+    return command(cmd, **dargs)
+
+
+def metadata(name, uri, options="", key=None, new_metadata=None, **dargs):
+    """
+    Show or set domain's custom XML Metadata
+
+    :param name: Domain name, id or uuid
+    :param uri: URI of the namespace
+    :param options: options may be live, config and current
+    :param key: Key to be used as a namespace identifier
+    :param new_metadata: new metadata to set
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "metadata --domain %s --uri %s %s" % (name, uri, options)
+    if key:
+        cmd += " --key %s" % key
+    if new_metadata:
+        cmd += " --set %s" % metadata
+    return command(cmd, **dargs)
+
+
+def cpu_models(arch, options="", **dargs):
+    """
+    Get the CPU models for an arch.
+
+    :param arch: Architecture
+    :param options: Extra options
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "cpu-models %s %s" % (arch, options)
+    return command(cmd, **dargs)
+
+
+def net_dhcp_leases(network, mac=None, options="", **dargs):
+    """
+    Print lease info for a given network
+
+    :param network: Network name or uuid
+    :param mac: Mac address
+    :param options: Extra options
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "net-dhcp-leases %s %s" % (network, options)
+    if mac:
+        cmd += " --mac %s" % mac
+    return command(cmd, **dargs)
+
+
+def qemu_monitor_event(domain=None, event=None, event_timeout=None,
+                       options="", **dargs):
+    """
+    Listen for QEMU Monitor Events
+
+    :param domain: Domain name, id or UUID
+    :param event: Event type name
+    :param event_timeout: Timeout seconds
+    :param options: Extra options
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "qemu-monitor-event %s" % options
+    if domain:
+        cmd += " --domain %s" % domain
+    if event:
+        cmd += " --event %s" % event
+    if event_timeout:
+        cmd += " --timeout %s" % event
+    return command(cmd, **dargs)
+
+
+def net_event(network=None, event=None, event_timeout=None, options="",
+              **dargs):
+    """
+    List event types, or wait for network events to occur
+
+    :param network: Network name or uuid
+    :param event: Event type to wait for
+    :param event_timeout: Timeout seconds
+    :param options: Extra options
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "net-event %s" % options
+    if network:
+        cmd += " --network %s" % network
+    if event:
+        cmd += " --event %s" % event
+    if event_timeout:
+        cmd += " --timeout %s" % event_timeout
+    return command(cmd, **dargs)
+
+
+def event(domain=None, event=None, event_timeout=None, options="", **dargs):
+    """
+    List event types, or wait for domain events to occur
+
+    :param domain: Domain name, id or UUID
+    :param event: Event type name
+    :param event_timeout: Timeout seconds
+    :param options: Extra options
+    :param dargs: Standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "event %s" % options
+    if domain:
+        cmd += " --domain %s" % domain
+    if event:
+        cmd += " --event %s" % event
+    if event_timeout:
+        cmd += " --timeout %s" % event
+    return command(cmd, **dargs)
