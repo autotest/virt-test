@@ -1471,6 +1471,8 @@ def create_net_xml(net_name, params, define_error=False):
     dhcp_end_ipv6 = params.get("dhcp_end_ipv6")
     tftp_root = params.get("tftp_root")
     bootp_file = params.get("bootp_file")
+    routes = params.get("routes", "").split()
+    pg_name = params.get("portgroup_name", "").split()
     try:
         if not virsh.net_info(net_name, ignore_status=True).exit_status:
             # Edit an existed network
@@ -1569,6 +1571,25 @@ def create_net_xml(net_name, params, define_error=False):
                                 "name": guest_name,
                                 "ip": guest_ipv4}]
             netxml.set_ip(ipxml)
+        if routes:
+            netxml.routes = [eval(x) for x in routes]
+        if pg_name:
+            pg_default = params.get("portgroup_default",
+                                    "").split()
+            pg_virtualport = params.get(
+                "portgroup_virtualport", "").split()
+            pg_bandwidth_inbound = params.get(
+                "portgroup_bandwidth_inbound", "").split()
+            pg_bandwidth_outbound = params.get(
+                "portgroup_bandwidth_outbound", "").split()
+            for i in range(len(pg_name)):
+                pgxml = network_xml.PortgroupXML()
+                pgxml.name = pg_name[i]
+                pgxml.default = pg_default[i]
+                pgxml.virtualport_type = pg_virtualport[i]
+                pgxml.bandwidth_inbound = eval(pg_bandwidth_inbound[i])
+                pgxml.bandwidth_outbound = eval(pg_bandwidth_outbound[i])
+                netxml.set_portgroup(pgxml)
         logging.debug("New network xml file: %s", netxml)
         netxml.xmltreefile.write()
         netxml.sync()
