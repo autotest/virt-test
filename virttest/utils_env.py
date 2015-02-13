@@ -79,6 +79,8 @@ def _update_address_cache(env, line):
                 address_cache.get('last_seen_ip')):
             mac = address_cache['last_seen_mac']
             ip = address_cache['last_seen_ip']
+            if address_cache.get(mac) == ip:
+                return
             # Check is match packet is a dhcpack packet
             if address_cache["count_mac"] - address_cache["count_ip"] == 3:
                 address_cache[mac] = ip
