@@ -503,6 +503,8 @@ class VM(virt_vm.BaseVM):
         def add_serial(help_text):
             if has_option(help_text, "serial"):
                 return " --serial pty"
+            else:
+                return ""
 
         def add_kernel_cmdline(help_text, cmdline):
             return " -append %s" % cmdline
