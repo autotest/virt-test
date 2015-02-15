@@ -1436,7 +1436,7 @@ def create_disk_xml(params):
     return diskxml.xml
 
 
-def create_net_xml(net_name, params, define_error=False):
+def create_net_xml(net_name, params):
     """
     Create a new network or update an existed network xml
     """
@@ -1453,6 +1453,7 @@ def create_net_xml(net_name, params, define_error=False):
     net_dns_hostip = params.get("net_dns_hostip")
     net_dns_hostnames = params.get("net_dns_hostnames", "").split()
     net_domain = params.get("net_domain")
+    net_virtualport = params.get("net_virtualport")
     net_bandwidth_inbound = params.get("net_bandwidth_inbound", "{}")
     net_bandwidth_outbound = params.get("net_bandwidth_outbound", "{}")
     net_ip_family = params.get("net_ip_family")
@@ -1541,6 +1542,8 @@ def create_net_xml(net_name, params, define_error=False):
             netxml.bandwidth_inbound = net_inbound
         if net_outbound:
             netxml.bandwidth_outbound = net_outbound
+        if net_virtualport:
+            netxml.virtualport_type = net_virtualport
 
         if net_ip_family == "ipv6":
             ipxml = network_xml.IPXML()
@@ -1582,23 +1585,24 @@ def create_net_xml(net_name, params, define_error=False):
                 "portgroup_bandwidth_inbound", "").split()
             pg_bandwidth_outbound = params.get(
                 "portgroup_bandwidth_outbound", "").split()
+            pg_vlan = params.get("portgroup_vlan", "").split()
             for i in range(len(pg_name)):
                 pgxml = network_xml.PortgroupXML()
                 pgxml.name = pg_name[i]
-                pgxml.default = pg_default[i]
-                pgxml.virtualport_type = pg_virtualport[i]
-                pgxml.bandwidth_inbound = eval(pg_bandwidth_inbound[i])
-                pgxml.bandwidth_outbound = eval(pg_bandwidth_outbound[i])
+                if len(pg_default) > i:
+                    pgxml.default = pg_default[i]
+                if len(pg_virtualport) > i:
+                    pgxml.virtualport_type = pg_virtualport[i]
+                if len(pg_bandwidth_inbound) > i:
+                    pgxml.bandwidth_inbound = eval(pg_bandwidth_inbound[i])
+                if len(pg_bandwidth_outbound) > i:
+                    pgxml.bandwidth_outbound = eval(pg_bandwidth_outbound[i])
+                if len(pg_vlan) > i:
+                    pgxml.vlan_tag = eval(pg_vlan[i])
                 netxml.set_portgroup(pgxml)
         logging.debug("New network xml file: %s", netxml)
         netxml.xmltreefile.write()
-        netxml.sync()
-    except xcepts.LibvirtXMLError, detail:
-        utils.log_last_traceback()
-        if define_error:
-            pass
-        else:
-            raise error.TestFail("Failed to define network: %s" % detail)
+        return netxml
 
     except Exception, detail:
         utils.log_last_traceback()
