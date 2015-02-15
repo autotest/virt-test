@@ -123,8 +123,23 @@ class PCIXML(CAPXML):
     """
     class for capability whose type is pci.
     """
+
+    #Example:
+    #<capability type='pci'>
+    #  <domain>0</domain>
+    #  <bus>7</bus>
+    #  <slot>0</slot>
+    #  <function>0</function>
+    #  <product id='0x1521'>I350 Gigabit Network Connection</product>
+    #  <vendor id='0x8086'>Intel Corporation</vendor>
+    #  <capability type='virt_functions'>
+    #    <address domain='0x0000' bus='0x08' slot='0x10' function='0x0'/>
+    #    <address domain='0x0000' bus='0x08' slot='0x10' function='0x4'/>
+    #  </capability>
+    #</capability>
+
     __slots__ = ('domain', 'bus', 'slot', 'function', 'product_id',
-                 'vendor_id')
+                 'vendor_id', 'virt_functions')
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementInt('domain', self, parent_xpath='/',
@@ -139,8 +154,55 @@ class PCIXML(CAPXML):
                                tag_name='product', attribute='id')
         accessors.XMLAttribute('vendor_id', self, parent_xpath='/',
                                tag_name='vendor', attribute='id')
+        accessors.XMLElementList('virt_functions', self,
+                                 parent_xpath='/capability',
+                                 marshal_from=self.marshal_from_address,
+                                 marshal_to=self.marshal_to_address)
         super(PCIXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = (' <capability type=\'pci\'></capability>')
+
+    class Address(base.LibvirtXMLBase):
+
+        """
+        Address of Virtual Function device.
+        """
+
+        #Example:
+        #  <address domain='0x0000' bus='0x08' slot='0x10' function='0x0'/>
+        #  <address domain='0x0000' bus='0x08' slot='0x10' function='0x4'/>
+
+        __slots__ = ('domain', 'bus', 'slot', 'function')
+
+        def __init__(self, virsh_instance=base.virsh):
+            accessors.XMLAttribute('domain', self, parent_xpath='/',
+                                   tag_name='address', attribute='domain')
+            accessors.XMLAttribute('bus', self, parent_xpath='/',
+                                   tag_name='address', attribute='bus')
+            accessors.XMLAttribute('slot', self, parent_xpath='/',
+                                   tag_name='address', attribute='slot')
+            accessors.XMLAttribute('function', self, parent_xpath='/',
+                                   tag_name='address', attribute='function')
+            super(PCIXML.Address, self).__init__(virsh_instance=virsh_instance)
+            self.xml = ('<address/>')
+
+    @staticmethod
+    def marshal_from_address(item, index, libvirtxml):
+        """Convert an Address instance into tag + attributes"""
+        root = item.xmltreefile.getroot()
+        if root.tag == 'address':
+            return (root.tag, dict(root.items()))
+        else:
+            raise xcepts.LibvirtXMLError("Expected a list of address "
+                                         "instances, not a %s" % str(item))
+
+    @staticmethod
+    def marshal_to_address(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes into an Address instance"""
+        if not tag == 'address':
+            return None     # Don't convert this item
+        newone = PCIXML.Address(virsh_instance=libvirtxml.virsh)
+        newone.update(attr_dict, excpt=xcepts.LibvirtXMLError)
+        return newone
 
     @staticmethod
     def make_sysfs_sub_path(domain, bus, slot, function):
