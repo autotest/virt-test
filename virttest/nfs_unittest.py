@@ -41,8 +41,8 @@ class nfs_test(unittest.TestCase):
         service.Factory.create_service.expect_call("nfs").and_return(
             FakeService("nfs"))
         mount_src = self.nfs_params.get("nfs_mount_src")
-        export_dir = (self.nfs_params.get("export_dir")
-                      or mount_src.split(":")[-1])
+        export_dir = (self.nfs_params.get("export_dir") or
+                      mount_src.split(":")[-1])
         export_ip = self.nfs_params.get("export_ip", "*")
         export_options = self.nfs_params.get("export_options", "").strip()
         nfs.Exportfs.expect_new(export_dir, export_ip, export_options)

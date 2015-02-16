@@ -384,9 +384,9 @@ class StrReader(object):
             line = line.rstrip().expandtabs()
             stripped_line = line.lstrip()
             indent = len(line) - len(stripped_line)
-            if (not stripped_line
-                or stripped_line.startswith("#")
-                    or stripped_line.startswith("//")):
+            if (not stripped_line or
+                    stripped_line.startswith("#") or
+                    stripped_line.startswith("//")):
                 continue
             self._lines.append((stripped_line, indent, linenum + 1))
 

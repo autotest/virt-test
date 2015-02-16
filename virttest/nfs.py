@@ -158,8 +158,8 @@ class Nfs(object):
             os_dep.command("exportfs")
             self.nfs_service = service.Factory.create_service("nfs")
 
-            self.export_dir = (params.get("export_dir")
-                               or self.mount_src.split(":")[-1])
+            self.export_dir = (params.get("export_dir") or
+                               self.mount_src.split(":")[-1])
             self.export_ip = params.get("export_ip", "*")
             self.export_options = params.get("export_options", "").strip()
             self.exportfs = Exportfs(self.export_dir, self.export_ip,

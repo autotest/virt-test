@@ -1403,8 +1403,8 @@ class Grubby(object):
         :param path: path to the binary that should be backed up
         '''
         backup_path = '%s.boottool.bkp' % path
-        if (os.path.exists(path)
-                and not os.path.exists(backup_path)):
+        if (os.path.exists(path) and
+                not os.path.exists(backup_path)):
             try:
                 shutil.move(path, backup_path)
             except:

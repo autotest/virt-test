@@ -269,8 +269,8 @@ def postprocess_image(test, params, image_name, vm_process_status=None):
                 logging.debug("Can not find matched image for selected guest "
                               "os, skip the image check.")
                 check_image_flag = False
-            if ("lazy refcounts" in image_info
-                    and image_info["lazy refcounts"] == "true"):
+            if ("lazy refcounts" in image_info and
+                    image_info["lazy refcounts"] == "true"):
                 logging.debug("Should not check image while guest is alive"
                               " when the image is create with lazy refcounts."
                               " Skip the image check.")
@@ -298,8 +298,8 @@ def postprocess_image(test, params, image_name, vm_process_status=None):
                 cl_images = params.get("master_images_clone", "")
                 if image_name in cl_images.split():
                     image.remove()
-            if (params.get("skip_cluster_leak_warn") == "yes"
-                    and "Leaked clusters" in e.message):
+            if (params.get("skip_cluster_leak_warn") == "yes" and
+                    "Leaked clusters" in e.message):
                 logging.warn(e.message)
             else:
                 raise e
