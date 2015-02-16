@@ -165,8 +165,8 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
 
     if (dest_host == 'localhost') and stable_check:
         # Pause the dest vm after creation
-        dest_vm.params['extra_params'] = (dest_vm.params.get('extra_params', '')
-                                          + ' -S')
+        _ = dest_vm.params.get('extra_params', '') + ' -S'
+        dest_vm.params['extra_params'] = _
 
     if dest_host == 'localhost':
         dest_vm.create(migration_mode=mig_protocol, mac_source=vm)

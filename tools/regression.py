@@ -496,10 +496,10 @@ def analyze(test, sample_type, arg1, arg2, configfile):
 
     desc = desc % s1.len
 
-    tee("<pre>####1. Description of setup#1\n" + s1.version + "\n test data:  "
-        + s1.testdata + "</pre>", test + ".html")
-    tee("<pre>####2. Description of setup#2\n" + s2.version + "\n test data:  "
-        + s2.testdata + "</pre>", test + ".html")
+    tee("<pre>####1. Description of setup#1\n%s\n test data:  %s</pre>"
+        % (s1.version, s1.testdata), "%s.html" % test)
+    tee("<pre>####2. Description of setup#2\n%s\n test data:  %s</pre>"
+        % (s2.version, s2.testdata), "%s.html" % test)
     tee("<pre>" + '\n'.join(desc.split('\\n')) + "</pre>", test + ".html")
     tee("<pre>" + s1.desc + "</pre>", test + ".html")
 

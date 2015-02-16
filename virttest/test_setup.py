@@ -354,8 +354,8 @@ class HugePageConfig(object):
                              " biggest number the system can support.")
                 target_hugepages = available_hugepages
                 available_mem = available_hugepages * self.hugepage_size
-                self.suggest_mem = int(available_mem / self.vms / 1024
-                                       - self.qemu_overhead)
+                self.suggest_mem = int(available_mem / self.vms / 1024 -
+                                       self.qemu_overhead)
                 if self.suggest_mem < self.lowest_mem_per_vm:
                     raise MemoryError("This host doesn't have enough free "
                                       "large memory pages for this test to "
@@ -719,8 +719,8 @@ class PrivateOvsBridgeConfig(PrivateBridgeConfig):
         output = self._get_bridge_info()
         for br_info in output.split("Bridge"):
             br_info = br_info.strip()
-            if (br_info and re.match(self.brname, br_info)
-                    and len(re.findall("Port\s+", br_info)) == 1):
+            if (br_info and re.match(self.brname, br_info) and
+                    len(re.findall("Port\s+", br_info)) == 1):
                 return False
         return True
 

@@ -1104,8 +1104,8 @@ class VM(virt_vm.BaseVM):
         # End of command line option wrappers
 
         # If nothing changed and devices exists, return imediatelly
-        if (name is None and params is None and root_dir is None
-                and self.devices is not None):
+        if (name is None and params is None and root_dir is None and
+                self.devices is not None):
             return self.devices
 
         if name is None:
@@ -1296,8 +1296,8 @@ class VM(virt_vm.BaseVM):
             # Multiple virtio console devices can't share a
             # single virtio-serial-pci bus. So add a virtio-serial-pci bus
             # when the port is a virtio console.
-            if (port_params.get('virtio_port_type') == 'console'
-                    and params.get('virtio_port_bus') is None):
+            if (port_params.get('virtio_port_type') == 'console' and
+                    params.get('virtio_port_bus') is None):
                 dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
                 dev.set_param('id',
                               'virtio_serial_pci%d' % no_virtio_serial_pcis)
@@ -1524,8 +1524,8 @@ class VM(virt_vm.BaseVM):
 
         # Some versions of windows don't support more than 2 sockets of cpu,
         # here is a workaround to make all windows use only 2 sockets.
-        if (vcpu_sockets and vcpu_sockets > 2
-                and params.get("os_type") == 'windows'):
+        if (vcpu_sockets and vcpu_sockets > 2 and
+                params.get("os_type") == 'windows'):
             vcpu_sockets = 2
 
         if smp == 0 or vcpu_sockets == 0:
@@ -1565,8 +1565,8 @@ class VM(virt_vm.BaseVM):
             devices.insert(StrDev('numa', cmdline=add_numa_node(devices)))
 
         if params.get("numa_consistency_check_cpu_mem", "no") == "yes":
-            if (numa_total_cpus > int(smp) or numa_total_mem > int(mem)
-                    or len(params.objects("guest_numa_nodes")) > int(smp)):
+            if (numa_total_cpus > int(smp) or numa_total_mem > int(mem) or
+                    len(params.objects("guest_numa_nodes")) > int(smp)):
                 logging.debug("-numa need %s vcpu and %s memory. It is not "
                               "matched the -smp and -mem. The vcpu number "
                               "from -smp is %s, and memory size from -mem is"
@@ -2263,8 +2263,8 @@ class VM(virt_vm.BaseVM):
                 else:
                     raise virt_vm.VMPAError(pa_type)
 
-            if (name is None and params is None and root_dir is None
-                    and self.devices is not None):
+            if (name is None and params is None and root_dir is None and
+                    self.devices is not None):
                 self.update_system_dependent_devs()
             # Make qemu command
             try:
@@ -3316,8 +3316,8 @@ class VM(virt_vm.BaseVM):
             clone.params['qemu_binary'] = utils_misc.get_qemu_dst_binary(self.params)
         if env:
             env.register_vm("%s_clone" % clone.name, clone)
-        if (local and not (migration_exec_cmd_src
-                           and "gzip" in migration_exec_cmd_src)):
+        if (local and not (migration_exec_cmd_src and
+                           "gzip" in migration_exec_cmd_src)):
             error.context("creating destination VM")
             if stable_check:
                 # Pause the dest vm after creation
@@ -3412,8 +3412,8 @@ class VM(virt_vm.BaseVM):
 
             self.wait_for_migration(timeout)
 
-            if (local and (migration_exec_cmd_src
-                           and "gzip" in migration_exec_cmd_src)):
+            if (local and (migration_exec_cmd_src and
+                           "gzip" in migration_exec_cmd_src)):
                 error.context("creating destination VM")
                 if stable_check:
                     # Pause the dest vm after creation

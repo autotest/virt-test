@@ -1613,9 +1613,9 @@ def create_nwfilter_xml(params):
                     if '-' in protocol[i]:
                         protocol[i] = protocol[i].replace('-', '_')
                 else:
-                    raise error.TestFail("Given protocol type %s" % protocol[i]
-                                         + " is not in supported list %s" %
-                                         PROTOCOL_TYPES)
+                    raise error.TestFail("Given protocol type %s"
+                                         " is not in supported list %s"
+                                         % (protocol[i], PROTOCOL_TYPES))
 
     try:
         new_filter = nwfilter_xml.NwfilterXML()

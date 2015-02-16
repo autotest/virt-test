@@ -217,8 +217,8 @@ class GuestWorker(object):
         script_size = utils.system_output("du -b %s | cut -f1"
                                           % guest_script_src).strip()
         script_size_guest = self.session.cmd_output(cmd_guest_size).strip()
-        if (script_size != script_size_guest
-                or self.session.cmd_status(cmd_already_compiled_chck)):
+        if (script_size != script_size_guest or
+                self.session.cmd_status(cmd_already_compiled_chck)):
             if self.os_linux:
                 # Disable serial-getty@hvc0.service on systemd-like hosts
                 self.session.cmd_status('systemctl mask '
@@ -594,11 +594,11 @@ class ThSendCheck(Thread):
                         logging.debug("ThSendCheck %s: Broken pipe "
                                       ", reconnecting. ", self.getName())
                         attempt = 10
-                        while (attempt > 1
-                               and not self.exitevent.isSet()):
+                        while (attempt > 1 and
+                               not self.exitevent.isSet()):
                             # Wait until main thread sets the new self.port
-                            while not (self.exitevent.isSet()
-                                       or self.migrate_event.wait(1)):
+                            while not (self.exitevent.isSet() or
+                                       self.migrate_event.wait(1)):
                                 pass
                             if self.exitevent.isSet():
                                 break
@@ -824,8 +824,8 @@ class ThRecvCheck(Thread):
                                       ", reconnecting. ", self.getName())
                         self.reload_loss_idx()
                         # Wait until main thread sets the new self.port
-                        while not (self.exitevent.isSet()
-                                   or self.migrate_event.wait(1)):
+                        while not (self.exitevent.isSet() or
+                                   self.migrate_event.wait(1)):
                             pass
                         if self.exitevent.isSet():
                             break
@@ -966,8 +966,8 @@ class ThRecvCheck(Thread):
                                       ", reconnecting. ", self.getName())
                         self.reload_loss_idx()
                         # Wait until main thread sets the new self.port
-                        while not (self.exitevent.isSet()
-                                   or self.migrate_event.wait(1)):
+                        while not (self.exitevent.isSet() or
+                                   self.migrate_event.wait(1)):
                             pass
                         if self.exitevent.isSet():
                             break

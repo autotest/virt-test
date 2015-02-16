@@ -696,8 +696,8 @@ class DevContainer(object):
         """
         i = 6   # We are going to divide it by 7 so 6 will result in 0
         for image_name in params.objects("images"):
-            _is_oldscsi = (params.object_params(image_name).get('drive_format')
-                           == 'scsi')
+            image_params = params.object_params(image_name)
+            _is_oldscsi = (image_params.get('drive_format') == 'scsi')
             _scsi_without_device = (not self.has_option('device') and
                                     params.object_params(image_name)
                                     .get('drive_format', 'virtio_blk')
@@ -706,8 +706,8 @@ class DevContainer(object):
                 i += 1
 
         for image_name in params.objects("cdroms"):
-            _is_oldscsi = (params.object_params(image_name).get('cd_format')
-                           == 'scsi')
+            _is_oldscsi = (params.object_params(image_name).get('cd_format') ==
+                           'scsi')
             _scsi_without_device = (not self.has_option('device') and
                                     params.object_params(image_name)
                                     .get('cd_format', 'virtio_blk')
