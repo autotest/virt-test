@@ -691,7 +691,7 @@ def preprocess(test, params, env):
             except test_setup.PolkitRulesSetupError, e:
                 logging.error("e")
             except Exception, e:
-                logging.error("Unexpected error:" % e)
+                logging.error("Unexpected error: '%s'" % e)
             libvirtd_inst.restart()
 
     if vm_type == "libvirt":
