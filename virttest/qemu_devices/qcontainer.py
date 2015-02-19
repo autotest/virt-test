@@ -82,7 +82,8 @@ class DevContainer(object):
         self.__state = -1    # -1 synchronized, 0 synchronized after hotplug
         self.__qemu_help = utils.system_output("%s -help" % qemu_binary,
                                                timeout=10, ignore_status=True)
-        self.__device_help = utils.system_output("%s -device ? 2>&1"
+        # escape the '?' otherwise it will fail if we have a single-char filename in cwd
+        self.__device_help = utils.system_output("%s -device \? 2>&1"
                                                  % qemu_binary, timeout=10,
                                                  ignore_status=True)
         self.__machine_types = utils.system_output("%s -M ?" % qemu_binary,
