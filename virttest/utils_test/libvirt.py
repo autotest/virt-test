@@ -2369,3 +2369,34 @@ def update_vm_disk_source(vm_name, disk_source_path, source_type="file"):
     logging.debug("The new VM XML:\n%s", vmxml.xmltreefile)
     vmxml.sync()
     return True
+
+
+def hotplug_domain_vcpu(vm_name, vcpu_count, set_cmd="setvcpus",
+                        action="hotplug"):
+    """
+    Hotplug/Unhotplug vcpu for domian
+
+    :param vm_name: Domain name, id, uuid
+    :param vcpu_count: For 'setvcpus', it means the current vcpus count
+                       For 'qemu-monitor-command', it's used to get max vcpu
+                       num by (vcpu_count - 1)
+    :param set_cmd: The vcpu hotplug/unhotplug operate command
+    :param action: hotplug/unhotplug action
+    """
+    if action not in ["hotplug", "unhotplug"]:
+        raise ValueError("Unsupport operate action for vcpu:%s" % action)
+    if set_cmd == "setvcpus":
+        result = virsh.setvcpus(vm_name, vcpu_count, "--live", debug=True)
+    elif set_cmd == "qemu-monitor-command":
+        cpu_opt = "cpu-add"
+        if action == "unhotplug":
+            cpu_opt = "cpu-del"
+        result = virsh.qemu_monitor_command(vm_name,
+                            '{\"execute\":\"%s\",\"arguments\":{\"id\":%d}}'\
+                                            % (cpu_opt, (vcpu_count - 1)),
+                                            "--pretty",
+                                            debug=True)
+    else:
+        raise ValueError("Unsupport hotplug operate command for vcpu:%s"
+                         % set_cmd)
+    return result
