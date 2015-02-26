@@ -835,8 +835,8 @@ class PoolVolumeTest(object):
                 utils.run("pvremove %s" % pv, ignore_status=True)
             # These types used iscsi device
             # If we did not provide block device
-            if (pool_type in ["logical", "fs", "disk"]
-                    and device_name.count("EXAMPLE")):
+            if (pool_type in ["logical", "fs", "disk"] and
+                    device_name.count("EXAMPLE")):
                 setup_or_cleanup_iscsi(is_setup=False,
                                        emulated_image=emulated_image)
             # Used iscsi device anyway
