@@ -1378,7 +1378,7 @@ class NumaInfo(object):
         cmd = utils.run("numactl --hardware")
         try:
             node_distances = cmd.stdout.split("node distances:")[-1].strip()
-            node_distance = re.findall("%s:" % node_id, node_distances)[0]
+            node_distance = re.findall("%s:.*" % node_id, node_distances)[0]
             node_distance = node_distance.split(":")[-1]
         except Exception:
             logging.warn("Get unexpect information from numctl")
@@ -1439,7 +1439,10 @@ class NumaNode(object):
             self.node_id = available_nodes[-1]
         else:
             self.cpus = self.get_node_cpus(i - 1).split()
-            self.extra_cpus = self.get_node_cpus(i).split()
+            if i == 1:
+                self.extra_cpus = self.get_node_cpus(i).split()
+            else:
+                self.extra_cpus = self.get_node_cpus(0).split()
             self.node_id = i - 1
         self.dict = {}
         for i in self.cpus:
@@ -1466,7 +1469,7 @@ class NumaNode(object):
                 cpulist_file.close()
             except IOError:
                 logging.warn("Can not find the cpu list information from both"
-                             "numactl and sysfs. Please check your system.")
+                             " numactl and sysfs. Please check your system.")
                 break_flag = True
             if not break_flag:
                 # Try to expand the numbers with '-' to a string of numbers
@@ -1491,6 +1494,34 @@ class NumaNode(object):
                 cpus = ""
 
         return cpus
+
+    def get_cpu_topology(self, cpu_id):
+        """
+        Return cpu info dict get from sysfs.
+
+        :param cpu_id: integer, cpu id number
+        :return: topology dict of certain cpu
+        """
+        topology_path = "/sys/devices/system/node/node%s" % self.node_id
+        topology_path += "/cpu%s/topology/" % cpu_id
+        cpu_topo = {"id": str(cpu_id)}
+        core_id_path = topology_path + "core_id"
+        siblings_path = topology_path + "thread_siblings_list"
+        socket_id_path = topology_path + "physical_package_id"
+        key_list = ["core_id", "siblings", "socket_id"]
+        for key in key_list:
+            try:
+                key_path = eval(key + '_path')
+                file_obj = open(key_path, 'r')
+                key_val = file_obj.read().rstrip('\n')
+                file_obj.close()
+                cpu_topo[key] = key_val
+            except IOError:
+                logging.warn("Can not find file %s from sysfs. Please check "
+                             "your system." % key_path)
+                cpu_topo[key] = None
+
+        return cpu_topo
 
     def free_cpu(self, i, thread=None):
         """
