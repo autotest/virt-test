@@ -48,6 +48,7 @@ from virttest.libvirt_xml.devices import disk
 from virttest.libvirt_xml.devices import hostdev
 from virttest.libvirt_xml.devices import controller
 from virttest.libvirt_xml.devices import seclabel
+from virttest.libvirt_xml.devices import channel
 from __init__ import ping
 try:
     from autotest.client import lv_utils
@@ -1673,6 +1674,55 @@ def create_nwfilter_xml(params):
     except Exception, detail:
         utils.log_last_traceback()
         raise error.TestFail("Fail to create nwfilter XML: %s" % detail)
+
+
+def create_channel_xml(params, alias=False, address=False):
+    """
+    Create a XML contains channel information.
+
+    :param params: the params for Channel slot
+    :param alias: allow to add 'alias' slot
+    :param address: allow to add 'address' slot
+    """
+    # Create attributes dict for channel's element
+    channel_source = {}
+    channel_target = {}
+    channel_alias = {}
+    channel_address = {}
+    channel_params = {}
+
+    channel_type_name = params.get("channel_type_name")
+    source_mode = params.get("source_mode")
+    source_path = params.get("source_path")
+    target_type = params.get("target_type")
+    target_name = params.get("target_name")
+
+    if channel_type_name is None:
+        raise error.TestFail("channel_type_name not specified.")
+    # if these params are None, it won't be used.
+    if source_mode:
+        channel_source['mode'] = source_mode
+    if source_path:
+        channel_source['path'] = source_path
+    if target_type:
+        channel_target['type'] = target_type
+    if target_name:
+        channel_target['name'] = target_name
+
+    channel_params = {'type_name': channel_type_name,
+                      'source': channel_source,
+                      'target': channel_target}
+    if alias:
+        channel_alias = target_name
+        channel_params['alias'] = {'name': channel_alias}
+    if address:
+        channel_address = {'type': 'virtio-serial',
+                           'controller': '0',
+                           'bus': '0'}
+        channel_params['address'] = channel_address
+    channelxml = channel.Channel.new_from_dict(channel_params)
+    logging.debug("Channel XML:\n%s", channelxml)
+    return channelxml
 
 
 def set_domain_state(vm, vm_state):
