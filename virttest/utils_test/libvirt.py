@@ -808,6 +808,7 @@ class PoolVolumeTest(object):
         sp = libvirt_storage.StoragePool()
         source_format = kwargs.get('source_format')
         source_name = kwargs.get('source_name')
+        device_name = kwargs.get('device_name', "/DEV/EXAMPLE")
         try:
             if sp.pool_exists(pool_name):
                 pv = libvirt_storage.PoolVolume(pool_name)
@@ -833,7 +834,13 @@ class PoolVolumeTest(object):
                 utils.run("vgremove -f vg_logical", ignore_status=True)
                 utils.run("pvremove %s" % pv, ignore_status=True)
             # These types used iscsi device
-            if pool_type in ["logical", "iscsi", "fs", "disk", "scsi"]:
+            # If we did not provide block device
+            if (pool_type in ["logical", "fs", "disk"]
+                    and device_name.count("EXAMPLE")):
+                setup_or_cleanup_iscsi(is_setup=False,
+                                       emulated_image=emulated_image)
+            # Used iscsi device anyway
+            if pool_type in ["iscsi", "scsi"]:
                 setup_or_cleanup_iscsi(is_setup=False,
                                        emulated_image=emulated_image)
                 if pool_type == "scsi":
@@ -864,6 +871,14 @@ class PoolVolumeTest(object):
         source_format = kwargs.get('source_format')
         source_name = kwargs.get('source_name', None)
         persistent = kwargs.get('persistent', False)
+        device_name = kwargs.get('device_name', "/DEV/EXAMPLE")
+        # If tester does not provide block device, creating one
+        if (device_name.count("EXAMPLE") and
+                pool_type in ["disk", "fs", "logical"]):
+            device_name = setup_or_cleanup_iscsi(is_setup=True,
+                                                 emulated_image=emulated_image,
+                                                 image_size=image_size)
+
         if pool_type == "dir":
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
@@ -875,9 +890,6 @@ class PoolVolumeTest(object):
             # and the max number of partitions is 4. If pre_disk_vol is None,
             # disk pool will have no volume
             pre_disk_vol = kwargs.get('pre_disk_vol', None)
-            device_name = setup_or_cleanup_iscsi(is_setup=True,
-                                                 emulated_image=emulated_image,
-                                                 image_size=image_size)
             if type(pre_disk_vol) == list and len(pre_disk_vol):
                 for vol in pre_disk_vol:
                     mk_part(device_name, vol)
@@ -887,9 +899,6 @@ class PoolVolumeTest(object):
             if source_format:
                 extra += " --source-format %s" % source_format
         elif pool_type == "fs":
-            device_name = setup_or_cleanup_iscsi(is_setup=True,
-                                                 emulated_image=emulated_image,
-                                                 image_size=image_size)
             cmd = "mkfs.ext4 -F %s" % device_name
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
@@ -897,9 +906,7 @@ class PoolVolumeTest(object):
             extra = " --source-dev %s" % device_name
             utils.run(cmd)
         elif pool_type == "logical":
-            logical_device = setup_or_cleanup_iscsi(is_setup=True,
-                                                    emulated_image=emulated_image,
-                                                    image_size=image_size)
+            logical_device = device_name
             cmd_pv = "pvcreate %s" % logical_device
             vg_name = "vg_%s" % pool_type
             cmd_vg = "vgcreate %s %s" % (vg_name, logical_device)
