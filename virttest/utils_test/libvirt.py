@@ -2369,3 +2369,43 @@ def update_vm_disk_source(vm_name, disk_source_path, source_type="file"):
     logging.debug("The new VM XML:\n%s", vmxml.xmltreefile)
     vmxml.sync()
     return True
+
+
+def hotplug_domain_vcpu(domain, count, by_virsh=True, hotplug=True):
+    """
+    Hot-plug/Hot-unplug vcpu for domian
+
+    :param domain:   Domain name, id, uuid
+    :param count:    to setvcpus it's the current vcpus number,
+                     but to qemu-monitor-command,
+                     we need to designate a specific CPU ID.
+                     The default will be got by (count - 1)
+    :param by_virsh: True means hotplug/unplug by command setvcpus,
+                     otherwise, using qemu_monitor
+    :param hotplug:  True means hot-plug, False means hot-unplug
+    """
+    if by_virsh:
+        result = virsh.setvcpus(domain, count, "--live", debug=True)
+    else:
+        if hotplug:
+            cpu_opt = "cpu-add"
+        else:
+            cpu_opt = "cpu-del"
+            # Note: cpu-del is supported currently, it will return error.
+            # as follow,
+            # {
+            #    "id": "libvirt-23",
+            #    "error": {
+            #        "class": "CommandNotFound",
+            #        "desc": "The command cpu-del has not been found"
+            #    }
+            # }
+            # so, the caller should check the result.
+        # hot-plug/hot-plug the CPU has maximal ID
+        params = (cpu_opt, (count - 1))
+        cmd = '{\"execute\":\"%s\",\"arguments\":{\"id\":%d}}' % params
+        result = virsh.qemu_monitor_command(domain,
+                                            cmd,
+                                            "--pretty",
+                                            debug=True)
+    return result
