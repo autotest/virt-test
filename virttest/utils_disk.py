@@ -368,13 +368,20 @@ class CdromInstallDisk(Disk):
     @error.context_aware
     def close(self):
         error.context("Creating unattended install CD image %s" % self.path)
-        f = open(os.path.join(self.mount, 'isolinux', 'isolinux.cfg'), 'w')
-        f.write('default /isolinux/vmlinuz append initrd=/isolinux/initrd.img '
-                '%s\n' % self.extra_params)
-        f.close()
-        m_cmd = ('mkisofs -o %s -b isolinux/isolinux.bin -c isolinux/boot.cat '
-                 '-no-emul-boot -boot-load-size 4 -boot-info-table -f -R -J '
-                 '-V -T %s' % (self.path, self.mount))
+        if os.path.exists(os.path.join(self.mount, 'isolinux')):
+            # bootable cdrom
+            f = open(os.path.join(self.mount, 'isolinux', 'isolinux.cfg'), 'w')
+            f.write('default /isolinux/vmlinuz append initrd=/isolinux/'
+                    'initrd.img %s\n' % self.extra_params)
+            f.close()
+            boot = '-b isolinux/isolinux.bin'
+        else:
+            # Not a bootable CDROM, using -kernel instead (eg.: arm64)
+            boot = ''
+
+        m_cmd = ('mkisofs -o %s %s -c isolinux/boot.cat -no-emul-boot '
+                 '-boot-load-size 4 -boot-info-table -f -R -J -V -T %s'
+                 % (self.path, boot, self.mount))
         utils.run(m_cmd)
         os.chmod(self.path, 0755)
         cleanup(self.mount)
