@@ -3361,9 +3361,10 @@ class VM(virt_vm.BaseVM):
                         continue
                     # spice_migrate_info requires host_ip, dest_port
                     # client_migrate_info also requires protocol
-                    cmdline = "%s hostname=%s" % (command, host_ip)
+                    cmdline = "%s " % (command)
                     if command == "client_migrate_info":
-                        cmdline += " ,protocol=%s" % self.params['display']
+                        cmdline += " protocol=%s," % self.params['display']
+                    cmdline += " hostname=%s" % (host_ip)
                     if dest_port:
                         cmdline += ",port=%s" % dest_port
                     if dest_tls_port:
