@@ -2665,8 +2665,8 @@ def verify_ip_address_ownership(ip, macs, timeout=60.0):
     regex = re.compile(r"\b%s\b.*\b(%s)\b" % (ip, mac_regex), re.I)
     arping_bin = utils_misc.find_command("arping")
     arping_cmd = "%s -f -c 3 -I %s %s" % (arping_bin, dev, ip)
-    ret = utils.wait_for(lambda: __arping(regex, arping_cmd, ip),
-                         timeout=timeout)
+    ret = utils_misc.wait_for(lambda: __arping(regex, arping_cmd, ip),
+                              timeout=timeout)
     return bool(ret)
 
 
