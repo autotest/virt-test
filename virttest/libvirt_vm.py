@@ -62,7 +62,7 @@ def complete_uri(ip_address):
 
 def get_uri_with_transport(uri_type='qemu', transport="", dest_ip=""):
     """
-    Return a URI to connect driver on dest with a specificed transport.
+    Return a URI to connect driver on dest with a specified transport.
 
     :param origin_uri: The URI on dest used to connect itself directly.
     :param transport: The transport type connect to dest.
@@ -1292,7 +1292,7 @@ class VM(virt_vm.BaseVM):
         guest in libvirt.
 
         If connect_uri is lxc related, we call wait_for_serial_login()
-        directly, without attampting login it via network.
+        directly, without attempting login it via network.
 
         Other connect_uri, call virt_vm.wait_for_login().
         """
@@ -1443,7 +1443,7 @@ class VM(virt_vm.BaseVM):
                 nic_params = dict(nic)
                 if mac_source is not None:
                     # Will raise exception if source doesn't
-                    # have cooresponding nic
+                    # have corresponding nic
                     logging.debug("Copying mac for nic %s from VM %s",
                                   nic.nic_name, mac_source.name)
                     nic_params['mac'] = mac_source.get_mac_address(
