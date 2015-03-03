@@ -12,6 +12,6 @@ def get_default_guest_os_info():
 
     detected = distro.detect()
     if detected.name == 'fedora' and int(detected.version) >= 20:
-        os_info = {'asset': 'jeos-20-64', 'variant': 'JeOS.20'}
+        os_info = {'asset': 'jeos-21-64', 'variant': 'JeOS.21'}
 
     return os_info
