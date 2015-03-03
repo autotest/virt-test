@@ -547,19 +547,26 @@ class TestLibvirtXML(LibvirtXMLTestBase):
                           lvxml.__delitem__,
                           'uuid')
 
-    def test_os_arch_machine_map(self):
+    def test_guest_capabilities(self):
         lvxml = self._from_scratch()
-        expected = {'hvm': {'x86_64': ['rhel6.3.0', 'pc']}}
-        test_oamm = lvxml.os_arch_machine_map
-        self.assertEqual(test_oamm, expected)
-        test_oamm = lvxml['os_arch_machine_map']
-        self.assertEqual(test_oamm, expected)
+        expected_os = 'hvm'
+        expected_arch = 'x86_64'
+        expected_guest = {'wordsize': '64',
+                          'emulator': '/usr/libexec/qemu-kvm',
+                          'machine': ['rhel6.3.0', 'pc'],
+                          'domain_qemu': {},
+                          'domain_kvm': {'emulator': '/usr/libexec/qemu-kvm'}}
+        expected = {expected_os: {expected_arch: expected_guest}}
+        test_guest_capa = lvxml.guest_capabilities
+        self.assertEqual(test_guest_capa, expected)
+        test_guest_capa = lvxml['guest_capabilities']
+        self.assertEqual(test_guest_capa, expected)
         self.assertRaises(xcepts.LibvirtXMLForbiddenError,
                           lvxml.__setattr__,
-                          'os_arch_machine_map', 'foobar')
+                          'guest_capabilities', 'foobar')
         self.assertRaises(xcepts.LibvirtXMLForbiddenError,
                           lvxml.__delitem__,
-                          'os_arch_machine_map')
+                          'guest_capabilities')
 
 
 class TestVMXML(LibvirtXMLTestBase):

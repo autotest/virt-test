@@ -594,7 +594,7 @@ class VM(virt_vm.BaseVM):
         arch_name = params.get("vm_arch_name", utils.get_current_kernel_arch())
         capabs = libvirt_xml.CapabilityXML()
         try:
-            support_machine_type = capabs.os_arch_machine_map[hvm_or_pv][arch_name]
+            support_machine_type = capabs.guest_capabilities[hvm_or_pv][arch_name]['machine']
         except KeyError, detail:
             if detail.args[0] == hvm_or_pv:
                 raise KeyError("No libvirt support for %s virtualization, "

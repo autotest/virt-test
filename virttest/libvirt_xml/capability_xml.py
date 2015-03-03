@@ -15,7 +15,7 @@ class CapabilityXML(base.LibvirtXMLBase):
     Properties:
         uuid:
             string of host uuid
-        os_arch_machine_map:
+        guest_capabilities:
             dict, read-only
         get:
             dict map from os type names to dict map from arch names
@@ -24,7 +24,7 @@ class CapabilityXML(base.LibvirtXMLBase):
     # TODO: Add more __slots__ and accessors to get some useful stats
     # e.g. guest_count etc.
 
-    __slots__ = ('uuid', 'os_arch_machine_map', 'cpu_count', 'arch', 'model',
+    __slots__ = ('uuid', 'guest_capabilities', 'cpu_count', 'arch', 'model',
                  'vendor', 'feature_list', 'power_management_list',
                  'cpu_topolopy')
     __schema_name__ = "capability"
@@ -35,8 +35,8 @@ class CapabilityXML(base.LibvirtXMLBase):
                                  forbidden=['set', 'del'],
                                  parent_xpath='/host',
                                  tag_name='uuid')
-        # This will skip self.get_os_arch_machine_map() defined below
-        accessors.AllForbidden(property_name="os_arch_machine_map",
+        # This will skip self.get_guest_capabilities() defined below
+        accessors.AllForbidden(property_name="guest_capabilities",
                                libvirtxml=self)
         # This will skip self.get_cpu_count() defined below
         accessors.AllForbidden(property_name="cpu_count",
@@ -72,29 +72,42 @@ class CapabilityXML(base.LibvirtXMLBase):
         # calls set_xml accessor method
         self['xml'] = self.__dict_get__('virsh').capabilities()
 
-    def get_os_arch_machine_map(self):
+    def get_guest_capabilities(self):
         """
-        Accessor method for os_arch_machine_map property (in __slots__)
+        Accessor method for guest_capabilities property (in __slots__).
+        Return a guest capabilities dict in following schema:
+        {<os_type>: {<arch name>: {'wordsize': '', 'emulator': '',
+        'machine': [<machine name>, ...], 'domaini_<type>': {'emulator': ''}}}}
         """
-        oamm = {}  # Schema {<os_type>:{<arch name>:[<machine>, ...]}}
+        guest_capa = {}
         xmltreefile = self.__dict_get__('xml')
         for guest in xmltreefile.findall('guest'):
             os_type_name = guest.find('os_type').text
             # Multiple guest definitions can share same os_type (e.g. hvm, pvm)
             if os_type_name == 'xen':
                 os_type_name = 'pv'
-            amm = oamm.get(os_type_name, {})
+            guest_arch = guest_capa.get(os_type_name, {})
             for arch in guest.findall('arch'):
                 arch_name = arch.get('name')
-                mmap = amm.get(arch_name, [])
+                arch_prop = guest_arch.get(arch_name, {})
+                arch_prop['wordsize'] = arch.find('wordsize').text
+                arch_prop['emulator'] = arch.find('emulator').text
+                m_list = []
                 for machine in arch.findall('machine'):
                     machine_text = machine.text
                     # Don't add duplicate entries
-                    if not mmap.count(machine_text):
-                        mmap.append(machine_text)
-                amm[arch_name] = mmap
-            oamm[os_type_name] = amm
-        return oamm
+                    if not m_list.count(machine_text):
+                        m_list.append(machine_text)
+                arch_prop['machine'] = m_list
+                for domain in arch.findall('domain'):
+                    domain_name = "domain_" + domain.get('type')
+                    dom_prop = {}
+                    if domain.find('emulator') is not None:
+                        dom_prop['emulator'] = domain.find('emulator').text
+                    arch_prop[domain_name] = dom_prop
+                guest_arch[arch_name] = arch_prop
+            guest_capa[os_type_name] = guest_arch
+        return guest_capa
 
     def get_power_management_list(self):
         """
