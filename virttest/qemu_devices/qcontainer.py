@@ -19,6 +19,7 @@ from utils import (DeviceError, DeviceHotplugError, DeviceInsertError,
 import os
 import qbuses
 import qdevices
+import shutil
 
 
 #
@@ -817,6 +818,57 @@ class DevContainer(object):
                                )
             return devices
 
+        def machine_aarch64(cmd=False):
+            """
+            aarch64 (arm64) doesn't support PCI bus, only MMIO transports.
+            Also it requires pflash for EFI boot.
+            :param cmd: If set uses "-M $cmd" to force this machine type
+            :return: List of added devices (including default buses)
+            """
+            def get_aavmf_vars(params):
+                """
+                Naive implementation of obtaining the main (first) image name
+                """
+                try:
+                    first_image = params.objects('images')[0]
+                    name = params.object_params(first_image).get('image_name')
+                    return os.path.join(data_dir.DATA_DIR,
+                                        name + "_AAVMF_VARS.fd")
+                except IndexError:
+                    raise DeviceError("Unable to map main image name to "
+                                      "AAVMF variables file.")
+            logging.warn('Support for aarch64 is highly experimental!')
+            devices = []
+            devices.append(qdevices.QStringDevice('machine', cmdline=cmd))
+            # EFI pflash
+            aavmf_code = ("-drive file=/usr/share/AAVMF/AAVMF_CODE.fd,"
+                          "if=pflash,format=raw,unit=0,readonly=on")
+            devices.append(qdevices.QStringDevice('AAVMF_CODE',
+                                                  cmdline=aavmf_code))
+            aavmf_vars = get_aavmf_vars(params)
+            if not os.path.exists(aavmf_vars):
+                logging.warn("AAVMF variables file '%s' doesn't exist, "
+                             "recreating it from the template (this should "
+                             "only happen when you install the machine as "
+                             "there is no default boot in EFI!)")
+                shutil.copy2('/usr/share/AAVMF/AAVMF_VARS.fd', aavmf_vars)
+            aavmf_vars = ("-drive file=%s,if=pflash,format=raw,unit=1"
+                          % aavmf_vars)
+            devices.append(qdevices.QStringDevice('AAVMF_VARS',
+                                                  cmdline=aavmf_vars))
+            # Add virtio-bus
+            # TODO: Currently this uses QNoAddrCustomBus and does not
+            # set the device's properties. This means that the qemu qtree
+            # and autotest's representations are completelly different and
+            # can't be used.
+            bus = qbuses.QNoAddrCustomBus('bus', [['addr'], [32]],
+                                          'virtio-mmio-bus', 'virtio-bus',
+                                          'virtio-mmio-bus')
+            devices.append(qdevices.QStringDevice('machine', cmdline=cmd,
+                                                  child_bus=bus,
+                                                  aobject="virtio-mmio-bus"))
+            return devices
+
         def machine_other(cmd=False):
             """
             isapc or unknown machine type. This type doesn't add any default
@@ -843,6 +895,8 @@ class DevContainer(object):
                     cmd = ""
                 if 'q35' in machine_type:   # Q35 + ICH9
                     devices = machine_q35(cmd)
+                elif arch.ARCH == 'aarch64':
+                    devices = machine_aarch64(cmd)
                 elif 'isapc' not in machine_type:   # i440FX
                     devices = machine_i440FX(cmd)
                 else:   # isapc (or other)
@@ -1050,8 +1104,8 @@ class DevContainer(object):
         :param num_queues: performace option for virtio-scsi-pci
         :param bus_extra_params: options want to add to virtio-scsi-pci bus
         """
-        def define_hbas(qtype, atype, bus, unit, port, qbus, addr_spec=None,
-                        pci_bus='pci.0', num_queues=None,
+        def define_hbas(qtype, atype, bus, unit, port, qbus, pci_bus,
+                        addr_spec=None, num_queues=None,
                         bus_extra_params=None):
             """
             Helper for creating HBAs of certain type.
@@ -1082,14 +1136,14 @@ class DevContainer(object):
                             bus_params[key] = value
                     if addr_spec:
                         dev = qdevices.QDevice(params=bus_params,
-                                               parent_bus={'aobject': pci_bus},
+                                               parent_bus=pci_bus,
                                                child_bus=qbus(busid=bus_name,
                                                               bus_type=qtype,
                                                               addr_spec=addr_spec,
                                                               atype=atype))
                     else:
                         dev = qdevices.QDevice(params=bus_params,
-                                               parent_bus={'aobject': pci_bus},
+                                               parent_bus=pci_bus,
                                                child_bus=qbus(busid=bus_name))
                     devices.append(dev)
                 bus = _hba % bus
@@ -1152,6 +1206,8 @@ class DevContainer(object):
                          "(disk %s)", name)
             bus = none_or_int(pci_addr)
 
+        pci_bus = {'aobject': pci_bus}
+
         #
         # HBA
         # fmt: ide, scsi, virtio, scsi-hd, ahci, usb1,2,3 + hba
@@ -1169,10 +1225,10 @@ class DevContainer(object):
                 # In case we hotplug, lsi wasn't added during the startup hook
                 if arch.ARCH == 'ppc64':
                     _ = define_hbas('SCSI', 'spapr-vscsi', None, None, None,
-                                    qbuses.QSCSIBus, [8, 16384])
+                                    qbuses.QSCSIBus, pci_bus, [8, 16384])
                 else:
                     _ = define_hbas('SCSI', 'lsi53c895a', None, None, None,
-                                    qbuses.QSCSIBus, [8, 16384])
+                                    qbuses.QSCSIBus, pci_bus, [8, 16384])
                 devices.extend(_[0])
         elif fmt == "ide":
             if bus:
@@ -1182,7 +1238,7 @@ class DevContainer(object):
             dev_parent = {'type': 'IDE', 'atype': 'ide'}
         elif fmt == "ahci":
             devs, bus, dev_parent = define_hbas('IDE', 'ahci', bus, unit, port,
-                                                qbuses.QAHCIBus)
+                                                qbuses.QAHCIBus, pci_bus)
             devices.extend(devs)
         elif fmt.startswith('scsi-'):
             if not scsi_hba:
@@ -1194,9 +1250,12 @@ class DevContainer(object):
                 addr_spec = [8, 16384]
             elif scsi_hba == 'virtio-scsi-pci':
                 addr_spec = [256, 16384]
+            elif scsi_hba == 'virtio-scsi-device':
+                addr_spec = [256, 16384]
+                pci_bus = {'type': 'virtio-bus'}
             _, bus, dev_parent = define_hbas('SCSI', scsi_hba, bus, unit, port,
-                                             qbuses.QSCSIBus, addr_spec,
-                                             num_queues=num_queues,
+                                             qbuses.QSCSIBus, pci_bus,
+                                             addr_spec, num_queues=num_queues,
                                              bus_extra_params=bus_extra_params)
             devices.extend(_)
         elif fmt in ('usb1', 'usb2', 'usb3'):
@@ -1211,7 +1270,9 @@ class DevContainer(object):
             elif fmt == 'usb3':
                 dev_parent = {'type': 'xhci'}
         elif fmt == 'virtio':
-            dev_parent = {'aobject': pci_bus}
+            dev_parent = pci_bus
+        elif fmt == 'virtio-blk-device':
+            dev_parent = {'type': 'virtio-bus'}
         else:
             dev_parent = {'type': fmt}
 
@@ -1274,7 +1335,7 @@ class DevContainer(object):
                 devices[-1].parent_bus = ({'type': fmt},)
             elif fmt == 'virtio':
                 devices[-1].set_param('addr', pci_addr)
-                devices[-1].parent_bus = ({'aobject': pci_bus},)
+                devices[-1].parent_bus = (pci_bus,)
             if not media == 'cdrom':
                 logging.warn("Using -drive fmt=xxx for %s is unsupported "
                              "method, false errors might occur.", name)
