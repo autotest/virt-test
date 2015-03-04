@@ -3379,3 +3379,34 @@ class GuestfishAPIs(lgf.GuestfishPersistent):
         The flags which were passed to "aug_init" affect exactly how files are saved.
         """
         return self.inner_cmd("aug-save")
+
+    def set_selinux(self, selinux):
+        """
+        set-selinux - set SELinux enabled or disabled at appliance boot
+        This sets the selinux flag that is passed to the appliance at boot time.
+        The default is "selinux=0" (disabled).
+        """
+        return self.inner_cmd("set_selinux %s" % selinux)
+
+    def get_selinux(self):
+        """
+        get-selinux - get SELinux enabled flag
+        This returns the current setting of the selinux flag which is passed to
+        the appliance at boot time. See "set_selinux".
+        """
+        return self.inner_cmd("get_selinux")
+
+    def setcon(self, context):
+        """
+        setcon - set SELinux security context
+        This sets the SELinux security context of the daemon to the string
+        "context".
+        """
+        return self.inner_cmd("setcon %s" % context)
+
+    def getcon(self):
+        """
+        getcon - get SELinux security context
+        This gets the SELinux security context of the daemon.
+        """
+        return self.inner_cmd("getcon")
