@@ -1389,7 +1389,7 @@ class VMCPUXML(base.LibvirtXMLBase):
                                  libvirtxml=self,
                                  parent_xpath='numa',
                                  marshal_from=self.marshal_from_cell,
-                                 marshal_to=self.mashal_to_cell)
+                                 marshal_to=self.marshal_to_cell)
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                libvirtxml=self)
