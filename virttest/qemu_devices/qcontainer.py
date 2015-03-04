@@ -825,6 +825,18 @@ class DevContainer(object):
             :param cmd: If set uses "-M $cmd" to force this machine type
             :return: List of added devices (including default buses)
             """
+            def get_aavmf_vars(params):
+                """
+                Naive implementation of obtaining the main (first) image name
+                """
+                try:
+                    first_image = params.objects('images')[0]
+                    name = params.object_params(first_image).get('image_name')
+                    return os.path.join(data_dir.DATA_DIR,
+                                        name + "_AAVMF_VARS.fd")
+                except IndexError:
+                    raise DeviceError("Unable to map main image name to "
+                                      "AAVMF variables file.")
             logging.warn('Support for aarch64 is highly experimental!')
             devices = []
             devices.append(qdevices.QStringDevice('machine', cmdline=cmd))
@@ -833,9 +845,12 @@ class DevContainer(object):
                           "if=pflash,format=raw,unit=0,readonly=on")
             devices.append(qdevices.QStringDevice('AAVMF_CODE',
                                                   cmdline=aavmf_code))
-            aavmf_vars = os.path.join(data_dir.DATA_DIR, 'images',
-                                      '%s_AAVMF_VARS.fd' % self.vmname)
+            aavmf_vars = get_aavmf_vars(params)
             if not os.path.exists(aavmf_vars):
+                logging.warn("AAVMF variables file '%s' doesn't exist, "
+                             "recreating it from the template (this should "
+                             "only happen when you install the machine as "
+                             "there is no default boot in EFI!)")
                 shutil.copy2('/usr/share/AAVMF/AAVMF_VARS.fd', aavmf_vars)
             aavmf_vars = ("-drive file=%s,if=pflash,format=raw,unit=1"
                           % aavmf_vars)
