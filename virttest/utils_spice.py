@@ -294,21 +294,29 @@ def clear_interface_linux(vm, login_timeout, timeout):
 
     @param vm:      VM where cleaning is required
     """
-    logging.info("restarting X on: %s", vm.name)
+    logging.info("restarting X/gdm on: %s", vm.name)
     session = vm.wait_for_login(username="root", password="123456",
                                 timeout=login_timeout)
+
+    if "release 7" in session.cmd('cat /etc/redhat-release'):
+        command = "gdm"
+        pgrep_process = "'^gdm$'"
+    else:
+        command = "Xorg"
+        pgrep_process = "Xorg"
+   
     try:
-        pid = session.cmd("pgrep Xorg")
-        session.cmd("killall Xorg")
+        pid = session.cmd("pgrep %s" % pgrep_process)
+        session.cmd("killall %s" % command)
         utils_misc.wait_for(lambda: _is_pid_alive(session, pid), 10,
                             timeout, 0.2)
     except:
         pass
 
     try:
-        session.cmd("ps -C Xorg")
+        session.cmd("ps -C %s" % command)
     except ShellCmdError:
-        raise error.TestFail("X not running")
+        raise error.TestFail("X/gdm not running")
 
 
 def deploy_epel_repo(guest_session, params):
@@ -337,6 +345,12 @@ def deploy_epel_repo(guest_session, params):
         elif "release 6" in guest_session.cmd("cat /etc/redhat-release"):
             cmd = ("yum -y localinstall http://download.fedoraproject.org/"
                    "pub/epel/6/%s/epel-release-6-8.noarch.rpm 2>&1" % arch)
+            logging.info("Installing epel repository to %s",
+                         params.get("guest_vm"))
+            guest_session.cmd(cmd, print_func=logging.info, timeout=90)
+        elif "release 7" in guest_session.cmd("cat /etc/redhat-release"):
+            cmd = ("yum -y localinstall http://download.bos.redhat.com/"
+                   "pub/epel/7/%s/e/epel-release-7-5.noarch.rpm 2>&1" % arch)
             logging.info("Installing epel repository to %s",
                          params.get("guest_vm"))
             guest_session.cmd(cmd, print_func=logging.info, timeout=90)
