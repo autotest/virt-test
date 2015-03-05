@@ -77,10 +77,14 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: return text value
             set: set 'on' or 'off' for guest OS memory dump
             del: removes tag
-        numa: dictionary
+        numa_memory: dictionary
             get: return dictionary of numatune/memory attributes
             set: set numatune/memory attributes from dictionary
             del: remove numatune/memory tag
+        numa_memnode: list dict of memnode attributes cellid, mode and nodeset
+            get: return list of dictionary with numatune/memnode attributes
+            set: set multiple numatune/memnode attributes from dictionary list
+            del: remove numatune/memnode tag
         on_poweroff: string, action to take when the guest requests a poweroff
             get: returns text value of on_poweroff tag
             set: set test of on_poweroff tag
@@ -113,6 +117,10 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: return a string for 'placement' attribute of vcpu
             set: change 'placement' attribute of vcpu
             del: remove 'placement' attribute of vcpu
+        cpuset: string, 'cpuset' attribute of vcpu tag
+            get: return a string for 'cpuset' attribute of vcpu
+            set: change 'cpuset' attribute of vcpu
+            del: remove 'cpuset' attribute of vcpu
         emulatorpin: string, cpuset value (see man virsh: cpulist)
             get: return text value of cputune/emulatorpin attributes
             set: set cputune/emulatorpin attributes from string
@@ -141,10 +149,11 @@ class VMXMLBase(base.LibvirtXMLBase):
 
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = ('hypervisor_type', 'vm_name', 'uuid', 'vcpu', 'max_mem',
-                 'current_mem', 'dumpcore', 'numa', 'devices', 'seclabel',
-                 'cputune', 'placement', 'current_vcpu', 'os', 'cpu',
-                 'pm', 'on_poweroff', 'on_reboot', 'on_crash', 'features',
-                 'mb', 'max_mem_unit', 'current_mem_unit', 'memtune')
+                 'current_mem', 'dumpcore', 'numa_memory', 'numa_memnode',
+                 'devices', 'seclabel', 'cputune', 'placement', 'cpuset',
+                 'current_vcpu', 'os', 'cpu', 'pm', 'on_poweroff', 'on_reboot',
+                 'on_crash', 'features', 'mb', 'max_mem_unit',
+                 'current_mem_unit', 'memtune')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -184,6 +193,12 @@ class VMXMLBase(base.LibvirtXMLBase):
                                parent_xpath='/',
                                tag_name='vcpu',
                                attribute='placement')
+        accessors.XMLAttribute(property_name="cpuset",
+                               libvirtxml=self,
+                               forbidden=None,
+                               parent_xpath='/',
+                               tag_name='vcpu',
+                               attribute='cpuset')
         accessors.XMLElementInt(property_name="max_mem",
                                 libvirtxml=self,
                                 forbidden=None,
@@ -217,11 +232,16 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  subclass=VMOSXML,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
-        accessors.XMLElementDict(property_name="numa",
+        accessors.XMLElementDict(property_name="numa_memory",
                                  libvirtxml=self,
                                  forbidden=None,
                                  parent_xpath='numatune',
                                  tag_name='memory')
+        accessors.XMLElementList(property_name="numa_memnode",
+                                 libvirtxml=self,
+                                 parent_xpath='numatune',
+                                 marshal_from=self.marshal_from_memnode,
+                                 marshal_to=self.marshal_to_memnode)
         accessors.XMLElementNest(property_name='cputune',
                                  libvirtxml=self,
                                  parent_xpath='/',
@@ -280,6 +300,30 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
+
+    @staticmethod
+    def marshal_from_memnode(item, index, libvirtxml):
+        """
+        Convert a dict to memnode tag and attributes.
+        """
+        del index
+        del libvirtxml
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of memnode "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('memnode', dict(item))
+
+    @staticmethod
+    def marshal_to_memnode(tag, attr_dict, index, libvirtxml):
+        """
+        Convert a memnode tag and attributes to a dict.
+        """
+        del index
+        del libvirtxml
+        if tag != 'memnode':
+            return None
+        return dict(attr_dict)
 
     def get_devices(self, device_type=None):
         """
@@ -829,12 +873,20 @@ class VMXML(VMXMLBase):
         return address_str
 
     @staticmethod
-    def get_numa_params(vm_name, virsh_instance=base.virsh):
+    def get_numa_memory_params(vm_name, virsh_instance=base.virsh):
         """
-        Return VM's numa setting from XML definition
+        Return VM's numa memory setting from XML definition
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
-        return vmxml.numa
+        return vmxml.numa_memory
+
+    @staticmethod
+    def get_numa_memnode_params(vm_name, virsh_instance=base.virsh):
+        """
+        Return VM's numa memnode setting from XML definition
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        return vmxml.numa_memnode
 
     def get_primary_serial(self):
         """
@@ -1293,7 +1345,7 @@ class VMCPUXML(base.LibvirtXMLBase):
 
     # Must copy these here or there will be descriptor problems
     __slots__ = ('model', 'vendor', 'feature_list', 'mode', 'match',
-                 'fallback', 'topology')
+                 'fallback', 'topology', 'numa_cell')
 
     def __init__(self, virsh_instance=base.virsh):
         """
@@ -1333,11 +1385,40 @@ class VMCPUXML(base.LibvirtXMLBase):
                                  forbidden=[],
                                  parent_xpath='/',
                                  tag_name='topology')
+        accessors.XMLElementList(property_name="numa_cell",
+                                 libvirtxml=self,
+                                 parent_xpath='numa',
+                                 marshal_from=self.marshal_from_cell,
+                                 marshal_to=self.marshal_to_cell)
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                libvirtxml=self)
         super(VMCPUXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = '<cpu/>'
+
+    @staticmethod
+    def marshal_from_cell(item, index, libvirtxml):
+        """
+        Convert a dict to cell tag and attributes.
+        """
+        del index
+        del libvirtxml
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of cell "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('cell', dict(item))
+
+    @staticmethod
+    def marshal_to_cell(tag, attr_dict, index, libvirtxml):
+        """
+        Convert a cell tag and attributes to a dict.
+        """
+        del index
+        del libvirtxml
+        if tag != 'cell':
+            return None
+        return dict(attr_dict)
 
     def get_feature_list(self):
         """

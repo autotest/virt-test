@@ -667,11 +667,6 @@ def bootstrap_tests(options):
         check_modules = None
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
 
-    if not options.config:
-        restore_image = not options.keep_image
-    else:
-        restore_image = False
-
     os_info = defaults.get_default_guest_os_info()
 
     kwargs = {'test_name': options.type,
@@ -680,9 +675,9 @@ def bootstrap_tests(options):
               'default_userspace_paths': None,
               'check_modules': check_modules,
               'online_docs_url': online_docs_url,
-              'download_image': not options.no_downloads,
               'selinux': options.selinux_setup,
-              'restore_image': restore_image,
+              'restore_image': not(options.no_downloads or
+                                   options.keep_image),
               'interactive': False,
               'update_providers': options.update_providers,
               'guest_os': options.guest_os or os_info['variant']}

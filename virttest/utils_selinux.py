@@ -318,16 +318,23 @@ def find_pathregex(defcon, pathname):
         return None
 
 
-def set_defcon(context_type, pathregex):
+def set_defcon(context_type, pathregex, context_range=None):
     """
     Set the default context of a file/path in local SELinux policy
 
     :param context_type: The selinux context (only type is used)
     :param pathregex: Pathname regex e.g. r"/foo/bar/baz(/.*)?"
+    :param context_range: MLS/MCS Security Range e.g. s0:c87,c520
     :raise SelinuxError: if semanage command not found
     :raise SeCmdError: if semanage exits non-zero
     """
-    cmd = ("semanage fcontext --add -t %s '%s'" % (context_type, pathregex))
+    cmd = "semanage fcontext --add"
+    if context_type:
+        cmd += ' -t %s' % context_type
+    if context_range:
+        cmd += ' -r %s' % context_range
+    if pathregex:
+        cmd += ' "%s"' % pathregex
     result = utils.run(cmd, ignore_status=True)
     _no_semanage(result)
     if result.exit_status != 0:
@@ -352,28 +359,33 @@ def del_defcon(context_type, pathregex):
 # Process pathname/dirdesc in uniform way for all defcon functions + unittests
 
 
-def _run_restorecon(pathname, dirdesc, readonly=True):
+def _run_restorecon(pathname, dirdesc, readonly=True, force=False):
     cmd = 'restorecon -v'
     if dirdesc:
         cmd += 'R'
     if readonly:
         cmd += 'n'
+    if force:
+        cmd += 'F'
     cmd += ' "%s"' % pathname
     # Always returns 0, even if contexts wrong
     return utils.run(cmd).stdout.strip()
 
 
-def verify_defcon(pathname, dirdesc=False):
+def verify_defcon(pathname, dirdesc=False, readonly=True, forcedesc=False):
     """
     Verify contexts of pathspec (and/or below, if dirdesc) match default
 
     :param pathname: Absolute path to file, directory, or symlink
     :param dirdesc: True to descend into sub-directories
+    :param readonly: True to passive check and don't change any file labels
+    :param forcedesc: True to force a replacement of the entire context
     :return: True if all components match default contexts
     :note: By default DOES NOT follow symlinks
     """
     # Default context path regexes only work on canonical paths
-    changes = _run_restorecon(pathname, dirdesc)
+    changes = _run_restorecon(pathname, dirdesc,
+                              readonly=readonly, force=forcedesc)
     if changes.count('restorecon reset'):
         return False
     else:

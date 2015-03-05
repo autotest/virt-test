@@ -1,23 +1,22 @@
 install
 KVM_TEST_MEDIUM
 text
-lang en_US.UTF-8
+reboot
+lang en_US
 keyboard us
-network --onboot yes --device eth0 --bootproto dhcp --noipv6 --hostname atest-guest
+network --bootproto dhcp --hostname atest-guest
 rootpw 123456
-firewall --disabled
-selinux --disabled
+firewall --enabled --ssh
+selinux --enforcing
 timezone --utc America/New_York
 firstboot --disable
-bootloader --location=mbr --timeout=0 --append="console=tty0 console=ttyS0,115200 plymouth.enable=0"
+bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
 zerombr
 poweroff
-services --enabled network
-repo --name updates
 KVM_TEST_LOGGING
 
 clearpart --all --initlabel
-part / --fstype=ext4 --grow --asprimary --size=1
+autopart
 
 %packages
 gpgme
@@ -31,6 +30,8 @@ pciutils
 usbutils
 bind-utils
 net-tools
+patch
+rsync
 -yum-utils
 -cryptsetup
 -dump
@@ -47,7 +48,6 @@ net-tools
 -mdadm
 -dmraid
 -ftp
--rsync
 -system-config-network-tui
 -pam_krb5
 -nano
@@ -159,7 +159,6 @@ net-tools
 -system-config-firewall-base
 -hesiod
 -libpciaccess
--diffutils
 -policycoreutils
 -m4
 -checkpolicy
@@ -171,38 +170,13 @@ net-tools
 
 %post
 function ECHO { for TTY in `cat /proc/consoles | cut -f1 -d' '`; do echo "$*" > /dev/$TTY; done }
+ECHO "OS install is completed"
 grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
+dhclient
+chkconfig sshd on
+iptables -F
+systemctl mask tmp.mount
 echo 0 > /selinux/enforce
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
-systemctl enable sshd.service
-systemctl mask fedora-wait-storage.service
-systemctl mask fedora-storage-init-late.service
-systemctl mask fedora-storage-init.service
-systemctl mask fedora-autoswap.service
-systemctl mask fedora-configure.service
-systemctl mask fedora-loadmodules.service
-systemctl mask fedora-readonly.service
-systemctl mask systemd-readahead-collect.service
-systemctl mask plymouth-start.service
-systemctl mask network.service
-systemctl mask remote-fs.target
-systemctl mask cryptsetup.target
-systemctl mask sys-devices-virtual-tty-tty2.device
-systemctl mask sys-devices-virtual-tty-tty3.device
-systemctl mask sys-devices-virtual-tty-tty4.device
-systemctl mask sys-devices-virtual-tty-tty5.device
-systemctl mask sys-devices-virtual-tty-tty6.device
-systemctl mask sys-devices-virtual-tty-tty7.device
-systemctl mask sys-devices-virtual-tty-tty8.device
-systemctl mask sys-devices-virtual-tty-tty9.device
-systemctl mask sys-devices-virtual-tty-tty10.device
-systemctl mask sys-devices-virtual-tty-tty11.device
-systemctl mask sys-devices-virtual-tty-tty12.device
-yum install -y hdparm ntpdate qemu-guest-agent
-yum clean all
-mkdir -p /var/log/journal
-dd if=/dev/zero of=/fill-up-file bs=1M
-rm -f /fill-up-file
 ECHO 'Post set up finished'
-ECHO "OS install is completed"
 %end

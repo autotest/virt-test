@@ -1,6 +1,7 @@
 install
 KVM_TEST_MEDIUM
 text
+reboot
 lang en_US
 keyboard us
 network --bootproto dhcp --hostname atest-guest
@@ -20,7 +21,6 @@ autopart
 %packages
 @standard
 @development-tools
-dmidecode
 %end
 
 %post

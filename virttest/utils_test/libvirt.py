@@ -48,6 +48,7 @@ from virttest.libvirt_xml.devices import disk
 from virttest.libvirt_xml.devices import hostdev
 from virttest.libvirt_xml.devices import controller
 from virttest.libvirt_xml.devices import seclabel
+from virttest.libvirt_xml.devices import channel
 from __init__ import ping
 try:
     from autotest.client import lv_utils
@@ -808,6 +809,7 @@ class PoolVolumeTest(object):
         sp = libvirt_storage.StoragePool()
         source_format = kwargs.get('source_format')
         source_name = kwargs.get('source_name')
+        device_name = kwargs.get('device_name', "/DEV/EXAMPLE")
         try:
             if sp.pool_exists(pool_name):
                 pv = libvirt_storage.PoolVolume(pool_name)
@@ -833,7 +835,13 @@ class PoolVolumeTest(object):
                 utils.run("vgremove -f vg_logical", ignore_status=True)
                 utils.run("pvremove %s" % pv, ignore_status=True)
             # These types used iscsi device
-            if pool_type in ["logical", "iscsi", "fs", "disk", "scsi"]:
+            # If we did not provide block device
+            if (pool_type in ["logical", "fs", "disk"] and
+                    device_name.count("EXAMPLE")):
+                setup_or_cleanup_iscsi(is_setup=False,
+                                       emulated_image=emulated_image)
+            # Used iscsi device anyway
+            if pool_type in ["iscsi", "scsi"]:
                 setup_or_cleanup_iscsi(is_setup=False,
                                        emulated_image=emulated_image)
                 if pool_type == "scsi":
@@ -864,6 +872,14 @@ class PoolVolumeTest(object):
         source_format = kwargs.get('source_format')
         source_name = kwargs.get('source_name', None)
         persistent = kwargs.get('persistent', False)
+        device_name = kwargs.get('device_name', "/DEV/EXAMPLE")
+        # If tester does not provide block device, creating one
+        if (device_name.count("EXAMPLE") and
+                pool_type in ["disk", "fs", "logical"]):
+            device_name = setup_or_cleanup_iscsi(is_setup=True,
+                                                 emulated_image=emulated_image,
+                                                 image_size=image_size)
+
         if pool_type == "dir":
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
@@ -875,9 +891,6 @@ class PoolVolumeTest(object):
             # and the max number of partitions is 4. If pre_disk_vol is None,
             # disk pool will have no volume
             pre_disk_vol = kwargs.get('pre_disk_vol', None)
-            device_name = setup_or_cleanup_iscsi(is_setup=True,
-                                                 emulated_image=emulated_image,
-                                                 image_size=image_size)
             if type(pre_disk_vol) == list and len(pre_disk_vol):
                 for vol in pre_disk_vol:
                     mk_part(device_name, vol)
@@ -887,9 +900,6 @@ class PoolVolumeTest(object):
             if source_format:
                 extra += " --source-format %s" % source_format
         elif pool_type == "fs":
-            device_name = setup_or_cleanup_iscsi(is_setup=True,
-                                                 emulated_image=emulated_image,
-                                                 image_size=image_size)
             cmd = "mkfs.ext4 -F %s" % device_name
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
@@ -897,9 +907,7 @@ class PoolVolumeTest(object):
             extra = " --source-dev %s" % device_name
             utils.run(cmd)
         elif pool_type == "logical":
-            logical_device = setup_or_cleanup_iscsi(is_setup=True,
-                                                    emulated_image=emulated_image,
-                                                    image_size=image_size)
+            logical_device = device_name
             cmd_pv = "pvcreate %s" % logical_device
             vg_name = "vg_%s" % pool_type
             cmd_vg = "vgcreate %s %s" % (vg_name, logical_device)
@@ -1666,6 +1674,55 @@ def create_nwfilter_xml(params):
     except Exception, detail:
         utils.log_last_traceback()
         raise error.TestFail("Fail to create nwfilter XML: %s" % detail)
+
+
+def create_channel_xml(params, alias=False, address=False):
+    """
+    Create a XML contains channel information.
+
+    :param params: the params for Channel slot
+    :param alias: allow to add 'alias' slot
+    :param address: allow to add 'address' slot
+    """
+    # Create attributes dict for channel's element
+    channel_source = {}
+    channel_target = {}
+    channel_alias = {}
+    channel_address = {}
+    channel_params = {}
+
+    channel_type_name = params.get("channel_type_name")
+    source_mode = params.get("source_mode")
+    source_path = params.get("source_path")
+    target_type = params.get("target_type")
+    target_name = params.get("target_name")
+
+    if channel_type_name is None:
+        raise error.TestFail("channel_type_name not specified.")
+    # if these params are None, it won't be used.
+    if source_mode:
+        channel_source['mode'] = source_mode
+    if source_path:
+        channel_source['path'] = source_path
+    if target_type:
+        channel_target['type'] = target_type
+    if target_name:
+        channel_target['name'] = target_name
+
+    channel_params = {'type_name': channel_type_name,
+                      'source': channel_source,
+                      'target': channel_target}
+    if alias:
+        channel_alias = target_name
+        channel_params['alias'] = {'name': channel_alias}
+    if address:
+        channel_address = {'type': 'virtio-serial',
+                           'controller': '0',
+                           'bus': '0'}
+        channel_params['address'] = channel_address
+    channelxml = channel.Channel.new_from_dict(channel_params)
+    logging.debug("Channel XML:\n%s", channelxml)
+    return channelxml
 
 
 def set_domain_state(vm, vm_state):

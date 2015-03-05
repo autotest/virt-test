@@ -861,11 +861,10 @@ class VirtTestApp(object):
                 default_userspace_paths = ["/usr/bin/virt-v2v"]
 
             if not self.options.config:
-                download_image = not self.options.no_downloads
-                keep_image = not self.options.keep_image
+                restore_image = not(self.options.no_downloads or
+                                    self.options.keep_image)
             else:
-                download_image = False
-                keep_image = False
+                restore_image = False
 
             test_dir = data_dir.get_backend_dir(self.options.type)
             bootstrap.bootstrap(test_name=self.options.type, test_dir=test_dir,
@@ -874,9 +873,8 @@ class VirtTestApp(object):
                                 check_modules=check_modules,
                                 online_docs_url=online_docs_url,
                                 interactive=interactive,
-                                download_image=download_image,
                                 selinux=self.options.selinux_setup,
-                                restore_image=keep_image,
+                                restore_image=restore_image,
                                 verbose=self.options.verbose,
                                 update_providers=self.options.update_providers,
                                 guest_os=(self.options.guest_os or

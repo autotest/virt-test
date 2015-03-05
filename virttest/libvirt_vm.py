@@ -62,7 +62,7 @@ def complete_uri(ip_address):
 
 def get_uri_with_transport(uri_type='qemu', transport="", dest_ip=""):
     """
-    Return a URI to connect driver on dest with a specificed transport.
+    Return a URI to connect driver on dest with a specified transport.
 
     :param origin_uri: The URI on dest used to connect itself directly.
     :param transport: The transport type connect to dest.
@@ -1316,7 +1316,7 @@ class VM(virt_vm.BaseVM):
         guest in libvirt.
 
         If connect_uri is lxc related, we call wait_for_serial_login()
-        directly, without attampting login it via network.
+        directly, without attempting login it via network.
 
         Other connect_uri, call virt_vm.wait_for_login().
         """
@@ -1467,7 +1467,7 @@ class VM(virt_vm.BaseVM):
                 nic_params = dict(nic)
                 if mac_source is not None:
                     # Will raise exception if source doesn't
-                    # have cooresponding nic
+                    # have corresponding nic
                     logging.debug("Copying mac for nic %s from VM %s",
                                   nic.nic_name, mac_source.name)
                     nic_params['mac'] = mac_source.get_mac_address(
@@ -1785,13 +1785,13 @@ class VM(virt_vm.BaseVM):
         # statm stores informations in pages, translate it to MB
         return shm * 4.0 / 1024
 
-    def get_cpu_topolopy_in_cmdline(self):
+    def get_cpu_topology_in_cmdline(self):
         """
-        Return the VM's cpu topolopy in VM cmdline.
+        Return the VM's cpu topology in VM cmdline.
 
-        :return: A dirt of cpu topolopy
+        :return: A dirt of cpu topology
         """
-        cpu_topolopy = {}
+        cpu_topology = {}
         vm_pid = self.get_pid()
         if vm_pid is None:
             logging.error("Fail to get VM pid")
@@ -1799,17 +1799,17 @@ class VM(virt_vm.BaseVM):
             cmdline = open("/proc/%d/cmdline" % vm_pid).read()
             values = re.findall("sockets=(\d+),cores=(\d+),threads=(\d+)",
                                 cmdline)[0]
-            cpu_topolopy = dict(zip(["sockets", "cores", "threads"], values))
-        return cpu_topolopy
+            cpu_topology = dict(zip(["sockets", "cores", "threads"], values))
+        return cpu_topology
 
-    def get_cpu_topolopy_in_vm(self):
-        cpu_topolopy = {}
+    def get_cpu_topology_in_vm(self):
+        cpu_topology = {}
         cpu_info = utils_misc.get_cpu_info(self.wait_for_login())
         if cpu_info:
-            cpu_topolopy['sockets'] = cpu_info['Socket(s)']
-            cpu_topolopy['cores'] = cpu_info['Core(s) per socket']
-            cpu_topolopy['threads'] = cpu_info['Thread(s) per core']
-        return cpu_topolopy
+            cpu_topology['sockets'] = cpu_info['Socket(s)']
+            cpu_topology['cores'] = cpu_info['Core(s) per socket']
+            cpu_topology['threads'] = cpu_info['Thread(s) per core']
+        return cpu_topology
 
     def activate_nic(self, nic_index_or_name):
         # TODO: Implement nic hotplugging

@@ -417,7 +417,8 @@ class VM(virt_vm.BaseVM):
             return cmd
 
         def add_serial(devices, name, filename):
-            if arch.ARCH == 'ppc64' or not devices.has_option("chardev"):
+            if (arch.ARCH in ('ppc64', 'aarch64') or
+                    not devices.has_option("chardev")):
                 return " -serial unix:'%s',server,nowait" % filename
 
             serial_id = "serial_id_%s" % name
@@ -540,7 +541,9 @@ class VM(virt_vm.BaseVM):
                 # libvirt gains the pci_slot, free_pci_addr here,
                 # value by parsing the xml file, i.e. counting all the
                 # pci devices and store the number.
-                if model != 'spapr-vlan':
+                if model == 'virtio-net-device':
+                    dev.parent_bus = {'type': 'virtio-bus'}
+                elif model != 'spapr-vlan':
                     dev.parent_bus = pci_bus
                     dev.set_param('addr', pci_addr)
                 if nic_extra_params:
@@ -3361,9 +3364,10 @@ class VM(virt_vm.BaseVM):
                         continue
                     # spice_migrate_info requires host_ip, dest_port
                     # client_migrate_info also requires protocol
-                    cmdline = "%s hostname=%s" % (command, host_ip)
+                    cmdline = "%s " % (command)
                     if command == "client_migrate_info":
-                        cmdline += " ,protocol=%s" % self.params['display']
+                        cmdline += " protocol=%s," % self.params['display']
+                    cmdline += " hostname=%s" % (host_ip)
                     if dest_port:
                         cmdline += ",port=%s" % dest_port
                     if dest_tls_port:
