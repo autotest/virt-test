@@ -304,7 +304,7 @@ def clear_interface_linux(vm, login_timeout, timeout):
     else:
         command = "Xorg"
         pgrep_process = "Xorg"
-   
+
     try:
         pid = session.cmd("pgrep %s" % pgrep_process)
         session.cmd("killall %s" % command)
