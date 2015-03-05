@@ -2635,14 +2635,14 @@ class VM(virt_vm.BaseVM):
     def monitor(self):
         """
         Return the main monitor object, selected by the parameter main_monitor.
-        If main_monitor isn't defined, return the first monitor.
-        If no monitors exist, or if main_monitor refers to a nonexistent
-        monitor, return None.
+        If main_monitor isn't defined or it refers to a nonexistent monitor,
+        return the first monitor.
+        If no monitors exist, return None.
         """
         for m in self.monitors:
             if m.name == self.params.get("main_monitor"):
                 return m
-        if self.monitors and not self.params.get("main_monitor"):
+        if self.monitors:
             return self.monitors[0]
         return None
 
@@ -2651,14 +2651,14 @@ class VM(virt_vm.BaseVM):
         """
         Return the catch monitor object, selected by the parameter
         catch_monitor.
-        If catch_monitor isn't defined or it refers to a nonexistent,
+        If catch_monitor isn't defined or it refers to a nonexistent monitor,
         return the last monitor.
         If no monitors exist, return None.
         """
         for m in self.monitors:
             if m.name == self.params.get("catch_monitor"):
                 return m
-        if self.monitors and not self.params.get("catch_monitor"):
+        if self.monitors:
             return self.monitors[-1]
         return None
 
