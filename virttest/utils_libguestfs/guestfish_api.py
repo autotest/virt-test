@@ -3410,3 +3410,154 @@ class GuestfishAPIs(lgf.GuestfishPersistent):
         This gets the SELinux security context of the daemon.
         """
         return self.inner_cmd("getcon")
+
+    def mke2fs(self, device, blockscount=None, blocksize=None,
+               fragsize=None, blockspergroup=None, numberofgroups=None,
+               bytesperinode=None, inodesize=None, journalsize=None,
+               numberofinodes=None, stridesize=None, stripewidth=None,
+               maxonlineresize=None, reservedblockspercentage=None,
+               mmpupdateinterval=None, journaldevice=None, label=None,
+               lastmounteddir=None, creatoros=None, fstype=None,
+               usagetype=None, uuid=None, forcecreate=None,
+               writesbandgrouponly=None, lazyitableinit=None,
+               lazyjournalinit=None, testfs=None, discard=None,
+               quotatype=None, extent=None, filetype=None,
+               flexbg=None, hasjournal=None, journaldev=None,
+               largefile=None, quota=None, resizeinode=None,
+               sparsesuper=None, uninitbg=None):
+        """
+        mke2fs - create an ext2/ext3/ext4 filesystem on device
+
+        "mke2fs" is used to create an ext2, ext3, or ext4 filesystem on
+        "device".
+        """
+        cmd = 'mke2fs %s' % device
+        if blockscount:
+            cmd += ' blockscount:%s' % blockscount
+        if blocksize:
+            cmd += ' blocksize:%s' % blocksize
+        if fragsize:
+            cmd += ' fragsize:%s' % fragsize
+        if blockspergroup:
+            cmd += ' blockspergroup:%s' % blockspergroup
+        if numberofgroups:
+            cmd += ' numberofgroups:%s' % numberofgroups
+        if bytesperinode:
+            cmd += ' bytesperinode:%s' % bytesperinode
+        if inodesize:
+            cmd += ' inodesize:%s' % inodesize
+        if journalsize:
+            cmd += ' journalsize:%s' % journalsize
+        if numberofinodes:
+            cmd += ' numberofinodes:%s' % numberofinodes
+        if stridesize:
+            cmd += ' stridesize:%s' % stridesize
+        if stripewidth:
+            cmd += ' stripewidth:%s' % stripewidth
+        if maxonlineresize:
+            cmd += ' maxonlineresize:%s' % maxonlineresize
+        if reservedblockspercentage:
+            cmd += ' reservedblockspercentage:%s' % reservedblockspercentage
+        if mmpupdateinterval:
+            cmd += ' mmpupdateinterval:%s' % mmpupdateinterval
+        if journaldevice:
+            cmd += ' journaldevice:%s' % journaldevice
+        if label:
+            cmd += ' label:%s' % label
+        if lastmounteddir:
+            cmd += ' lastmounteddir:%s' % lastmounteddir
+        if creatoros:
+            cmd += ' creatoros:%s' % creatoros
+        if fstype:
+            cmd += ' fstype:%s' % fstype
+        if usagetype:
+            cmd += ' usagetype:%s' % usagetype
+        if uuid:
+            cmd += ' uuid:%s' % uuid
+        if forcecreate:
+            cmd += ' forcecreate:%s' % forcecreate
+        if writesbandgrouponly:
+            cmd += ' writesbandgrouponly:%s' % writesbandgrouponly
+        if lazyitableinit:
+            cmd += ' lazyitableinit:%s' % lazyitableinit
+        if lazyjournalinit:
+            cmd += ' lazyjournalinit:%s' % lazyjournalinit
+        if testfs:
+            cmd += ' testfs:%s' % testfs
+        if discard:
+            cmd += ' discard:%s' % discard
+        if quotatype:
+            cmd += ' quotatype:%s' % quotatype
+        if extent:
+            cmd += ' extent:%s' % extent
+        if filetype:
+            cmd += ' filetype:%s' % filetype
+        if flexbg:
+            cmd += ' flexbg:%s' % flexbg
+        if hasjournal:
+            cmd += ' hasjournal:%s' % hasjournal
+        if journaldev:
+            cmd += ' journaldev:%s' % journaldev
+        if largefile:
+            cmd += ' largefile:%s' % largefile
+        if quota:
+            cmd += ' quota:%s' % quota
+        if resizeinode:
+            cmd += ' resizeinode:%s' % resizeinode
+        if sparsesuper:
+            cmd += ' sparsesuper:%s' % sparsesuper
+        if uninitbg:
+            cmd += ' uninitbg:%s' % uninitbg
+        return self.inner_cmd(cmd)
+
+    def mke2journal(self, blocksize, device):
+        """
+        mke2journal - make ext2/3/4 external journal
+
+        This creates an ext2 external journal on "device". It is equivalent to
+        the command:
+        """
+        return self.inner_cmd("mke2journal %s %s" % (blocksize, device))
+
+    def mke2journal_L(self, blocksize, label, device):
+        """
+        mke2journal-L - make ext2/3/4 external journal with label
+
+        mke2journal-L blocksize label device
+        """
+        return self.inner_cmd("mke2journal_L %s %s %s" % (blocksize, label, device))
+
+    def mke2journal_U(self, blocksize, uuid, device):
+        """
+        mke2journal-U - make ext2/3/4 external journal with UUI
+
+        This creates an ext2 external journal on "device" with UUID "uuid".
+        """
+        return self.inner_cmd("mke2journal_U %s %s %s" % (blocksize, uuid, device))
+
+    def mke2fs_J(self, fstype, blocksize, device, journal):
+        """
+        mke2fs-J - make ext2/3/4 filesystem with external journal
+
+        This creates an ext2/3/4 filesystem on "device" with an external journal
+        on "journal". It is equivalent to the command:
+        """
+        return self.inner_cmd("mke2fs_J %s %s %s %s" % (fstype, blocksize, device, journal))
+
+    def mke2fs_JU(self, fstype, blocksize, device, uuid):
+        """
+        mke2fs-JU - make ext2/3/4 filesystem with external journal
+
+        This creates an ext2/3/4 filesystem on "device" with an external journal
+        on the journal with UUID "uuid".
+        """
+        return self.inner_cmd("mke2fs_JU %s %s %s %s" % (fstype, blocksize, device, uuid))
+
+    def mke2fs_JL(self, fstype, blocksize, device, label):
+        """
+        mke2fs-JL - make ext2/3/4 filesystem with external journal
+
+        This creates an ext2/3/4 filesystem on "device" with an external journal
+        on the journal labeled "label".
+        """
+        return self.inner_cmd("mke2fs_JL %s %s %s %s" % (fstype, blocksize, device, label))
