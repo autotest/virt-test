@@ -535,7 +535,7 @@ def define_pool(pool_name, pool_type, pool_target, cleanup_flag, **kwargs):
                          need_cleanup_nfs, need_cleanup_iscsi,
                          need_cleanup_logical, selinux_bak and
                          need_cleanup_gluster
-    :param kwargs: key words for sepcial pool define. eg, glusterfs pool
+    :param kwargs: key words for special pool define. eg, glusterfs pool
                          source path and source name, etc
     """
 

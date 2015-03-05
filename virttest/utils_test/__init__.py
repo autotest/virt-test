@@ -75,7 +75,7 @@ def update_boot_option(vm, args_removed=None, args_added=None,
     :param args_removed: Kernel options want to remove.
     :param args_added: Kernel options want to add.
     :param need_reboot: Whether need reboot VM or not.
-    :raise error.TestError: Raised if fail to update guest kernel cmdlie.
+    :raise error.TestError: Raised if fail to update guest kernel cmdline.
 
     """
     if vm.params.get("os_type") == 'windows':
