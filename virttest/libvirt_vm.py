@@ -413,6 +413,21 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
+        def add_controller(model=None):
+            if model == 'virtio-scsi':
+                return " --controller type=scsi,model=virtio-scsi"
+            else:
+                return ""
+
+        def check_controller(virt_install_cmd_line, controller):
+            found = False
+            output = re.findall(r"controller\stype=(\S+),model=(\S+)", virt_install_cmd_line)
+            for item in output:
+                if controller in item[1]:
+                    found = True
+                    break
+            return found
+
         def add_drive(help_text, filename, pool=None, vol=None, device=None,
                       bus=None, perms=None, size=None, sparse=False,
                       cache=None, fmt=None):
@@ -761,12 +776,21 @@ class VM(virt_vm.BaseVM):
             if image_params.get("boot_drive") == "no":
                 continue
             if filename:
+                libvirt_controller = image_params.get("libvirt_controller", None)
+                _drive_format = image_params.get("drive_format")
+                if libvirt_controller:
+                    if not check_controller(virt_install_cmd, libvirt_controller):
+                        virt_install_cmd += add_controller(libvirt_controller)
+                    #this will reset the scsi-hd to scsi as we are adding controller
+                    # to mention the drive format
+                    if 'scsi' in _drive_format:
+                        _drive_format = "scsi"
                 virt_install_cmd += add_drive(help_text,
                                               filename,
                                               None,
                                               None,
                                               None,
-                                              image_params.get("drive_format"),
+                                              _drive_format,
                                               None,
                                               image_params.get("image_size"),
                                               image_params.get("drive_sparse"),
