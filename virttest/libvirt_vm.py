@@ -570,6 +570,22 @@ class VM(virt_vm.BaseVM):
                           result)
             return result
 
+        def add_memballoon(help_text, memballoon_model):
+            """
+            Adding memballoon device to the vm.
+
+            :param help_text: string, virt-install help text.
+            :param memballon_model: string, memballoon model.
+            :return: string, empty or memballoon model option.
+            """
+            if has_option(help_text, "memballoon"):
+                result = " --memballoon model=%s" % memballoon_model
+            else:
+                logging.warning("memballoon is not supported")
+                result = ""
+            logging.debug("vm.add_memballoon returning: %s", result)
+            return result
+
         # End of command line option wrappers
 
         if name is None:
@@ -729,6 +745,11 @@ class VM(virt_vm.BaseVM):
 
         # Add serial console
         virt_install_cmd += add_serial(help_text)
+
+        # Add memballoon device
+        memballoon_model = params.get("memballoon_model")
+        if memballoon_model:
+            virt_install_cmd += add_memballoon(help_text, memballoon_model)
 
         # If the PCI assignment step went OK, add each one of the PCI assigned
         # devices to the command line.
