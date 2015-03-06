@@ -854,11 +854,10 @@ def postprocess(test, params, env):
             try:
                 video = video_maker.GstPythonVideoMaker()
                 if (video.has_element('vp8enc') and video.has_element('webmmux')):
-                    video_file = os.path.join(test.debugdir, "%s-%s.webm" %
-                                              (screendump_dir, test.iteration))
+                    video_file = "%s.webm" % screendump_dir
                 else:
-                    video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
-                                              (screendump_dir, test.iteration))
+                    video_file = "%s.ogg" % screendump_dir
+                video_file = os.path.join(test.debugdir, video_file)
                 logging.debug("Encoding video file %s", video_file)
                 video.start(screendump_dir, video_file)
 
@@ -1154,9 +1153,9 @@ def _take_screendumps(test, params, env):
                 logging.warn("VM '%s' produced an invalid screendump", vm.name)
                 os.unlink(temp_filename)
                 continue
-            screendump_dir = os.path.join(test.debugdir,
-                                          "screendumps_%s_%s" % (vm.name,
-                                                                 vm_pid))
+            screendump_dir = "screendumps_%s_%s_%s" % (vm.name, vm_pid,
+                                                       test.iteration)
+            screendump_dir = os.path.join(test.debugdir, screendump_dir)
             try:
                 os.makedirs(screendump_dir)
             except OSError:
