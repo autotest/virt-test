@@ -143,6 +143,6 @@ class Graphics(base.TypedDeviceBase):
         :param vm_name: name of vm
         """
         vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
-        vmxml.xmltreefile.remove_by_xpath('/devices/graphics')
+        vmxml.xmltreefile.remove_by_xpath('/devices/graphics', remove_all=True)
         vmxml.xmltreefile.write()
         vmxml.sync()
