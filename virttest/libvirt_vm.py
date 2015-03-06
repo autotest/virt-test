@@ -2315,6 +2315,12 @@ class VM(virt_vm.BaseVM):
         self.install_package('qemu-guest-agent')
 
         session = self.wait_for_login()
+
+        def _is_ga_running():
+            return (not session.cmd_status("pgrep qemu-ga"))
+
+        def _is_ga_finished():
+            return (session.cmd_status("pgrep qemu-ga") == 1)
         try:
             # Start/stop qemu-guest-agent
             if start:
@@ -2325,6 +2331,13 @@ class VM(virt_vm.BaseVM):
             if status != 0:
                 raise virt_vm.VMError("Start/stop of qemu-guest-agent "
                                       "failed:\n%s" % output)
+            # Check qemu-guest-agent status
+            if start:
+                if not utils_misc.wait_for(_is_ga_running, timeout=60):
+                    raise virt_vm.VMError("qemu-guest-agent is not running.")
+            else:
+                if not utils_misc.wait_for(_is_ga_finished, timeout=60):
+                    raise virt_vm.VMError("qemu-guest-agent is running")
         finally:
             session.close()
 
