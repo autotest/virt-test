@@ -2341,6 +2341,9 @@ def get_all_vol_paths():
     vol_path = []
     sp = libvirt_storage.StoragePool()
     for pool_name in sp.list_pools().keys():
+        if sp.list_pools()[pool_name]['State'] != "active":
+            logging.warning("Inactive pool '%s' cannot be processed" % pool_name)
+            continue
         pv = libvirt_storage.PoolVolume(pool_name)
         for path in pv.list_volumes().values():
             vol_path.append(path)
