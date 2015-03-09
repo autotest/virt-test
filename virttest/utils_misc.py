@@ -1272,10 +1272,10 @@ def get_cpu_info(session=None):
     cpu_info = {}
     cmd = "lscpu"
     if session is None:
-        output = utils.system_output(cmd, ignore_status=True)
+        output = utils.system_output(cmd, ignore_status=True).splitlines()
     else:
         try:
-            output = session.cmd_output(cmd).strip().splitlines()
+            output = session.cmd_output(cmd).splitlines()
         finally:
             session.close()
     cpu_info = dict(map(lambda x: [i.strip() for i in x.split(":")], output))
