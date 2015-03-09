@@ -720,7 +720,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
               check_modules, online_docs_url, restore_image=False,
               interactive=True, selinux=False,
               verbose=False, update_providers=False,
-              guest_os=defaults.DEFAULT_GUEST_OS):
+              guest_os=defaults.DEFAULT_GUEST_OS, force_update=False):
     """
     Common virt test assistant module.
 
@@ -782,7 +782,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
 
     datadir = data_dir.get_data_dir()
     if test_name == 'libvirt':
-        create_config_files(test_dir, shared_dir, interactive, step)
+        create_config_files(test_dir, shared_dir, interactive, step, force_update)
         create_subtests_cfg(test_name)
         create_guest_os_cfg(test_name)
         # Don't bother checking if changes can't be made
@@ -804,7 +804,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
                            data_dir.get_tmp_dir(),
                            interactive, selinux)
     else:  # Some other test
-        create_config_files(test_dir, shared_dir, interactive, step)
+        create_config_files(test_dir, shared_dir, interactive, step, force_update)
         create_subtests_cfg(test_name)
         create_guest_os_cfg(test_name)
 
