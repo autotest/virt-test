@@ -115,7 +115,7 @@ class SnapshotXML(SnapshotXMLBase):
         """
         Remove all disks
         """
-        self.xmltreefile.remove_by_xpath('/disks')
+        self.xmltreefile.remove_by_xpath('/disks', remove_all=True)
         self.xmltreefile.write()
 
     class SnapDiskXML(Disk):

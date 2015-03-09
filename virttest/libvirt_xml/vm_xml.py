@@ -370,7 +370,7 @@ class VMXMLBase(base.LibvirtXMLBase):
         Remove all devices
         """
         try:
-            self.xmltreefile.remove_by_xpath('/devices')
+            self.xmltreefile.remove_by_xpath('/devices', remove_all=True)
         except (AttributeError, TypeError):
             pass  # Element already doesn't exist
         self.xmltreefile.write()
@@ -452,7 +452,7 @@ class VMXMLBase(base.LibvirtXMLBase):
         Remove the seclabel tag from a domain
         """
         try:
-            self.xmltreefile.remove_by_xpath("/seclabel")
+            self.xmltreefile.remove_by_xpath("/seclabel", remove_all=True)
         except (AttributeError, TypeError):
             pass  # Element already doesn't exist
         self.xmltreefile.write()
@@ -1219,11 +1219,7 @@ class VMXML(VMXMLBase):
         """
         Remove all graphics devices.
         """
-        try:
-            self.xmltreefile.remove_by_xpath('/devices/graphics')
-        except (AttributeError, TypeError):
-            pass  # Element already doesn't exist
-        self.xmltreefile.write()
+        self.remove_all_device_by_type('graphics')
 
     def remove_all_device_by_type(self, device_type):
         """
@@ -1232,7 +1228,10 @@ class VMXML(VMXMLBase):
         :param type: Type name for devices should be removed.
         """
         try:
-            self.xmltreefile.remove_by_xpath('/devices/%s' % device_type)
+            self.xmltreefile.remove_by_xpath(
+                '/devices/%s' % device_type,
+                remove_all=True,
+            )
         except (AttributeError, TypeError):
             pass  # Element already doesn't exist
         self.xmltreefile.write()
@@ -1331,7 +1330,7 @@ class VMXML(VMXMLBase):
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         try:
-            vmxml.xmltreefile.remove_by_xpath("/memoryBacking")
+            vmxml.xmltreefile.remove_by_xpath("/memoryBacking", remove_all=True)
             vmxml.sync()
         except (AttributeError, TypeError):
             pass  # Element already doesn't exist
