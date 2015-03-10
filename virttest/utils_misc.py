@@ -2261,7 +2261,7 @@ def get_winutils_vol(session, label="WIN_UTILS"):
     return device.group(1)
 
 
-def format_windows_disk(session, did, mountpoint, size, fstype="ntfs"):
+def format_windows_disk(session, did, mountpoint=None, size=None, fstype="ntfs"):
     """
     Create a partition on disk in windows guest and format it.
 
@@ -2274,8 +2274,11 @@ def format_windows_disk(session, did, mountpoint, size, fstype="ntfs"):
     """
     list_disk_cmd = "echo list disk > disk && "
     list_disk_cmd += "echo exit >> disk && diskpart /s disk"
-    size = int(float(normalize_data_size(size, order_magnitude="M")))
     disks = session.cmd_output(list_disk_cmd)
+
+    if size is not None:
+        size = int(float(normalize_data_size(size, order_magnitude="M")))
+
     for disk in disks.splitlines():
         if re.search(r"DISK %s" % did, disk, re.I | re.M):
             cmd_header = 'echo list disk > disk &&'
@@ -2286,27 +2289,37 @@ def format_windows_disk(session, did, mountpoint, size, fstype="ntfs"):
             detail_cmd = ' '.join([cmd_header, detail_cmd, cmd_footer])
             logging.debug("Detail for 'Disk%s'" % did)
             details = session.cmd_output(detail_cmd)
+
             if re.search("Status.*Offline", details, re.I | re.M):
                 online_cmd = 'echo online disk>> disk'
                 online_cmd = ' '.join([cmd_header, online_cmd, cmd_footer])
                 logging.info("Online 'Disk%s'" % did)
                 session.cmd(online_cmd)
+
             if re.search("Read.*Yes", details, re.I | re.M):
                 set_rw_cmd = 'echo attributes disk clear readonly>> disk'
                 set_rw_cmd = ' '.join([cmd_header, set_rw_cmd, cmd_footer])
                 logging.info("Clear readonly bit on 'Disk%s'" % did)
                 session.cmd(set_rw_cmd)
-            mkpart_cmd = 'echo create partition primary size=%s >> disk' % size
+
+            if size is None:
+                mkpart_cmd = 'echo create partition primary >> disk'
+            else:
+                mkpart_cmd = 'echo create partition primary size=%s >> disk' % size
             mkpart_cmd = ' '.join([cmd_header, mkpart_cmd, cmd_footer])
             logging.info("Create partition on 'Disk%s'" % did)
             session.cmd(mkpart_cmd)
             logging.info("Format the 'Disk%s' to %s" % (did, fstype))
             format_cmd = 'echo list partition >> disk && '
             format_cmd += 'echo select partition 1 >> disk && '
-            format_cmd += 'echo assign letter=%s >> disk && ' % mountpoint
+            if mountpoint is None:
+                format_cmd += 'echo assign >> disk && '
+            else:
+                format_cmd += 'echo assign letter=%s >> disk && ' % mountpoint
             format_cmd += 'echo format fs=%s quick >> disk ' % fstype
             format_cmd = ' '.join([cmd_header, format_cmd, cmd_footer])
-            session.cmd(format_cmd)
+            session.cmd(format_cmd, timeout=300)
+
             return True
 
     return False
