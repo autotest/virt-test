@@ -143,7 +143,8 @@ def cleanup_vm(vm_name=None, disk=None):
         logging.error("Undefine %s failed:%s", vm_name, detail)
     try:
         if disk is not None:
-            os.remove(disk)
+            if os.path.exists(disk):
+                os.remove(disk)
     except IOError, detail:
         logging.error("Remove disk %s failed:%s", disk, detail)
 
