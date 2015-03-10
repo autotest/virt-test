@@ -312,7 +312,7 @@ class VirtTools(object):
             return (False, result)
         return (True, self.outdisk)
 
-    def guestmount(self, mountpoint, disk_or_domain=None):
+    def guestmount(self, mountpoint, disk_or_domain=None, **kargs):
         """
         Mount filesystems in a disk or domain to host mountpoint.
 
@@ -325,14 +325,26 @@ class VirtTools(object):
             os.mkdir(mountpoint)
         if os.path.ismount(mountpoint):
             utils.run("umount -l %s" % mountpoint, ignore_status=True)
-        inspector = "yes" == self.params.get("gm_inspector", "yes")
-        readonly = "yes" == self.params.get("gm_readonly", "no")
+        inpspector = kargs.get("inpspector")
+        readonly = kargs.get("readonly")
+        is_disk = kargs.get("is_disk")
+        ignore_status = kargs.get("ignore_status", True)
+        debug = kargs.get("debug", True)
+        timeout = kargs.get("kargs")
+        is_disk = kargs.get("is_disk")
         special_mountpoints = self.params.get("special_mountpoints", [])
-        is_disk = "yes" == self.params.get("gm_is_disk", "no")
+        if not inpspector:
+            inspector = "yes" == self.params.get("gm_inspector", "yes")
+        if not readonly:
+            readonly = "yes" == self.params.get("gm_readonly", "no")
+        if not is_disk:
+            is_disk = "yes" == self.params.get("gm_is_disk", "no")
+        if not timeout:
+            timeout = int(self.params.get("timeout", 240))
         options = {}
-        options['ignore_status'] = True
-        options['debug'] = True
-        options['timeout'] = int(self.params.get("timeout", 240))
+        options['ignore_status'] = ignore_status
+        options['debug'] = debug
+        options['timeout'] = timeout
         options['special_mountpoints'] = special_mountpoints
         options['is_disk'] = is_disk
         result = lgf.guestmount(disk_or_domain, mountpoint,
