@@ -2620,9 +2620,14 @@ def parse_arp():
     for line in arp_cache:
         mac = line.split()[3]
         ip = line.split()[0]
+        flag = line.split()[2]
 
         # Skip the header
         if mac.count(":") != 5:
+            continue
+
+        # Skip the incomplete ARP entries
+        if flag == "0x0":
             continue
 
         ret[mac] = ip
