@@ -566,7 +566,7 @@ class Container(unittest.TestCase):
         qcontainer.utils.system_output.expect_call('%s -help' % qemu_cmd,
                                                    timeout=10, ignore_status=True
                                                    ).and_return(QEMU_HELP)
-        qcontainer.utils.system_output.expect_call("%s -device ? 2>&1"
+        qcontainer.utils.system_output.expect_call("%s -device \? 2>&1"
                                                    % qemu_cmd, timeout=10,
                                                    ignore_status=True
                                                    ).and_return(QEMU_DEVICES)
