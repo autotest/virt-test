@@ -16,13 +16,11 @@ More specifically:
 :copyright: 2008-2013 Red Hat Inc.
 """
 
-import commands
 import cPickle
 import errno
 import fcntl
 import logging
 import os
-import re
 import socket
 import threading
 import time

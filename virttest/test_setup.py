@@ -10,12 +10,10 @@ import math
 import shutil
 from virttest.staging import service
 from autotest.client.shared import error, utils
-from autotest.client import os_dep
 import data_dir
 import utils_misc
 import versionable_class
 import openvswitch
-import utils_net
 
 try:
     from virttest.staging import utils_memory

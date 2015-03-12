@@ -10,7 +10,6 @@ import tempfile
 import aexpect
 import utils_misc
 import rss_client
-import base64
 
 from remote_commander import remote_master
 from remote_commander import messenger
