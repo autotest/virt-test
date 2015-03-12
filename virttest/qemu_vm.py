@@ -173,8 +173,8 @@ class VM(virt_vm.BaseVM):
         """
         Return True if the VM is alive and its monitor is responsive.
         """
-        return not self.is_dead() and (not self.monitor or
-                                       self.monitor.is_responsive())
+        return not self.is_dead() and (not self.catch_monitor or
+                                       self.catch_monitor.is_responsive())
 
     def is_dead(self):
         """
@@ -1257,6 +1257,10 @@ class VM(virt_vm.BaseVM):
                                                parent_bus=pci_bus))
 
         # Add monitors
+        catch_monitor = params.get("catch_monitor")
+        if catch_monitor:
+            if catch_monitor not in params.get("monitors"):
+                params["monitors"] += " %s" % catch_monitor
         for monitor_name in params.objects("monitors"):
             monitor_params = params.object_params(monitor_name)
             monitor_filename = qemu_monitor.get_monitor_filename(vm,
@@ -2722,15 +2726,31 @@ class VM(virt_vm.BaseVM):
     def monitor(self):
         """
         Return the main monitor object, selected by the parameter main_monitor.
-        If main_monitor isn't defined, return the first monitor.
-        If no monitors exist, or if main_monitor refers to a nonexistent
-        monitor, return None.
+        If main_monitor isn't defined or it refers to a nonexistent monitor,
+        return the first monitor.
+        If no monitors exist, return None.
         """
         for m in self.monitors:
             if m.name == self.params.get("main_monitor"):
                 return m
-        if self.monitors and not self.params.get("main_monitor"):
+        if self.monitors:
             return self.monitors[0]
+        return None
+
+    @property
+    def catch_monitor(self):
+        """
+        Return the catch monitor object, selected by the parameter
+        catch_monitor.
+        If catch_monitor isn't defined or it refers to a nonexistent monitor,
+        return the last monitor.
+        If no monitors exist, return None.
+        """
+        for m in self.monitors:
+            if m.name == self.params.get("catch_monitor"):
+                return m
+        if self.monitors:
+            return self.monitors[-1]
         return None
 
     def get_monitors_by_type(self, mon_type):
@@ -3581,8 +3601,8 @@ class VM(virt_vm.BaseVM):
     # should this really be expected from VMs of all hypervisor types?
     def screendump(self, filename, debug=True):
         try:
-            if self.monitor:
-                self.monitor.screendump(filename=filename, debug=debug)
+            if self.catch_monitor:
+                self.catch_monitor.screendump(filename=filename, debug=debug)
         except qemu_monitor.MonitorError, e:
             logging.warn(e)
 

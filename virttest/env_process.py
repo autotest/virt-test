@@ -1238,7 +1238,7 @@ def store_vm_register(vm, log_filename, append=False):
     :rtype: bool
     """
     try:
-        output = vm.monitor.info('registers', debug=False)
+        output = vm.catch_monitor.info('registers', debug=False)
         timestamp = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
     except qemu_monitor.MonitorError, err:
         logging.warn(err)
