@@ -114,12 +114,12 @@ def create_monitor(vm, monitor_name, monitor_params):
     """
     monitor_creator = HumanMonitor
     if monitor_params.get("monitor_type") == "qmp":
-        monitor_creator = QMPMonitor
         if not utils_misc.qemu_has_option("qmp", vm.qemu_binary):
             # Add a "human" monitor on non-qmp version of qemu.
             logging.warn("QMP monitor is unsupported by this version of qemu,"
                          " creating human monitor instead.")
-            monitor_creator = HumanMonitor
+        else:
+            monitor_creator = QMPMonitor
 
     monitor_filename = get_monitor_filename(vm, monitor_name)
     logging.info("Connecting to monitor '%s'", monitor_name)
