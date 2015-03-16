@@ -36,12 +36,10 @@ from virttest import aexpect, utils_misc, virt_vm, data_dir, utils_net
 from virttest import storage, asset, bootstrap, remote
 import virttest
 
-
-try:
-    from virttest.staging import utils_cgroup
-except ImportError:
-    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
-    from autotest.client.shared import utils_cgroup
+# Import submodules, should not be considered as unused import
+import libvirt
+import qemu
+import libguestfs
 
 try:
     from virttest.staging import utils_memory
