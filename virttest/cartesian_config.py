@@ -1861,7 +1861,6 @@ class Parser(object):
 
         # Check previously failed filters
         for i, failed_case in enumerate(node.failed_cases):
-            # pylint: disable=W0142
             if not might_pass(*failed_case):
                 self._debug("\n*    this subtree has failed before %s\n"
                             "         content: %s\n"
