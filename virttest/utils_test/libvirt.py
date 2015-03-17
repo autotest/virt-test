@@ -2352,7 +2352,8 @@ def get_all_vol_paths():
 
 
 def do_migration(vm_name, uri, extra, auth_pwd, auth_user="root",
-                 options="--verbose", virsh_patterns=".*100\s%.*"):
+                 options="--verbose", virsh_patterns=".*100\s%.*",
+                 su_user="", timeout=30):
     """
     Migrate VM to target host.
     """
@@ -2361,6 +2362,10 @@ def do_migration(vm_name, uri, extra, auth_pwd, auth_user="root",
     patterns_auth_pwd = r".*[Pp]assword.*"
 
     command = "%s virsh migrate %s %s %s" % (extra, vm_name, options, uri)
+    # allow specific user to run virsh command
+    if su_user != "":
+        command = "su %s -c '%s'" % (su_user, command)
+
     logging.info("Execute %s", command)
     # setup shell session
     session = aexpect.ShellSession(command, echo=True)
@@ -2371,7 +2376,7 @@ def do_migration(vm_name, uri, extra, auth_pwd, auth_user="root",
                       patterns_auth_pwd, virsh_patterns]
         while True:
             match, text = session.read_until_any_line_matches(match_list,
-                                                              timeout=30,
+                                                              timeout=timeout,
                                                               internal_timeout=1)
             if match == -4:
                 logging.info("Matched 'yes/no', details: <%s>", text)
