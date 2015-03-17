@@ -551,7 +551,6 @@ class SSHConnection(ConnectionBase):
         """
         Clean up authentication host.
         """
-        pass
         # initialize variables
         server_ip = self.server_ip
         server_user = self.server_user
