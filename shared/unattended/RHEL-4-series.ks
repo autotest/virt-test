@@ -29,7 +29,7 @@ ntp
 redhat-lsb
 
 %post
-function ECHO { for TTY in `cat /proc/consoles | cut -f1 -d' '`; do echo "$*" > /dev/$TTY; done }
+function ECHO { for TTY in ttyS0 hvc0; do echo "$*" > /dev/$TTY; done }
 ECHO "OS install is completed"
 grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
 grubby --args="divider=10" --update-kernel=$(grubby --default-kernel)

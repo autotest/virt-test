@@ -28,7 +28,7 @@ ntp
 redhat-lsb
 
 %post
-function ECHO { for TTY in `cat /proc/consoles | cut -f1 -d' '`; do echo "$*" > /dev/$TTY; done }
+function ECHO { for TTY in ttyS0 hvc0; do echo "$*" > /dev/$TTY; done }
 ECHO "OS install is completed"
 cd home
 echo "s0:2345:respawn:/sbin/agetty -L -f /etc/issue 115200 ttyS0 vt100" >> /etc/inittab
