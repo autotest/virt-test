@@ -667,8 +667,6 @@ def bootstrap_tests(options):
         check_modules = None
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
 
-    os_info = defaults.get_default_guest_os_info()
-
     kwargs = {'test_name': options.type,
               'test_dir': test_dir,
               'base_dir': data_dir.get_data_dir(),
@@ -680,7 +678,7 @@ def bootstrap_tests(options):
                                    options.keep_image),
               'interactive': False,
               'update_providers': options.update_providers,
-              'guest_os': options.guest_os or os_info['variant']}
+              'guest_os': options.guest_os or defaults.DEFAULT_GUEST_OS}
 
     # Tolerance we have without printing a message for the user to wait (3 s)
     tolerance = 3

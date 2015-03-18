@@ -188,8 +188,7 @@ class VirtTestRunParser(optparse.OptionParser):
         optparse.OptionParser.__init__(self, usage='Usage: %prog [options]')
         from virttest import data_dir
         import virttest.defaults
-        os_info = virttest.defaults.get_default_guest_os_info()
-        self.default_guest_os = os_info['variant']
+        self.default_guest_os = virttest.defaults.DEFAULT_GUEST_OS
 
         try:
             qemu_bin_path = _find_default_qemu_paths()[0]
