@@ -1230,8 +1230,7 @@ class VMXML(VMXMLBase):
         try:
             self.xmltreefile.remove_by_xpath(
                 '/devices/%s' % device_type,
-                remove_all=True,
-            )
+                remove_all=True)
         except (AttributeError, TypeError):
             pass  # Element already doesn't exist
         self.xmltreefile.write()
