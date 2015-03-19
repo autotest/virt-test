@@ -1237,7 +1237,8 @@ class VMXML(VMXMLBase):
 
     def add_hostdev(self, source_address, mode='subsystem',
                     hostdev_type='pci',
-                    managed='yes'):
+                    managed='yes',
+                    boot_order=None):
         """
         Add a hostdev device to guest.
 
@@ -1247,6 +1248,8 @@ class VMXML(VMXMLBase):
         dev.mode = mode
         dev.hostdev_type = hostdev_type
         dev.managed = managed
+        if boot_order:
+            dev.boot_order = boot_order
         dev.source_address = dev.new_source_address(**source_address)
         self.add_device(dev)
 
