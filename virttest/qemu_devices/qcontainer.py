@@ -1181,7 +1181,6 @@ class DevContainer(object):
             if media is None:
                 media = "disk"
         else:       # Skip default variables
-            imgfmt = None
             if media != 'cdrom':    # ignore only 'disk'
                 media = None
 
