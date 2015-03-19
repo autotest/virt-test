@@ -1337,6 +1337,16 @@ class VMXML(VMXMLBase):
         except (AttributeError, TypeError):
             pass  # Element already doesn't exist
 
+    def remove_all_boots(self):
+        """
+        Remove all OS boots
+        """
+        try:
+            self.xmltreefile.remove_by_xpath('/os/boot', remove_all=True)
+        except (AttributeError, TypeError):
+            pass  # Element already doesn't exist
+        self.xmltreefile.write()
+
 
 class VMCPUXML(base.LibvirtXMLBase):
 
