@@ -32,8 +32,9 @@ http://lmr.fedorapeople.org/winutils/winutils.iso
 JeOS image
 ----------
 
-Latest:
+You can find the JeOS images here:
 
-http://lmr.fedorapeople.org/jeos/jeos-17-64.qcow2.7z
+http://lmr.fedorapeople.org/jeos/
 
-Checksums can be found on the same dir of each file.
+You'll find .7za (p7zipped) files for versions of
+the JeOS available, as well as their MD5SUM files.
