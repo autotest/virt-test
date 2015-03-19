@@ -683,7 +683,6 @@ class BaseVM(object):
                           arp_ip, self.name, str(index))
             # Update address_cache since ip/mac releation ship verify pass
             self.address_cache[nic.mac.lower()] = arp_ip
-            self.address_cache["ip_pool"].discard(arp_ip)
             return arp_ip
 
         elif self.ip_version == "ipv6":

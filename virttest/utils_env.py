@@ -52,15 +52,11 @@ def _update_address_cache(env, line):
     count = address_cache.get("line_count", 0) + 1
     address_cache["line_count"] = count
     # Container to save missed dhcpack packet IP
-    ip_pool = address_cache.get("ip_pool", set())
-    address_cache["ip_pool"] = ip_pool
     matches = re.search(r"Your.IP\s+(\S+)", line, re.I)
     if matches:
         # Counter line num. when match IP
         address_cache["count_ip"] = count
         ip = matches.group(1)
-        ip_pool.add(ip)
-        address_cache["ip_pool"] = ip_pool
         if ip != address_cache.get("last_seen_ip"):
             address_cache["last_seen_ip"] = ip
         return
@@ -84,8 +80,6 @@ def _update_address_cache(env, line):
             # Check is match packet is a dhcpack packet
             if address_cache["count_mac"] - address_cache["count_ip"] == 3:
                 address_cache[mac] = ip
-                ip_pool.discard(ip)
-                address_cache["ip_pool"] = ip_pool
                 del address_cache["line_count"]
                 del address_cache["count_ip"]
                 del address_cache["count_mac"]
