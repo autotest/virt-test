@@ -84,8 +84,6 @@ sed -i "/--lock-media/s/^/#/" /usr/lib/udev/rules.d/60-cdrom_id.rules 2>/dev/nul
 systemctl set-default graphical.target
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-ens*
 sed -i "s/ONBOOT=no/ONBOOT=yes/" /etc/sysconfig/network-scripts/ifcfg-ens*
-echo 'Post set up finished' > /dev/ttyS0
-echo Post set up finished > /dev/hvc0
 cat > '/etc/gdm/custom.conf' << EOF
 [daemon]
 AutomaticLogin=test
@@ -97,4 +95,5 @@ EOF
 cat >> '/home/test/.bashrc' << EOF
 alias shutdown='sudo shutdown'
 EOF
+ECHO 'Post set up finished'
 %end
