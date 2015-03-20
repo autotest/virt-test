@@ -396,7 +396,7 @@ class LibvirtQemuConfig(LibvirtConfigCommon):
         'auto_dump_path': 'string',
         'auto_dump_bypass_cache': 'boolean',
         'auto_start_bypass_cache': 'boolean',
-        'hugetlbfs_mount': 'string',
+        'hugetlbfs_mount': 'list',
         'bridge_helper': 'string',
         'clear_emulator_capabilities': 'boolean',
         'set_process_name': 'boolean',
