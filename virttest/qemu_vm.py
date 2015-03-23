@@ -432,7 +432,8 @@ class VM(virt_vm.BaseVM):
             return cmd
 
         def add_virtio_port(devices, name, bus, filename, porttype, chardev,
-                            name_prefix=None, index=None, extra_params=""):
+                            name_prefix=None, index=None, extra_params="",
+                            filetype="socket"):
             """
             Appends virtio_serialport or virtio_console device to cmdline.
             :param help: qemu -h output
@@ -444,14 +445,20 @@ class VM(virt_vm.BaseVM):
             :param name_prefix: Custom name prefix (port index is appended)
             :param index: Index of the current virtio_port
             :param extra_params: Space sepparated chardev params
+            :param filetype: file type for chardev backend (socket or file)
             """
             cmd = ''
             # host chardev
             if chardev == "spicevmc":   # SPICE
                 cmd += " -chardev spicevmc,id=dev%s,name=%s" % (name, name)
             else:   # SOCKET
-                cmd = (" -chardev socket,id=dev%s,path=%s,server,nowait"
-                       % (name, filename))
+                if ":" in filename and filetype == "socket":
+                    host, port = filename.split(":")
+                    cmd = (" -chardev socket,id=dev%s," % name +
+                           "host=%s,port=%s,server,nowait" % (host, port))
+                else:
+                    cmd = (" -chardev %s,id=dev%s,path=%s,server,nowait" % (
+                           filetype, name, filename))
             # virtport device
             if porttype in ("console", "virtio_console"):
                 cmd += " -device virtconsole"
@@ -1324,7 +1331,9 @@ class VM(virt_vm.BaseVM):
                                   port_params.get('virtio_port_chardev'),
                                   port_params.get('virtio_port_name_prefix'),
                                   no_virtio_ports,
-                                  port_params.get('virtio_port_params', ''))
+                                  port_params.get('virtio_port_params', ''),
+                                  port_params.get('virtio_port_chardev_type',
+                                                  'socket'))
             devices.insert(StrDev('VIO-%s' % port_name, cmdline=cmd))
             no_virtio_ports += 1
 
