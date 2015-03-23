@@ -655,7 +655,9 @@ class BaseVM(object):
             arp_ip = self.address_cache.get(nic.mac.lower())
             if not arp_ip:
                 arp_ip = self.address_cache.get(nic.mac.upper())
-            if not arp_ip or not utils_net.verify_ip_address_ownership(arp_ip, macs) or os.geteuid() != 0:
+            if (not arp_ip or
+                    not utils_net.verify_ip_address_ownership(arp_ip, macs) or
+                    os.geteuid() != 0):
                 # For non-root, tcpdump won't work for finding IP address,
                 # or IP missed in address_cache, try to find it from arp table.
                 ip_map = utils_net.parse_arp()
@@ -663,18 +665,19 @@ class BaseVM(object):
             if not arp_ip:
                 raise VMIPAddressMissingError(nic.mac)
 
-            # SR-IOV cards may not be in same subnet with the card used by
-            # host by default, so arp checks won't work. Therefore, do not
-            # raise VMAddressVerificationError when SR-IOV is used.
             nic_params = self.params.object_params(nic.nic_name)
             pci_assignable = nic_params.get("pci_assignable") != "no"
 
             if not utils_net.verify_ip_address_ownership(arp_ip, macs):
-                if pci_assignable:
+                # SR-IOV/Macvtap cards may not be in same subnet with the cards
+                # used by host by default, so arp checks won't work. Therefore,
+                # do not raise VMAddressVerificationError when SR-IOV is used.
+                if pci_assignable or nic.nettype == "macvtap":
+                    nic_backend = pci_assignable and "SR-IOV" or "macvtap"
                     msg = "Could not verify DHCP lease: %s-> %s." % (nic.mac,
                                                                      arp_ip)
-                    msg += (" Maybe %s is not in the same subnet "
-                            "as the host (SR-IOV in use)" % arp_ip)
+                    msg += " Maybe %s is not in the same subnet " % arp_ip
+                    msg += "as the host (%s in use)" % nic_backend
                     logging.error(msg)
                 else:
                     raise VMAddressVerificationError(nic.mac, arp_ip)
