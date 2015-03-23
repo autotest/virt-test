@@ -2475,3 +2475,28 @@ def hotplug_domain_vcpu(domain, count, by_virsh=True, hotplug=True):
                                             "--pretty",
                                             debug=True)
     return result
+
+
+def exec_virsh_edit(source, edit_cmd, connect_uri="qemu:///system"):
+    """
+    Execute edit command.
+
+    :param source : virsh edit's option.
+    :param edit_cmd: Edit command list to execute.
+    :return: True if edit is successful, False if edit is failure.
+    """
+    logging.info("Trying to edit xml with cmd %s", edit_cmd)
+    session = aexpect.ShellSession("sudo -s")
+    try:
+        session.sendline("virsh -c %s edit %s" % (connect_uri, source))
+        for cmd in edit_cmd:
+            session.sendline(cmd)
+        session.send('\x1b')
+        session.send('ZZ')
+        remote.handle_prompts(session, None, None, r"[\#\$]\s*$", debug=True)
+        session.close()
+        return True
+    except Exception, e:
+        session.close()
+        logging.error("Error occurred: %s", e)
+        return False
