@@ -1,17 +1,21 @@
+#version=RHEL7
 install
 KVM_TEST_MEDIUM
 GRAPHICAL_OR_TEXT
 poweroff
 lang en_US.UTF-8
-keyboard us
-network --onboot yes --device eth0 --bootproto dhcp
-rootpw 123456
-firewall --enabled --ssh
-selinux --enforcing
-timezone --utc America/New_York
-firstboot --disable
-bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
+keyboard --vckeymap=us --xlayouts='us'
 zerombr
+eula --agreed
+firewall --disabled
+selinux --disabled
+services --enabled=NetworkManager,sshd
+poweroff
+
+rootpw 123456
+timezone --utc America/New_York
+
+bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
 clearpart --all --initlabel
 autopart
 xconfig --startxonboot
@@ -76,4 +80,6 @@ sed -i "s/^ONBOOT=.*/ONBOOT=yes/g" /etc/sysconfig/network-scripts/ifcfg-eth0
 ECHO "Disable lock cdrom udev rules"
 sed -i "/--lock-media/s/^/#/" /usr/lib/udev/rules.d/60-cdrom_id.rules 2>/dev/null>&1
 ECHO 'Post set up finished'
+echo 'Post set up finished' > /dev/ttyS0
+echo 'Post set up finished' > /dev/hvc0
 %end
