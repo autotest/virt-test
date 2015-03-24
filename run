@@ -168,9 +168,9 @@ SUPPORTED_LOG_LEVELS = [
 SUPPORTED_TEST_TYPES = [
     'qemu', 'libvirt', 'libguestfs', 'openvswitch', 'v2v', 'lvsb']
 
-SUPPORTED_LIBVIRT_URIS = ['qemu:///system', 'lxc:///']
+SUPPORTED_LIBVIRT_URIS = ['qemu:///system', 'lxc:///', 'esx:///']
 
-SUPPORTED_LIBVIRT_DRIVERS = ['qemu', 'lxc', 'xen']
+SUPPORTED_LIBVIRT_DRIVERS = ['qemu', 'lxc', 'xen', 'esx']
 
 SUPPORTED_IMAGE_TYPES = ['raw', 'qcow2', 'qed', 'vmdk']
 

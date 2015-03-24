@@ -72,7 +72,8 @@ def get_uri_with_transport(uri_type='qemu', transport="", dest_ip=""):
                   'qemu_system': "qemu:///system",
                   'qemu_session': "qemu:///session",
                   'lxc': "lxc:///",
-                  'xen': "xen:///"}
+                  'xen': "xen:///",
+                  'esx': "esx:///"}
     try:
         origin_uri = _type2uri_[uri_type]
     except KeyError:
@@ -157,6 +158,12 @@ class VM(virt_vm.BaseVM):
         Return True if VM is a xen guest.
         """
         return (self.connect_uri and self.connect_uri.count("xen"))
+
+    def is_esx(self):
+        """
+        Return True if VM is a esx guest.
+        """
+        return (self.connect_uri and self.connect_uri.count("esx"))
 
     def verify_alive(self):
         """
@@ -1770,6 +1777,8 @@ class VM(virt_vm.BaseVM):
             pid_file = "/var/run/libvirt/lxc/%s.pid" % self.name
         elif self.is_qemu():
             pid_file = "/var/run/libvirt/qemu/%s.pid" % self.name
+        elif self.is_esx():
+            pid_file = "/var/run/libvirt/esx/%s.pid" % self.name
         # TODO: Add more vm driver type
         else:
             raise ValueError("Unsupport connect uri: %s." % self.connect_uri)
