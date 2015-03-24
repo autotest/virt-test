@@ -2500,3 +2500,21 @@ def exec_virsh_edit(source, edit_cmd, connect_uri="qemu:///system"):
         session.close()
         logging.error("Error occurred: %s", e)
         return False
+
+
+def new_disk_vol_name(pool_name):
+    """
+    According to BZ#1138523, the new volume name must be the next
+    created partition(sdb1, etc.), so we need to inspect the original
+    partitions of the disk then count the new partition number.
+
+    :param pool_name: Disk pool name
+    :return: New volume name or none
+    """
+    poolxml = pool_xml.PoolXML.new_from_dumpxml(pool_name)
+    if poolxml.get_type(pool_name) != "disk":
+        logging.error("This is not a disk pool")
+        return None
+    disk = poolxml.get_source().device_path[5:]
+    part_num = len(filter(lambda s: s.startswith(disk), get_parts_list()))
+    return disk + str(part_num)
