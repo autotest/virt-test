@@ -1004,6 +1004,12 @@ def run(test, params, env):
     src = params.get('images_good')
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
     dst = storage.get_image_filename(params, base_dir)
+    if params.get("storage_type") == "iscsi":
+        dd_cmd = "dd if=/dev/zero of=%s bs=1M count=1" % dst
+        txt = "iscsi used, need destroy data in %s" % dst
+        txt += " by command: %s" % dd_cmd
+        logging.info(txt)
+        utils.system(dd_cmd)
     image_name = os.path.basename(dst)
     mount_point = params.get("dst_dir")
     if mount_point and src:
