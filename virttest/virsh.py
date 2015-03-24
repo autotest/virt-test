@@ -4044,7 +4044,7 @@ def metadata(name, uri, options="", key=None, new_metadata=None, **dargs):
     if key:
         cmd += " --key %s" % key
     if new_metadata:
-        cmd += " --set %s" % metadata
+        cmd += " --set '%s'" % new_metadata.replace("\'", "\"")
     return command(cmd, **dargs)
 
 
