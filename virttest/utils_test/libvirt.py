@@ -18,6 +18,7 @@ More specifically:
 
 import re
 import os
+import ast
 import logging
 import shutil
 import threading
@@ -1484,11 +1485,11 @@ def create_net_xml(net_name, params):
         if net_dns_forward:
             dns_dict["dns_forward"] = net_dns_forward
         if net_dns_txt:
-            dns_dict["txt"] = eval(net_dns_txt)
+            dns_dict["txt"] = ast.literal_eval(net_dns_txt)
         if net_dns_srv:
-            dns_dict["srv"] = eval(net_dns_srv)
+            dns_dict["srv"] = ast.literal_eval(net_dns_srv)
         if net_dns_forwarders:
-            dns_dict["forwarders"] = [eval(x) for x in
+            dns_dict["forwarders"] = [ast.literal_eval(x) for x in
                                       net_dns_forwarders]
         if net_dns_hostip:
             host_dict["host_ip"] = net_dns_hostip
@@ -1500,44 +1501,22 @@ def create_net_xml(net_name, params):
             host = dns_obj.new_host(**host_dict)
             dns_obj.host = host
         netxml.dns = dns_obj
-        bridge = eval(net_bridge)
+        bridge = ast.literal_eval(net_bridge)
         if bridge:
             netxml.bridge = bridge
-        forward = eval(net_forward)
+        forward = ast.literal_eval(net_forward)
         if forward:
-            net_ifs = utils_net.get_net_if(state="UP")
-            # Check forward device is valid or not,
-            # if it's not in host interface list, try to set
-            # forward device to first active interface of host
-            if (forward.has_key('mode') and forward['mode'] in
-                ['passthrough', 'private', 'bridge', 'macvtap'] and
-                forward.has_key('dev') and
-                    forward['dev'] not in net_ifs):
-                logging.warn("Forward device %s is not a interface"
-                             " of host, reset to %s",
-                             forward['dev'], net_ifs[0])
-                forward['dev'] = net_ifs[0]
             netxml.forward = forward
         if forward_iface:
             interface = [
                 {'dev': x} for x in forward_iface.split()]
-            net_ifs = utils_net.get_net_if(state="UP")
-            # The guest will use first interface of the list,
-            # check if it's valid or not
-            # if it's not in host interface list, try to set
-            # forward interface to first active interface of host
-            if interface[0]['dev'] not in net_ifs:
-                logging.warn("Forward interface %s is not a "
-                             " interface of host, reset to %s",
-                             interface[0]['dev'], net_ifs[0])
-            interface[0]['dev'] = net_ifs[0]
             netxml.forward_interface = interface
         if nat_port:
-            netxml.nat_port = eval(nat_port)
+            netxml.nat_port = ast.literal_eval(nat_port)
         if net_domain:
             netxml.domain_name = net_domain
-        net_inbound = eval(net_bandwidth_inbound)
-        net_outbound = eval(net_bandwidth_outbound)
+        net_inbound = ast.literal_eval(net_bandwidth_inbound)
+        net_outbound = ast.literal_eval(net_bandwidth_outbound)
         if net_inbound:
             netxml.bandwidth_inbound = net_inbound
         if net_outbound:
@@ -1575,7 +1554,7 @@ def create_net_xml(net_name, params):
                                 "ip": guest_ipv4}]
             netxml.set_ip(ipxml)
         if routes:
-            netxml.routes = [eval(x) for x in routes]
+            netxml.routes = [ast.literal_eval(x) for x in routes]
         if pg_name:
             pg_default = params.get("portgroup_default",
                                     "").split()
@@ -1594,11 +1573,11 @@ def create_net_xml(net_name, params):
                 if len(pg_virtualport) > i:
                     pgxml.virtualport_type = pg_virtualport[i]
                 if len(pg_bandwidth_inbound) > i:
-                    pgxml.bandwidth_inbound = eval(pg_bandwidth_inbound[i])
+                    pgxml.bandwidth_inbound = ast.literal_eval(pg_bandwidth_inbound[i])
                 if len(pg_bandwidth_outbound) > i:
-                    pgxml.bandwidth_outbound = eval(pg_bandwidth_outbound[i])
+                    pgxml.bandwidth_outbound = ast.literal_eval(pg_bandwidth_outbound[i])
                 if len(pg_vlan) > i:
-                    pgxml.vlan_tag = eval(pg_vlan[i])
+                    pgxml.vlan_tag = ast.literal_eval(pg_vlan[i])
                 netxml.set_portgroup(pgxml)
         logging.debug("New network xml file: %s", netxml)
         netxml.xmltreefile.write()
