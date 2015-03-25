@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+import subprocess
 
 
 class ParallelError(Exception):
@@ -12,7 +14,7 @@ class ParallelError(Exception):
 
 class ParallelExecute(object):
 
-    def __init__(self, functions, max_simultaneous_procs=20):
+    def __init__(self, functions, max_simultaneous_procs=20, list_of_functions=True):
         """
         This takes in a dictionary of functions which map to a set of
         functions that they depend on.
@@ -40,6 +42,7 @@ class ParallelExecute(object):
             for dep in deps:
                 dependents[dep].append(fn)
 
+        self.is_functions = list_of_functions
         self.max_procs = max_simultaneous_procs
         self.functions = functions
         self.dependents = dependents
@@ -52,7 +55,10 @@ class ParallelExecute(object):
         if pid:
             self.pid_map[pid] = function
         else:
-            function()
+            if self.is_functions:
+                function()
+            else:
+                subprocess.call(function.split())
             sys.exit(0)
 
     def run_until_completion(self):
@@ -65,13 +71,20 @@ class ParallelExecute(object):
             max_allowed = self.max_procs - len(self.pid_map)
             max_able = len(self.ready_to_run)
             for _ in xrange(min(max_allowed, max_able)):
-                self._run(self.ready_to_run.pop())
+                if self.is_functions:
+                    self._run(self.ready_to_run.pop())
+                else:
+                    time.sleep(2)
+                    self._run(self.ready_to_run.pop())
 
             # Handle one proc that's finished.
             pid, status = os.wait()
             fn = self.pid_map.pop(pid)
             if status != 0:
-                errors.append("%s failed" % fn.__name__)
+                if self.is_functions:
+                    errors.append("%s failed" % fn.__name__)
+                else:
+                    errors.append("%s failed" % fn)
                 continue
 
             for dependent in self.dependents[fn]:
