@@ -372,6 +372,15 @@ def set_log_file_dir(directory):
     _log_file_dir = directory
 
 
+def get_log_file_dir():
+    """
+    get the base directory for log files created by log_line().
+
+    """
+    global _log_file_dir
+    return _log_file_dir
+
+
 def close_log_file(filename):
     global _open_log_files, _log_file_dir, _log_lock
     remove = []
