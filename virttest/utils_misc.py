@@ -2440,10 +2440,9 @@ def get_image_info(image_file):
     ::
 
         image_info_dict = {'format':'raw',
-                           'vsize' : '10737418240'
-                           'dsize' : '931135488'}
-
-    :todo: Add more information to `image_info_dict`.
+                           'vsize' : '10737418240',
+                           'dsize' : '931135488',
+                           'csize' : '65536'}
     """
     try:
         cmd = "qemu-img info %s" % image_file
@@ -2466,6 +2465,9 @@ def get_image_info(image_file):
                     image_info_dict['dsize'] = int(float(
                         normalize_data_size(dsize, order_magnitude="B",
                                             factor=1024)))
+                elif line.find("cluster_size") != -1:
+                    csize = line.split(':')[-1].strip()
+                    image_info_dict['csize'] = int(csize)
         return image_info_dict
     except (KeyError, IndexError, error.CmdError), detail:
         raise error.TestError("Fail to get information of %s:\n%s" %
