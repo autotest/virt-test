@@ -260,10 +260,13 @@ class PortgroupXML(base.LibvirtXMLBase):
         bandwidth_outbound:
             dict, operates on outbound tag in bandwidth which is child
             of portgroup.
+        vlan_tag:
+            dict, operates on vlan tag of portgroup
     """
 
     __slots__ = ('name', 'default', 'virtualport_type',
-                 'bandwidth_inbound', 'bandwidth_outbound')
+                 'bandwidth_inbound', 'bandwidth_outbound',
+                 'vlan_tag')
 
     def __init__(self, virsh_instance=base.virsh):
         """
@@ -281,6 +284,9 @@ class PortgroupXML(base.LibvirtXMLBase):
         accessors.XMLElementDict('bandwidth_outbound', self,
                                  parent_xpath='/bandwidth',
                                  tag_name='outbound')
+        accessors.XMLElementDict('vlan_tag', self,
+                                 parent_xpath='/vlan',
+                                 tag_name='tag')
         super(PortgroupXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<portgroup></portgroup>"
 
@@ -307,6 +313,10 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             dict, operates on nat tag
         bridge:
             dict, operates on bridge attributes
+        routes:
+            list, operates on route tag.
+        virtualport_type:
+            string, operates on 'type' attribute of virtualport tag.
         bandwidth_inbound:
             dict, operates on inbound under bandwidth.
         bandwidth_outbound:
@@ -358,7 +368,8 @@ class NetworkXMLBase(base.LibvirtXMLBase):
     __slots__ = ('name', 'uuid', 'bridge', 'defined', 'active',
                  'autostart', 'persistent', 'forward', 'mac', 'ip',
                  'bandwidth_inbound', 'bandwidth_outbound', 'portgroup',
-                 'dns', 'domain_name', 'nat_port', 'forward_interface')
+                 'dns', 'domain_name', 'nat_port', 'forward_interface',
+                 'routes', 'virtualport_type')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
         'defined', 'active',
@@ -394,6 +405,11 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                  tag_name='dns', subclass=DNSXML,
                                  subclass_dargs={
                                      'virsh_instance': virsh_instance})
+        accessors.XMLElementList('routes', self, parent_xpath='/',
+                                 marshal_from=self.marshal_from_route,
+                                 marshal_to=self.marshal_to_route)
+        accessors.XMLAttribute('virtualport_type', self, parent_xpath='/',
+                               tag_name='virtualport', attribute='type')
         super(NetworkXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def __check_undefined__(self, errmsg):
@@ -532,7 +548,6 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         if not issubclass(type(value), PortgroupXML):
             raise xcepts.LibvirtXMLError("value must be a PortgroupXML"
                                          "instance or subclass.")
-        self.del_portgroup()
         root = self.xmltreefile.getroot()
         root.append(value.xmltreefile.getroot())
         self.xmltreefile.write()
@@ -569,6 +584,26 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         del index                    # not used
         del libvirtxml               # not used
         if tag != 'interface':
+            return None              # skip this one
+        return dict(attr_dict)       # return copy of dict, not reference
+
+    @staticmethod
+    def marshal_from_route(item, index, libvirtxml):
+        """Convert a dictionary into a tag + attributes"""
+        del index           # not used
+        del libvirtxml      # not used
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of interface "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('route', dict(item))  # return copy of dict, not reference
+
+    @staticmethod
+    def marshal_to_route(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes into a dictionary"""
+        del index                    # not used
+        del libvirtxml               # not used
+        if tag != 'route':
             return None              # skip this one
         return dict(attr_dict)       # return copy of dict, not reference
 

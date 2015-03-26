@@ -14,7 +14,7 @@ class Interface(base.TypedDeviceBase):
     __slots__ = ('source', 'mac_address', 'bandwidth',
                  'model', 'link_state', 'target',
                  'driver', 'address', 'boot_order',
-                 'filterref', 'backend')
+                 'filterref', 'backend', 'virtualport_type')
 
     def __init__(self, type_name, virsh_instance=base.base.virsh):
         super(Interface, self).__init__(device_tag='interface',
@@ -81,6 +81,8 @@ class Interface(base.TypedDeviceBase):
                                  tag_name='address', subclass=self.Address,
                                  subclass_dargs={'type_name': 'pci',
                                                  'virsh_instance': virsh_instance})
+        accessors.XMLAttribute('virtualport_type', self, parent_xpath='/',
+                               tag_name='virtualport', attribute='type')
     # For convenience
     Address = librarian.get('address')
 
