@@ -1335,6 +1335,39 @@ def create_hostdev_xml(pci_id, boot_order=0):
     return hostdev_xml.xml
 
 
+def alter_boot_order(vm_name, pci_id, boot_order=0):
+    """
+    Alter the startup sequence of VM to PCI-device firstly
+
+    OS boot element and per-device boot elements are mutually exclusive,
+    It's necessary that remove all OS boots before setting PCI-device order
+
+    :param vm_name: VM name
+    :param pci_id:  such as "0000:06:00.1"
+    :param boot_order: order priority, such as 1, 2, ...
+    """
+    vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
+    # remove all of OS boots
+    vmxml.remove_all_boots()
+    # prepare PCI-device XML with boot order
+    try:
+        device_domain = pci_id.split(':')[0]
+        device_domain = "0x%s" % device_domain
+        device_bus = pci_id.split(':')[1]
+        device_bus = "0x%s" % device_bus
+        device_slot = pci_id.split(':')[-1].split('.')[0]
+        device_slot = "0x%s" % device_slot
+        device_function = pci_id.split('.')[-1]
+        device_function = "0x%s" % device_function
+    except IndexError:
+        raise error.TestError("Invalid PCI Info: %s" % pci_id)
+    attrs = {'domain': device_domain, 'slot': device_slot,
+             'bus': device_bus, 'function': device_function}
+    vmxml.add_hostdev(attrs, boot_order=boot_order)
+    # synchronize XML
+    vmxml.sync()
+
+
 def create_disk_xml(params):
     """
     Create a disk configuration file.
