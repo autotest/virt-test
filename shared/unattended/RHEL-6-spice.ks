@@ -60,6 +60,7 @@ iptables -F
 echo 0 > /selinux/enforce
 chkconfig NetworkManager on
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
+sed -i "s/^/#/g" /etc/udev/rules.d/70-persistent-net.rules
 cat > '/etc/gdm/custom.conf' << EOF
 [daemon]
 AutomaticLogin=test
