@@ -297,7 +297,11 @@ class Monitor:
                     self.open_log_files[log] = open(log, "w")
                 for line in log_str.splitlines():
                     self.open_log_files[log].write("%s: %s\n" % (timestr, line))
-            except Exception:
+            except Exception, err:
+                txt = "Fail to record log to %s.\n" % log
+                txt += "Log content: %s\n" % log_str
+                txt += "Exception error: %s" % err
+                logging.error(txt)
                 self.open_log_files[log].close()
                 self.open_log_files.pop(log)
         finally:
@@ -698,6 +702,7 @@ class HumanMonitor(Monitor):
                     self._passfd = passfd_setup.import_passfd()
                 # If command includes a file descriptor, use passfd module
                 self._passfd.sendfd(self._socket, fd, "%s\n" % cmd)
+                self._log_lines(cmd)
             else:
                 # Send command
                 if debug:
@@ -1410,6 +1415,7 @@ class QMPMonitor(Monitor):
                 # If command includes a file descriptor, use passfd module
                 self._passfd.sendfd(
                     self._socket, fd, json.dumps(cmdobj) + "\n")
+                self._log_lines(str(cmdobj))
             else:
                 self._send(json.dumps(cmdobj) + "\n")
             # Read response
