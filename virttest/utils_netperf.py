@@ -128,7 +128,7 @@ class NetperfPackage(remote.Remote_Package):
         self.env_cleanup(clean_all=False)
         cmd = "%s && %s " % (pre_setup_cmd, setup_cmd)
         try:
-            self.session.cmd(cmd)
+            self.session.cmd(cmd, timeout=1200)
         except aexpect.ShellError, e:
             raise NetperfPackageError("Compile failed: %s" % e)
 
@@ -215,13 +215,15 @@ class Netperf(object):
     def is_target_running(self, target):
         if self.client == "nc":
             list_cmd = "wmic process where name='%s' list" % target
-            status, output = self.session.cmd_status_output(list_cmd)
+            status, output = self.session.cmd_status_output(list_cmd,
+                                                            timeout=240)
             check_reg = re.compile(r"%s" % target, re.I)
             if check_reg.findall(output):
                 return True
         else:
             status_cmd = "ps -C %s" % target
-            status, output = self.session.cmd_status_output(status_cmd)
+            status, output = self.session.cmd_status_output(status_cmd,
+                                                            timeout=240)
             if not status:
                 return True
         return False
