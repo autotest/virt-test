@@ -1392,7 +1392,10 @@ class DevContainer(object):
         devices[-1].set_param('min_io_size', min_io_size)
         devices[-1].set_param('opt_io_size', opt_io_size)
         devices[-1].set_param('bootindex', bootindex)
-        devices[-1].set_param('x-data-plane', x_data_plane, bool)
+        if x_data_plane in ["yes", "no", "on", "off"]:
+            devices[-1].set_param('x-data-plane', x_data_plane, bool)
+        else:
+            devices[-1].set_param('iothread', x_data_plane)
         if 'serial' in options:
             devices[-1].set_param('serial', serial)
             devices[-2].set_param('serial', None)   # remove serial from drive
