@@ -280,7 +280,7 @@ class ConnectionBase(propcan.PropCanBase):
                              conn_recover() will not called by __del__()
                              If it is True, Connection class will call
                              conn_recover() in __del__(), then user need not
-                             call it manully. But the errors in conn_recover()
+                             call it manually. But the errors in conn_recover()
                              will be ignored.
 
         Example:
@@ -297,7 +297,7 @@ class ConnectionBase(propcan.PropCanBase):
           virsh.connect(URI)
           connection.conn_recover()
 
-        We sugguest *not* to pass auto_recover=True to __init__(),
+        We suggest *not* to pass auto_recover=True to __init__(),
         and call conn_recover() manually when you don't need this
         connection any more.
         """
@@ -408,9 +408,9 @@ class ConnectionBase(propcan.PropCanBase):
         Set client session to value.
         """
         if value:
-            message = "Forbide to set client_session to %s." % value
+            message = "Forbid to set client_session to %s." % value
         else:
-            message = "Forbide to set client_session."
+            message = "Forbid to set client_session."
 
         raise ConnForbiddenError(message)
 
@@ -418,7 +418,7 @@ class ConnectionBase(propcan.PropCanBase):
         """
         Delete client session.
         """
-        raise ConnForbiddenError('Forbide to del client_session')
+        raise ConnForbiddenError('Forbid to del client_session')
 
     def _new_server_session(self):
         """
@@ -464,9 +464,9 @@ class ConnectionBase(propcan.PropCanBase):
         Set server session to value.
         """
         if value:
-            message = "Forbide to set server_session to %s." % value
+            message = "Forbid to set server_session to %s." % value
         else:
-            message = "Forbide to set server_session."
+            message = "Forbid to set server_session."
 
         raise ConnForbiddenError(message)
 
@@ -474,7 +474,7 @@ class ConnectionBase(propcan.PropCanBase):
         """
         Delete server session.
         """
-        raise ConnForbiddenError('Forbide to del server_session')
+        raise ConnForbiddenError('Forbid to del server_session')
 
 
 class SSHConnection(ConnectionBase):
@@ -482,7 +482,7 @@ class SSHConnection(ConnectionBase):
     """
     Connection of SSH transport.
 
-    Some specific varaibles in SSHConnection class.
+    Some specific variables in SSHConnection class.
 
     ssh_rsa_pub_path: Path of id_rsa.pub, default is /root/.ssh/id_rsa.pub.
     ssh_id_rsa_path: Path of id_rsa, default is /root/.ssh/id_rsa.
@@ -648,7 +648,7 @@ class TCPConnection(ConnectionBase):
     """
     Connection class for TCP transport.
 
-    Some specific varaibles for TCPConnection class.
+    Some specific variables for TCPConnection class.
     """
     __slots__ = ('tcp_port', 'remote_syslibvirtd',
                  'remote_libvirtdconf', 'sasl_allowed_users',
@@ -773,7 +773,7 @@ class TLSConnection(ConnectionBase):
     """
     Connection of TLS transport.
 
-    Some specific varaibles for TLSConnection class.
+    Some specific variables for TLSConnection class.
 
     server_cn, client_cn, ca_cn: Info to build pki key.
     CERTOOL: tool to build key for TLS connection.
@@ -1269,7 +1269,7 @@ class UNIXConnection(ConnectionBase):
     """
     Connection class for UNIX transport.
 
-    Some specific varaibles for UNIXConnection class.
+    Some specific variables for UNIXConnection class.
     """
     __slots__ = ('auth_unix_ro', 'auth_unix_rw', 'unix_sock_dir',
                  'unix_sock_group', 'unix_sock_ro_perms',
