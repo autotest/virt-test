@@ -405,7 +405,7 @@ class VirshPersistent(Virsh):
                  'readonly')
 
     # B/c the auto_close of VirshSession is False, we
-    # need to manager the ref-count of it manully.
+    # need to manage the ref-count of it manually.
     COUNTERS = {}
 
     def __init__(self, *args, **dargs):
