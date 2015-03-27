@@ -129,6 +129,15 @@ def sys_v_init_result_parser(command):
             # If output does not contain a dead flag, check it with "running".
             return bool(re.search(r"running", output))
         return method
+    elif command == "raw_status":
+        def method(cmdResult):
+            """
+            Parse method for service XXX status raw output.
+
+            Returns command result object.
+            """
+            return cmdResult
+        return method
     elif command == "list":
         def method(cmdResult):
             """
@@ -218,6 +227,16 @@ def systemd_result_parser(command):
             # Check it with Active status.
             return (output.count("Active: active") > 0)
         return method
+    elif command == "raw_status":
+        def method(cmdResult):
+            """
+            Parse method for systemctl status XXX raw output.
+
+            Returns command result object.
+            """
+            output = cmdResult
+            return output
+        return method
     elif command == "list":
         def method(cmdResult):
             """
@@ -270,6 +289,9 @@ def sys_v_init_command_generator(command):
     elif command == 'disable':
         command_name = "chkconfig"
         command = "off"
+    elif command == "raw_status":
+        command_name = "chkconfig"
+        command = "status"
     elif command == 'list':
         # noinspection PyUnusedLocal
         def list_command(service_name):
@@ -324,6 +346,8 @@ def systemd_command_generator(command):
         return set_target_command
     elif command == "reset_failed":
         command = "reset-failed"
+    elif command == "raw_status":
+        command = "status"
 
     def method(service_name):
         return [command_name, command, "%s.service" % service_name]
@@ -342,7 +366,8 @@ COMMANDS = (
     "is_enabled",
     "list",
     "set_target",
-    "reset_failed"
+    "reset_failed",
+    "raw_status"
 )
 
 
