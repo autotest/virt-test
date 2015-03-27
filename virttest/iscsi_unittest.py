@@ -60,7 +60,7 @@ class iscsi_test(unittest.TestCase):
                                         ).and_return(ret_str)
         out_cmd = "iscsiadm -m node -o delete -T %s " % iscsi_obj.target
         out_cmd += "--portal 127.0.0.1"
-        utils.system.expect_call(out_cmd).and_return("")
+        utils.system.expect_call(out_cmd, ignore_status=True).and_return("")
         os.path.isfile.expect_call(fname).and_return(False)
         s_cmd = "tgtadm --lld iscsi --mode target --op show"
         utils.system_output.expect_call(s_cmd
