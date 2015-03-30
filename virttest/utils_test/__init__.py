@@ -733,7 +733,7 @@ def run_autotest(vm, session, control_path, timeout,
         dirname = os.path.dirname(remote_path)
         session.cmd("cd %s" % dirname)
         session.cmd("mkdir -p %s" % os.path.dirname(dest_dir))
-        e_cmd = "tar xjvf %s -C %s" % (basename, os.path.dirname(dest_dir))
+        e_cmd = "tar xjvmf %s -C %s" % (basename, os.path.dirname(dest_dir))
         output = session.cmd(e_cmd, timeout=240)
         autotest_dirname = ""
         for line in output.splitlines()[1:]:
