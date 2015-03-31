@@ -9,7 +9,7 @@ import shutil
 import xml.dom.minidom
 from autotest.client.shared import error, iso9660
 from autotest.client import utils
-from virttest import arch, virt_vm, utils_misc, utils_disk
+from virttest import virt_vm, utils_misc, utils_disk
 from virttest import qemu_monitor, remote, syslog_server
 from virttest import http_server, data_dir, utils_net, utils_test
 from virttest import funcatexit, storage
