@@ -9,7 +9,7 @@ import shutil
 import xml.dom.minidom
 from autotest.client.shared import error, iso9660
 from autotest.client import utils
-from virttest import virt_vm, utils_misc, utils_disk
+from virttest import arch, virt_vm, utils_misc, utils_disk
 from virttest import qemu_monitor, remote, syslog_server
 from virttest import http_server, data_dir, utils_net, utils_test
 from virttest import funcatexit, storage
@@ -139,7 +139,7 @@ class UnattendedInstallConfig(object):
                            'process_check', 'vfd_size', 'cdrom_mount_point',
                            'floppy_mount_point', 'cdrom_virtio',
                            'virtio_floppy', 're_driver_match',
-                           're_hardware_id', 'driver_in_floppy']
+                           're_hardware_id', 'driver_in_floppy', 'vga']
 
         for a in self.attributes:
             setattr(self, a, params.get(a, ''))
@@ -340,6 +340,13 @@ class UnattendedInstallConfig(object):
             else:
                 l = ''
             contents = re.sub(dummy_logging_re, l, contents)
+
+        dummy_graphical_re = re.compile('GRAPHICAL_OR_TEXT')
+        if dummy_graphical_re.search(contents):
+            if not self.vga or self.vga.lower() == "none":
+                contents = dummy_graphical_re.sub('text', contents)
+            else:
+                contents = dummy_graphical_re.sub('graphical', contents)
 
         logging.debug("Unattended install contents:")
         for line in contents.splitlines():

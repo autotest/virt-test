@@ -1,9 +1,10 @@
 install
 KVM_TEST_MEDIUM
+GRAPHICAL_OR_TEXT
 poweroff
 lang en_US.UTF-8
 keyboard us
-network --bootproto dhcp 
+network --bootproto dhcp
 rootpw --plaintext 123456
 firstboot --disable
 user --name=test --password=123456
