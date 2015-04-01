@@ -2383,16 +2383,35 @@ class VM(virt_vm.BaseVM):
 
         def _is_ga_finished():
             return (session.cmd_status("pgrep qemu-ga") == 1)
+
+        def _start_ga():
+            if not _is_ga_running():
+                cmd = "service qemu-guest-agent start"
+                status, output = session.cmd_status_output(cmd)
+                if status and "unrecognized service" in output:
+                    cmd = "service qemu-ga start"
+                    status, output = session.cmd_status_output(cmd)
+                if status:
+                    raise virt_vm.VMError("Start qemu-guest-agent failed:"
+                                          "\n%s" % output)
+
+        def _stop_ga():
+            if _is_ga_running():
+                cmd = "service qemu-guest-agent stop"
+                status, output = session.cmd_status_output(cmd)
+                if status and "unrecognized service" in output:
+                    cmd = "service qemu-ga stop"
+                    status, output = session.cmd_status_output(cmd)
+                if status:
+                    raise virt_vm.VMError("Stop qemu-guest-agent failed:"
+                                          "\n%s" % output)
+
         try:
             # Start/stop qemu-guest-agent
             if start:
-                cmd = "pgrep qemu-ga || service qemu-guest-agent start"
+                _start_ga()
             else:
-                cmd = "service qemu-guest-agent stop"
-            status, output = session.cmd_status_output(cmd)
-            if status != 0:
-                raise virt_vm.VMError("Start/stop of qemu-guest-agent "
-                                      "failed:\n%s" % output)
+                _stop_ga()
             # Check qemu-guest-agent status
             if start:
                 if not utils_misc.wait_for(_is_ga_running, timeout=60):
