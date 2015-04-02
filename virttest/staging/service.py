@@ -370,7 +370,25 @@ COMMANDS = (
 )
 
 
-class _ServiceResultParser(object):
+class _ServiceCommTool(object):
+
+    """
+    Provide an interface to complete the similar initialization
+    """
+
+    def __init__(self, func, command_list):
+        """
+        common __init__ function used to create staticmethod
+
+        :param func:         function name
+        :param command_list: list of all the commands, e.g. start, stop, etc
+        """
+        self.commands = command_list
+        for command in self.commands:
+            setattr(self, command, func(command))
+
+
+class _ServiceResultParser(_ServiceCommTool):
 
     """
     A class that contains staticmethods to parse the result of service command.
@@ -378,24 +396,21 @@ class _ServiceResultParser(object):
 
     def __init__(self, result_parser, command_list=COMMANDS):
         """
-            Create staticmethods for each command in command_list using setattr and the
-            result_parser
+        Create staticmethods for each command in command_list[],
+        which used to parse result of command
 
-            :param result_parser: function that generates functions that parse the result of command.
-            :type result_parser: function
-            :param command_list: list of all the commands, e.g. start, stop, restart, etc.
-            :type command_list: list
+        :param result_parser: function used to parse result of command.
+        :type  result_parser: function
         """
-        self.commands = command_list
-        for command in self.commands:
-            setattr(self, command, result_parser(command))
+        super(_ServiceResultParser, self).__init__(func=result_parser,
+                                                   command_list=command_list)
 
     @staticmethod
     def default_method(cmdResult):
         """
-        Default method to parse result from command which is not 'list' nor 'status'.
+        Parse result for the command, which neithor 'list' nor 'status'.
 
-        Returns True if command was executed successfully.
+        return True if command was executed successfully.
         """
         if cmdResult.exit_status:
             logging.debug(cmdResult)
@@ -404,7 +419,7 @@ class _ServiceResultParser(object):
             return True
 
 
-class _ServiceCommandGenerator(object):
+class _ServiceCommandGenerator(_ServiceCommTool):
 
     """
     A class that contains staticmethods that generate partial functions that
@@ -413,17 +428,13 @@ class _ServiceCommandGenerator(object):
 
     def __init__(self, command_generator, command_list=COMMANDS):
         """
-            Create staticmethods for each command in command_list using setattr and the
-            command_generator
+        Create staticmethods for each command in command_list[]
 
-            :param command_generator: function that generates functions that generate lists of command strings
-            :type command_generator: function
-            :param command_list: list of all the commands, e.g. start, stop, restart, etc.
-            :type command_list: list
+        :param command_generator: function used to generate command string
+        :type  command_generator: function
         """
-        self.commands = command_list
-        for command in self.commands:
-            setattr(self, command, command_generator(command))
+        super(_ServiceCommandGenerator, self).__init__(func=command_generator,
+                                                       command_list=command_list)
 
 
 class _SpecificServiceManager(object):
