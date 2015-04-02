@@ -290,7 +290,6 @@ def sys_v_init_command_generator(command):
         command_name = "chkconfig"
         command = "off"
     elif command == "raw_status":
-        command_name = "chkconfig"
         command = "status"
     elif command == 'list':
         # noinspection PyUnusedLocal
