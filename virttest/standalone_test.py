@@ -435,7 +435,7 @@ def configure_console_logging(loglevel=logging.DEBUG):
     Simple helper for adding a file logger to the root logger.
     """
     logger = logging.getLogger()
-    stream_handler = logging.StreamHandler()
+    stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setLevel(loglevel)
 
     fmt = '%(asctime)s %(levelname)-5.5s| %(message)s'
