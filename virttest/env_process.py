@@ -1118,27 +1118,34 @@ def postprocess_on_error(test, params, env):
 
 
 def _vm_watchdog(test, params, env):
+    def log_err(vm, action, details, logged_errors):
+        if action not in logged_errors:
+            logging.warn("VM '%s' failed to %s: %s", vm.name, action,
+                         details)
+            logged_errors.append(action)
+        return None
+
     def check_screendump(vm, temp_filename, counter, cache, test_iteration,
-                         quality):
+                         quality, logged_errors):
         """
         Get's screendump and if not in cache, stores it.
-        :return: True if in cache, False if not in cache, None on failure
+        :return: True if in cache, False if not in cache, string on failure
         """
-        _msg = "VM '%s' failed to %s: %s"
         # Get the screendump
         try:
             vm.screendump(filename=temp_filename, debug=False)
-        except (AttributeError, qemu_monitor.MonitorError), exc:
-            logging.warn(_msg, vm.name, "query for sceendump", exc)
+        except (AttributeError, qemu_monitor.MonitorError), details:
+            log_err(vm, "query for sceendump", details, logged_errors)
             return None
         if not os.path.exists(temp_filename):
-            logging.warn(_msg, vm.name, "produce a screendump",
-                         "File %s does not exists" % temp_filename)
+            log_err(vm, "produce a screendump",
+                    "File %s does not exists" % temp_filename, logged_errors)
             return None
         if not ppm_utils.image_verify_ppm_file(temp_filename):
-            logging.warn(_msg, vm.name, "produce correct screendump",
-                         "Invalid ppm file")
+            log_err(vm, "produce correct screendump", "Invalid ppm file",
+                    logged_errors)
             os.unlink(temp_filename)
+            logged_errors.append("produce correct screendump")
             return None
         screendump_dir = "screendumps_%s_%s_iter%s" % (vm.name, vm.get_pid(),
                                                        test_iteration)
@@ -1163,16 +1170,15 @@ def _vm_watchdog(test, params, env):
                            quality=quality)
                 counter[vm.instance] = idx   # Image is produced
             except IOError, details:
-                logging.warning("VM '%s' failed to convert the screendump: %s",
-                                vm.name, details)
+                log_err(vm, 'convert the screendump', details, logged_errors)
 
             vm.verify_bsod(temp_filename)
             return False
 
-    def check_serialport(vm, cache):
+    def check_serialport(vm, cache, logged_errors):
         """
         Checks serialport length
-        :return: True if in cache, False if not in cache, None on failure
+        :return: True if in cache, False if not in cache, string on failure
         """
         if not vm.serial_console:
             return True
@@ -1185,8 +1191,7 @@ def _vm_watchdog(test, params, env):
                 cache[vm.instance] = length
                 return False
         except (AttributeError, OSError), details:
-            logging.warn("VM '%s' failed to get serial console log: %s",
-                         vm.name, details)
+            log_err(vm, 'get serial console log', details, logged_errors)
             return None
 
     global _screendump_thread_termination_event
@@ -1208,6 +1213,7 @@ def _vm_watchdog(test, params, env):
 
     img_cache = []      # Shared cache of screendump hashes for all vms
     serial_cache = {}   # per-vm last lengths of the VM's serial logs
+    logged_errors = []
     counter = {}
     inactivity = {}
 
@@ -1221,10 +1227,8 @@ def _vm_watchdog(test, params, env):
             # Get hashes
             screendump = check_screendump(vm, temp_filename, counter,
                                           img_cache, test.iteration,
-                                          quality)
-            serial = check_serialport(vm, serial_cache)
-            if screendump is None and serial is None:
-                continue    # No valid hash, skip the inactivity check
+                                          quality, logged_errors)
+            serial = check_serialport(vm, serial_cache, logged_errors)
             # Detect inactivity
             if not inactivity_watcher:
                 continue    # Inactivity check disabled
