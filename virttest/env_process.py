@@ -1169,6 +1169,26 @@ def _vm_watchdog(test, params, env):
             vm.verify_bsod(temp_filename)
             return False
 
+    def check_serialport(vm, cache):
+        """
+        Checks serialport length
+        :return: True if in cache, False if not in cache, None on failure
+        """
+        if not vm.serial_console:
+            return True
+        try:
+            port_path = vm.serial_console.output_filename
+            length = os.path.getsize(port_path)
+            if length == cache.get(vm.instance):
+                return True
+            else:
+                cache[vm.instance] = length
+                return False
+        except (AttributeError, OSError), details:
+            logging.warn("VM '%s' failed to get serial console log: %s",
+                         vm.name, details)
+            return None
+
     global _screendump_thread_termination_event
     temp_dir = test.debugdir
     if params.get("screendump_temp_dir"):
@@ -1187,6 +1207,7 @@ def _vm_watchdog(test, params, env):
     inactivity_watcher = params.get("inactivity_watcher", "log")
 
     img_cache = []      # Shared cache of screendump hashes for all vms
+    serial_cache = {}   # per-vm last lengths of the VM's serial logs
     counter = {}
     inactivity = {}
 
@@ -1201,12 +1222,13 @@ def _vm_watchdog(test, params, env):
             screendump = check_screendump(vm, temp_filename, counter,
                                           img_cache, test.iteration,
                                           quality)
-            if screendump is None:
+            serial = check_serialport(vm, serial_cache)
+            if screendump is None and serial is None:
                 continue    # No valid hash, skip the inactivity check
             # Detect inactivity
             if not inactivity_watcher:
                 continue    # Inactivity check disabled
-            if screendump is True:
+            if screendump is True and serial is True:
                 # VM is probably inactive
                 time_inactive = time.time() - inactivity.get(vm.instance)
                 if time_inactive > inactivity_treshold:
