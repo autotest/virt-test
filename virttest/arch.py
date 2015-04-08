@@ -3,7 +3,7 @@ from virttest import utils_misc
 
 ARCH = platform.machine()
 
-if ARCH == "ppc64":
+if ARCH == "ppc64" or ARCH == "ppc64le":
     # From include/linux/sockios.h
     SIOCSIFHWADDR = 0x8924
     SIOCGIFHWADDR = 0x8927
