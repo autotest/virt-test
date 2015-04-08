@@ -516,6 +516,9 @@ def setup_or_cleanup_gluster(is_setup, vol_name, brick_path="", pool_name="",
         logging.debug("finish start gluster")
         gluster.gluster_vol_create(vol_name, ip_addr, brick_path, force=True)
         gluster.gluster_allow_insecure(vol_name)
+        gluster.gluster_nfs_disable(vol_name)
+        output = utils.system_output("cat %s" % file_path)
+        logging.debug("The contents of %s: \n%s", file_path, output)
         logging.debug("finish vol create in gluster")
         return ip_addr
     else:
