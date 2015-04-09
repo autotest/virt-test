@@ -1257,13 +1257,13 @@ def restart_guest_network(session, mac_addr=None, os_type="linux",
         if mac_addr:
             nic_ifname = get_linux_ifname(session, mac_addr)
             restart_cmd = "ifconfig %s up; " % nic_ifname
-            restart_cmd += "pidof dhclient && killall dhclient; "
+            restart_cmd += "dhclient -r; "
             if ip_version == "ipv6":
                 restart_cmd += "dhclient -6 %s" % nic_ifname
             else:
                 restart_cmd += "dhclient %s" % nic_ifname
         else:
-            restart_cmd = "pidof dhclient && killall dhclient; "
+            restart_cmd = "dhclient -r; "
             if ip_version == "ipv6":
                 restart_cmd += "dhclient -6"
             else:
@@ -1529,6 +1529,52 @@ def change_iface_bridge(ifname, new_bridge, ovs=None):
     else:
         raise error.AutotestError("Network interface %s is wrong type %s." %
                                   (ifname, new_bridge))
+
+
+@__init_openvswitch
+def ovs_br_exists(brname, ovs=None):
+    """
+    Check if bridge exists or not on OVS system
+
+    :param brname: Name of the bridge
+    :param ovs: OpenVSwitch object.
+    """
+    if ovs is None:
+        ovs = __ovs
+
+    return brname in ovs.list_br()
+
+
+@__init_openvswitch
+def add_ovs_bridge(brname, ovs=None):
+    """
+    Add a bridge to ovs
+
+    :param brname: Name of the bridge
+    :param ovs: OpenVSwitch object.
+    """
+    if ovs is None:
+        ovs = __ovs
+
+    if not ovs_br_exists(brname, ovs):
+        ovs.add_br(brname)
+
+
+@__init_openvswitch
+def del_ovs_bridge(brname, ovs=None):
+    """
+    Delete a bridge from ovs
+
+    :param brname: Name of the bridge
+    :param ovs: OpenVSwitch object.
+    """
+    if ovs is None:
+        ovs = __ovs
+
+    if ovs_br_exists(brname, ovs):
+        ovs.del_br(brname)
+    else:
+        raise BRNotExistError(brname, "")
 
 
 @__init_openvswitch
@@ -2834,7 +2880,16 @@ def update_mac_ip_address(vm, params, timeout=None):
     """
     network_query = params.get("network_query", "ifconfig")
     restart_network = params.get("restart_network", "service network restart")
+    filter_list = []
     mac_ip_filter = params.get("mac_ip_filter")
+    if mac_ip_filter:
+        filter_list.append(mac_ip_filter)
+    else:
+        # Provide a list of patterns for different linux version
+        filter_list.extend([(r"HWaddr (.\w+:\w+:\w+:\w+:\w+:\w+)\s+?"
+                             "inet addr:(.\d+\.\d+\.\d+\.\d+)"),
+                            (r"inet (.\d+.\d+.\d+.\d+).*?"
+                             "ether (.\w+:\w+:\w+:\w+:\w+:\w+)")])
     if timeout is None:
         timeout = int(params.get("login_timeout"))
     session = vm.wait_for_serial_login(timeout=360)
@@ -2844,9 +2899,13 @@ def update_mac_ip_address(vm, params, timeout=None):
     while time.time() < end_time:
         try:
             if num % 3 == 0 and num != 0:
-                session.cmd(restart_network)
+                # Ignore any errors here for further operation
+                session.cmd(restart_network, ignore_all_errors=True)
             output = session.cmd_status_output(network_query)[1]
-            macs_ips = re.findall(mac_ip_filter, output, re.S)
+            for mac_ip_filter in filter_list:
+                macs_ips = re.findall(mac_ip_filter, output, re.S)
+                if macs_ips:
+                    break
             # Get nics number
         except Exception, err:
             logging.error(err)
