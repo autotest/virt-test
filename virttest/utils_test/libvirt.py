@@ -505,7 +505,7 @@ def setup_or_cleanup_gluster(is_setup, vol_name, brick_path="", pool_name="",
     try:
         utils_misc.find_command("gluster")
     except ValueError:
-        raise error.TestError("Missing command 'gluster'")
+        raise error.TestNAError("Missing command 'gluster'")
     if not brick_path:
         tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
         brick_path = os.path.join(tmpdir, pool_name)
