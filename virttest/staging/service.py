@@ -252,7 +252,7 @@ def systemd_result_parser(command):
         return _ServiceResultParser.default_method
 
 
-def sys_v_init_command_generator(command):
+def sysvinit_command_generator(command):
     """
     Generate lists of command arguments for sys_v style inits.
 
@@ -441,10 +441,8 @@ class _SpecificServiceManager(object):
         for cmd in service_command_generator.commands:
             setattr(self, cmd,
                     self.generate_run_function(run,
-                                               getattr(
-                                                   service_result_parser, cmd),
-                                               getattr(
-                                                   service_command_generator, cmd),
+                                               getattr(service_result_parser, cmd),
+                                               getattr(service_command_generator, cmd),
                                                service_name))
 
     @staticmethod
@@ -507,8 +505,7 @@ class _GenericServiceManager(object):
         for cmd in service_command_generator.commands:
             setattr(self, cmd,
                     self.generate_run_function(run,
-                                               getattr(
-                                                   service_result_parser, cmd),
+                                               getattr(service_result_parser, cmd),
                                                getattr(service_command_generator, cmd)))
 
     @staticmethod
@@ -706,7 +703,7 @@ class Factory(object):
         Provide some functions to auto detect system type.
         And auto create command_generator and result_parser.
         """
-        _command_generators = {"init": sys_v_init_command_generator,
+        _command_generators = {"init": sysvinit_command_generator,
                                "systemd": systemd_command_generator}
 
         _result_parsers = {"init": sysvinit_result_parser,
