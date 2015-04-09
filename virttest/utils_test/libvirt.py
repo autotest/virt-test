@@ -1255,8 +1255,10 @@ def check_iface(iface_name, checkpoint, extra="", **dargs):
     Check interface with specified checkpoint.
 
     :param iface_name: Interface name
-    :param checkpoint: Check if interface exists, MAC address, IP address or
-                       ping out. Support values: [exists, mac, ip, ping]
+    :param checkpoint: Check if interface exists,
+                       and It's MAC address, IP address and State,
+                       also connectivity by ping.
+                       valid checkpoint: [exists, mac, ip, ping, state]
     :param extra: Extra string for checking
     :return: Boolean value, true for pass, false for fail
     """
@@ -1291,6 +1293,15 @@ def check_iface(iface_name, checkpoint, extra="", **dargs):
             iface_ip = iface.get_ip()
             check_pass = iface_ip == extra
             logging.debug("IP address of %s: %s", iface_name, iface_ip)
+        elif checkpoint == "state":
+            # check iface State
+            result = virsh.iface_list(extra, ignore_status=True)
+            check_exit_status(result, False)
+            output = re.findall(r"(\S+)\ +(\S+)\ +(\S+|\s+)[\ +\n]",
+                                str(result.stdout))
+            iface_state = filter(lambda x: x[0] == iface_name, output[1:])[0][1]
+            # active corresponds True, otherwise return False
+            check_pass = iface_state == "active"
         elif checkpoint == "ping":
             # extra is the ping destination
             count = dargs.get("count", 3)
