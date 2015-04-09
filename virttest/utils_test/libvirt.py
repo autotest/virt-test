@@ -694,15 +694,13 @@ def pci_label_from_address(address_dict, radix=10):
         radix = 16
         return = pci_0000_08_10_0
     """
-    if not set(['domain', 'bus', 'slot', 'function']).issubset(
-            address_dict.keys()):
-        raise error.TestError("Param %s does not contain keys of "
-                              "['domain', 'bus', 'slot', 'function']." %
-                              str(address_dict))
-    domain = int(address_dict['domain'], radix)
-    bus = int(address_dict['bus'], radix)
-    slot = int(address_dict['slot'], radix)
-    function = int(address_dict['function'], radix)
+    try:
+        domain = int(address_dict['domain'], radix)
+        bus = int(address_dict['bus'], radix)
+        slot = int(address_dict['slot'], radix)
+        function = int(address_dict['function'], radix)
+    except (TypeError, KeyError), detail:
+        raise error.TestError(detail)
     pci_label = ("pci_%04x_%02x_%02x_%01x" % (domain, bus, slot, function))
     return pci_label
 
