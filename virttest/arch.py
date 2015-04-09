@@ -3,7 +3,7 @@ from virttest import utils_misc
 
 ARCH = platform.machine()
 
-if ARCH == "ppc64":
+if ARCH == "ppc64" or ARCH == "ppc64le":
     # From include/linux/sockios.h
     SIOCSIFHWADDR = 0x8924
     SIOCGIFHWADDR = 0x8927
@@ -78,5 +78,5 @@ def get_kvm_module_list():
         arch_convert = {'GenuineIntel': 'intel', 'AuthenticAMD': 'amd'}
         host_cpu_type = utils_misc.get_cpu_vendor(verbose=False)
         return ["kvm", "kvm-%s" % arch_convert[host_cpu_type]]
-    elif ARCH == 'ppc64':
+    elif ARCH == 'ppc64' or ARCH == "ppc64le":
         return ["kvm"]
