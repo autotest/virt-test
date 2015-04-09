@@ -1675,7 +1675,13 @@ class EGDConfig(object):
             for pid in self.env.data["egd_pids"]:
                 logging.info("Stop egd.pl(%s)" % pid)
                 utils.signal_pid(pid, 15)
-            # give time to wait port released by egd.pl
-            time.sleep(3)
+
+            def _all_killed():
+                for pid in self.env.data["egd_pids"]:
+                    if utils.pid_is_alive(pid):
+                        return False
+                return True
+            # wait port released by egd.pl
+            utils.wait_for(_all_killed, timeout=60)
         except OSError:
             logging.warn("egd.pl is running")
