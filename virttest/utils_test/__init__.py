@@ -560,11 +560,8 @@ def run_virtio_serial_file_transfer(test, params, env, port_names=None,
                     err += " Script output:\n%s" % g_output
                     raise error.TestError(err)
         finally:
-            if host_thread.isAlive():
-                output = ""
-                host_thread.join(10)
-                if host_thread.is_alive():
-                    output = "%s, %s" % host_thread.communicate()
+            output = host_thread.join(timeout=60)
+            if output:
                 if action == "both":
                     if "Md5MissMatch" in output:
                         err = "Data lost during file transfer. Md5 miss "
@@ -607,7 +604,7 @@ def run_virtio_serial_file_transfer(test, params, env, port_names=None,
     else:
         action = "both"
         guest_action = "both"
-        txt = "Transfer data betwwen guest and host"
+        txt = "Transfer data between guest and host"
     n_times = int(params.get("file_transfer_repeat_times", 1))
     txt += " for %s times" % n_times
     error.context(txt, logging.info)
