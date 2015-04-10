@@ -95,10 +95,15 @@ class LibvirtNetwork(object):
         ip = utils_net.get_ip_address_by_interface(self.iface)
         return ip, net_xml
 
-    def __init__(self, net_type, address=None, iface=None):
-        self.name = 'virt-test-%s' % net_type
+    def __init__(self, net_type, address=None, iface=None, net_name=None,
+                 persistent=False):
+        if net_name is None:
+            self.name = 'virt-test-%s' % net_type
+        else:
+            self.name = net_name
         self.address = address
         self.iface = iface
+        self.persistent = persistent
 
         if net_type == 'vnet':
             if not self.address:
@@ -114,13 +119,19 @@ class LibvirtNetwork(object):
             self.ip, net_xml = self.create_bridge_xml()
         else:
             raise error.TestError('Unknown libvirt network type %s' % net_type)
-        net_xml.create()
+        if self.persistent:
+            net_xml.define()
+            net_xml.start()
+        else:
+            net_xml.create()
 
-    def destroy(self):
+    def cleanup(self):
         """
-        Clear up created network.
+        Clear up network.
         """
-        return virsh.net_destroy(self.name)
+        virsh.net_destroy(self.name)
+        if self.persistent:
+            virsh.net_undefine(self.name)
 
 
 def cpus_parser(cpulist):
