@@ -213,20 +213,16 @@ class Netperf(object):
                                            status_test_command=self.status_test_command)
 
     def is_target_running(self, target):
+        list_cmd = "ps -C %s" % target
         if self.client == "nc":
             list_cmd = "wmic process where name='%s' list" % target
-            status, output = self.session.cmd_status_output(list_cmd,
-                                                            timeout=240)
-            check_reg = re.compile(r"%s" % target, re.I)
-            if check_reg.findall(output):
-                return True
-        else:
-            status_cmd = "ps -C %s" % target
-            status, output = self.session.cmd_status_output(status_cmd,
-                                                            timeout=240)
-            if not status:
-                return True
-        return False
+        try:
+            output = self.session.cmd_output_safe(list_cmd, timeout=120)
+            check_reg = re.compile(r"%s" % target, re.I | re.M)
+            return bool(check_reg.findall(output))
+        except Exception, err:
+            logging.debug("Check process error: %s" % str(err))
+        False
 
     def stop(self, target):
         if self.client == "nc":
