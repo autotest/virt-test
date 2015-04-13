@@ -1960,13 +1960,13 @@ def print_dicts(options, dicts):
 
 
 def convert_data_size(size, default_sufix='B'):
-    '''
+    """
     Convert data size from human readable units to an int of arbitrary size.
 
-    @param size: Human readable data size representation (string).
-    @param default_sufix: Default sufix used to represent data.
-    @return: Int with data size in the appropriate order of magnitude.
-    '''
+    :param size: Human readable data size representation (string).
+    :param default_sufix: Default sufix used to represent data.
+    :return: Int with data size in the appropriate order of magnitude.
+    """
     orders = {'B': 1,
               'K': 1024,
               'M': 1024 * 1024,
@@ -1987,10 +1987,10 @@ def compare_string(str1, str2):
     Compare two int string and return -1, 0, 1.
     It can compare two memory value even in sufix
 
-    @param str1: The first string
-    @param str2: The second string
+    :param str1: The first string
+    :param str2: The second string
 
-    @Return: Rteurn -1, when str1<  str2
+    :Return: Rteurn -1, when str1<  str2
                      0, when str1 = str2
                      1, when str1>  str2
     """

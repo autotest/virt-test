@@ -258,9 +258,9 @@ def install_usbclerk_win(client, host_path, client_path="C:\\usbclerk.msi"):
     """
     Install remote-viewer on a windows client
 
-    @param client:      VM object
-    @param host_path:   Location of installer on host
-    @param client_path: Location of installer after copying
+    :param client:      VM object
+    :param host_path:   Location of installer on host
+    :param client_path: Location of installer after copying
     """
     session = client.wait_for_login(timeout=int(
                                     client.params.get("login_timeout", 360)))
@@ -292,7 +292,7 @@ def clear_interface_linux(vm, login_timeout, timeout):
     """
     Clears user interface of a vm without reboot
 
-    @param vm:      VM where cleaning is required
+    :param vm:      VM where cleaning is required
     """
     logging.info("restarting X/gdm on: %s", vm.name)
     session = vm.wait_for_login(username="root", password="123456",
