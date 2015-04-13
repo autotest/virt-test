@@ -148,6 +148,7 @@ class VM(virt_vm.BaseVM):
         self.start_monotonic_time = 0.0
         self.last_boot_index = 0
         self.last_driver_index = 0
+        self.iothread_id = -1
 
     def verify_alive(self):
         """
@@ -382,6 +383,13 @@ class VM(virt_vm.BaseVM):
             elif action == "rem":
                 if devices.has_option("sandbox"):
                     return " -sandbox off "
+
+        def process_iothreads(iothread_id, action):
+            if action == "add":
+                new_iothread_object=" -object iothread,id=iothread%d " % iothread_id
+                current_iothread_id = iothread_id
+                iothread_id += 1
+                return (new_iothread_object, current_iothread_id)
 
         def add_human_monitor(devices, monitor_name, filename):
             if not devices.has_option("chardev"):
@@ -1136,6 +1144,7 @@ class VM(virt_vm.BaseVM):
         vdisk = 0
         scsi_disk = 0
         self.last_boot_index = 0
+        self.iothread_id = -1
         if params.get("kernel"):
             self.last_boot_index = 1
 
@@ -1350,6 +1359,7 @@ class VM(virt_vm.BaseVM):
         # Add images (harddrives)
         for image_name in params.objects("images"):
             # FIXME: Use qemu_devices for handling indexes
+
             image_params = params.object_params(image_name)
             if image_params.get("boot_drive") == "no":
                 continue
@@ -1380,6 +1390,14 @@ class VM(virt_vm.BaseVM):
                     self.last_boot_index += 1
             if image_params.get("boot_drive") == "no":
                 continue
+
+            if params.get("iothreads", "off") == "on":
+                self.iothread_id = 0
+                iothread_object, iothread_id = process_iothreads(self.iothread_id, "add")
+                devices.insert(StrDev('iothreads', cmdline=iothread_object))
+                image_params['iothread_id'] = iothread_id
+                image_params['x-data-plane'] = True
+
             devs = devices.images_define_by_params(image_name, image_params,
                                                    'disk', index, image_boot,
                                                    image_bootindex)

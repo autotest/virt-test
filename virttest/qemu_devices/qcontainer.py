@@ -1064,7 +1064,7 @@ class DevContainer(object):
                                    readonly=None, scsiid=None, lun=None, aio=None,
                                    strict_mode=None, media=None, imgfmt=None,
                                    pci_addr=None, scsi_hba=None, x_data_plane=None,
-                                   blk_extra_params=None, scsi=None,
+                                   iothread_id=None, blk_extra_params=None, scsi=None,
                                    pci_bus='pci.0', drv_extra_params=None,
                                    num_queues=None, bus_extra_params=None,
                                    force_fmt=None):
@@ -1104,6 +1104,8 @@ class DevContainer(object):
         :param scsi_hba: Custom scsi HBA
         :param num_queues: performace option for virtio-scsi-pci
         :param bus_extra_params: options want to add to virtio-scsi-pci bus
+        :param x_data_plane: required for iothreads
+        :param iothread: name of the thread assinged to the device
         """
         def define_hbas(qtype, atype, bus, unit, port, qbus, pci_bus,
                         addr_spec=None, num_queues=None,
@@ -1391,7 +1393,10 @@ class DevContainer(object):
         devices[-1].set_param('min_io_size', min_io_size)
         devices[-1].set_param('opt_io_size', opt_io_size)
         devices[-1].set_param('bootindex', bootindex)
-        devices[-1].set_param('x-data-plane', x_data_plane, bool)
+        if iothread_id is not None:
+            iothread_object = "iothread%s" % str(iothread_id)
+            devices[-1].set_param('x-data-plane', x_data_plane, bool)
+            devices[-1].set_param('iothread', iothread_object)
         if 'serial' in options:
             devices[-1].set_param('serial', serial)
             devices[-2].set_param('serial', None)   # remove serial from drive
@@ -1464,6 +1469,7 @@ class DevContainer(object):
                                                image_params.get("scsi_hba"),
                                                image_params.get(
                                                    "x-data-plane"),
+                                               image_params.get("iothread_id"),
                                                image_params.get(
                                                    "blk_extra_params"),
                                                image_params.get("virtio-blk-pci_scsi"),
@@ -1545,6 +1551,7 @@ class DevContainer(object):
                                                image_params.get("scsi_hba"),
                                                image_params.get(
                                                    "x-data-plane"),
+                                               image_params.get("iothread_id"),
                                                image_params.get(
                                                    "blk_extra_params"),
                                                image_params.get("virtio-blk-pci_scsi"),

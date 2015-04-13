@@ -410,6 +410,10 @@ class VirtTestRunParser(optparse.OptionParser):
                         default="on",
                         help=("Enable qemu sandboxing "
                               "(on/off). Default: %default"))
+        qemu.add_option("--iothreads", action="store", dest="iothreads",
+                        default="off",
+                        help=("Enable qemu device threading "
+                            "(on/off). Default: %default"))
         self.add_option_group(qemu)
 
         libvirt = optparse.OptionGroup(self, 'Options specific to the libvirt test')
@@ -647,6 +651,13 @@ class VirtTestApp(object):
         else:
             logging.info("Config provided, ignoring \"--sandbox <on|off>\" option")
 
+    def _process_iothreads(self):
+        if not self.options.config:
+            if self.options.iothreads == "on":
+                self.cartesian_parser.assign("iothreads", "on")
+        else:
+            logging.info("Config provided, ignoring \"--iothreads <on|off>\" option")
+
     def _process_malloc_perturb(self):
         self.cartesian_parser.assign("malloc_perturb",
                                      self.options.malloc_perturb)
@@ -668,6 +679,7 @@ class VirtTestApp(object):
         self._process_vhost()
         self._process_malloc_perturb()
         self._process_qemu_sandbox()
+        self._process_iothreads()
 
     def _process_lvsb_specific_options(self):
         """
