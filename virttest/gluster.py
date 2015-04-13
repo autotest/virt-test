@@ -34,7 +34,7 @@ class GlusterBrickError(GlusterError):
 @error.context_aware
 def glusterd_start():
     """
-    Check for glusterd status
+    Check for glusterd status and start it
     """
     cmd = "service glusterd status"
     output = utils.system_output(cmd, ignore_status=True)
@@ -47,7 +47,7 @@ def glusterd_start():
 @error.context_aware
 def is_gluster_vol_started(vol_name):
     """
-    Returns if the volume is started, if not send false
+    Return true if the volume is started, if not send false
     """
     cmd = "gluster volume info %s" % vol_name
     error.context("Gluster volume info failed for volume: %s" % vol_name)
@@ -62,7 +62,7 @@ def is_gluster_vol_started(vol_name):
 @error.context_aware
 def gluster_vol_start(vol_name):
     """
-    Starts the volume if it is stopped
+    Start the volume if it is stopped
     """
     # Check if the volume is stopped, if then start
     if not is_gluster_vol_started(vol_name):
@@ -77,9 +77,9 @@ def gluster_vol_start(vol_name):
 @error.context_aware
 def gluster_vol_stop(vol_name, force=False):
     """
-    Starts the volume if it is stopped
+    Stop the volume if it is started
     """
-    # Check if the volume is stopped, if then start
+    # Check if the volume is started, if then stop
     if is_gluster_vol_started(vol_name):
         error.context("Gluster volume stop for volume; %s" % vol_name)
         if force:
@@ -99,9 +99,9 @@ def gluster_vol_stop(vol_name, force=False):
 @error.context_aware
 def gluster_vol_delete(vol_name):
     """
-    Starts the volume if it is stopped
+    Delete the volume if it is not started
     """
-    # Check if the volume is stopped, if then start
+    # Check if the volume is stopped, if then delete
     if not is_gluster_vol_started(vol_name):
         error.context("Gluster volume delete; %s" % vol_name)
         cmd = "gluster volume delete %s" % vol_name
@@ -118,7 +118,7 @@ def gluster_vol_delete(vol_name):
 @error.context_aware
 def is_gluster_vol_avail(vol_name):
     """
-    Returns if the volume already available
+    Check if the volume already available
     """
     cmd = "gluster volume info"
     error.context("Gluster volume info failed")
