@@ -2003,7 +2003,7 @@ def get_qemu_best_cpu_model(params):
         if host_cpu_model in qemu_cpu_models:
             return host_cpu_model
     # If no host cpu model can be found on qemu_cpu_models, choose the default
-    return params.get("default_cpu_model", "qemu64")
+    return params.get("default_cpu_model", None)
 
 
 def check_if_vm_vcpu_match(vcpu_desire, vm):
