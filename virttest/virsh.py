@@ -807,9 +807,7 @@ def nodecpumap(extra="", **dargs):
     :return: CmdResult object
     """
     cmd = "nodecpumap %s" % extra
-    CmdResult = command(cmd, **dargs)
-
-    return CmdResult
+    return command(cmd, **dargs)
 
 
 def nodesuspend(target, duration, extra='', **dargs):
@@ -873,9 +871,7 @@ def maxvcpus(option='', **dargs):
     :return: CmdResult object
     """
     cmd = "maxvcpus %s" % option
-    CmdResult = command(cmd, **dargs)
-
-    return CmdResult
+    return command(cmd, **dargs)
 
 
 def dom_list(options="", **dargs):
@@ -2994,9 +2990,7 @@ def nodedev_reset(name, options="", **dargs):
     :return: cmdresult object.
     """
     cmd = ("nodedev-reset --device %s %s" % (name, options))
-    CmdResult = command(cmd, **dargs)
-
-    return CmdResult
+    return command(cmd, **dargs)
 
 
 def ttyconsole(name, **dargs):
@@ -3103,9 +3097,7 @@ def nodedev_detach(name, options="", **dargs):
     :return: cmdresult object.
     """
     cmd = ("nodedev-detach --device %s %s" % (name, options))
-    CmdResult = command(cmd, **dargs)
-
-    return CmdResult
+    return command(cmd, **dargs)
 
 
 def nodedev_dettach(name, options="", **dargs):
@@ -3125,9 +3117,7 @@ def nodedev_reattach(name, options="", **dargs):
     :return: cmdresult object.
     """
     cmd = ("nodedev-reattach --device %s %s" % (name, options))
-    CmdResult = command(cmd, **dargs)
-
-    return CmdResult
+    return command(cmd, **dargs)
 
 
 def vcpucount(name, options="", **dargs):
@@ -3217,9 +3207,7 @@ def autostart(name, options, **dargs):
     :return: cmdresult object.
     """
     cmd = ("autostart %s %s" % (name, options))
-    CmdResult = command(cmd, **dargs)
-
-    return CmdResult
+    return command(cmd, **dargs)
 
 
 def node_memtune(shm_pages_to_scan=None, shm_sleep_millisecs=None,
@@ -3695,9 +3683,7 @@ def nwfilter_list(options="", **dargs):
     :return: list of network filters
     """
     cmd = "nwfilter-list %s" % options
-    result = command(cmd, **dargs)
-
-    return result
+    return command(cmd, **dargs)
 
 
 def nwfilter_edit(name, options="", **dargs):
