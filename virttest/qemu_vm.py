@@ -417,7 +417,7 @@ class VM(virt_vm.BaseVM):
             return cmd
 
         def add_serial(devices, name, filename):
-            if (arch.ARCH in ('ppc64', 'aarch64') or
+            if (arch.ARCH in ('ppc64', 'ppc64le', 'aarch64') or
                     not devices.has_option("chardev")):
                 return " -serial unix:'%s',server,nowait" % filename
 
