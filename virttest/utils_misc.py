@@ -2979,9 +2979,7 @@ def bind_device_driver(pci_id, driver_type):
     vendor = vd_list[0].split(':')[0]
     device = vd_list[0].split(':')[1]
     bind_cmd = "echo %s %s > %s" % (vendor, device, bind_file)
-    if utils.run(bind_cmd, ignore_status=True).exit_status:
-        return False
-    return True
+    return utils.run(bind_cmd, ignore_status=True).exit_status == 0
 
 
 def unbind_device_driver(pci_id):
@@ -2994,11 +2992,7 @@ def unbind_device_driver(pci_id):
         return False
     unbind_file = "/sys/bus/pci/devices/%s/driver/unbind" % pci_id
     unbind_cmd = "echo %s > %s" % (pci_id, unbind_file)
-    unbind_ret = utils.run(unbind_cmd, ignore_status=True)
-    if unbind_ret.exit_status:
-        logging.error(unbind_ret)
-        return False
-    return True
+    return utils.run(unbind_cmd, ignore_status=True).exit_status == 0
 
 
 def check_device_driver(pci_id, driver_type):
@@ -3012,11 +3006,8 @@ def check_device_driver(pci_id, driver_type):
     driver = utils.run("readlink %s" % device_driver,
                        ignore_status=True).stdout.strip()
     driver = os.path.basename(driver)
-    logging.debug("Current %s driver is %s", pci_id, driver)
-    logging.debug("Expected %s driver is %s", pci_id, driver_type)
-    if driver == driver_type:
-        return True
-    return False
+    logging.debug("% is %s, expect %s", pci_id, driver, driver_type)
+    return driver == driver_type
 
 
 class VFIOError(Exception):
