@@ -250,6 +250,36 @@ class QBaseDevice(object):
         self.cmdline()
 
     # pylint: disable=E0202
+    def iothread_object_del(self,monitor):
+        """ :return: the output of monitor.cmd() object del command """
+        if isinstance(monitor, qemu_monitor.QMPMonitor):
+            try:
+                cmd, args = self.object_del_qmp()
+                return monitor.cmd(cmd, args)
+            except DeviceError:     # qmp command not supported
+                return monitor.human_monitor_cmd(self.object_del_hmp())
+        elif isinstance(monitor, qemu_monitor.HumanMonitor):
+            return monitor.cmd(self.object_del_hmp())
+        else:
+            raise TypeError("Invalid monitor object: %s(%s)" % (monitor,
+                                                                type(monitor)))
+
+    # pylint: disable=E0202
+    def iothread_object_add(self,monitor):
+        """ :return: the output of monitor.cmd() object add command """
+        if isinstance(monitor, qemu_monitor.QMPMonitor):
+            try:
+                cmd, args = self.object_add_qmp()
+                return monitor.cmd(cmd, args)
+            except DeviceError:     # qmp command not supported
+                return monitor.human_monitor_cmd(self.object_add_hmp())
+        elif isinstance(monitor, qemu_monitor.HumanMonitor):
+            return monitor.cmd(self.object_add_hmp())
+        else:
+            raise TypeError("Invalid monitor object: %s(%s)" % (monitor,
+                                                                type(monitor)))
+
+    # pylint: disable=E0202
     def hotplug(self, monitor):
         """ :return: the output of monitor.cmd() hotplug command """
         if isinstance(monitor, qemu_monitor.QMPMonitor):
@@ -263,6 +293,21 @@ class QBaseDevice(object):
         else:
             raise TypeError("Invalid monitor object: %s(%s)" % (monitor,
                                                                 type(monitor)))
+
+    def object_del_hmp(self):
+        """ :return: method not supported here """
+        pass
+
+    def object_del_qmp(self):
+        """ :return: method not supported here """
+        pass
+    def object_add_hmp(self):
+        """ :return: the hotplug monitor command """
+        pass
+
+    def object_add_qmp(self):
+        """ :return: the hotplug monitor command """
+        pass
 
     def hotplug_hmp(self):
         """ :return: the hotplug monitor command """
@@ -662,6 +707,22 @@ class QDevice(QCustomDevice):
         else:
             out = "device_add %s" % _convert_args(self.params)
         return out
+
+    def object_del_hmp(self):
+        """ :return: the object del monitor command """
+        return "object_del %s" % self.params.get('iothread')
+
+    def object_del_qmp(self):
+        """ :return: the object del monitor command """
+        return "object-del", {'id': self.params.get('iothread')}
+
+    def object_add_hmp(self):
+        """ :return: the object add monitor command """
+        return "object_add %s" % self.params.get('iothread')
+
+    def object_add_qmp(self):
+        """ :return: the object add monitor command """
+        return "object-add", {'qom-type': 'iothread', 'id': self.params.get('iothread')}
 
     def hotplug_qmp(self):
         """ :return: the hotplug monitor command """
