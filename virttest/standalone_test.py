@@ -5,8 +5,6 @@ import sys
 import time
 import traceback
 import Queue
-import glob
-import shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import aexpect
