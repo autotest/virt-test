@@ -1158,9 +1158,7 @@ class PciAssignable(object):
         """
         base_dir = "/sys/bus/pci"
         stub_path = os.path.join(base_dir, "drivers/%s" % self.device_driver)
-        if os.path.exists(os.path.join(stub_path, full_id)):
-            return True
-        return False
+        return os.path.exists(os.path.join(stub_path, full_id))
 
     @error.context_aware
     def sr_iov_setup(self):

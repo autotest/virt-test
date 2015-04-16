@@ -523,10 +523,7 @@ class Interface(object):
         Check Whether this Interface is a bridge port_to_br
         """
         path = os.path.join(SYSFS_NET_PATH, self.name)
-        if os.path.exists(os.path.join(path, "brport")):
-            return True
-        else:
-            return False
+        return os.path.exists(os.path.join(path, "brport"))
 
     def __netlink_pack(self, msgtype, flags, seq, pid, data):
         '''
