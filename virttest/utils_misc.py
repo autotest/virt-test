@@ -3136,9 +3136,7 @@ class VFIOController(object):
         """
         Check whether given vfio group has been established.
         """
-        if os.path.exists("/dev/vfio/%s" % group_id):
-            return True
-        return False
+        return os.path.exists("/dev/vfio/%s" % group_id)
 
 
 class SELinuxBoolean(object):
