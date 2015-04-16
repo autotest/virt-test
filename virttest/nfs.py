@@ -227,7 +227,7 @@ class Nfs(object):
         if self.nfs_setup and self.unexportfs_in_clean:
             self.exportfs.reset_export()
         if self.mk_mount_dir and os.path.isdir(self.mount_dir):
-            shutil.rmtree(self.mount_dir)
+            utils.safe_rmdir(self.mount_dir)
 
 
 class NFSClient(object):
