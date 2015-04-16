@@ -2326,7 +2326,9 @@ class VM(virt_vm.BaseVM):
             # Install the package if it does not exists
             cmd = "rpm -q %s || yum install -y %s" % (name, name)
             status, output = session.cmd_status_output(cmd, timeout=300)
-            if status != 0:
+            # Just check status is not enough
+            # It's necessary to check if install successfully
+            if status != 0 or session.cmd_status("rpm -q %s" % name) != 0:
                 raise virt_vm.VMError("Installation of package %s failed:\n%s" %
                                       (name, output))
         finally:
