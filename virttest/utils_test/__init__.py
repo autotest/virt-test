@@ -1314,11 +1314,11 @@ def get_readable_cdroms(params, session):
         if s == 0:
             readable_cdroms.append(d)
             break
-
-    if readable_cdroms:
-        return readable_cdroms
-
-    raise error.TestFail("Could not find a cdrom device with media inserted")
+    if not readable_cdroms:
+        info_cmd = params.get("cdrom_info_cmd")
+        output = session.cmd_output(info_cmd)
+        logging.debug("Guest cdroms info: %s" % output)
+    return readable_cdroms
 
 
 def service_setup(vm, session, directory):
