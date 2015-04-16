@@ -5,8 +5,10 @@ import sys
 import time
 import traceback
 import Queue
+
 from autotest.client.shared import error
 from autotest.client import utils
+
 import aexpect
 import asset
 import utils_misc
@@ -28,6 +30,134 @@ global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
 global TAG_INDEX
 TAG_INDEX = {}
+
+
+class StreamProxy(object):
+
+    """
+    Mechanism to redirect a stream to a file, allowing the original stream to
+    be restored later.
+    """
+
+    def __init__(self, filename=None, stream=sys.stdout):
+        """
+        Keep 2 streams to write to, and eventually switch.
+        """
+        self.stream = None
+        self.terminal = stream
+        if filename is None:
+            self.log = stream
+        else:
+            self.log = open(filename, "a")
+        self.redirect()
+
+    def write(self, message):
+        """
+        Write to the current stream.
+        """
+        self.stream.write(message)
+
+    def flush(self):
+        """
+        Flush the current stream.
+        """
+        self.stream.flush()
+
+    def restore(self):
+        """Restore original stream"""
+        self.stream = self.terminal
+
+    def redirect(self):
+        """Redirect stream to log file"""
+        self.stream = self.log
+
+
+def handle_stdout(options):
+    """
+    Replace stdout with a proxy object.
+
+    Depending on self.options.verbose, make proxy print to /dev/null, or
+    original sys.stdout stream.
+    """
+    if not options.verbose:
+        # Replace stdout with our proxy pointing to /dev/null
+        sys.stdout = StreamProxy(filename="/dev/null", stream=sys.stdout)
+    else:
+        # Retain full stdout
+        sys.stdout = StreamProxy(filename=None, stream=sys.stdout)
+
+
+def _variant_only_file(filename):
+    """
+    Parse file containing flat list of items to append on an 'only' filter
+    """
+    result = []
+    fullpath = None
+    if not os.path.isabs(filename):
+        fullpath = os.path.realpath(os.path.join(data_dir.get_root_dir(),
+                                                 filename))
+    if fullpath is not None:
+        for line in open(fullpath).readlines():
+            line = line.strip()
+            if line.startswith('#') or len(line) < 3:
+                continue
+            result.append(line)
+
+    return ", ".join(result)
+
+
+SUPPORTED_LOG_LEVELS = ["debug", "info", "warning", "error", "critical"]
+
+SUPPORTED_TEST_TYPES = ['qemu', 'libvirt', 'libguestfs', 'openvswitch', 'v2v', 'lvsb']
+
+SUPPORTED_LIBVIRT_URIS = ['qemu:///system', 'lxc:///']
+SUPPORTED_LIBVIRT_DRIVERS = ['qemu', 'lxc', 'xen']
+
+SUPPORTED_IMAGE_TYPES = ['raw', 'qcow2', 'qed', 'vmdk']
+SUPPORTED_DISK_BUSES = ['ide', 'scsi', 'virtio_blk', 'virtio_scsi', 'lsi_scsi', 'ahci', 'usb2', 'xenblk']
+SUPPORTED_NIC_MODELS = ["virtio_net", "e1000", "rtl8139", "spapr-vlan"]
+SUPPORTED_NET_TYPES = ["bridge", "user", "none"]
+
+QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
+LIBVIRT_DEFAULT_SET = _variant_only_file('backends/libvirt/cfg/default_tests')
+LVSB_DEFAULT_SET = "lvsb_date"
+OVS_DEFAULT_SET = "load_module, ovs_basic"
+
+LIBVIRT_INSTALL = "unattended_install.import.import.default_install.aio_native"
+LIBVIRT_REMOVE = "remove_guest.without_disk"
+
+
+def find_default_qemu_paths(options_qemu=None, options_dst_qemu=None):
+    if options_qemu:
+        if not os.path.isfile(options_qemu):
+            raise RuntimeError("Invalid qemu binary provided (%s)" %
+                               options_qemu)
+        qemu_bin_path = options_qemu
+    else:
+        try:
+            qemu_bin_path = utils_misc.find_command('qemu-kvm')
+        except ValueError:
+            qemu_bin_path = utils_misc.find_command('kvm')
+
+    if options_dst_qemu is not None:
+        if not os.path.isfile(options_dst_qemu):
+            raise RuntimeError("Invalid dst qemu binary provided (%s)" %
+                               options_dst_qemu)
+        qemu_dst_bin_path = options_dst_qemu
+    else:
+        qemu_dst_bin_path = None
+
+    qemu_dirname = os.path.dirname(qemu_bin_path)
+    qemu_img_path = os.path.join(qemu_dirname, 'qemu-img')
+    qemu_io_path = os.path.join(qemu_dirname, 'qemu-io')
+
+    if not os.path.exists(qemu_img_path):
+        qemu_img_path = utils_misc.find_command('qemu-img')
+
+    if not os.path.exists(qemu_io_path):
+        qemu_io_path = utils_misc.find_command('qemu-io')
+
+    return [qemu_bin_path, qemu_img_path, qemu_io_path, qemu_dst_bin_path]
 
 
 class Test(object):
