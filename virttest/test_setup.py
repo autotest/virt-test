@@ -33,7 +33,7 @@ class THPError(Exception):
 class THPNotSupportedError(THPError):
 
     """
-    Thrown when host does not support tansparent hugepages.
+    Thrown when host does not support transparent hugepages.
     """
     pass
 
@@ -41,7 +41,7 @@ class THPNotSupportedError(THPError):
 class THPWriteConfigError(THPError):
 
     """
-    Thrown when host does not support tansparent hugepages.
+    Thrown when host does not support transparent hugepages.
     """
     pass
 
@@ -320,7 +320,7 @@ class HugePageConfig(object):
         if self.vms < self.max_vms:
             self.vms = self.max_vms
         # memory of all VMs plus qemu overhead of 128MB per guest
-        # (this value can be overriden in your cartesian config)
+        # (this value can be overridden in your cartesian config)
         vmsm = self.vms * (self.mem + self.qemu_overhead)
         target_hugepages = int(vmsm * 1024 / self.hugepage_size)
 
@@ -413,13 +413,13 @@ class HugePageConfig(object):
     @error.context_aware
     def cleanup(self):
         if self.deallocate:
-            error.context("trying to dealocate hugepage memory")
+            error.context("trying to deallocate hugepage memory")
             try:
                 utils.system("umount %s" % self.hugepage_path)
             except error.CmdError:
                 return
             utils.system("echo 0 > %s" % self.kernel_hp_file)
-            logging.debug("Hugepage memory successfully dealocated")
+            logging.debug("Hugepage memory successfully deallocated")
 
 
 class KSMConfig(object):
@@ -442,7 +442,7 @@ class KSMConfig(object):
         self.ksmctler = utils_misc.KSMController()
         self.ksm_module_loaded = self.ksmctler.is_module_loaded()
 
-        # load the ksm module for furthur information check
+        # load the ksm module for further information check
         if self.ksm_module and not self.ksm_module_loaded:
             self.ksmctler.load_ksm_module()
 
@@ -935,7 +935,7 @@ class PciAssignable(object):
 
         :param vf_id: vf id to check.
         :type vf_id: string
-        :return: Return True if vf has already assinged to VM. Else
+        :return: Return True if vf has already assigned to VM. Else
                  return false.
         :rtype: bool
         """
@@ -1384,14 +1384,14 @@ class LibvirtPolkitConfig(object):
     """
     Enable polkit access driver for libvirtd and set polkit rules.
 
-    For setting JavaScript polkit rule, using template of rule to satisify
+    For setting JavaScript polkit rule, using template of rule to satisfy
     libvirt ACL API testing need, just replace keys in template.
 
     Create a non-privileged user 'testacl' for test if given
     'unprivileged_user' contains 'EXAMPLE', and delete the user at cleanup.
 
     Multiple rules could be add into one config file while action_id string
-    is offered space seperated.
+    is offered space separated.
 
     e.g.
     action_id = "org.libvirt.api.domain.start org.libvirt.api.domain.write"
@@ -1417,8 +1417,8 @@ class LibvirtPolkitConfig(object):
             self.action_id = []
         self.user = params.get("unprivileged_user")
         if params.get("action_lookup"):
-            # The action_lookup string should be seperated by space and
-            # each seperated string should have ':' which represent key:value
+            # The action_lookup string should be separated by space and
+            # each separated string should have ':' which represent key:value
             # for later use.
             self.attr = params.get("action_lookup").split()
         else:
@@ -1531,7 +1531,7 @@ class LibvirtPolkitConfig(object):
             for i in range(len(self.action_id)):
                 rules += rule_tmp.replace('ACTION_ID', self.action_id[i])
 
-            # repalce 'RULE' with rules in polkit template string
+            # replace 'RULE' with rules in polkit template string
             self.template = template.replace('RULE', rules)
             logging.debug("The polkit config rule is:\n%s" % self.template)
 
@@ -1556,7 +1556,7 @@ class LibvirtPolkitConfig(object):
             self.user = 'testacl'
         self._set_polkit_conf()
         # Polkit rule will take about 1 second to take effect after change.
-        # Restart polkit daemon will force it immidiately.
+        # Restart polkit daemon will force it immediately.
         self.polkitd.restart()
 
     def cleanup(self):
