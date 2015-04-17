@@ -1798,8 +1798,8 @@ def get_host_cpu_models():
             pattern += r".+(\b%s\b)" % i
         return pattern
 
-    if ARCH == 'ppc64':
-        return ['POWER7']
+    if ARCH in ('ppc64', 'ppc64le'):
+        return []     # remove -cpu and leave it on qemu to decide
 
     cpu_types = {"AuthenticAMD": ["Opteron_G5", "Opteron_G4", "Opteron_G3",
                                   "Opteron_G2", "Opteron_G1"],
@@ -2003,7 +2003,7 @@ def get_qemu_best_cpu_model(params):
         if host_cpu_model in qemu_cpu_models:
             return host_cpu_model
     # If no host cpu model can be found on qemu_cpu_models, choose the default
-    return params.get("default_cpu_model", "qemu64")
+    return params.get("default_cpu_model", None)
 
 
 def check_if_vm_vcpu_match(vcpu_desire, vm):
