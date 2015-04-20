@@ -14,7 +14,7 @@ class Interface(base.TypedDeviceBase):
     __slots__ = ('source', 'mac_address', 'bandwidth',
                  'model', 'link_state', 'target',
                  'driver', 'address', 'boot_order',
-                 'filterref', 'backend')
+                 'filterref', 'backend', 'virtualport_type')
 
     def __init__(self, type_name, virsh_instance=base.base.virsh):
         super(Interface, self).__init__(device_tag='interface',
@@ -79,8 +79,10 @@ class Interface(base.TypedDeviceBase):
                                attribute='type')
         accessors.XMLElementNest('address', self, parent_xpath='/',
                                  tag_name='address', subclass=self.Address,
-                                 subclass_dargs={'type_name': 'drive',
+                                 subclass_dargs={'type_name': 'pci',
                                                  'virsh_instance': virsh_instance})
+        accessors.XMLAttribute('virtualport_type', self, parent_xpath='/',
+                               tag_name='virtualport', attribute='type')
     # For convenience
     Address = librarian.get('address')
 
@@ -98,6 +100,15 @@ class Interface(base.TypedDeviceBase):
         Return a new interafce driver instance from dargs
         """
         new_one = self.Driver(virsh_instance=self.virsh)
+        for key, value in dargs.items():
+            setattr(new_one, key, value)
+        return new_one
+
+    def new_iface_address(self, **dargs):
+        """
+        Return a new interface Address instance and set properties from dargs
+        """
+        new_one = self.Address("pci", virsh_instance=self.virsh)
         for key, value in dargs.items():
             setattr(new_one, key, value)
         return new_one

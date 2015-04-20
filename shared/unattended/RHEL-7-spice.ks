@@ -4,14 +4,16 @@ GRAPHICAL_OR_TEXT
 poweroff
 lang en_US.UTF-8
 keyboard us
-network --onboot yes --device eth0 --bootproto dhcp
-rootpw 123456
+network --bootproto dhcp
+rootpw --plaintext 123456
+firstboot --disable
+user --name=test --password=123456
 firewall --enabled --ssh
 selinux --enforcing
 timezone --utc America/New_York
-firstboot --disable
 bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
 zerombr
+KVM_TEST_LOGGING
 clearpart --all --initlabel
 autopart
 xconfig --startxonboot
@@ -21,30 +23,37 @@ xconfig --startxonboot
 @core
 @development
 @additional-devel
-@debugging-tools
+@debugging
 @network-tools
-@fonts
 @x11
 @gnome-desktop
-lftp
-gcc
-gcc-c++
-patch
-make
-git
-nc
+@fonts
+@smart-card
+gnome-utils
+python-imaging
 NetworkManager
 ntpdate
-redhat-lsb
-numactl-libs
-numactl
-sg3_utils
-hdparm
-lsscsi
-libaio-devel
-perl-Time-HiRes
-flex
-prelink
+dconf
+watchdog
+coreutils
+usbutils
+spice-xpi
+spice-gtk3
+docbook-utils
+sgml-common
+openjade
+virt-viewer
+pulseaudio-libs-devel
+mesa-libGL-devel
+pygtk2-devel
+libjpeg-turbo-devel
+spice-vdagent
+usbredir
+SDL
+totem
+dmidecode
+alsa-utils
+-gnome-initial-setup
 %end
 
 %post
@@ -62,8 +71,6 @@ ECHO "yum install -y stress"
 yum install -y stress
 ECHO "chkconfig sshd on"
 chkconfig sshd on
-ECHO "PermitRootLogin in /etc/ssh/sshd_config"
-sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/g' /etc/ssh/sshd_config
 ECHO "iptables -F"
 iptables -F
 ECHO "echo 0 > selinux/enforce"
@@ -72,8 +79,22 @@ ECHO "chkconfig NetworkManager on"
 chkconfig NetworkManager on
 ECHO "update ifcfg-eth0"
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
-sed -i "s/^ONBOOT=.*/ONBOOT=yes/g" /etc/sysconfig/network-scripts/ifcfg-eth0
 ECHO "Disable lock cdrom udev rules"
 sed -i "/--lock-media/s/^/#/" /usr/lib/udev/rules.d/60-cdrom_id.rules 2>/dev/null>&1
+#Workaround for graphical boot as anaconda seems to always instert skipx
+systemctl set-default graphical.target
+sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-ens*
+sed -i "s/ONBOOT=no/ONBOOT=yes/" /etc/sysconfig/network-scripts/ifcfg-ens*
+cat > '/etc/gdm/custom.conf' << EOF
+[daemon]
+AutomaticLogin=test
+AutomaticLoginEnable=True
+EOF
+cat >> '/etc/sudoers' << EOF
+test ALL = NOPASSWD: /sbin/shutdown -r now,/sbin/shutdown -h now
+EOF
+cat >> '/home/test/.bashrc' << EOF
+alias shutdown='sudo shutdown'
+EOF
 ECHO 'Post set up finished'
 %end

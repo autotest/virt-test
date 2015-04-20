@@ -405,7 +405,7 @@ class VirshPersistent(Virsh):
                  'readonly')
 
     # B/c the auto_close of VirshSession is False, we
-    # need to manager the ref-count of it manully.
+    # need to manage the ref-count of it manually.
     COUNTERS = {}
 
     def __init__(self, *args, **dargs):
@@ -4044,7 +4044,7 @@ def metadata(name, uri, options="", key=None, new_metadata=None, **dargs):
     if key:
         cmd += " --key %s" % key
     if new_metadata:
-        cmd += " --set %s" % metadata
+        cmd += " --set '%s'" % new_metadata.replace("\'", "\"")
     return command(cmd, **dargs)
 
 

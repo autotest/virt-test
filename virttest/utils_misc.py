@@ -372,6 +372,15 @@ def set_log_file_dir(directory):
     _log_file_dir = directory
 
 
+def get_log_file_dir():
+    """
+    get the base directory for log files created by log_line().
+
+    """
+    global _log_file_dir
+    return _log_file_dir
+
+
 def close_log_file(filename):
     global _open_log_files, _log_file_dir, _log_lock
     remove = []
@@ -1378,7 +1387,7 @@ class NumaInfo(object):
         cmd = utils.run("numactl --hardware")
         try:
             node_distances = cmd.stdout.split("node distances:")[-1].strip()
-            node_distance = re.findall("%s:" % node_id, node_distances)[0]
+            node_distance = re.findall("%s:.*" % node_id, node_distances)[0]
             node_distance = node_distance.split(":")[-1]
         except Exception:
             logging.warn("Get unexpect information from numctl")
@@ -1439,7 +1448,10 @@ class NumaNode(object):
             self.node_id = available_nodes[-1]
         else:
             self.cpus = self.get_node_cpus(i - 1).split()
-            self.extra_cpus = self.get_node_cpus(i).split()
+            if i == 1:
+                self.extra_cpus = self.get_node_cpus(i).split()
+            else:
+                self.extra_cpus = self.get_node_cpus(0).split()
             self.node_id = i - 1
         self.dict = {}
         for i in self.cpus:
@@ -1466,7 +1478,7 @@ class NumaNode(object):
                 cpulist_file.close()
             except IOError:
                 logging.warn("Can not find the cpu list information from both"
-                             "numactl and sysfs. Please check your system.")
+                             " numactl and sysfs. Please check your system.")
                 break_flag = True
             if not break_flag:
                 # Try to expand the numbers with '-' to a string of numbers
@@ -1491,6 +1503,34 @@ class NumaNode(object):
                 cpus = ""
 
         return cpus
+
+    def get_cpu_topology(self, cpu_id):
+        """
+        Return cpu info dict get from sysfs.
+
+        :param cpu_id: integer, cpu id number
+        :return: topology dict of certain cpu
+        """
+        topology_path = "/sys/devices/system/node/node%s" % self.node_id
+        topology_path += "/cpu%s/topology/" % cpu_id
+        cpu_topo = {"id": str(cpu_id)}
+        core_id_path = topology_path + "core_id"
+        siblings_path = topology_path + "thread_siblings_list"
+        socket_id_path = topology_path + "physical_package_id"
+        key_list = ["core_id", "siblings", "socket_id"]
+        for key in key_list:
+            try:
+                key_path = eval(key + '_path')
+                file_obj = open(key_path, 'r')
+                key_val = file_obj.read().rstrip('\n')
+                file_obj.close()
+                cpu_topo[key] = key_val
+            except IOError:
+                logging.warn("Can not find file %s from sysfs. Please check "
+                             "your system." % key_path)
+                cpu_topo[key] = None
+
+        return cpu_topo
 
     def free_cpu(self, i, thread=None):
         """
@@ -1758,8 +1798,8 @@ def get_host_cpu_models():
             pattern += r".+(\b%s\b)" % i
         return pattern
 
-    if ARCH == 'ppc64':
-        return ['POWER7']
+    if ARCH in ('ppc64', 'ppc64le'):
+        return []     # remove -cpu and leave it on qemu to decide
 
     cpu_types = {"AuthenticAMD": ["Opteron_G5", "Opteron_G4", "Opteron_G3",
                                   "Opteron_G2", "Opteron_G1"],
@@ -1963,7 +2003,7 @@ def get_qemu_best_cpu_model(params):
         if host_cpu_model in qemu_cpu_models:
             return host_cpu_model
     # If no host cpu model can be found on qemu_cpu_models, choose the default
-    return params.get("default_cpu_model", "qemu64")
+    return params.get("default_cpu_model", None)
 
 
 def check_if_vm_vcpu_match(vcpu_desire, vm):
@@ -2440,10 +2480,9 @@ def get_image_info(image_file):
     ::
 
         image_info_dict = {'format':'raw',
-                           'vsize' : '10737418240'
-                           'dsize' : '931135488'}
-
-    :todo: Add more information to `image_info_dict`.
+                           'vsize' : '10737418240',
+                           'dsize' : '931135488',
+                           'csize' : '65536'}
     """
     try:
         cmd = "qemu-img info %s" % image_file
@@ -2466,6 +2505,9 @@ def get_image_info(image_file):
                     image_info_dict['dsize'] = int(float(
                         normalize_data_size(dsize, order_magnitude="B",
                                             factor=1024)))
+                elif line.find("cluster_size") != -1:
+                    csize = line.split(':')[-1].strip()
+                    image_info_dict['csize'] = int(csize)
         return image_info_dict
     except (KeyError, IndexError, error.CmdError), detail:
         raise error.TestError("Fail to get information of %s:\n%s" %
@@ -2937,9 +2979,7 @@ def bind_device_driver(pci_id, driver_type):
     vendor = vd_list[0].split(':')[0]
     device = vd_list[0].split(':')[1]
     bind_cmd = "echo %s %s > %s" % (vendor, device, bind_file)
-    if utils.run(bind_cmd, ignore_status=True).exit_status:
-        return False
-    return True
+    return utils.run(bind_cmd, ignore_status=True).exit_status == 0
 
 
 def unbind_device_driver(pci_id):
@@ -2952,11 +2992,7 @@ def unbind_device_driver(pci_id):
         return False
     unbind_file = "/sys/bus/pci/devices/%s/driver/unbind" % pci_id
     unbind_cmd = "echo %s > %s" % (pci_id, unbind_file)
-    unbind_ret = utils.run(unbind_cmd, ignore_status=True)
-    if unbind_ret.exit_status:
-        logging.error(unbind_ret)
-        return False
-    return True
+    return utils.run(unbind_cmd, ignore_status=True).exit_status == 0
 
 
 def check_device_driver(pci_id, driver_type):
@@ -2970,11 +3006,8 @@ def check_device_driver(pci_id, driver_type):
     driver = utils.run("readlink %s" % device_driver,
                        ignore_status=True).stdout.strip()
     driver = os.path.basename(driver)
-    logging.debug("Current %s driver is %s", pci_id, driver)
-    logging.debug("Expected %s driver is %s", pci_id, driver_type)
-    if driver == driver_type:
-        return True
-    return False
+    logging.debug("% is %s, expect %s", pci_id, driver, driver_type)
+    return driver == driver_type
 
 
 class VFIOError(Exception):
@@ -3094,9 +3127,7 @@ class VFIOController(object):
         """
         Check whether given vfio group has been established.
         """
-        if os.path.exists("/dev/vfio/%s" % group_id):
-            return True
-        return False
+        return os.path.exists("/dev/vfio/%s" % group_id)
 
 
 class SELinuxBoolean(object):

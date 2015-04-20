@@ -718,7 +718,7 @@ class DevContainer(object):
                 i += 1
 
         for i in xrange(i / 7):     # Autocreated lsi hba
-            if arch.ARCH == 'ppc64':
+            if arch.ARCH in ('ppc64', 'ppc64le'):
                 _name = 'spapr-vscsi%s' % i
                 bus = qbuses.QSCSIBus("scsi.0", 'SCSI', [8, 16384],
                                       atype='spapr-vscsi')
@@ -1181,7 +1181,6 @@ class DevContainer(object):
             if media is None:
                 media = "disk"
         else:       # Skip default variables
-            imgfmt = None
             if media != 'cdrom':    # ignore only 'disk'
                 media = None
 
@@ -1224,7 +1223,7 @@ class DevContainer(object):
                                  "support; ignoring bus/unit/port. (%s)", name)
                     bus, unit, port = None, None, None
                 # In case we hotplug, lsi wasn't added during the startup hook
-                if arch.ARCH == 'ppc64':
+                if arch.ARCH in ('ppc64', 'ppc64le'):
                     _ = define_hbas('SCSI', 'spapr-vscsi', None, None, None,
                                     qbuses.QSCSIBus, pci_bus, [8, 16384])
                 else:
@@ -1326,7 +1325,7 @@ class DevContainer(object):
             if fmt == 'ide':
                 devices[-1].parent_bus = ({'type': fmt.upper(), 'atype': fmt},)
             elif fmt == 'scsi':
-                if arch.ARCH == 'ppc64':
+                if arch.ARCH in ('ppc64', 'ppc64le'):
                     devices[-1].parent_bus = ({'atype': 'spapr-vscsi',
                                                'type': 'SCSI'},)
                 else:
@@ -1392,7 +1391,10 @@ class DevContainer(object):
         devices[-1].set_param('min_io_size', min_io_size)
         devices[-1].set_param('opt_io_size', opt_io_size)
         devices[-1].set_param('bootindex', bootindex)
-        devices[-1].set_param('x-data-plane', x_data_plane, bool)
+        if x_data_plane in ["yes", "no", "on", "off"]:
+            devices[-1].set_param('x-data-plane', x_data_plane, bool)
+        else:
+            devices[-1].set_param('iothread', x_data_plane)
         if 'serial' in options:
             devices[-1].set_param('serial', serial)
             devices[-2].set_param('serial', None)   # remove serial from drive

@@ -16,7 +16,7 @@ poweroff
 KVM_TEST_LOGGING
 
 clearpart --all --initlabel
-autopart
+part / --fstype=ext4 --grow --asprimary --size=1
 
 %packages
 gpgme
@@ -178,5 +178,13 @@ iptables -F
 systemctl mask tmp.mount
 echo 0 > /selinux/enforce
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
+sed -i -e "s,^GRUB_TIMEOUT=.*,GRUB_TIMEOUT=0," /etc/default/grub
+grub2-mkconfig > /etc/grub2.cfg
+yum install -y hdparm ntpdate qemu-guest-agent
+yum clean all
+mkdir -p /var/log/journal
+sed -i -e 's/\#SystemMaxUse=/SystemMaxUse=50M/g' /etc/systemd/journald.conf
+dd if=/dev/zero of=/fill-up-file bs=1M
+rm -f /fill-up-file
 ECHO 'Post set up finished'
 %end

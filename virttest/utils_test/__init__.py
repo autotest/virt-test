@@ -32,6 +32,7 @@ import subprocess
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
+from virttest import qemu_virtio_port
 from virttest import aexpect, utils_misc, virt_vm, data_dir, utils_net
 from virttest import storage, asset, bootstrap, remote
 import virttest
@@ -198,7 +199,7 @@ def get_time(session, time_command, time_filter_re, time_format):
     :return: A tuple containing the host time and guest time.
     """
     if re.findall("ntpdate|w32tm", time_command):
-        output = session.cmd(time_command)
+        output = session.cmd_output_safe(time_command)
         if re.match('ntpdate', time_command):
             try:
                 offset = re.findall('offset (.*) sec', output)[0]
@@ -241,12 +242,13 @@ def get_time(session, time_command, time_filter_re, time_format):
         loc = locale.getlocale(locale.LC_TIME)
         # Get and parse host time
         host_time_out = utils.run(time_command).stdout
-        host_time_out, diff = host_time_out.split("  ")
+        diff = host_time_out.split()[-2]
+        host_time_out = " ".join(host_time_out.split()[:-2])
         try:
             try:
                 locale.setlocale(locale.LC_TIME, "C")
                 host_time = time.mktime(time.strptime(host_time_out, time_format))
-                host_time += float(diff.split(" ")[0])
+                host_time += float(diff)
             except Exception, err:
                 logging.debug("(time_format, time_string): (%s, %s)",
                               time_format, host_time_out)
@@ -254,12 +256,13 @@ def get_time(session, time_command, time_filter_re, time_format):
         finally:
             locale.setlocale(locale.LC_TIME, loc)
 
-        output = session.cmd_output(time_command)
+        output = session.cmd_output_safe(time_command)
 
         # Get and parse guest time
         try:
             str_time = re.findall(time_filter_re, output)[0]
-            str_time, diff = str_time.split("  ")
+            diff = str_time.split()[-2]
+            str_time = " ".join(str_time.split()[:-2])
         except IndexError:
             logging.debug("The time string from guest is:\n%s", str_time)
             raise error.TestError("The time string from guest is unexpected.")
@@ -273,16 +276,16 @@ def get_time(session, time_command, time_filter_re, time_format):
             try:
                 locale.setlocale(locale.LC_TIME, "C")
                 guest_time = time.mktime(time.strptime(str_time, time_format))
-                guest_time += float(diff.split(" ")[0])
+                guest_time += float(diff)
             except Exception, err:
                 logging.debug("(time_format, time_string): (%s, %s)",
-                              time_format, host_time_out)
+                              time_format, str_time)
                 raise err
         finally:
             locale.setlocale(locale.LC_TIME, loc)
     else:
         host_time = time.time()
-        output = session.cmd_output(time_command).strip()
+        output = session.cmd_output_safe(time_command).strip()
         num = 0.0
         reo = None
 
@@ -290,6 +293,7 @@ def get_time(session, time_command, time_filter_re, time_format):
             reo = re.findall(time_filter_re, output)[0]
             if len(reo) > 1:
                 num = float(reo[1])
+                reo = reo[0]
         except IndexError:
             logging.debug("The time string from guest is:\n%s", output)
             raise error.TestError("The time string from guest is unexpected.")
@@ -501,6 +505,168 @@ def run_file_transfer(test, params, env):
         session.close()
 
 
+@error.context_aware
+def run_virtio_serial_file_transfer(test, params, env, port_name=None,
+                                    sender="guest", md5_check=True):
+    """
+    Transfer file between host and guest through virtio serial.
+
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
+    :param port_name: VM's serial port name used to transfer data.
+    :param sender: Who is data sender. guest, host or both.
+    :param md5_check: Check md5 or not.
+    """
+    def get_virtio_port_host_file(vm, port_name):
+        """
+        Returns separated virtserialports
+        :param vm: VM object
+        :return: All virtserialports
+        """
+        ports = []
+        for port in vm.virtio_ports:
+            if isinstance(port, qemu_virtio_port.VirtioSerial):
+                if port.name == port_name:
+                    return port.hostfile
+
+    def run_host_cmd(host_cmd, timeout=720):
+        output = utils.system_output(host_cmd, timeout=timeout)
+        return output
+
+    def transfer_data(session, host_cmd, guest_cmd, n_time, timeout,
+                      md5_check, action):
+        for num in xrange(n_time):
+            md5_host = "1"
+            md5_guest = "2"
+            logging.info("Data transfer repeat %s/%s." % (num + 1, n_time))
+            try:
+                args = (host_cmd, timeout)
+                host_thread = utils.InterruptedThread(run_host_cmd, args)
+                host_thread.start()
+                g_output = session.cmd_output(guest_cmd, timeout=timeout)
+                if action == "both":
+                    if "Md5MissMatch" in g_output:
+                        err = "Data lost during file transfer. Md5 miss match."
+                        err += " Script output:\n%s" % g_output
+                        if md5_check:
+                            raise error.TestFail(err)
+                        else:
+                            logging.warn(err)
+                else:
+                    md5_re = "md5_sum = (\w{32})"
+                    try:
+                        md5_guest = re.findall(md5_re, g_output)[0]
+                    except Exception:
+                        err = "Fail to get md5, script may fail."
+                        err += " Script output:\n%s" % g_output
+                        raise error.TestError(err)
+            finally:
+                if host_thread:
+                    output = ""
+                    output = host_thread.join(10)
+                    if action == "both":
+                        if "Md5MissMatch" in output:
+                            err = "Data lost during file transfer. Md5 miss "
+                            err += "match. Script output:\n%s" % output
+                            if md5_check:
+                                raise error.TestFail(err)
+                            else:
+                                logging.warn(err)
+                    else:
+                        md5_re = "md5_sum = (\w{32})"
+                        try:
+                            md5_host = re.findall(md5_re, output)[0]
+                        except Exception:
+                            err = "Fail to get md5, script may fail."
+                            err += " Script output:\n%s" % output
+                            raise error.TestError(err)
+                if action != "both" and md5_host != md5_guest:
+                    err = "Data lost during file transfer. Md5 miss match."
+                    err += " Guest script output:\n %s" % g_output
+                    err += " Host script output:\n%s" % output
+                    if md5_check:
+                        raise error.TestFail(err)
+                    else:
+                        logging.warn(err)
+
+    env["serial_file_transfer_start"] = False
+    vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
+    timeout = int(params.get("login_timeout", 360))
+    session = vm.wait_for_login(timeout=timeout)
+
+    if not port_name:
+        port_name = params["file_transfer_serial_port"]
+    guest_scripts = params["guest_scripts"]
+    guest_path = params.get("guest_script_folder", "C:\\")
+    error.context("Copy test scripts to guest.", logging.info)
+    for script in guest_scripts.split(";"):
+        link = os.path.join(data_dir.get_root_dir(), "shared", "deps",
+                            "serial", script)
+        vm.copy_files_to(link, guest_path, timeout=60)
+    host_device = get_virtio_port_host_file(vm, port_name)
+
+    dir_name = test.tmpdir
+    transfer_timeout = int(params.get("transfer_timeout", 720))
+    tmp_dir = params.get("tmp_dir", "/var/tmp/")
+    clean_cmd = params.get("clean_cmd", "rm -f")
+    filesize = int(params.get("filesize", 10))
+    count = int(filesize)
+
+    host_data_file = os.path.join(dir_name,
+                                  "tmp-%s" % utils_misc.generate_random_string(8))
+    guest_data_file = os.path.join(tmp_dir,
+                                   "tmp-%s" % utils_misc.generate_random_string(8))
+
+    if sender == "host" or sender == "both":
+        cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (host_data_file, count)
+        error.context("Creating %dMB file on host" % filesize, logging.info)
+        utils.run(cmd)
+    else:
+        guest_file_create_cmd = "dd if=/dev/zero of=%s bs=1M count=%d"
+        guest_file_create_cmd = params.get("guest_file_create_cmd",
+                                           guest_file_create_cmd)
+        cmd = guest_file_create_cmd % (guest_data_file, count)
+        error.context("Creating %dMB file on host" % filesize, logging.info)
+        session.cmd(cmd, timeout=600)
+
+    if sender == "host":
+        action = "send"
+        guest_action = "receive"
+        txt = "Transfer data from host to guest"
+    elif sender == "guest":
+        action = "receive"
+        guest_action = "send"
+        txt = "Transfer data from guest to host"
+    else:
+        action = "both"
+        guest_action = "both"
+        txt = "Transfer data betwwen guest and host"
+
+    host_script = params.get("host_script", "serial_host_send_receive.py")
+    host_script = os.path.join(data_dir.get_root_dir(), "shared", "deps",
+                               "serial", host_script)
+    host_cmd = "python %s -s %s -f %s -a %s" % (host_script, host_device,
+                                                host_data_file, action)
+    guest_script = params.get("guest_script",
+                              "VirtIoChannel_guest_send_receive.py")
+    guest_script = os.path.join(guest_path, guest_script)
+
+    guest_cmd = "python %s -d %s -f %s -a %s" % (guest_script, port_name,
+                                                 guest_data_file, guest_action)
+    n_time = int(params.get("repeat_times", 1))
+    txt += " for %s times" % n_time
+    try:
+        env["serial_file_transfer_start"] = True
+        transfer_data(session, host_cmd, guest_cmd, n_time, transfer_timeout,
+                      md5_check, action)
+    finally:
+        env["serial_file_transfer_start"] = False
+    if session:
+        session.close()
+
+
 def run_autotest(vm, session, control_path, timeout,
                  outputdir, params, copy_only=False, control_args=None,
                  ignore_session_terminated=False):
@@ -570,7 +736,7 @@ def run_autotest(vm, session, control_path, timeout,
         dirname = os.path.dirname(remote_path)
         session.cmd("cd %s" % dirname)
         session.cmd("mkdir -p %s" % os.path.dirname(dest_dir))
-        e_cmd = "tar xjvf %s -C %s" % (basename, os.path.dirname(dest_dir))
+        e_cmd = "tar xjvmf %s -C %s" % (basename, os.path.dirname(dest_dir))
         output = session.cmd(e_cmd, timeout=240)
         autotest_dirname = ""
         for line in output.splitlines()[1:]:

@@ -490,7 +490,7 @@ class QtreeDisksContainer(object):
             """ checks the drive format according to qtree info """
             expected = params.get('drive_format')
             if expected == 'scsi':
-                if arch.ARCH == 'ppc64':
+                if arch.ARCH in ('ppc64', 'ppc64le'):
                     expected = 'spapr-vscsi'
                 else:
                     expected = 'lsi53c895a'

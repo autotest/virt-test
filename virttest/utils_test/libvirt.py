@@ -18,6 +18,7 @@ More specifically:
 
 import re
 import os
+import ast
 import logging
 import shutil
 import threading
@@ -504,7 +505,7 @@ def setup_or_cleanup_gluster(is_setup, vol_name, brick_path="", pool_name="",
     try:
         utils_misc.find_command("gluster")
     except ValueError:
-        raise error.TestError("Missing command 'gluster'")
+        raise error.TestNAError("Missing command 'gluster'")
     if not brick_path:
         tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
         brick_path = os.path.join(tmpdir, pool_name)
@@ -693,15 +694,13 @@ def pci_label_from_address(address_dict, radix=10):
         radix = 16
         return = pci_0000_08_10_0
     """
-    if not set(['domain', 'bus', 'slot', 'function']).issubset(
-            address_dict.keys()):
-        raise error.TestError("Param %s does not contain keys of "
-                              "['domain', 'bus', 'slot', 'function']." %
-                              str(address_dict))
-    domain = int(address_dict['domain'], radix)
-    bus = int(address_dict['bus'], radix)
-    slot = int(address_dict['slot'], radix)
-    function = int(address_dict['function'], radix)
+    try:
+        domain = int(address_dict['domain'], radix)
+        bus = int(address_dict['bus'], radix)
+        slot = int(address_dict['slot'], radix)
+        function = int(address_dict['function'], radix)
+    except (TypeError, KeyError), detail:
+        raise error.TestError(detail)
     pci_label = ("pci_%04x_%02x_%02x_%01x" % (domain, bus, slot, function))
     return pci_label
 
@@ -1334,6 +1333,39 @@ def create_hostdev_xml(pci_id, boot_order=0):
     return hostdev_xml.xml
 
 
+def alter_boot_order(vm_name, pci_id, boot_order=0):
+    """
+    Alter the startup sequence of VM to PCI-device firstly
+
+    OS boot element and per-device boot elements are mutually exclusive,
+    It's necessary that remove all OS boots before setting PCI-device order
+
+    :param vm_name: VM name
+    :param pci_id:  such as "0000:06:00.1"
+    :param boot_order: order priority, such as 1, 2, ...
+    """
+    vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
+    # remove all of OS boots
+    vmxml.remove_all_boots()
+    # prepare PCI-device XML with boot order
+    try:
+        device_domain = pci_id.split(':')[0]
+        device_domain = "0x%s" % device_domain
+        device_bus = pci_id.split(':')[1]
+        device_bus = "0x%s" % device_bus
+        device_slot = pci_id.split(':')[-1].split('.')[0]
+        device_slot = "0x%s" % device_slot
+        device_function = pci_id.split('.')[-1]
+        device_function = "0x%s" % device_function
+    except IndexError:
+        raise error.TestError("Invalid PCI Info: %s" % pci_id)
+    attrs = {'domain': device_domain, 'slot': device_slot,
+             'bus': device_bus, 'function': device_function}
+    vmxml.add_hostdev(attrs, boot_order=boot_order)
+    # synchronize XML
+    vmxml.sync()
+
+
 def create_disk_xml(params):
     """
     Create a disk configuration file.
@@ -1454,6 +1486,7 @@ def create_net_xml(net_name, params):
     net_name = params.get("net_name", "default")
     net_bridge = params.get("net_bridge", '{}')
     net_forward = params.get("net_forward", '{}')
+    forward_iface = params.get("forward_iface")
     net_dns_forward = params.get("net_dns_forward")
     net_dns_txt = params.get("net_dns_txt")
     net_dns_srv = params.get("net_dns_srv")
@@ -1461,6 +1494,7 @@ def create_net_xml(net_name, params):
     net_dns_hostip = params.get("net_dns_hostip")
     net_dns_hostnames = params.get("net_dns_hostnames", "").split()
     net_domain = params.get("net_domain")
+    net_virtualport = params.get("net_virtualport")
     net_bandwidth_inbound = params.get("net_bandwidth_inbound", "{}")
     net_bandwidth_outbound = params.get("net_bandwidth_outbound", "{}")
     net_ip_family = params.get("net_ip_family")
@@ -1479,6 +1513,8 @@ def create_net_xml(net_name, params):
     dhcp_end_ipv6 = params.get("dhcp_end_ipv6")
     tftp_root = params.get("tftp_root")
     bootp_file = params.get("bootp_file")
+    routes = params.get("routes", "").split()
+    pg_name = params.get("portgroup_name", "").split()
     try:
         if not virsh.net_info(net_name, ignore_status=True).exit_status:
             # Edit an existed network
@@ -1489,11 +1525,11 @@ def create_net_xml(net_name, params):
         if net_dns_forward:
             dns_dict["dns_forward"] = net_dns_forward
         if net_dns_txt:
-            dns_dict["txt"] = eval(net_dns_txt)
+            dns_dict["txt"] = ast.literal_eval(net_dns_txt)
         if net_dns_srv:
-            dns_dict["srv"] = eval(net_dns_srv)
+            dns_dict["srv"] = ast.literal_eval(net_dns_srv)
         if net_dns_forwarders:
-            dns_dict["forwarders"] = [eval(x) for x in
+            dns_dict["forwarders"] = [ast.literal_eval(x) for x in
                                       net_dns_forwarders]
         if net_dns_hostip:
             host_dict["host_ip"] = net_dns_hostip
@@ -1505,22 +1541,28 @@ def create_net_xml(net_name, params):
             host = dns_obj.new_host(**host_dict)
             dns_obj.host = host
         netxml.dns = dns_obj
-        bridge = eval(net_bridge)
+        bridge = ast.literal_eval(net_bridge)
         if bridge:
             netxml.bridge = bridge
-        forward = eval(net_forward)
+        forward = ast.literal_eval(net_forward)
         if forward:
             netxml.forward = forward
+        if forward_iface:
+            interface = [
+                {'dev': x} for x in forward_iface.split()]
+            netxml.forward_interface = interface
         if nat_port:
-            netxml.nat_port = eval(nat_port)
+            netxml.nat_port = ast.literal_eval(nat_port)
         if net_domain:
             netxml.domain_name = net_domain
-        net_inbound = eval(net_bandwidth_inbound)
-        net_outbound = eval(net_bandwidth_outbound)
+        net_inbound = ast.literal_eval(net_bandwidth_inbound)
+        net_outbound = ast.literal_eval(net_bandwidth_outbound)
         if net_inbound:
             netxml.bandwidth_inbound = net_inbound
         if net_outbound:
             netxml.bandwidth_outbound = net_outbound
+        if net_virtualport:
+            netxml.virtualport_type = net_virtualport
 
         if net_ip_family == "ipv6":
             ipxml = network_xml.IPXML()
@@ -1551,9 +1593,35 @@ def create_net_xml(net_name, params):
                                 "name": guest_name,
                                 "ip": guest_ipv4}]
             netxml.set_ip(ipxml)
+        if routes:
+            netxml.routes = [ast.literal_eval(x) for x in routes]
+        if pg_name:
+            pg_default = params.get("portgroup_default",
+                                    "").split()
+            pg_virtualport = params.get(
+                "portgroup_virtualport", "").split()
+            pg_bandwidth_inbound = params.get(
+                "portgroup_bandwidth_inbound", "").split()
+            pg_bandwidth_outbound = params.get(
+                "portgroup_bandwidth_outbound", "").split()
+            pg_vlan = params.get("portgroup_vlan", "").split()
+            for i in range(len(pg_name)):
+                pgxml = network_xml.PortgroupXML()
+                pgxml.name = pg_name[i]
+                if len(pg_default) > i:
+                    pgxml.default = pg_default[i]
+                if len(pg_virtualport) > i:
+                    pgxml.virtualport_type = pg_virtualport[i]
+                if len(pg_bandwidth_inbound) > i:
+                    pgxml.bandwidth_inbound = ast.literal_eval(pg_bandwidth_inbound[i])
+                if len(pg_bandwidth_outbound) > i:
+                    pgxml.bandwidth_outbound = ast.literal_eval(pg_bandwidth_outbound[i])
+                if len(pg_vlan) > i:
+                    pgxml.vlan_tag = ast.literal_eval(pg_vlan[i])
+                netxml.set_portgroup(pgxml)
         logging.debug("New network xml file: %s", netxml)
         netxml.xmltreefile.write()
-        netxml.sync()
+        return netxml
 
     except Exception, detail:
         utils.log_last_traceback()
@@ -2435,3 +2503,86 @@ def update_vm_disk_source(vm_name, disk_source_path, source_type="file"):
     logging.debug("The new VM XML:\n%s", vmxml.xmltreefile)
     vmxml.sync()
     return True
+
+
+def hotplug_domain_vcpu(domain, count, by_virsh=True, hotplug=True):
+    """
+    Hot-plug/Hot-unplug vcpu for domian
+
+    :param domain:   Domain name, id, uuid
+    :param count:    to setvcpus it's the current vcpus number,
+                     but to qemu-monitor-command,
+                     we need to designate a specific CPU ID.
+                     The default will be got by (count - 1)
+    :param by_virsh: True means hotplug/unplug by command setvcpus,
+                     otherwise, using qemu_monitor
+    :param hotplug:  True means hot-plug, False means hot-unplug
+    """
+    if by_virsh:
+        result = virsh.setvcpus(domain, count, "--live", debug=True)
+    else:
+        if hotplug:
+            cpu_opt = "cpu-add"
+        else:
+            cpu_opt = "cpu-del"
+            # Note: cpu-del is supported currently, it will return error.
+            # as follow,
+            # {
+            #    "id": "libvirt-23",
+            #    "error": {
+            #        "class": "CommandNotFound",
+            #        "desc": "The command cpu-del has not been found"
+            #    }
+            # }
+            # so, the caller should check the result.
+        # hot-plug/hot-plug the CPU has maximal ID
+        params = (cpu_opt, (count - 1))
+        cmd = '{\"execute\":\"%s\",\"arguments\":{\"id\":%d}}' % params
+        result = virsh.qemu_monitor_command(domain,
+                                            cmd,
+                                            "--pretty",
+                                            debug=True)
+    return result
+
+
+def exec_virsh_edit(source, edit_cmd, connect_uri="qemu:///system"):
+    """
+    Execute edit command.
+
+    :param source : virsh edit's option.
+    :param edit_cmd: Edit command list to execute.
+    :return: True if edit is successful, False if edit is failure.
+    """
+    logging.info("Trying to edit xml with cmd %s", edit_cmd)
+    session = aexpect.ShellSession("sudo -s")
+    try:
+        session.sendline("virsh -c %s edit %s" % (connect_uri, source))
+        for cmd in edit_cmd:
+            session.sendline(cmd)
+        session.send('\x1b')
+        session.send('ZZ')
+        remote.handle_prompts(session, None, None, r"[\#\$]\s*$", debug=True)
+        session.close()
+        return True
+    except Exception, e:
+        session.close()
+        logging.error("Error occurred: %s", e)
+        return False
+
+
+def new_disk_vol_name(pool_name):
+    """
+    According to BZ#1138523, the new volume name must be the next
+    created partition(sdb1, etc.), so we need to inspect the original
+    partitions of the disk then count the new partition number.
+
+    :param pool_name: Disk pool name
+    :return: New volume name or none
+    """
+    poolxml = pool_xml.PoolXML.new_from_dumpxml(pool_name)
+    if poolxml.get_type(pool_name) != "disk":
+        logging.error("This is not a disk pool")
+        return None
+    disk = poolxml.get_source().device_path[5:]
+    part_num = len(filter(lambda s: s.startswith(disk), get_parts_list()))
+    return disk + str(part_num)

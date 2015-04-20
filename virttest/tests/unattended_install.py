@@ -139,7 +139,7 @@ class UnattendedInstallConfig(object):
                            'process_check', 'vfd_size', 'cdrom_mount_point',
                            'floppy_mount_point', 'cdrom_virtio',
                            'virtio_floppy', 're_driver_match',
-                           're_hardware_id', 'driver_in_floppy']
+                           're_hardware_id', 'driver_in_floppy', 'vga']
 
         for a in self.attributes:
             setattr(self, a, params.get(a, ''))
@@ -340,6 +340,13 @@ class UnattendedInstallConfig(object):
             else:
                 l = ''
             contents = re.sub(dummy_logging_re, l, contents)
+
+        dummy_graphical_re = re.compile('GRAPHICAL_OR_TEXT')
+        if dummy_graphical_re.search(contents):
+            if not self.vga or self.vga.lower() == "none":
+                contents = dummy_graphical_re.sub('text', contents)
+            else:
+                contents = dummy_graphical_re.sub('graphical', contents)
 
         logging.debug("Unattended install contents:")
         for line in contents.splitlines():
@@ -1004,6 +1011,12 @@ def run(test, params, env):
     src = params.get('images_good')
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
     dst = storage.get_image_filename(params, base_dir)
+    if params.get("storage_type") == "iscsi":
+        dd_cmd = "dd if=/dev/zero of=%s bs=1M count=1" % dst
+        txt = "iscsi used, need destroy data in %s" % dst
+        txt += " by command: %s" % dd_cmd
+        logging.info(txt)
+        utils.system(dd_cmd)
     image_name = os.path.basename(dst)
     mount_point = params.get("dst_dir")
     if mount_point and src:

@@ -1230,15 +1230,15 @@ class VMXML(VMXMLBase):
         try:
             self.xmltreefile.remove_by_xpath(
                 '/devices/%s' % device_type,
-                remove_all=True,
-            )
+                remove_all=True)
         except (AttributeError, TypeError):
             pass  # Element already doesn't exist
         self.xmltreefile.write()
 
     def add_hostdev(self, source_address, mode='subsystem',
                     hostdev_type='pci',
-                    managed='yes'):
+                    managed='yes',
+                    boot_order=None):
         """
         Add a hostdev device to guest.
 
@@ -1248,6 +1248,8 @@ class VMXML(VMXMLBase):
         dev.mode = mode
         dev.hostdev_type = hostdev_type
         dev.managed = managed
+        if boot_order:
+            dev.boot_order = boot_order
         dev.source_address = dev.new_source_address(**source_address)
         self.add_device(dev)
 
@@ -1334,6 +1336,16 @@ class VMXML(VMXMLBase):
             vmxml.sync()
         except (AttributeError, TypeError):
             pass  # Element already doesn't exist
+
+    def remove_all_boots(self):
+        """
+        Remove all OS boots
+        """
+        try:
+            self.xmltreefile.remove_by_xpath('/os/boot', remove_all=True)
+        except (AttributeError, TypeError):
+            pass  # Element already doesn't exist
+        self.xmltreefile.write()
 
 
 class VMCPUXML(base.LibvirtXMLBase):

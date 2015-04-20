@@ -417,7 +417,7 @@ class VM(virt_vm.BaseVM):
             return cmd
 
         def add_serial(devices, name, filename):
-            if (arch.ARCH in ('ppc64', 'aarch64') or
+            if (arch.ARCH in ('ppc64', 'ppc64le', 'aarch64') or
                     not devices.has_option("chardev")):
                 return " -serial unix:'%s',server,nowait" % filename
 
@@ -1346,6 +1346,14 @@ class VM(virt_vm.BaseVM):
             usb_params = params.object_params(usb_name)
             for dev in devices.usbc_by_params(usb_name, usb_params):
                 devices.insert(dev)
+
+        for iothread in params.get("iothreads", "").split():
+            cmd = "-object iothread,"
+            iothread_id = params.get("%s_id" % iothread.strip())
+            if not iothread_id:
+                iothread_id = iothread.strip()
+            cmd += "id=%s" % iothread_id
+            devices.insert(StrDev("IOthread_%s" % iothread_id, cmdline=cmd))
 
         # Add images (harddrives)
         for image_name in params.objects("images"):

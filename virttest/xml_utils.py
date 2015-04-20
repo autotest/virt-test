@@ -80,7 +80,7 @@ class TempXMLFile(file):
 
     def unlink(self):
         """
-        Unconditionaly delete file, ignoring related exceptions
+        Unconditionally delete file, ignoring related exceptions
         """
         try:
             os.unlink(self.name)

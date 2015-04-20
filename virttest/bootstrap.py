@@ -110,13 +110,18 @@ def verify_recommended_programs(t_type):
                              "source. Aliases searched: %s", cmd_aliases)
 
 
-def verify_mandatory_programs(t_type):
+def verify_mandatory_programs(t_type, guest_os):
     failed_cmds = []
     cmds = mandatory_programs[t_type]
     for cmd in cmds:
         try:
             logging.info(utils_misc.find_command(cmd))
         except ValueError:
+            if cmd == '7za' and guest_os != defaults.DEFAULT_GUEST_OS:
+                logging.warn("Command 7za (required to uncompress JeOS) "
+                             "missing. You can still use virt-test with guest"
+                             " OS's other than JeOS.")
+                continue
             logging.error("Required command %s is missing. You must "
                           "install it", cmd)
             failed_cmds.append(cmd)
@@ -759,7 +764,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     logging.info("")
     step += 1
     logging.info("%d - Checking the mandatory programs and headers", step)
-    verify_mandatory_programs(test_name)
+    verify_mandatory_programs(test_name, guest_os)
 
     logging.info("")
     step += 1
