@@ -4020,7 +4020,7 @@ def domcapabilities(virttype=None, emulatorbin=None, arch=None, machine=None,
     if virttype:
         cmd += " --virttype %s" % virttype
     if emulatorbin:
-        cmd += " --emulatorpin %s" % emulatorbin
+        cmd += " --emulatorbin %s" % emulatorbin
     if arch:
         cmd += " --arch %s" % arch
     if machine:
