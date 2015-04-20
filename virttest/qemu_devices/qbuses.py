@@ -422,6 +422,20 @@ class QStrictCustomBus(QSparseBus):
         self._set_device_props(device, addr)
 
 
+class QNoAddrCustomBus(QSparseBus):
+
+    """
+    This is the opposite of QStrictCustomBus. Even when addr is set it's not
+    updated in the device's params.
+    """
+
+    def _set_device_props(self, device, addr):
+        pass
+
+    def _update_device_props(self, device, addr):
+        pass
+
+
 class QUSBBus(QSparseBus):
 
     """

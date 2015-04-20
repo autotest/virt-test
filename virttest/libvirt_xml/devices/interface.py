@@ -14,7 +14,7 @@ class Interface(base.TypedDeviceBase):
     __slots__ = ('source', 'mac_address', 'bandwidth',
                  'model', 'link_state', 'target',
                  'driver', 'address', 'boot_order',
-                 'filterref')
+                 'filterref', 'backend')
 
     def __init__(self, type_name, virsh_instance=base.base.virsh):
         super(Interface, self).__init__(device_tag='interface',
@@ -30,6 +30,11 @@ class Interface(base.TypedDeviceBase):
                                  forbidden=None,
                                  parent_xpath='/',
                                  tag_name='target')
+        accessors.XMLElementDict(property_name="backend",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='backend')
         accessors.XMLAttribute(property_name="mac_address",
                                libvirtxml=self,
                                forbidden=None,

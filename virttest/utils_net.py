@@ -33,7 +33,9 @@ sockfd = None
 
 
 class NetError(Exception):
-    pass
+
+    def __init__(self, *args):
+        Exception.__init__(self, *args)
 
 
 class TAPModuleError(NetError):
@@ -2618,9 +2620,14 @@ def parse_arp():
     for line in arp_cache:
         mac = line.split()[3]
         ip = line.split()[0]
+        flag = line.split()[2]
 
         # Skip the header
         if mac.count(":") != 5:
+            continue
+
+        # Skip the incomplete ARP entries
+        if flag == "0x0":
             continue
 
         ret[mac] = ip
@@ -2628,7 +2635,7 @@ def parse_arp():
     return ret
 
 
-def verify_ip_address_ownership(ip, macs, timeout=10.0):
+def verify_ip_address_ownership(ip, macs, timeout=60.0):
     """
     Use arping and the ARP cache to make sure a given IP address belongs to one
     of the given MAC addresses.
@@ -2637,28 +2644,35 @@ def verify_ip_address_ownership(ip, macs, timeout=10.0):
     :param macs: A list or tuple of MAC addresses.
     :return: True if ip is assigned to a MAC address in macs.
     """
-    ip_map = parse_arp()
-    for mac in macs:
-        if ip_map.get(mac) == ip:
-            return True
+    def __arping(regex, arping_cmd, ip):
+        # Compile a regex that matches the given IP address and any of the
+        # given MAC addresses from arping output
+        ip_map = parse_arp()
+        for mac in macs:
+            if ip_map.get(mac) == ip:
+                return True
+        o = commands.getoutput(arping_cmd)
+        if not regex.search(o):
+            logging.debug("Verify arping result failed: %s" % o)
+            return False
+        return True
 
-    # Compile a regex that matches the given IP address and any of the given
-    # MAC addresses
-    mac_regex = "|".join("(%s)" % mac for mac in macs)
-    regex = re.compile(r"\b%s\b.*\b(%s)\b" % (ip, mac_regex), re.IGNORECASE)
-
-    # Get the name of the bridge device for arping
-    o = commands.getoutput("%s route get %s" %
-                           (utils_misc.find_command("ip"), ip))
-    dev = re.findall(r"dev\s+\S+", o, re.IGNORECASE)
+    # Get the name of the bridge device for ip route cache
+    ip_cmd = utils_misc.find_command("ip")
+    ip_cmd = "%s route get %s" % (ip_cmd, ip)
+    o = commands.getoutput(ip_cmd)
+    dev = re.findall(r"dev\s+\S+", o, re.I)
     if not dev:
+        logging.debug("No dev in route table to %s: %s" % (ip, o))
         return False
     dev = dev[0].split()[-1]
-
-    # Send an ARP request
-    o = commands.getoutput("%s -f -c 3 -I %s %s" %
-                           (utils_misc.find_command("arping"), dev, ip))
-    return bool(regex.search(o))
+    mac_regex = "|".join("(%s)" % mac for mac in macs)
+    regex = re.compile(r"\b%s\b.*\b(%s)\b" % (ip, mac_regex), re.I)
+    arping_bin = utils_misc.find_command("arping")
+    arping_cmd = "%s -f -c 3 -I %s %s" % (arping_bin, dev, ip)
+    ret = utils_misc.wait_for(lambda: __arping(regex, arping_cmd, ip),
+                              timeout=timeout)
+    return bool(ret)
 
 
 def generate_mac_address_simple():
@@ -2775,7 +2789,7 @@ def get_linux_ifname(session, mac_address=""):
     def _process_output(cmd, reg_pattern):
         sys_ifname = ["lo", "sit0"]
         try:
-            output = session.cmd(cmd)
+            output = session.cmd_output_safe(cmd)
             ifname_list = re.findall(reg_pattern, output, re.I)
             if not ifname_list:
                 return None

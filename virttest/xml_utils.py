@@ -302,13 +302,17 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         """
         self.get_parent(element).remove(element)
 
-    def remove_by_xpath(self, xpath):
+    def remove_by_xpath(self, xpath, remove_all=False):
         """
         Remove an element found by xpath
 
         :param xpath: element name or path to remove
         """
-        self.remove(self.find(xpath))  # can't remove root
+        if remove_all:
+            for elem in self.findall(xpath):
+                self.remove(elem)
+        else:
+            self.remove(self.find(xpath))  # can't remove root
 
     def create_by_xpath(self, xpath):
         """

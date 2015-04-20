@@ -15,7 +15,7 @@ class CapabilityXML(base.LibvirtXMLBase):
     Properties:
         uuid:
             string of host uuid
-        os_arch_machine_map:
+        guest_capabilities:
             dict, read-only
         get:
             dict map from os type names to dict map from arch names
@@ -24,9 +24,9 @@ class CapabilityXML(base.LibvirtXMLBase):
     # TODO: Add more __slots__ and accessors to get some useful stats
     # e.g. guest_count etc.
 
-    __slots__ = ('uuid', 'os_arch_machine_map', 'cpu_count', 'arch', 'model',
+    __slots__ = ('uuid', 'guest_capabilities', 'cpu_count', 'arch', 'model',
                  'vendor', 'feature_list', 'power_management_list',
-                 'cpu_topolopy')
+                 'cpu_topology', 'cells_topology')
     __schema_name__ = "capability"
 
     def __init__(self, virsh_instance=base.virsh):
@@ -35,8 +35,8 @@ class CapabilityXML(base.LibvirtXMLBase):
                                  forbidden=['set', 'del'],
                                  parent_xpath='/host',
                                  tag_name='uuid')
-        # This will skip self.get_os_arch_machine_map() defined below
-        accessors.AllForbidden(property_name="os_arch_machine_map",
+        # This will skip self.get_guest_capabilities() defined below
+        accessors.AllForbidden(property_name="guest_capabilities",
                                libvirtxml=self)
         # This will skip self.get_cpu_count() defined below
         accessors.AllForbidden(property_name="cpu_count",
@@ -57,11 +57,18 @@ class CapabilityXML(base.LibvirtXMLBase):
                                  forbidden=['del'],
                                  parent_xpath='/host/cpu',
                                  tag_name='vendor')
-        accessors.XMLElementDict(property_name="cpu_topolopy",
+        accessors.XMLElementDict(property_name="cpu_topology",
                                  libvirtxml=self,
                                  forbidden=['del'],
                                  parent_xpath='/host/cpu',
                                  tag_name='topology')
+        accessors.XMLElementNest(property_name='cells_topology',
+                                 libvirtxml=self,
+                                 parent_xpath='/host',
+                                 tag_name='topology',
+                                 subclass=TopologyXML,
+                                 subclass_dargs={
+                                     'virsh_instance': virsh_instance})
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                libvirtxml=self)
@@ -72,29 +79,42 @@ class CapabilityXML(base.LibvirtXMLBase):
         # calls set_xml accessor method
         self['xml'] = self.__dict_get__('virsh').capabilities()
 
-    def get_os_arch_machine_map(self):
+    def get_guest_capabilities(self):
         """
-        Accessor method for os_arch_machine_map property (in __slots__)
+        Accessor method for guest_capabilities property (in __slots__).
+        Return a guest capabilities dict in following schema:
+        {<os_type>: {<arch name>: {'wordsize': '', 'emulator': '',
+        'machine': [<machine name>, ...], 'domaini_<type>': {'emulator': ''}}}}
         """
-        oamm = {}  # Schema {<os_type>:{<arch name>:[<machine>, ...]}}
+        guest_capa = {}
         xmltreefile = self.__dict_get__('xml')
         for guest in xmltreefile.findall('guest'):
             os_type_name = guest.find('os_type').text
             # Multiple guest definitions can share same os_type (e.g. hvm, pvm)
             if os_type_name == 'xen':
                 os_type_name = 'pv'
-            amm = oamm.get(os_type_name, {})
+            guest_arch = guest_capa.get(os_type_name, {})
             for arch in guest.findall('arch'):
                 arch_name = arch.get('name')
-                mmap = amm.get(arch_name, [])
+                arch_prop = guest_arch.get(arch_name, {})
+                arch_prop['wordsize'] = arch.find('wordsize').text
+                arch_prop['emulator'] = arch.find('emulator').text
+                m_list = []
                 for machine in arch.findall('machine'):
                     machine_text = machine.text
                     # Don't add duplicate entries
-                    if not mmap.count(machine_text):
-                        mmap.append(machine_text)
-                amm[arch_name] = mmap
-            oamm[os_type_name] = amm
-        return oamm
+                    if not m_list.count(machine_text):
+                        m_list.append(machine_text)
+                arch_prop['machine'] = m_list
+                for domain in arch.findall('domain'):
+                    domain_name = "domain_" + domain.get('type')
+                    dom_prop = {}
+                    if domain.find('emulator') is not None:
+                        dom_prop['emulator'] = domain.find('emulator').text
+                    arch_prop[domain_name] = dom_prop
+                guest_arch[arch_name] = arch_prop
+            guest_capa[os_type_name] = guest_arch
+        return guest_capa
 
     def get_power_management_list(self):
         """
@@ -196,3 +216,187 @@ class CapabilityXML(base.LibvirtXMLBase):
         xmltreefile = self.__dict_get__('xml')
         cpu_node = xmltreefile.find('/host/cpu')
         xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
+
+
+class TopologyXML(base.LibvirtXMLBase):
+
+    """
+    Handler of cells topology element in libvirt capabilities.
+
+    Properties:
+        num:
+            string of node cell numbers
+        cell:
+            list of cpu dict
+    """
+
+    __slots__ = ('num', 'cell')
+
+    def __init__(self, virsh_instance=base.virsh):
+        """
+        Create new cells topology XML instance
+        """
+        accessors.XMLAttribute(property_name="num",
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='cells',
+                               attribute='num')
+        accessors.AllForbidden(property_name="cell",
+                               libvirtxml=self)
+        super(TopologyXML, self).__init__(virsh_instance)
+        self.xml = self.__dict_get__('virsh').capabilities()
+        self.xmltreefile.reroot("/host/topology")
+        self.xmltreefile.write()
+
+    def get_cell(self):
+        """
+        Return CellXML instances list
+        """
+        cell_list = []
+        for cell_node in self.xmltreefile.findall('/cells/cell'):
+            xml_str = xml_utils.ElementTree.tostring(
+                cell_node)
+            new_cell = CellXML()
+            new_cell.xml = xml_str
+            cell_list.append(new_cell)
+        return cell_list
+
+
+class CellXML(base.LibvirtXMLBase):
+
+    """
+    Handler of cell element in libvirt capabilities.
+
+    Properties:
+        cell_id:
+            string of node cell number id
+        memory:
+            int, memory size
+        mem_unit:
+            string of memory unit
+        pages:
+            list of pages dict
+        sibling:
+            list of sibling dict
+        cpus_num:
+            string of cpus number
+        cpu:
+            list of cpu dict
+    """
+
+    __slots__ = ('cell_id', 'memory', 'mem_unit', 'pages', 'sibling',
+                 'cpus_num', 'cpu')
+
+    def __init__(self, virsh_instance=base.virsh):
+        """
+        Create new cpus XML instance
+        """
+        accessors.XMLAttribute(property_name="cell_id",
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='cell',
+                               attribute='id')
+        accessors.XMLElementInt(property_name="memory",
+                                libvirtxml=self,
+                                parent_xpath='/',
+                                tag_name='memory')
+        accessors.XMLAttribute(property_name="mem_unit",
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='memory',
+                               attribute='unit')
+        accessors.XMLElementList(property_name="pages",
+                                 libvirtxml=self,
+                                 parent_xpath='/',
+                                 marshal_from=self.marshal_from_pages,
+                                 marshal_to=self.marshal_to_pages)
+        accessors.XMLElementList(property_name="sibling",
+                                 libvirtxml=self,
+                                 parent_xpath='/distances',
+                                 marshal_from=self.marshal_from_sibling,
+                                 marshal_to=self.marshal_to_sibling)
+        accessors.XMLAttribute(property_name="cpus_num",
+                               libvirtxml=self,
+                               parent_xpath='/',
+                               tag_name='cpus',
+                               attribute='num')
+        accessors.XMLElementList(property_name="cpu",
+                                 libvirtxml=self,
+                                 parent_xpath='/cpus',
+                                 marshal_from=self.marshal_from_cpu,
+                                 marshal_to=self.marshal_to_cpu)
+        super(CellXML, self).__init__(virsh_instance)
+        self.xml = u"<cell></cell>"
+
+    @staticmethod
+    def marshal_from_pages(item, index, libvirtxml):
+        """
+        Convert a dict to pages tag and attributes.
+        """
+        del index
+        del libvirtxml
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of pages "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('pages', dict(item))
+
+    @staticmethod
+    def marshal_to_pages(tag, attr_dict, index, libvirtxml, text):
+        """
+        Convert a pages tag and attributes to a dict.
+        """
+        del index
+        del libvirtxml
+        if tag != 'pages':
+            return None
+        attr_dict['text'] = text
+        return dict(attr_dict)
+
+    @staticmethod
+    def marshal_from_sibling(item, index, libvirtxml):
+        """
+        Convert a dict to sibling tag and attributes.
+        """
+        del index
+        del libvirtxml
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of sibling "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('sibling', dict(item))
+
+    @staticmethod
+    def marshal_to_sibling(tag, attr_dict, index, libvirtxml):
+        """
+        Convert a sibling tag and attributes to a dict.
+        """
+        del index
+        del libvirtxml
+        if tag != 'sibling':
+            return None
+        return dict(attr_dict)
+
+    @staticmethod
+    def marshal_from_cpu(item, index, libvirtxml):
+        """
+        Convert a dict to cpu tag and attributes.
+        """
+        del index
+        del libvirtxml
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of cpu "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('cpu', dict(item))
+
+    @staticmethod
+    def marshal_to_cpu(tag, attr_dict, index, libvirtxml):
+        """
+        Convert a cpu tag and attributes to a dict.
+        """
+        del index
+        del libvirtxml
+        if tag != 'cpu':
+            return None
+        return dict(attr_dict)

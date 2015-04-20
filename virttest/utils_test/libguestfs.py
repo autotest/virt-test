@@ -143,7 +143,8 @@ def cleanup_vm(vm_name=None, disk=None):
         logging.error("Undefine %s failed:%s", vm_name, detail)
     try:
         if disk is not None:
-            os.remove(disk)
+            if os.path.exists(disk):
+                os.remove(disk)
     except IOError, detail:
         logging.error("Remove disk %s failed:%s", disk, detail)
 
@@ -163,7 +164,7 @@ class VirtTools(object):
         # Many command will create a new vm or disk, init it here
         self.newvm = libvirt_vm.VM("VTNEWVM", vm.params, vm.root_dir,
                                    vm.address_cache)
-        # Preapre for created vm disk
+        # Prepare for created vm disk
         self.indisk = get_primary_disk(vm)
         self.outdisk = None
 

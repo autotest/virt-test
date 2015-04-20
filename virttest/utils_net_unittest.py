@@ -130,26 +130,30 @@ class TestVirtIface(unittest.TestCase):
             self.assertEqual(get_access_value, expected_value)
 
     def test_half_set(self):
+        def what_func(propertea):
+            return props[propertea]
         half_prop_end = (len(self.VirtIface.__all_slots__) / 2) + 1
         props = {}
         for propertea in self.VirtIface.__all_slots__[0:half_prop_end]:
             props[propertea] = utils_misc.generate_random_string(16)
         virtiface = self.VirtIface(props)
-        what_func = lambda propertea: props[propertea]
         self.loop_assert(virtiface, props.keys(), what_func)
 
     def test_full_set(self):
+        def what_func(propertea):
+            return props[propertea]
         props = {}
         for propertea in self.VirtIface.__all_slots__:
             props[propertea] = utils_misc.generate_random_string(16)
         virtiface = self.VirtIface(props)
-        what_func = lambda propertea: props[propertea]
         self.loop_assert(virtiface, props.keys(), what_func)
 
     def test_apendex_set(self):
         """
         Verify container ignores unknown key names
         """
+        def what_func(propertea):
+            return props[propertea]
         props = {}
         for propertea in self.VirtIface.__all_slots__:
             props[propertea] = utils_misc.generate_random_string(16)
@@ -163,7 +167,6 @@ class TestVirtIface(unittest.TestCase):
         apendex_set.update(props)
         apendex_set.update(more_props)
         virtiface = self.VirtIface(apendex_set)
-        what_func = lambda propertea: props[propertea]
         # str(props) guarantees apendex set wasn't incorporated
         self.loop_assert(virtiface, props.keys(), what_func)
 

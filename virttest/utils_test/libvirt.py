@@ -43,10 +43,12 @@ from virttest.libvirt_xml import xcepts
 from virttest.libvirt_xml import NetworkXML
 from virttest.libvirt_xml import IPXML
 from virttest.libvirt_xml import pool_xml
+from virttest.libvirt_xml import nwfilter_xml
 from virttest.libvirt_xml.devices import disk
 from virttest.libvirt_xml.devices import hostdev
 from virttest.libvirt_xml.devices import controller
 from virttest.libvirt_xml.devices import seclabel
+from virttest.libvirt_xml.devices import channel
 from __init__ import ping
 try:
     from autotest.client import lv_utils
@@ -468,6 +470,7 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
         _iscsi.emulated_id = _iscsi.get_target_id()
         _iscsi.cleanup()
         utils.run("rm -f %s" % emulated_path)
+        utils.run("vgscan --cache", ignore_status=True)
     return ""
 
 
@@ -533,7 +536,7 @@ def define_pool(pool_name, pool_type, pool_target, cleanup_flag, **kwargs):
                          need_cleanup_nfs, need_cleanup_iscsi,
                          need_cleanup_logical, selinux_bak and
                          need_cleanup_gluster
-    :param kwargs: key words for sepcial pool define. eg, glusterfs pool
+    :param kwargs: key words for special pool define. eg, glusterfs pool
                          source path and source name, etc
     """
 
@@ -807,6 +810,7 @@ class PoolVolumeTest(object):
         sp = libvirt_storage.StoragePool()
         source_format = kwargs.get('source_format')
         source_name = kwargs.get('source_name')
+        device_name = kwargs.get('device_name', "/DEV/EXAMPLE")
         try:
             if sp.pool_exists(pool_name):
                 pv = libvirt_storage.PoolVolume(pool_name)
@@ -832,7 +836,13 @@ class PoolVolumeTest(object):
                 utils.run("vgremove -f vg_logical", ignore_status=True)
                 utils.run("pvremove %s" % pv, ignore_status=True)
             # These types used iscsi device
-            if pool_type in ["logical", "iscsi", "fs", "disk", "scsi"]:
+            # If we did not provide block device
+            if (pool_type in ["logical", "fs", "disk"] and
+                    device_name.count("EXAMPLE")):
+                setup_or_cleanup_iscsi(is_setup=False,
+                                       emulated_image=emulated_image)
+            # Used iscsi device anyway
+            if pool_type in ["iscsi", "scsi"]:
                 setup_or_cleanup_iscsi(is_setup=False,
                                        emulated_image=emulated_image)
                 if pool_type == "scsi":
@@ -863,6 +873,14 @@ class PoolVolumeTest(object):
         source_format = kwargs.get('source_format')
         source_name = kwargs.get('source_name', None)
         persistent = kwargs.get('persistent', False)
+        device_name = kwargs.get('device_name', "/DEV/EXAMPLE")
+        # If tester does not provide block device, creating one
+        if (device_name.count("EXAMPLE") and
+                pool_type in ["disk", "fs", "logical"]):
+            device_name = setup_or_cleanup_iscsi(is_setup=True,
+                                                 emulated_image=emulated_image,
+                                                 image_size=image_size)
+
         if pool_type == "dir":
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
@@ -874,9 +892,6 @@ class PoolVolumeTest(object):
             # and the max number of partitions is 4. If pre_disk_vol is None,
             # disk pool will have no volume
             pre_disk_vol = kwargs.get('pre_disk_vol', None)
-            device_name = setup_or_cleanup_iscsi(is_setup=True,
-                                                 emulated_image=emulated_image,
-                                                 image_size=image_size)
             if type(pre_disk_vol) == list and len(pre_disk_vol):
                 for vol in pre_disk_vol:
                     mk_part(device_name, vol)
@@ -886,9 +901,6 @@ class PoolVolumeTest(object):
             if source_format:
                 extra += " --source-format %s" % source_format
         elif pool_type == "fs":
-            device_name = setup_or_cleanup_iscsi(is_setup=True,
-                                                 emulated_image=emulated_image,
-                                                 image_size=image_size)
             cmd = "mkfs.ext4 -F %s" % device_name
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
@@ -896,9 +908,7 @@ class PoolVolumeTest(object):
             extra = " --source-dev %s" % device_name
             utils.run(cmd)
         elif pool_type == "logical":
-            logical_device = setup_or_cleanup_iscsi(is_setup=True,
-                                                    emulated_image=emulated_image,
-                                                    image_size=image_size)
+            logical_device = device_name
             cmd_pv = "pvcreate %s" % logical_device
             vg_name = "vg_%s" % pool_type
             cmd_vg = "vgcreate %s %s" % (vg_name, logical_device)
@@ -1550,6 +1560,172 @@ def create_net_xml(net_name, params):
         raise error.TestFail("Fail to create network XML: %s" % detail)
 
 
+def create_nwfilter_xml(params):
+    """
+    Create a new network filter or update an existed network filter xml
+    """
+    filter_name = params.get("filter_name", "testcase")
+    exist_filter = params.get("exist_filter", "no-mac-spoofing")
+    filter_chain = params.get("filter_chain")
+    filter_priority = params.get("filter_priority", "")
+    filter_uuid = params.get("filter_uuid")
+
+    # process filterref_name
+    filterrefs_list = []
+    filterrefs_key = []
+    for i in params.keys():
+        if 'filterref_name_' in i:
+            filterrefs_key.append(i)
+    filterrefs_key.sort()
+    for i in filterrefs_key:
+        filterrefs_dict = {}
+        filterrefs_dict['filter'] = params[i]
+        filterrefs_list.append(filterrefs_dict)
+
+    # prepare rule and protocol attributes
+    protocol = {}
+    rule_dict = {}
+    rule_dict_tmp = {}
+    RULE_ATTR = ('rule_action', 'rule_direction', 'rule_priority',
+                 'rule_statematch')
+    PROTOCOL_TYPES = ['mac', 'vlan', 'stp', 'arp', 'rarp', 'ip', 'ipv6',
+                      'tcp', 'udp', 'sctp', 'icmp', 'igmp', 'esp', 'ah',
+                      'udplite', 'all', 'tcp-ipv6', 'udp-ipv6', 'sctp-ipv6',
+                      'icmpv6', 'esp-ipv6', 'ah-ipv6', 'udplite-ipv6',
+                      'all-ipv6']
+    # rule should end with 'EOL' as separator, multiple rules are supported
+    rule = params.get("rule")
+    if rule:
+        rule_list = rule.split('EOL')
+        for i in range(len(rule_list)):
+            if rule_list[i]:
+                attr = rule_list[i].split()
+                for j in range(len(attr)):
+                    attr_list = attr[j].split('=')
+                    rule_dict_tmp[attr_list[0]] = attr_list[1]
+                rule_dict[i] = rule_dict_tmp
+                rule_dict_tmp = {}
+
+        # process protocol parameter
+        for i in rule_dict.keys():
+            if 'protocol' not in rule_dict[i]:
+                # Set protocol as string 'None' as parse from cfg is
+                # string 'None'
+                protocol[i] = 'None'
+            else:
+                protocol[i] = rule_dict[i]['protocol']
+                rule_dict[i].pop('protocol')
+
+                if protocol[i] in PROTOCOL_TYPES:
+                    # replace '-' with '_' in ipv6 types as '-' is not
+                    # supposed to be in class name
+                    if '-' in protocol[i]:
+                        protocol[i] = protocol[i].replace('-', '_')
+                else:
+                    raise error.TestFail("Given protocol type %s"
+                                         " is not in supported list %s"
+                                         % (protocol[i], PROTOCOL_TYPES))
+
+    try:
+        new_filter = nwfilter_xml.NwfilterXML()
+        filterxml = new_filter.new_from_filter_dumpxml(exist_filter)
+
+        # Set filter attribute
+        filterxml.filter_name = filter_name
+        filterxml.filter_priority = filter_priority
+        if filter_chain:
+            filterxml.filter_chain = filter_chain
+        if filter_uuid:
+            filterxml.uuid = filter_uuid
+        filterxml.filterrefs = filterrefs_list
+
+        # Set rule attribute
+        index_total = filterxml.get_rule_index()
+        rule = filterxml.get_rule(0)
+        rulexml = rule.backup_rule()
+        for i in index_total:
+            filterxml.del_rule()
+        for i in range(len(rule_dict.keys())):
+            rulexml.rule_action = rule_dict[i].get('rule_action')
+            rulexml.rule_direction = rule_dict[i].get('rule_direction')
+            rulexml.rule_priority = rule_dict[i].get('rule_priority')
+            rulexml.rule_statematch = rule_dict[i].get('rule_statematch')
+            for j in RULE_ATTR:
+                if j in rule_dict[i].keys():
+                    rule_dict[i].pop(j)
+
+            # set protocol attribute
+            if protocol[i] != 'None':
+                protocolxml = rulexml.get_protocol(protocol[i])
+                new_one = protocolxml.new_attr(**rule_dict[i])
+                protocolxml.attrs = new_one
+                rulexml.xmltreefile = protocolxml.xmltreefile
+            else:
+                rulexml.del_protocol()
+
+            filterxml.add_rule(rulexml)
+
+            # Reset rulexml
+            rulexml = rule.backup_rule()
+
+        filterxml.xmltreefile.write()
+        logging.info("The network filter xml is:\n%s" % filterxml)
+        return filterxml
+
+    except Exception, detail:
+        utils.log_last_traceback()
+        raise error.TestFail("Fail to create nwfilter XML: %s" % detail)
+
+
+def create_channel_xml(params, alias=False, address=False):
+    """
+    Create a XML contains channel information.
+
+    :param params: the params for Channel slot
+    :param alias: allow to add 'alias' slot
+    :param address: allow to add 'address' slot
+    """
+    # Create attributes dict for channel's element
+    channel_source = {}
+    channel_target = {}
+    channel_alias = {}
+    channel_address = {}
+    channel_params = {}
+
+    channel_type_name = params.get("channel_type_name")
+    source_mode = params.get("source_mode")
+    source_path = params.get("source_path")
+    target_type = params.get("target_type")
+    target_name = params.get("target_name")
+
+    if channel_type_name is None:
+        raise error.TestFail("channel_type_name not specified.")
+    # if these params are None, it won't be used.
+    if source_mode:
+        channel_source['mode'] = source_mode
+    if source_path:
+        channel_source['path'] = source_path
+    if target_type:
+        channel_target['type'] = target_type
+    if target_name:
+        channel_target['name'] = target_name
+
+    channel_params = {'type_name': channel_type_name,
+                      'source': channel_source,
+                      'target': channel_target}
+    if alias:
+        channel_alias = target_name
+        channel_params['alias'] = {'name': channel_alias}
+    if address:
+        channel_address = {'type': 'virtio-serial',
+                           'controller': '0',
+                           'bus': '0'}
+        channel_params['address'] = channel_address
+    channelxml = channel.Channel.new_from_dict(channel_params)
+    logging.debug("Channel XML:\n%s", channelxml)
+    return channelxml
+
+
 def set_domain_state(vm, vm_state):
     """
     Set domain state.
@@ -2166,6 +2342,9 @@ def get_all_vol_paths():
     vol_path = []
     sp = libvirt_storage.StoragePool()
     for pool_name in sp.list_pools().keys():
+        if sp.list_pools()[pool_name]['State'] != "active":
+            logging.warning("Inactive pool '%s' cannot be processed" % pool_name)
+            continue
         pv = libvirt_storage.PoolVolume(pool_name)
         for path in pv.list_volumes().values():
             vol_path.append(path)
@@ -2173,7 +2352,8 @@ def get_all_vol_paths():
 
 
 def do_migration(vm_name, uri, extra, auth_pwd, auth_user="root",
-                 options="--verbose", virsh_patterns=".*100\s%.*"):
+                 options="--verbose", virsh_patterns=".*100\s%.*",
+                 su_user="", timeout=30):
     """
     Migrate VM to target host.
     """
@@ -2182,6 +2362,10 @@ def do_migration(vm_name, uri, extra, auth_pwd, auth_user="root",
     patterns_auth_pwd = r".*[Pp]assword.*"
 
     command = "%s virsh migrate %s %s %s" % (extra, vm_name, options, uri)
+    # allow specific user to run virsh command
+    if su_user != "":
+        command = "su %s -c '%s'" % (su_user, command)
+
     logging.info("Execute %s", command)
     # setup shell session
     session = aexpect.ShellSession(command, echo=True)
@@ -2192,7 +2376,7 @@ def do_migration(vm_name, uri, extra, auth_pwd, auth_user="root",
                       patterns_auth_pwd, virsh_patterns]
         while True:
             match, text = session.read_until_any_line_matches(match_list,
-                                                              timeout=30,
+                                                              timeout=timeout,
                                                               internal_timeout=1)
             if match == -4:
                 logging.info("Matched 'yes/no', details: <%s>", text)

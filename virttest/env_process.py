@@ -269,8 +269,8 @@ def postprocess_image(test, params, image_name, vm_process_status=None):
                 logging.debug("Can not find matched image for selected guest "
                               "os, skip the image check.")
                 check_image_flag = False
-            if ("lazy refcounts" in image_info
-                    and image_info["lazy refcounts"] == "true"):
+            if ("lazy refcounts" in image_info and
+                    image_info["lazy refcounts"] == "true"):
                 logging.debug("Should not check image while guest is alive"
                               " when the image is create with lazy refcounts."
                               " Skip the image check.")
@@ -298,8 +298,8 @@ def postprocess_image(test, params, image_name, vm_process_status=None):
                 cl_images = params.get("master_images_clone", "")
                 if image_name in cl_images.split():
                     image.remove()
-            if (params.get("skip_cluster_leak_warn") == "yes"
-                    and "Leaked clusters" in e.message):
+            if (params.get("skip_cluster_leak_warn") == "yes" and
+                    "Leaked clusters" in e.message):
                 logging.warn(e.message)
             else:
                 raise e
@@ -691,7 +691,7 @@ def preprocess(test, params, env):
             except test_setup.PolkitRulesSetupError, e:
                 logging.error("e")
             except Exception, e:
-                logging.error("Unexpected error:" % e)
+                logging.error("Unexpected error: '%s'" % e)
             libvirtd_inst.restart()
 
     if vm_type == "libvirt":
@@ -759,7 +759,7 @@ def preprocess(test, params, env):
                                                           kernel_extra_param)
 
         if kernel_config_set.strip() != kernel_cmdline.strip():
-                kernel_need_modify = True
+            kernel_need_modify = True
 
         if kernel_need_modify:
             for vm in env.get_all_vms():
@@ -845,20 +845,20 @@ def postprocess(test, params, env):
         _screendump_thread = None
 
     # Encode an HTML 5 compatible video from the screenshots produced
-
-    dirs = re.findall("(screendump\S*_[0-9]+)", str(os.listdir(test.debugdir)))
-    for dir in dirs:
-        screendump_dir = os.path.join(test.debugdir, dir)
+    dir_rex = "(screendump\S*_[0-9]+_iter%s)" % test.iteration
+    screendump_dir = re.findall(dir_rex, str(os.listdir(test.debugdir)))
+    if screendump_dir:
+        screendump_dir = os.path.join(test.debugdir, screendump_dir[0])
         if (params.get("encode_video_files", "yes") == "yes" and
                 glob.glob("%s/*" % screendump_dir)):
             try:
                 video = video_maker.GstPythonVideoMaker()
-                if (video.has_element('vp8enc') and video.has_element('webmmux')):
-                    video_file = os.path.join(test.debugdir, "%s-%s.webm" %
-                                              (screendump_dir, test.iteration))
+                if ((video.has_element('vp8enc') and
+                     video.has_element('webmmux'))):
+                    video_file = "%s.webm" % screendump_dir
                 else:
-                    video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
-                                              (screendump_dir, test.iteration))
+                    video_file = "%s.ogg" % screendump_dir
+                video_file = os.path.join(test.debugdir, video_file)
                 logging.debug("Encoding video file %s", video_file)
                 video.start(screendump_dir, video_file)
 
@@ -867,14 +867,22 @@ def postprocess(test, params, env):
                     "Video creation failed for %s: %s", screendump_dir, detail)
 
     # Warn about corrupt PPM files
-    for f in glob.glob(os.path.join(test.debugdir, "*.ppm")):
+    screendump_temp_dir = params.get("screendump_temp_dir")
+    if screendump_temp_dir:
+        screendump_temp_dir = utils_misc.get_path(
+            test.bindir, screendump_temp_dir)
+    else:
+        screendump_temp_dir = test.debugdir
+    ppm_file_rex = "*_iter%s.ppm" % test.iteration
+    for f in glob.glob(os.path.join(screendump_temp_dir, ppm_file_rex)):
         if not ppm_utils.image_verify_ppm_file(f):
             logging.warn("Found corrupt PPM file: %s", f)
 
     # Should we convert PPM files to PNG format?
     if params.get("convert_ppm_files_to_png", "no") == "yes":
         try:
-            for f in glob.glob(os.path.join(test.debugdir, "*.ppm")):
+            for f in glob.glob(
+                    os.path.join(screendump_temp_dir, ppm_file_rex)):
                 if ppm_utils.image_verify_ppm_file(f):
                     new_path = f.replace(".ppm", ".png")
                     image = PIL.Image.open(f)
@@ -884,7 +892,7 @@ def postprocess(test, params, env):
 
     # Should we keep the PPM files?
     if params.get("keep_ppm_files", "no") != "yes":
-        for f in glob.glob(os.path.join(test.debugdir, '*.ppm')):
+        for f in glob.glob(os.path.join(screendump_temp_dir, ppm_file_rex)):
             os.unlink(f)
 
     # Should we keep the screendump dirs?
@@ -1119,8 +1127,9 @@ def _take_screendumps(test, params, env):
             os.makedirs(temp_dir)
         except OSError:
             pass
-    temp_filename = os.path.join(temp_dir, "scrdump-%s.ppm" %
-                                 utils_misc.generate_random_string(6))
+    random_id = utils_misc.generate_random_string(6)
+    temp_filename = "scrdump-%s-iter%s.ppm" % (random_id, test.iteration)
+    temp_filename = os.path.join(temp_dir, temp_filename)
     delay = float(params.get("screendump_delay", 5))
     quality = int(params.get("screendump_quality", 30))
     inactivity_treshold = float(params.get("inactivity_treshold", 1800))
@@ -1154,16 +1163,16 @@ def _take_screendumps(test, params, env):
                 logging.warn("VM '%s' produced an invalid screendump", vm.name)
                 os.unlink(temp_filename)
                 continue
-            screendump_dir = os.path.join(test.debugdir,
-                                          "screendumps_%s_%s" % (vm.name,
-                                                                 vm_pid))
+            screendump_dir = "screendumps_%s_%s_iter%s" % (vm.name, vm_pid,
+                                                           test.iteration)
+            screendump_dir = os.path.join(test.debugdir, screendump_dir)
             try:
                 os.makedirs(screendump_dir)
             except OSError:
                 pass
             counter[vm.instance] += 1
-            screendump_filename = os.path.join(screendump_dir, "%04d.jpg" %
-                                               counter[vm.instance])
+            filename = "%04d.jpg" % counter[vm.instance]
+            screendump_filename = os.path.join(screendump_dir, filename)
             vm.verify_bsod(screendump_filename)
             image_hash = utils.hash_file(temp_filename)
             if image_hash in cache:
@@ -1229,7 +1238,7 @@ def store_vm_register(vm, log_filename, append=False):
     :rtype: bool
     """
     try:
-        output = vm.monitor.info('registers', debug=False)
+        output = vm.catch_monitor.info('registers', debug=False)
         timestamp = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
     except qemu_monitor.MonitorError, err:
         logging.warn(err)
@@ -1256,7 +1265,8 @@ def _store_vm_register(test, params, env):
         for vm_instance in results.keys():
             if results[vm_instance] > 0:
                 msg += " Used to failed to get register info from guest"
-                msg += " %s for %s times." % (vm_instance, results[vm_instance])
+                msg += " %s for %s times." % (vm_instance,
+                                              results[vm_instance])
 
         if msg != "%s." % status:
             logging.debug(msg)
@@ -1287,7 +1297,8 @@ def _store_vm_register(test, params, env):
 
             if vm.instance not in counter:
                 counter[vm.instance] = 1
-            vr_filename = utils_misc.get_path(vr_dir, "%04d" % counter[vm.instance])
+            vr_filename = "%04d" % counter[vm.instance]
+            vr_filename = utils_misc.get_path(vr_dir, vr_filename)
             stored_log = store_vm_register(vm, vr_filename)
             if vm_register_error_count[vm.instance] >= 1:
                 logging.debug("%s alive now. Used to failed to get register"

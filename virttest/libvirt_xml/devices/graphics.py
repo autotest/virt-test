@@ -12,7 +12,8 @@ class Graphics(base.TypedDeviceBase):
 
     __slots__ = ('passwd', 'channel', 'listen', 'listens', 'autoport', 'port',
                  'tlsPort', 'defaultMode', 'image_compression',
-                 'jpeg_compression', 'zlib_compression', 'playback_compression')
+                 'jpeg_compression', 'zlib_compression', 'playback_compression',
+                 'listen_type', 'listen_addr')
 
     def __init__(self, type_name='vnc', virsh_instance=base.base.virsh):
         # Add additional attribute 'passwd' for security
@@ -26,6 +27,8 @@ class Graphics(base.TypedDeviceBase):
                                tag_name='graphics', attribute='port')
         accessors.XMLAttribute('tlsPort', self, parent_xpath='/',
                                tag_name='graphics', attribute='tlsPort')
+        accessors.XMLAttribute('type', self, parent_xpath='/',
+                               tag_name='graphics', attribute='type')
         accessors.XMLAttribute('defaultMode', self, parent_xpath='/',
                                tag_name='graphics', attribute='defaultMode')
         accessors.XMLAttribute('image_compression', self, parent_xpath='/',
@@ -36,6 +39,10 @@ class Graphics(base.TypedDeviceBase):
                                tag_name='zlib', attribute='compression')
         accessors.XMLAttribute('playback_compression', self, parent_xpath='/',
                                tag_name='playback', attribute='compression')
+        accessors.XMLAttribute('listen_type', self, parent_xpath='/',
+                               tag_name='listen', attribute='type')
+        accessors.XMLAttribute('listen_addr', self, parent_xpath='/',
+                               tag_name='listen', attribute='address')
         super(Graphics, self).__init__(device_tag='graphics',
                                        type_name=type_name,
                                        virsh_instance=virsh_instance)
@@ -136,6 +143,6 @@ class Graphics(base.TypedDeviceBase):
         :param vm_name: name of vm
         """
         vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
-        vmxml.xmltreefile.remove_by_xpath('/devices/graphics')
+        vmxml.xmltreefile.remove_by_xpath('/devices/graphics', remove_all=True)
         vmxml.xmltreefile.write()
         vmxml.sync()

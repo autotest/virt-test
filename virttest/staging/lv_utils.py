@@ -324,11 +324,11 @@ def lv_revert(vg_name, lv_name, lv_snapshot_name):
             raise error.TestError("Volume group could not be found")
         if not lv_check(vg_name, lv_snapshot_name):
             raise error.TestError("Snapshot could not be found")
-        if (not lv_check(vg_name, lv_snapshot_name)
-                and not lv_check(vg_name, lv_name)):
+        if (not lv_check(vg_name, lv_snapshot_name) and
+                not lv_check(vg_name, lv_name)):
             raise error.TestError("Snapshot and its origin could not be found")
-        if (lv_check(vg_name, lv_snapshot_name)
-                and not lv_check(vg_name, lv_name)):
+        if (lv_check(vg_name, lv_snapshot_name) and
+                not lv_check(vg_name, lv_name)):
             raise error.TestError("Snapshot origin could not be found")
 
         cmd = ("lvconvert --merge /dev/%s/%s" % (vg_name, lv_snapshot_name))
@@ -344,8 +344,8 @@ def lv_revert(vg_name, lv_name, lv_snapshot_name):
         # and attempt to reactivate the volume.
         if (('Snapshot could not be found' in ex and
              re.search(re.escape(lv_snapshot_name + " [active]"),
-                       utils.run("lvdisplay").stdout))
-                or ("The logical volume %s is still active" % lv_name) in ex):
+                       utils.run("lvdisplay").stdout)) or
+                ("The logical volume %s is still active" % lv_name) in ex):
             logging.warning(("Logical volume %s is still active! " +
                              "Attempting to deactivate..."), lv_name)
             lv_reactivate(vg_name, lv_name)

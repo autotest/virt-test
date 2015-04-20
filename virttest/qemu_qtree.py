@@ -163,9 +163,11 @@ class QtreeDev(QtreeNode):
         super(QtreeDev, self).add_child(child)
 
     def guess_type(self):
-        if ('drive' in self.qtree and
-                self.qtree['type'] != 'usb-storage' and
-                self.qtree['type'] != 'virtio-blk-device'):
+        if self.qtree['type'] == 'virtio-blk-device':
+            return QtreeDisk
+        elif ('drive' in self.qtree and
+              self.qtree['type'] != 'usb-storage' and
+              self.qtree['type'] != 'virtio-blk-pci'):
             # ^^ HOOK when usb-storage-containter is detected as disk
             return QtreeDisk
         else:
@@ -445,6 +447,12 @@ class QtreeDisksContainer(object):
             if (disk.get_qtree()['type'].startswith('scsi') or
                     disk.get_qtree()['type'].startswith('usb2')):
                 props = disk.get_qtree()
+                # New output from qtree will include hex number. Should
+                # remove it in this function.
+                for item in props:
+                    if re.match("\d+\s+\(.*?\)", props[item]):
+                        props[item] = re.findall("\d+", props[item])[0]
+
                 disks.add('%d-%d-%d' % (int(props.get('channel')),
                                         int(props.get('scsi-id')),
                                         int(props.get('lun'))))

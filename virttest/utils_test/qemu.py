@@ -16,13 +16,11 @@ More specifically:
 :copyright: 2008-2013 Red Hat Inc.
 """
 
-import commands
 import cPickle
 import errno
 import fcntl
 import logging
 import os
-import re
 import socket
 import threading
 import time
@@ -165,8 +163,8 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
 
     if (dest_host == 'localhost') and stable_check:
         # Pause the dest vm after creation
-        dest_vm.params['extra_params'] = (dest_vm.params.get('extra_params', '')
-                                          + ' -S')
+        _ = dest_vm.params.get('extra_params', '') + ' -S'
+        dest_vm.params['extra_params'] = _
 
     if dest_host == 'localhost':
         dest_vm.create(migration_mode=mig_protocol, mac_source=vm)
@@ -728,7 +726,7 @@ class MultihostMigration(object):
                         for vm in mig_data.vms:
                             vm.resume()
                         wait = self.params.get("start_migration_timeout", 0)
-                        logging.debug("Wait for migraiton %s seconds." %
+                        logging.debug("Wait for migration %s seconds." %
                                       (wait))
                         time.sleep(int(wait))
 
@@ -832,7 +830,7 @@ class MultihostMigration(object):
         try:
             self.migration_scenario()
 
-            self._hosts_barrier(self.hosts, self.hosts, 'all_test_finihed',
+            self._hosts_barrier(self.hosts, self.hosts, 'all_test_finished',
                                 self.finish_timeout)
         finally:
             self.cleanup()
@@ -959,7 +957,7 @@ class MultihostMigrationFd(MultihostMigration):
                 fds = {}
                 for s, vm_name in zip(sockets, vms_name):
                     fds["migration_fd_%s" % vm_name] = s.fileno()
-                logging.debug("File descrtiptors %s used for"
+                logging.debug("File descriptors %s used for"
                               " migration." % (fds))
 
                 super_cls = super(MultihostMigrationFd, self)
@@ -980,7 +978,7 @@ class MultihostMigrationFd(MultihostMigration):
                 fds = {}
                 for conn, vm_name in zip(conns, vms_name):
                     fds["migration_fd_%s" % vm_name] = conn.fileno()
-                logging.debug("File descrtiptors %s used for"
+                logging.debug("File descriptors %s used for"
                               " migration." % (fds))
 
                 # Prohibits descriptor inheritance.

@@ -10,7 +10,6 @@ import tempfile
 import aexpect
 import utils_misc
 import rss_client
-import base64
 
 from remote_commander import remote_master
 from remote_commander import messenger
@@ -134,7 +133,7 @@ def handle_prompts(session, username, password, prompt, timeout=10,
                 [r"[Aa]re you sure", r"[Pp]assword:\s*",
                  r"\(or (press|type) Control-D to continue\):\s*$",  # Prompt of rescue mode for Red Hat.
                  r"[Gg]ive.*[Ll]ogin:\s*$",  # Prompt of rescue mode for SUSE.
-                 r"(?<![Ll]ast).*[Ll]ogin:\s*$",  # Don't match "Last Login:"
+                 r"(?<![Ll]ast )[Ll]ogin:\s*$",  # Don't match "Last Login:"
                  r"[Cc]onnection.*closed", r"[Cc]onnection.*refused",
                  r"[Pp]lease wait", r"[Ww]arning", r"[Ee]nter.*username",
                  r"[Ee]nter.*password", r"[Cc]onnection timed out", prompt],

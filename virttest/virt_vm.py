@@ -13,10 +13,13 @@ import aexpect
 import traceback
 import ppm_utils
 import data_dir
+import copy
 
 
 class VMError(Exception):
-    pass
+
+    def __init__(self, *args):
+        Exception.__init__(self, *args)
 
 
 class VMCreateError(VMError):
@@ -632,6 +635,9 @@ class BaseVM(object):
         :raise VMAddressVerificationError: If the MAC-IP address mapping cannot
                 be verified (using arping)
         """
+        # Make sure the IP address is assigned to one or more macs
+        # for this guest
+        macs = self.virtnet.mac_list()
         nic = self.virtnet[index]
         self.ip_version = self.params.get("ip_version", "ipv4").lower()
         # TODO: Determine port redirection in use w/o checking nettype
@@ -645,25 +651,17 @@ class BaseVM(object):
         if not nic.has_key('mac'):
             raise VMMACAddressMissingError(index)
         if self.ip_version == "ipv4":
-            # Get the IP address from arp cache, try upper and lower case
-            arp_ip = self.address_cache.get(nic.mac.upper())
+            # Get the IP address from arp cache
+            arp_ip = self.address_cache.get(nic.mac.lower())
             if not arp_ip:
-                arp_ip = self.address_cache.get(nic.mac.lower())
-
-            if not arp_ip and os.geteuid() != 0:
+                arp_ip = self.address_cache.get(nic.mac.upper())
+            if not arp_ip or not utils_net.verify_ip_address_ownership(arp_ip, macs) or os.geteuid() != 0:
                 # For non-root, tcpdump won't work for finding IP address,
-                # try arp
+                # or IP missed in address_cache, try to find it from arp table.
                 ip_map = utils_net.parse_arp()
                 arp_ip = ip_map.get(nic.mac.lower())
-                if arp_ip:
-                    self.address_cache[nic.mac.lower()] = arp_ip
-
             if not arp_ip:
                 raise VMIPAddressMissingError(nic.mac)
-
-            # Make sure the IP address is assigned to one or more macs
-            # for this guest
-            macs = self.virtnet.mac_list()
 
             # SR-IOV cards may not be in same subnet with the card used by
             # host by default, so arp checks won't work. Therefore, do not
@@ -683,6 +681,9 @@ class BaseVM(object):
 
             logging.debug('Found/Verified IP %s for VM %s NIC %s',
                           arp_ip, self.name, str(index))
+            # Update address_cache since ip/mac releation ship verify pass
+            self.address_cache[nic.mac.lower()] = arp_ip
+            self.address_cache["ip_pool"].discard(arp_ip)
             return arp_ip
 
         elif self.ip_version == "ipv6":

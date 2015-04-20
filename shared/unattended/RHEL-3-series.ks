@@ -12,7 +12,7 @@ firstboot --disable
 bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
 clearpart --all --initlabel
 autopart
-reboot
+poweroff
 mouse generic3ps/2
 skipx
 
@@ -28,13 +28,13 @@ ntp
 redhat-lsb
 
 %post
-echo "OS install is completed" > /dev/ttyS0
+function ECHO { for TTY in ttyS0 hvc0; do echo "$*" > /dev/$TTY; done }
+ECHO "OS install is completed"
 cd home
 echo "s0:2345:respawn:/sbin/agetty -L -f /etc/issue 115200 ttyS0 vt100" >> /etc/inittab
 echo "ttyS0" >> /etc/securetty
 dhclient
 chkconfig sshd on
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
-echo 'Post set up finished' > /dev/ttyS0
-echo Post set up finished > /dev/hvc0
+ECHO 'Post set up finished'
 %end

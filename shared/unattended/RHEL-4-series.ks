@@ -29,7 +29,8 @@ ntp
 redhat-lsb
 
 %post
-echo "OS install is completed" > /dev/ttyS0
+function ECHO { for TTY in ttyS0 hvc0; do echo "$*" > /dev/$TTY; done }
+ECHO "OS install is completed"
 grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
 grubby --args="divider=10" --update-kernel=$(grubby --default-kernel)
 cd home
@@ -48,6 +49,5 @@ make
 make install
 ln -sf /usr/local/bin/python /usr/bin/python
 sleep 10
-echo 'Post set up finished' > /dev/ttyS0
-echo Post set up finished > /dev/hvc0
+ECHO 'Post set up finished'
 %end

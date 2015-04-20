@@ -62,7 +62,7 @@ def complete_uri(ip_address):
 
 def get_uri_with_transport(uri_type='qemu', transport="", dest_ip=""):
     """
-    Return a URI to connect driver on dest with a specificed transport.
+    Return a URI to connect driver on dest with a specified transport.
 
     :param origin_uri: The URI on dest used to connect itself directly.
     :param transport: The transport type connect to dest.
@@ -413,6 +413,35 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
+        def add_controller(model=None):
+            """
+            Add controller option for virt-install command line.
+
+            :param model: string, controller model.
+            :return: string, empty or controller option.
+            """
+            if model == 'virtio-scsi':
+                return " --controller type=scsi,model=virtio-scsi"
+            else:
+                return ""
+
+        def check_controller(virt_install_cmd_line, controller):
+            """
+            Check for the controller already available in virt-install
+            command line.
+
+            :param virt_install_cmd_line: string, virt-install command line.
+            :param controller: string, controller model.
+            :return: True if succeed of False if failed.
+            """
+            found = False
+            output = re.findall(r"controller\stype=(\S+),model=(\S+)", virt_install_cmd_line)
+            for item in output:
+                if controller in item[1]:
+                    found = True
+                    break
+            return found
+
         def add_drive(help_text, filename, pool=None, vol=None, device=None,
                       bus=None, perms=None, size=None, sparse=False,
                       cache=None, fmt=None):
@@ -503,6 +532,8 @@ class VM(virt_vm.BaseVM):
         def add_serial(help_text):
             if has_option(help_text, "serial"):
                 return " --serial pty"
+            else:
+                return ""
 
         def add_kernel_cmdline(help_text, cmdline):
             return " -append %s" % cmdline
@@ -568,6 +599,22 @@ class VM(virt_vm.BaseVM):
                           result)
             return result
 
+        def add_memballoon(help_text, memballoon_model):
+            """
+            Adding memballoon device to the vm.
+
+            :param help_text: string, virt-install help text.
+            :param memballon_model: string, memballoon model.
+            :return: string, empty or memballoon model option.
+            """
+            if has_option(help_text, "memballoon"):
+                result = " --memballoon model=%s" % memballoon_model
+            else:
+                logging.warning("memballoon is not supported")
+                result = ""
+            logging.debug("vm.add_memballoon returning: %s", result)
+            return result
+
         # End of command line option wrappers
 
         if name is None:
@@ -594,7 +641,7 @@ class VM(virt_vm.BaseVM):
         arch_name = params.get("vm_arch_name", utils.get_current_kernel_arch())
         capabs = libvirt_xml.CapabilityXML()
         try:
-            support_machine_type = capabs.os_arch_machine_map[hvm_or_pv][arch_name]
+            support_machine_type = capabs.guest_capabilities[hvm_or_pv][arch_name]['machine']
         except KeyError, detail:
             if detail.args[0] == hvm_or_pv:
                 raise KeyError("No libvirt support for %s virtualization, "
@@ -728,6 +775,11 @@ class VM(virt_vm.BaseVM):
         # Add serial console
         virt_install_cmd += add_serial(help_text)
 
+        # Add memballoon device
+        memballoon_model = params.get("memballoon_model")
+        if memballoon_model:
+            virt_install_cmd += add_memballoon(help_text, memballoon_model)
+
         # If the PCI assignment step went OK, add each one of the PCI assigned
         # devices to the command line.
         if self.pci_devices:
@@ -759,12 +811,21 @@ class VM(virt_vm.BaseVM):
             if image_params.get("boot_drive") == "no":
                 continue
             if filename:
+                libvirt_controller = image_params.get("libvirt_controller", None)
+                _drive_format = image_params.get("drive_format")
+                if libvirt_controller:
+                    if not check_controller(virt_install_cmd, libvirt_controller):
+                        virt_install_cmd += add_controller(libvirt_controller)
+                    #this will reset the scsi-hd to scsi as we are adding controller
+                    # to mention the drive format
+                    if 'scsi' in _drive_format:
+                        _drive_format = "scsi"
                 virt_install_cmd += add_drive(help_text,
                                               filename,
                                               None,
                                               None,
                                               None,
-                                              image_params.get("drive_format"),
+                                              _drive_format,
                                               None,
                                               image_params.get("image_size"),
                                               image_params.get("drive_sparse"),
@@ -1079,18 +1140,21 @@ class VM(virt_vm.BaseVM):
         finally:
             session.close()
 
-    def create_swap_partition(self):
+    def create_swap_partition(self, swap_path=None):
         """
         Make a swap partition and active it.
 
         A cleanup_swap() should be call after use to clean up
         the environment changed.
+
+        :param swap_path: Swap image path.
         """
         if self.is_dead():
             logging.error("Can't create swap on a dead VM.")
             return False
 
-        swap_path = os.path.join(data_dir.get_tmp_dir(), "swap_image")
+        if not swap_path:
+            swap_path = os.path.join(data_dir.get_tmp_dir(), "swap_image")
         swap_size = self.get_used_mem()
         utils.run("qemu-img create %s %s" % (swap_path, swap_size * 1024))
         self.created_swap_path = swap_path
@@ -1290,7 +1354,7 @@ class VM(virt_vm.BaseVM):
         guest in libvirt.
 
         If connect_uri is lxc related, we call wait_for_serial_login()
-        directly, without attampting login it via network.
+        directly, without attempting login it via network.
 
         Other connect_uri, call virt_vm.wait_for_login().
         """
@@ -1441,7 +1505,7 @@ class VM(virt_vm.BaseVM):
                 nic_params = dict(nic)
                 if mac_source is not None:
                     # Will raise exception if source doesn't
-                    # have cooresponding nic
+                    # have corresponding nic
                     logging.debug("Copying mac for nic %s from VM %s",
                                   nic.nic_name, mac_source.name)
                     nic_params['mac'] = mac_source.get_mac_address(
@@ -1759,13 +1823,13 @@ class VM(virt_vm.BaseVM):
         # statm stores informations in pages, translate it to MB
         return shm * 4.0 / 1024
 
-    def get_cpu_topolopy_in_cmdline(self):
+    def get_cpu_topology_in_cmdline(self):
         """
-        Return the VM's cpu topolopy in VM cmdline.
+        Return the VM's cpu topology in VM cmdline.
 
-        :return: A dirt of cpu topolopy
+        :return: A dirt of cpu topology
         """
-        cpu_topolopy = {}
+        cpu_topology = {}
         vm_pid = self.get_pid()
         if vm_pid is None:
             logging.error("Fail to get VM pid")
@@ -1773,17 +1837,17 @@ class VM(virt_vm.BaseVM):
             cmdline = open("/proc/%d/cmdline" % vm_pid).read()
             values = re.findall("sockets=(\d+),cores=(\d+),threads=(\d+)",
                                 cmdline)[0]
-            cpu_topolopy = dict(zip(["sockets", "cores", "threads"], values))
-        return cpu_topolopy
+            cpu_topology = dict(zip(["sockets", "cores", "threads"], values))
+        return cpu_topology
 
-    def get_cpu_topolopy_in_vm(self):
-        cpu_topolopy = {}
+    def get_cpu_topology_in_vm(self):
+        cpu_topology = {}
         cpu_info = utils_misc.get_cpu_info(self.wait_for_login())
         if cpu_info:
-            cpu_topolopy['sockets'] = cpu_info['Socket(s)']
-            cpu_topolopy['cores'] = cpu_info['Core(s) per socket']
-            cpu_topolopy['threads'] = cpu_info['Thread(s) per core']
-        return cpu_topolopy
+            cpu_topology['sockets'] = cpu_info['Socket(s)']
+            cpu_topology['cores'] = cpu_info['Core(s) per socket']
+            cpu_topology['threads'] = cpu_info['Thread(s) per core']
+        return cpu_topology
 
     def activate_nic(self, nic_index_or_name):
         # TODO: Implement nic hotplugging
@@ -2313,6 +2377,12 @@ class VM(virt_vm.BaseVM):
         self.install_package('qemu-guest-agent')
 
         session = self.wait_for_login()
+
+        def _is_ga_running():
+            return (not session.cmd_status("pgrep qemu-ga"))
+
+        def _is_ga_finished():
+            return (session.cmd_status("pgrep qemu-ga") == 1)
         try:
             # Start/stop qemu-guest-agent
             if start:
@@ -2323,6 +2393,13 @@ class VM(virt_vm.BaseVM):
             if status != 0:
                 raise virt_vm.VMError("Start/stop of qemu-guest-agent "
                                       "failed:\n%s" % output)
+            # Check qemu-guest-agent status
+            if start:
+                if not utils_misc.wait_for(_is_ga_running, timeout=60):
+                    raise virt_vm.VMError("qemu-guest-agent is not running.")
+            else:
+                if not utils_misc.wait_for(_is_ga_finished, timeout=60):
+                    raise virt_vm.VMError("qemu-guest-agent is running")
         finally:
             session.close()
 

@@ -384,9 +384,9 @@ class StrReader(object):
             line = line.rstrip().expandtabs()
             stripped_line = line.lstrip()
             indent = len(line) - len(stripped_line)
-            if (not stripped_line
-                or stripped_line.startswith("#")
-                    or stripped_line.startswith("//")):
+            if (not stripped_line or
+                    stripped_line.startswith("#") or
+                    stripped_line.startswith("//")):
                 continue
             self._lines.append((stripped_line, indent, linenum + 1))
 
@@ -1861,7 +1861,6 @@ class Parser(object):
 
         # Check previously failed filters
         for i, failed_case in enumerate(node.failed_cases):
-            # pylint: disable=W0142
             if not might_pass(*failed_case):
                 self._debug("\n*    this subtree has failed before %s\n"
                             "         content: %s\n"

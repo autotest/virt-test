@@ -39,7 +39,7 @@ def iscsi_get_nodes():
     cmd = "iscsiadm --mode node"
 
     output = utils.system_output(cmd, ignore_status=True)
-    pattern = r"(\d+\.\d+\.\d+\.\d+|\W:{2}\d\W):\d+,\d+\s+([\w\.\-:\d]+)"
+    pattern = r"(\d+\.\d+\.\d+\.\d+|\[.+\]):\d+,\d+\s+([\w\.\-:\d]+)"
     nodes = []
     if "No records found" not in output:
         nodes = re.findall(pattern, output)
@@ -79,6 +79,7 @@ def iscsi_node_del(target_name=None):
                 cmd = "iscsiadm -m node -o delete -T %s " % target_name
                 cmd += "--portal %s" % node_tup[0]
                 utils.system(cmd)
+                break
         if not cmd:
             logging.error("The target '%s' for delete is not in target node"
                           " record", target_name)

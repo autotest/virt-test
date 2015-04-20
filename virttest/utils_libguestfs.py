@@ -193,7 +193,8 @@ class Guestfish(LibguestfsBase):
             unset_cmd += "unset %s;" % env
         if run_mode == "interactive" and unset_cmd:
             guestfs_exec = unset_cmd + " " + guestfs_exec
-        elif run_mode == "remote":
+
+        if run_mode == "remote":
             guestfs_exec += " --listen"
         else:
             if uri:

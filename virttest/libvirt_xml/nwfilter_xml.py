@@ -135,14 +135,12 @@ class NwfilterXMLBase(base.LibvirtXMLBase):
         filter_chain: string, filter name
         filter_priority: string, filter priority
         uuid: string, operates on uuid tag
-        filterref: string, operates on filterref tag
-        filterref_name: string, reference filter name
+        filterrefs: list, list of dictionaries describing filterref properties
     """
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('filter_name', 'filter_chain',
                                                  'filter_priority',
-                                                 'uuid', 'filterref',
-                                                 'filterref_name')
+                                                 'uuid', 'filterrefs')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -157,12 +155,32 @@ class NwfilterXMLBase(base.LibvirtXMLBase):
                                tag_name='filter', attribute='priority')
         accessors.XMLElementText('uuid', self, parent_xpath='/',
                                  tag_name='uuid')
-        accessors.XMLElementText('filterref', self, parent_xpath='/',
-                                 tag_name='filterref')
-        accessors.XMLAttribute('filterref_name', self, parent_xpath='/',
-                               tag_name='filterref', attribute='filter')
-
+        accessors.XMLElementList(property_name='filterrefs',
+                                 libvirtxml=self,
+                                 parent_xpath='/',
+                                 marshal_from=self.marshal_from_filterref,
+                                 marshal_to=self.marshal_to_filterref)
         super(NwfilterXMLBase, self).__init__(virsh_instance=virsh_instance)
+
+    @staticmethod
+    def marshal_from_filterref(item, index, libvirtxml):
+        """Convert a dictionary into a tag + attributes"""
+        del index           # not used
+        del libvirtxml      # not used
+        if not isinstance(item, dict):
+            raise xcepts.LibvirtXMLError("Expected a dictionary of filterref "
+                                         "attributes, not a %s"
+                                         % str(item))
+        return ('filterref', dict(item))  # return copy of dict, not reference
+
+    @staticmethod
+    def marshal_to_filterref(tag, attr_dict, index, libvirtxml):
+        """Convert a tag + attributes into a dictionary"""
+        del index                    # not used
+        del libvirtxml               # not used
+        if tag != 'filterref':
+            return None              # skip this one
+        return dict(attr_dict)       # return copy of dict, not reference
 
     def get_rule_index(self, rule_protocol=None):
         """

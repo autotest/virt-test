@@ -173,8 +173,8 @@ class VM(virt_vm.BaseVM):
         """
         Return True if the VM is alive and its monitor is responsive.
         """
-        return not self.is_dead() and (not self.monitor or
-                                       self.monitor.is_responsive())
+        return not self.is_dead() and (not self.catch_monitor or
+                                       self.catch_monitor.is_responsive())
 
     def is_dead(self):
         """
@@ -417,7 +417,8 @@ class VM(virt_vm.BaseVM):
             return cmd
 
         def add_serial(devices, name, filename):
-            if arch.ARCH == 'ppc64' or not devices.has_option("chardev"):
+            if (arch.ARCH in ('ppc64', 'aarch64') or
+                    not devices.has_option("chardev")):
                 return " -serial unix:'%s',server,nowait" % filename
 
             serial_id = "serial_id_%s" % name
@@ -540,7 +541,9 @@ class VM(virt_vm.BaseVM):
                 # libvirt gains the pci_slot, free_pci_addr here,
                 # value by parsing the xml file, i.e. counting all the
                 # pci devices and store the number.
-                if model != 'spapr-vlan':
+                if model == 'virtio-net-device':
+                    dev.parent_bus = {'type': 'virtio-bus'}
+                elif model != 'spapr-vlan':
                     dev.parent_bus = pci_bus
                     dev.set_param('addr', pci_addr)
                 if nic_extra_params:
@@ -1104,8 +1107,8 @@ class VM(virt_vm.BaseVM):
         # End of command line option wrappers
 
         # If nothing changed and devices exists, return imediatelly
-        if (name is None and params is None and root_dir is None
-                and self.devices is not None):
+        if (name is None and params is None and root_dir is None and
+                self.devices is not None):
             return self.devices
 
         if name is None:
@@ -1254,6 +1257,10 @@ class VM(virt_vm.BaseVM):
                                                parent_bus=pci_bus))
 
         # Add monitors
+        catch_monitor = params.get("catch_monitor")
+        if catch_monitor:
+            if catch_monitor not in params.get("monitors"):
+                params["monitors"] += " %s" % catch_monitor
         for monitor_name in params.objects("monitors"):
             monitor_params = params.object_params(monitor_name)
             monitor_filename = qemu_monitor.get_monitor_filename(vm,
@@ -1296,8 +1303,8 @@ class VM(virt_vm.BaseVM):
             # Multiple virtio console devices can't share a
             # single virtio-serial-pci bus. So add a virtio-serial-pci bus
             # when the port is a virtio console.
-            if (port_params.get('virtio_port_type') == 'console'
-                    and params.get('virtio_port_bus') is None):
+            if (port_params.get('virtio_port_type') == 'console' and
+                    params.get('virtio_port_bus') is None):
                 dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
                 dev.set_param('id',
                               'virtio_serial_pci%d' % no_virtio_serial_pcis)
@@ -1524,8 +1531,8 @@ class VM(virt_vm.BaseVM):
 
         # Some versions of windows don't support more than 2 sockets of cpu,
         # here is a workaround to make all windows use only 2 sockets.
-        if (vcpu_sockets and vcpu_sockets > 2
-                and params.get("os_type") == 'windows'):
+        if (vcpu_sockets and vcpu_sockets > 2 and
+                params.get("os_type") == 'windows'):
             vcpu_sockets = 2
 
         if smp == 0 or vcpu_sockets == 0:
@@ -1565,8 +1572,8 @@ class VM(virt_vm.BaseVM):
             devices.insert(StrDev('numa', cmdline=add_numa_node(devices)))
 
         if params.get("numa_consistency_check_cpu_mem", "no") == "yes":
-            if (numa_total_cpus > int(smp) or numa_total_mem > int(mem)
-                    or len(params.objects("guest_numa_nodes")) > int(smp)):
+            if (numa_total_cpus > int(smp) or numa_total_mem > int(mem) or
+                    len(params.objects("guest_numa_nodes")) > int(smp)):
                 logging.debug("-numa need %s vcpu and %s memory. It is not "
                               "matched the -smp and -mem. The vcpu number "
                               "from -smp is %s, and memory size from -mem is"
@@ -2263,8 +2270,8 @@ class VM(virt_vm.BaseVM):
                 else:
                     raise virt_vm.VMPAError(pa_type)
 
-            if (name is None and params is None and root_dir is None
-                    and self.devices is not None):
+            if (name is None and params is None and root_dir is None and
+                    self.devices is not None):
                 self.update_system_dependent_devs()
             # Make qemu command
             try:
@@ -2719,15 +2726,31 @@ class VM(virt_vm.BaseVM):
     def monitor(self):
         """
         Return the main monitor object, selected by the parameter main_monitor.
-        If main_monitor isn't defined, return the first monitor.
-        If no monitors exist, or if main_monitor refers to a nonexistent
-        monitor, return None.
+        If main_monitor isn't defined or it refers to a nonexistent monitor,
+        return the first monitor.
+        If no monitors exist, return None.
         """
         for m in self.monitors:
             if m.name == self.params.get("main_monitor"):
                 return m
-        if self.monitors and not self.params.get("main_monitor"):
+        if self.monitors:
             return self.monitors[0]
+        return None
+
+    @property
+    def catch_monitor(self):
+        """
+        Return the catch monitor object, selected by the parameter
+        catch_monitor.
+        If catch_monitor isn't defined or it refers to a nonexistent monitor,
+        return the last monitor.
+        If no monitors exist, return None.
+        """
+        for m in self.monitors:
+            if m.name == self.params.get("catch_monitor"):
+                return m
+        if self.monitors:
+            return self.monitors[-1]
         return None
 
     def get_monitors_by_type(self, mon_type):
@@ -3316,8 +3339,8 @@ class VM(virt_vm.BaseVM):
             clone.params['qemu_binary'] = utils_misc.get_qemu_dst_binary(self.params)
         if env:
             env.register_vm("%s_clone" % clone.name, clone)
-        if (local and not (migration_exec_cmd_src
-                           and "gzip" in migration_exec_cmd_src)):
+        if (local and not (migration_exec_cmd_src and
+                           "gzip" in migration_exec_cmd_src)):
             error.context("creating destination VM")
             if stable_check:
                 # Pause the dest vm after creation
@@ -3361,9 +3384,10 @@ class VM(virt_vm.BaseVM):
                         continue
                     # spice_migrate_info requires host_ip, dest_port
                     # client_migrate_info also requires protocol
-                    cmdline = "%s hostname=%s" % (command, host_ip)
+                    cmdline = "%s " % (command)
                     if command == "client_migrate_info":
-                        cmdline += " ,protocol=%s" % self.params['display']
+                        cmdline += " protocol=%s," % self.params['display']
+                    cmdline += " hostname=%s" % (host_ip)
                     if dest_port:
                         cmdline += ",port=%s" % dest_port
                     if dest_tls_port:
@@ -3412,8 +3436,8 @@ class VM(virt_vm.BaseVM):
 
             self.wait_for_migration(timeout)
 
-            if (local and (migration_exec_cmd_src
-                           and "gzip" in migration_exec_cmd_src)):
+            if (local and (migration_exec_cmd_src and
+                           "gzip" in migration_exec_cmd_src)):
                 error.context("creating destination VM")
                 if stable_check:
                     # Pause the dest vm after creation
@@ -3493,31 +3517,41 @@ class VM(virt_vm.BaseVM):
         :param serial: Serial login or not (default is False).
         :return: A new shell session object.
         """
-        def __rebooting(session):
+        def __rebooting(session, timeout):
             """
             Check guest rebooting.
             """
             if self.params["os_type"] == "windows":
                 timeout = self.CLOSE_SESSION_TIMEOUT
                 return not session.is_responsive(timeout=timeout)
-            return session.read_until_any_line_matches("Rebooting")
+            # 2.6 kernel report restarting system, 3.0 kernel reports
+            # rebooting.
+            patterns = [r"[Rr]ebooting", r"[Rr]estarting system"]
+            return session.read_until_any_line_matches(patterns,
+                                                       timeout=timeout)
 
         error.base_context("rebooting '%s'" % self.name, logging.info)
         error.context("before reboot")
         error.context()
 
         if method == "shell":
+            internal_timeout = timeout / 2
+            s_session = self.wait_for_serial_login(timeout=internal_timeout)
+            # if session is None and  serial is False
+            if not (session or serial):
+                session = self.wait_for_login(timeout=internal_timeout,
+                                              nic_index=nic_index)
             if not session:
-                if serial:
-                    session = self.serial_login()
-                else:
-                    session = self.login(nic_index=nic_index)
+                session = s_session
+            # serial session used to check is guest in rebooting
             session.sendline(self.params.get("reboot_command"))
             error.context("waiting for guest to go down", logging.info)
             if not utils_misc.wait_for(
-                    lambda: __rebooting(session), timeout / 2, 0, 1):
+                    lambda: __rebooting(s_session, internal_timeout),
+                    internal_timeout, 0, 1):
                 raise virt_vm.VMRebootError("Guest refuses to go down")
             session.close()
+            s_session.close()
 
         elif method == "system_reset":
             # Clear the event list of all QMP monitors
@@ -3544,7 +3578,7 @@ class VM(virt_vm.BaseVM):
         error.context("logging in after reboot", logging.info)
         if serial:
             return self.wait_for_serial_login(timeout=timeout)
-        return self.wait_for_login(nic_index, timeout=timeout)
+        return self.wait_for_login(nic_index=nic_index, timeout=timeout)
 
     def send_key(self, keystr):
         """
@@ -3567,8 +3601,8 @@ class VM(virt_vm.BaseVM):
     # should this really be expected from VMs of all hypervisor types?
     def screendump(self, filename, debug=True):
         try:
-            if self.monitor:
-                self.monitor.screendump(filename=filename, debug=debug)
+            if self.catch_monitor:
+                self.catch_monitor.screendump(filename=filename, debug=debug)
         except qemu_monitor.MonitorError, e:
             logging.warn(e)
 

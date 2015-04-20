@@ -3,8 +3,6 @@ import UserDict
 import os
 import logging
 import re
-import time
-
 import utils_misc
 import virt_vm
 import aexpect
@@ -46,43 +44,56 @@ def lock_safe(function):
 
 @lock_safe
 def _update_address_cache(env, line):
-    if re.search("Your.IP", line, re.IGNORECASE):
-        matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
-        if matches:
-            env["address_cache"]["last_seen"] = matches[0]
+    """
+    Update mac <-> ip releation ship dict when we got a dhcpack packet.
+    """
+    address_cache = env["address_cache"]
+    # counter to record how may line searched
+    count = address_cache.get("line_count", 0) + 1
+    address_cache["line_count"] = count
+    # Container to save missed dhcpack packet IP
+    ip_pool = address_cache.get("ip_pool", set())
+    address_cache["ip_pool"] = ip_pool
+    matches = re.search(r"Your.IP\s+(\S+)", line, re.I)
+    if matches:
+        # Counter line num. when match IP
+        address_cache["count_ip"] = count
+        ip = matches.group(1)
+        ip_pool.add(ip)
+        address_cache["ip_pool"] = ip_pool
+        if ip != address_cache.get("last_seen_ip"):
+            address_cache["last_seen_ip"] = ip
+        return
 
-    if re.search("Client.Ethernet.Address", line, re.IGNORECASE):
-        matches = re.findall(r"\w*:\w*:\w*:\w*:\w*:\w*", line)
-        if matches and env["address_cache"].get("last_seen"):
-            mac_address = matches[0].lower()
-            last_time = env["address_cache"].get("time_%s" % mac_address, 0)
-            last_ip = env["address_cache"].get("last_seen")
-            cached_ip = env["address_cache"].get(mac_address)
+    matches = re.search(r"Client.Ethernet.Address\s+(\S+)", line, re.I)
+    if matches:
+        mac = matches.group(1).lower()
+        # Counter line num. when match MAC
+        address_cache["count_mac"] = count
+        if mac != address_cache.get("last_seen_mac"):
+            address_cache["last_seen_mac"] = mac
+        return
 
-            if (time.time() - last_time > 5 or cached_ip != last_ip):
-                logging.debug("(address cache) DHCP lease OK: %s --> %s",
-                              mac_address, env["address_cache"].get("last_seen"))
-
-            env["address_cache"][mac_address] = env["address_cache"].get("last_seen")
-            env["address_cache"]["time_%s" % mac_address] = time.time()
-            del env["address_cache"]["last_seen"]
-        elif matches:
-            env["address_cache"]["last_seen_mac"] = matches[0]
-
-    if re.search("Requested.IP", line, re.IGNORECASE):
-        matches = matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
-        if matches and env["address_cache"].get("last_seen_mac"):
-            ip_address = matches[0]
-            mac_address = env["address_cache"].get("last_seen_mac")
-            last_time = env["address_cache"].get("time_%s" % mac_address, 0)
-
-            if time.time() - last_time > 10:
-                logging.debug("(address cache) DHCP lease OK: %s --> %s",
-                              mac_address, ip_address)
-
-            env["address_cache"][mac_address] = ip_address
-            env["address_cache"]["time_%s" % mac_address] = time.time()
-            del env["address_cache"]["last_seen_mac"]
+    if re.search(r"DHCP.Message.*:\s+ACK", line, re.I):
+        if (address_cache.get('last_seen_mac') and
+                address_cache.get('last_seen_ip')):
+            mac = address_cache['last_seen_mac']
+            ip = address_cache['last_seen_ip']
+            if address_cache.get(mac) == ip:
+                return
+            # Check is match packet is a dhcpack packet
+            if address_cache["count_mac"] - address_cache["count_ip"] == 3:
+                address_cache[mac] = ip
+                ip_pool.discard(ip)
+                address_cache["ip_pool"] = ip_pool
+                del address_cache["line_count"]
+                del address_cache["count_ip"]
+                del address_cache["count_mac"]
+                del address_cache["last_seen_mac"]
+                del address_cache["last_seen_ip"]
+                logging.info("tcpdump updated address_cache" +
+                             "(%s <-> %s)" % (mac, ip))
+        return
 
     # ipv6 address cache:
     mac_ipv6_reg = r"client-ID.*?([0-9a-fA-F]{12})\).*IA_ADDR (.*) pltime"
@@ -95,6 +106,7 @@ def _update_address_cache(env, line):
             logging.debug("(address cache) DHCPV6 lease OK: %s --> %s",
                           mac_address, request_ip)
             env["address_cache"]["%s_6" % mac_address] = request_ip
+        return
 
     if re.search("dhcp6 (reply|advertise)", line, re.IGNORECASE):
         ipv6_mac_reg = "IA_ADDR (.*) pltime.*client-ID.*?([0-9a-fA-F]{12})\)"
@@ -106,6 +118,7 @@ def _update_address_cache(env, line):
             logging.debug("(address cache) DHCPV6 lease OK: %s --> %s",
                           mac_address, allocate_ip)
             env["address_cache"]["%s_6" % mac_address] = allocate_ip
+        return
 
 
 def _tcpdump_handler(env, filename, line):

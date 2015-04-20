@@ -17,7 +17,6 @@ More specifically:
 """
 
 import commands
-import errno
 import glob
 import imp
 import locale
@@ -33,19 +32,14 @@ import subprocess
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from autotest.client.tools import scan_results
-from virttest import aexpect, remote, utils_misc, virt_vm, data_dir, utils_net
+from virttest import aexpect, utils_misc, virt_vm, data_dir, utils_net
 from virttest import storage, asset, bootstrap, remote
 import virttest
 
+# Import submodules, should not be considered as unused import
 import libvirt
 import qemu
 import libguestfs
-
-try:
-    from virttest.staging import utils_cgroup
-except ImportError:
-    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
-    from autotest.client.shared import utils_cgroup
 
 try:
     from virttest.staging import utils_memory
@@ -75,7 +69,7 @@ def update_boot_option(vm, args_removed=None, args_added=None,
     :param args_removed: Kernel options want to remove.
     :param args_added: Kernel options want to add.
     :param need_reboot: Whether need reboot VM or not.
-    :raise error.TestError: Raised if fail to update guest kernel cmdlie.
+    :raise error.TestError: Raised if fail to update guest kernel cmdline.
 
     """
     if vm.params.get("os_type") == 'windows':
@@ -448,7 +442,6 @@ def run_file_transfer(test, params, env):
 
     dir_name = test.tmpdir
     transfer_timeout = int(params.get("transfer_timeout"))
-    transfer_type = params.get("transfer_type")
     tmp_dir = params.get("tmp_dir", "/tmp/")
     clean_cmd = params.get("clean_cmd", "rm -f")
     filesize = int(params.get("filesize", 4000))
@@ -466,10 +459,6 @@ def run_file_transfer(test, params, env):
     try:
         error.context("Creating %dMB file on host" % filesize, logging.info)
         utils.run(cmd)
-
-        if transfer_type != "remote":
-            raise error.TestError("Unknown test file transfer mode %s" %
-                                  transfer_type)
 
         error.context("Transferring file host -> guest,"
                       " timeout: %ss" % transfer_timeout, logging.info)
