@@ -16,6 +16,8 @@ elif os.path.exists("/dev/hdb"):
     fs = job.filesystem("/dev/hdb", job.tmpdir)
 else:
     fs = job.filesystem("/dev/vdb", job.tmpdir)
-job.run_test('parallel_dd', fs=fs, fstype='ext3', iterations=5, megabytes=1000, streams=2)
+job.run_test('parallel_dd', fs=fs, fstype='', iterations=5, megabytes=1000,
+             streams=2, fs_dd_woptions='oflag:direct',
+             fs_dd_roptions='iflag:direct')
 
 
