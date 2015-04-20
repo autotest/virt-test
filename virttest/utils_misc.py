@@ -500,7 +500,7 @@ def wait_for(func, timeout, first=0.0, step=1.0, text=None):
     :param text: Text to print while waiting, for debug purposes
     """
     start_time = time.time()
-    end_time = time.time() + timeout
+    end_time = time.time() + int(timeout)
 
     time.sleep(first)
 
