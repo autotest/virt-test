@@ -222,7 +222,7 @@ class Netperf(object):
             return bool(check_reg.findall(output))
         except Exception, err:
             logging.debug("Check process error: %s" % str(err))
-        False
+        return False
 
     def stop(self, target):
         if self.client == "nc":
