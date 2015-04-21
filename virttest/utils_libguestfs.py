@@ -531,7 +531,10 @@ class GuestfishPersistent(Guestfish):
         if copyonread:
             cmd += " copyonread:true"
         else:
-            cmd += " copyonread:false"
+            # The default is false for copyonread.
+            # If copyonread param is false,
+            # It's no need to set " copyonread:false" explicitly.
+            pass
 
         return self.inner_cmd(cmd)
 
