@@ -4,7 +4,7 @@ GRAPHICAL_OR_TEXT
 poweroff
 lang en_US.UTF-8
 keyboard us
-network --bootproto dhcp
+network --onboot yes --device eth0 --bootproto dhcp
 rootpw --plaintext 123456
 firstboot --disable
 user --name=test --password=123456
@@ -83,8 +83,8 @@ ECHO "Disable lock cdrom udev rules"
 sed -i "/--lock-media/s/^/#/" /usr/lib/udev/rules.d/60-cdrom_id.rules 2>/dev/null>&1
 #Workaround for graphical boot as anaconda seems to always instert skipx
 systemctl set-default graphical.target
-sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-ens*
-sed -i "s/ONBOOT=no/ONBOOT=yes/" /etc/sysconfig/network-scripts/ifcfg-ens*
+sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-*
+sed -i "s/ONBOOT=no/ONBOOT=yes/" /etc/sysconfig/network-scripts/ifcfg-*
 cat > '/etc/gdm/custom.conf' << EOF
 [daemon]
 AutomaticLogin=test
