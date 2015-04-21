@@ -67,7 +67,7 @@ class Rng(base.UntypedDeviceBase):
             accessors.XMLAttribute(property_name="backend_protocol",
                                    libvirtxml=self,
                                    forbidden=None,
-                                   parent_xpath='/backend',
+                                   parent_xpath='/',
                                    tag_name='protocol',
                                    attribute='type')
             super(self.__class__, self).__init__(virsh_instance=virsh_instance)
