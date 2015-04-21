@@ -1204,6 +1204,10 @@ class VM(virt_vm.BaseVM):
         if devices.has_option("nodefaults") and defaults != "yes":
             devices.insert(StrDev('nodefaults', cmdline=" -nodefaults"))
 
+        # nodefconfig please
+        if params.get("defconfig", "yes") == "no":
+            devices.insert(StrDev('nodefconfig', cmdline=" -nodefconfig"))
+
         vga = params.get("vga")
         if vga:
             if vga != 'none':

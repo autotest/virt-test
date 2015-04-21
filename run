@@ -410,6 +410,11 @@ class VirtTestRunParser(optparse.OptionParser):
                         default="on",
                         help=("Enable qemu sandboxing "
                               "(on/off). Default: %default"))
+        qemu.add_option("--defconfig", action="store", dest="defconfig",
+                        default="yes",
+                        help=("Prevent qemu from loading sysconfdir/qemu.conf "
+                              "and sysconfdir/target-ARCH.conf at startup. "
+                              "(yes/no). Default: %default"))
         self.add_option_group(qemu)
 
         libvirt = optparse.OptionGroup(self, 'Options specific to the libvirt test')
@@ -647,6 +652,13 @@ class VirtTestApp(object):
         else:
             logging.info("Config provided, ignoring \"--sandbox <on|off>\" option")
 
+    def _process_qemu_defconfig(self):
+        if not self.options.config:
+            if self.options.defconfig == "no":
+                self.cartesian_parser.assign("defconfig", "no")
+        else:
+            logging.info("Config provided, ignoring \"--defconfig <yes|no>\" option")
+
     def _process_malloc_perturb(self):
         self.cartesian_parser.assign("malloc_perturb",
                                      self.options.malloc_perturb)
@@ -668,6 +680,7 @@ class VirtTestApp(object):
         self._process_vhost()
         self._process_malloc_perturb()
         self._process_qemu_sandbox()
+        self._process_qemu_defconfig()
 
     def _process_lvsb_specific_options(self):
         """
