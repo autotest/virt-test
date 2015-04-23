@@ -267,7 +267,7 @@ class PoolXML(PoolXMLBase):
         :param name: Original pool name.
         :param new_name: new name of pool.
         :param uuid: new pool uuid, if None libvirt will generate automatically.
-        :return:
+        :return: True/False or raise LibvirtXMLError
         """
         pool_ins = libvirt_storage.StoragePool()
         if not pool_ins.is_pool_persistent(name):
@@ -275,14 +275,19 @@ class PoolXML(PoolXMLBase):
             return False
         start_pool = False
         if pool_ins.is_pool_active(name):
-            virsh_instance.pool_destroy(name)
             start_pool = True
         poolxml = PoolXML.new_from_dumpxml(name, virsh_instance)
         backup = poolxml.copy()
+
+        def _cleanup(details=""):
+            # cleanup if rename failed
+            backup.pool_define()
+            if start_pool:
+                pool_ins.start_pool(name)
+            raise xcepts.LibvirtXMLError("%s" % details)
+
         if not pool_ins.delete_pool(name):
-            del poolxml
-            raise xcepts.LibvirtXMLError("Error occur while deleting pool: %s"
-                                         % name)
+            _cleanup(details="Delete pool %s failed" % name)
         # Alter the XML
         poolxml.name = new_name
         if uuid is None:
@@ -291,17 +296,9 @@ class PoolXML(PoolXMLBase):
             poolxml.uuid = uuid
         # Re-define XML to libvirt
         logging.debug("Rename pool: %s to %s.", name, new_name)
-        # error message for failed define
-        error_msg = "Error reported while defining pool:\n"
-        try:
-            if not poolxml.pool_define():
-                raise xcepts.LibvirtXMLError(error_msg + "%s"
-                                             % poolxml.get('xml'))
-        except error.CmdError, detail:
-            del poolxml
-            # Allow exceptions thrown here since state will be undefined
-            backup.pool_define()
-            raise xcepts.LibvirtXMLError(error_msg + "%s" % detail)
+        if not poolxml.pool_define():
+            logging.info("Pool xml: %s" % poolxml.get('xml'))
+            _cleanup(details="Define pool %s failed" % new_name)
         if start_pool:
             pool_ins.start_pool(new_name)
         return True
