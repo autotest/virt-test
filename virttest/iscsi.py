@@ -78,7 +78,7 @@ def iscsi_node_del(target_name=None):
             if target_name in node_tup:
                 cmd = "iscsiadm -m node -o delete -T %s " % target_name
                 cmd += "--portal %s" % node_tup[0]
-                utils.system(cmd)
+                utils.system(cmd, ignore_status=True)
                 break
         if not cmd:
             logging.error("The target '%s' for delete is not in target node"
@@ -87,7 +87,7 @@ def iscsi_node_del(target_name=None):
         for node_tup in node_list:
             cmd = "iscsiadm -m node -o delete -T %s " % node_tup[1]
             cmd += "--portal %s" % node_tup[0]
-            utils.system(cmd)
+            utils.system(cmd, ignore_status=True)
 
 
 def iscsi_logout(target_name=None):
@@ -138,6 +138,7 @@ class Iscsi(object):
         os_dep.command("iscsiadm")
         self.target = params.get("target")
         self.export_flag = False
+        self.restart_tgtd = 'yes' == params.get("restart_tgtd", "no")
         if params.get("portal_ip"):
             self.portal_ip = params.get("portal_ip")
         else:
@@ -432,6 +433,9 @@ class Iscsi(object):
                 cmd = "tgtadm --lld iscsi --mode target --op delete "
                 cmd += "--tid %s" % self.emulated_id
                 utils.system(cmd)
+        if self.restart_tgtd:
+            cmd = "service tgtd restart"
+            utils.system(cmd)
 
     def logout(self):
         """
