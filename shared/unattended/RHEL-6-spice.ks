@@ -32,6 +32,7 @@ KVM_TEST_LOGGING
 @Smart Card Support
 gnome-utils
 python-imaging
+python-six
 NetworkManager
 ntpdate
 watchdog

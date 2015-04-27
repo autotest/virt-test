@@ -31,6 +31,8 @@ xconfig --startxonboot
 @smart-card
 gnome-utils
 python-imaging
+python-six
+pyparsing
 NetworkManager
 ntpdate
 dconf
