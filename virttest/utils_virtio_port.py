@@ -49,8 +49,9 @@ class VirtioPortTest(object):
                 _no_serialports = -1
                 _no_consoles = -1
         # If not enough ports, modify params and recreate VM
-        if (_no_serialports < no_serialports or _no_consoles < no_consoles
-                or spread != _spread):
+        if (_no_serialports < no_serialports or
+                _no_consoles < no_consoles or
+                spread != _spread):
             if not quiet:
                 out = "tests reqirements are different from cfg: "
                 if _no_serialports < no_serialports:
