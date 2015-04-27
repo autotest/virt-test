@@ -1816,6 +1816,25 @@ def net_update(network, update_cmd, section, xml, extra="", **dargs):
     return command(cmd, **dargs)
 
 
+def _pool_type_check(pool_type):
+    """
+    check if the pool_type is supported or not
+
+    :param pool_type: pool type
+    :return: valid pool type or None
+    """
+    valid_types = ['dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical', 'gluster']
+
+    if pool_type and pool_type not in valid_types:
+        logging.error("Specified pool type '%s' not in '%s'",
+                      pool_type, valid_types)
+        pool_type = None
+    elif not pool_type:
+        # take the first element as default pool_type
+        pool_type = valid_types[0]
+    return pool_type
+
+
 def pool_info(name, **dargs):
     """
     Returns basic information about the storage pool.
@@ -1871,12 +1890,9 @@ def pool_create_as(name, pool_type, target, extra="", **dargs):
     if not name:
         logging.error("Please give a pool name")
 
-    types = ['dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical', 'gluster']
-
-    if pool_type and pool_type not in types:
-        logging.error("Only support pool types: %s.", types)
-    elif not pool_type:
-        pool_type = types[0]
+    pool_type = _pool_type_check(pool_type)
+    if pool_type is None:
+        return False
 
     logging.info("Create %s type pool %s", pool_type, name)
     cmd = "pool-create-as --name %s --type %s --target %s %s" \
@@ -2027,12 +2043,9 @@ def pool_define_as(name, pool_type, target, extra="", **dargs):
     :return: True if pool define command was successful
     """
 
-    types = ['dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical', 'gluster']
-
-    if pool_type and pool_type not in types:
-        logging.error("Only support pool types: %s.", types)
-    elif not pool_type:
-        pool_type = types[0]
+    pool_type = _pool_type_check(pool_type)
+    if pool_type is None:
+        return False
 
     logging.debug("Try to define %s type pool %s", pool_type, name)
     cmd = "pool-define-as --name %s --type %s --target %s %s" \
