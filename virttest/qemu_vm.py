@@ -1977,10 +1977,11 @@ class VM(virt_vm.BaseVM):
                 logfile = "serial-%s-%s.log" % (port.name, self.name)
                 socat_cmd = "nc -U %s" % port.hostfile
                 self.virtio_console = aexpect.ShellSession(
-                        socat_cmd, auto_close=False,
-                        output_func=utils_misc.log_line,
-                        output_params=(logfile,),
-                        prompt=self.params.get("shell_prompt", "[\#\$]"))
+                    socat_cmd,
+                    auto_close=False,
+                    output_func=utils_misc.log_line,
+                    output_params=(logfile,),
+                    prompt=self.params.get("shell_prompt", "[\#\$]"))
                 return
         logging.warn("Not virtio console created in VM.")
         self.virtio_console = None
