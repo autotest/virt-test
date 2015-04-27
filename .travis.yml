@@ -10,7 +10,7 @@ virtualenv:
     system_site_packages: true
 
 before_script:
-    - echo "deb http://ppa.launchpad.net/lmr/autotest/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list
+    - echo "deb http://ppa.launchpad.net/lmr/autotest/ubuntu utopic main" | sudo tee -a /etc/apt/sources.list
     - sudo apt-get update -q
     - sudo apt-get -y --force-yes install autotest
 
