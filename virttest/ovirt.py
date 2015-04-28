@@ -34,7 +34,7 @@ def connect(params):
         logging.error('ovirt_engine[url|user|password] are necessary!!')
 
     if version is None:
-        version = param.Version(major='3', minor='0')
+        version = param.Version(major='3', minor='5')
     else:
         version = param.Version(version)
 
@@ -44,7 +44,7 @@ def connect(params):
         # Try to connect oVirt API if connection doesn't exist,
         # otherwise, directly return existing API connection.
         if not _connected:
-            _api = API(url, username, password)
+            _api = API(url, username, password, insecure=True)
             _connected = True
             return (_api, version)
         else:
@@ -97,9 +97,10 @@ class VMManager(virt_vm.BaseVM):
             self.pci_devices = []
             self.uuid = None
             self.only_pty = False
+            self.remote_sessions = []
 
         self.spice_port = 8000
-        self.name = params.get("vm_name", "")
+        self.name = params.get("main_vm", "")
         self.params = params
         self.root_dir = root_dir
         self.address_cache = address_cache
@@ -134,12 +135,12 @@ class VMManager(virt_vm.BaseVM):
         except Exception, e:
             logging.error('Failed to get %s status:\n%s' % (self.name, str(e)))
 
-    def get_mac_address(self):
+    def get_mac_address(self, net_name='*'):
         """
         Return MAC address of a VM.
         """
         try:
-            return self.instance.nics.get().get_mac().get_address()
+            return self.instance.nics.get(name=net_name).get_mac().get_address()
         except Exception, e:
             logging.error('Failed to get %s status:\n%s' % (self.name, str(e)))
 
@@ -468,8 +469,10 @@ class VMManager(virt_vm.BaseVM):
                 NIC's MAC address
         """
         nic = self.virtnet[index]
+        logging.debug("The nic: %s", nic)
         if nic.nettype == 'bridge':
             mac = self.get_mac_address()
+            logging.debug("The address cache: %s", self.address_cache)
             ip = self.address_cache.get(mac)
             # TODO: Verify MAC-IP address mapping on remote ovirt node
             if not ip:
