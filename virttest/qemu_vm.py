@@ -1546,15 +1546,21 @@ class VM(virt_vm.BaseVM):
         vcpu_cores = int(params.get("vcpu_cores", 0))
         vcpu_threads = int(params.get("vcpu_threads", 0))
 
-        # Force CPU threads to 2 when smp > 8.
-        if smp > 8 and vcpu_threads <= 1:
-            vcpu_threads = 2
-
         # Some versions of windows don't support more than 2 sockets of cpu,
         # here is a workaround to make all windows use only 2 sockets.
         if (vcpu_sockets and vcpu_sockets > 2 and
                 params.get("os_type") == 'windows'):
             vcpu_sockets = 2
+
+        amd_vendor_string = params.get("amd_vendor_string")
+        if not amd_vendor_string:
+            amd_vendor_string = "AuthenticAMD"
+        if amd_vendor_string == utils_misc.get_cpu_vendor():
+            # AMD cpu do not support multi threads.
+            if params.get("test_negative_thread", "no") != "yes":
+                vcpu_threads = 1
+                txt = "Set vcpu_threads to 1 for AMD cpu."
+                logging.warn(txt)
 
         if smp == 0 or vcpu_sockets == 0:
             vcpu_cores = vcpu_cores or 1
