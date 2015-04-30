@@ -1687,7 +1687,10 @@ class VM(virt_vm.BaseVM):
                             session.close()
             # Destroy VM directly, as 'ignore_status=True' by default, so destroy
             # a shutoff domain is also acceptable here.
-            virsh.destroy(self.name, uri=self.connect_uri)
+            destroy_opt = ''
+            if gracefully:
+                destroy_opt = '--graceful'
+            virsh.destroy(self.name, destroy_opt, uri=self.connect_uri)
 
         finally:
             self.cleanup_serial_console()
