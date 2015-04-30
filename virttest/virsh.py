@@ -1281,15 +1281,16 @@ def shutdown(name, options="", **dargs):
     return command("shutdown %s %s" % (name, options), **dargs)
 
 
-def destroy(name, **dargs):
+def destroy(name, options="", **dargs):
     """
     True on successful domain destruction
 
     :param name: VM name
+    :param options: options for virsh destroy
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
     """
-    return command("destroy %s" % (name), **dargs)
+    return command("destroy %s %s" % (name, options), **dargs)
 
 
 def define(xml_path, **dargs):
