@@ -822,9 +822,6 @@ def bootstrap_tests(options):
         if t_elapsed > tolerance and not wait_message_printed:
             print_stdout("Running setup. Please wait...")
             wait_message_printed = True
-            # if bootstrap takes too long, we temporarily make stdout verbose
-            # again, so the user can see what's taking so long
-            sys.stdout.restore()
         time.sleep(0.1)
 
     # in case stdout was restored above, redirect it again
