@@ -233,6 +233,19 @@ class StoragePool(object):
     def delete_pool(self, name):
         """
         Destroy and Delete a pool if it exists on given libvirt
+
+        It's reasonable to delete a pool by calling pool-delete.
+        However, due to pool-delete operation is non-recoverable.
+        Redhat suggests to achieve this objective by virsh,
+        1) virsh pool-destroy pool-name
+        2) virsh pool-undefine pool-name
+
+        Please refer to the following URI for more details.
+        https://access.redhat.com/documentation/en-US
+        /Red_Hat_Enterprise_Linux/6/html
+        /Virtualization_Administration_Guide
+        /chap-Virtualization_Administration_Guide
+        -Storage_Pools-Storage_Pools.html#delete-ded-disk-storage-pool
         """
         if self.is_pool_active(name):
             if not self.virsh_instance.pool_destroy(name):
