@@ -54,6 +54,14 @@ class THPKhugepagedError(THPError):
     pass
 
 
+class HPNotSupportedError(Exception):
+
+    """
+    Thrown when host does not support hugepages.
+    """
+    pass
+
+
 class PolkitConfigError(Exception):
 
     """
@@ -286,7 +294,10 @@ class HugePageConfig(object):
         self.qemu_overhead = int(params.get("hugepages_qemu_overhead", 128))
         self.deallocate = params.get("hugepages_deallocate", "yes") == "yes"
         self.hugepage_path = '/mnt/kvm_hugepage'
-        self.kernel_hp_file = '/proc/sys/vm/nr_hugepages'
+        if os.path.exists('/proc/sys/vm/nr_hugepages'):
+            self.kernel_hp_file = '/proc/sys/vm/nr_hugepages'
+        else:
+            raise HPNotSupportedError("System doesn't support hugepages")
         self.pool_path = "/sys/kernel/mm/hugepages"
         self.sys_node_path = "/sys/devices/system/node"
         self.hugepage_size = self.get_hugepage_size()
