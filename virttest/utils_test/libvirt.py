@@ -35,6 +35,7 @@ from virttest import libvirt_storage
 from virttest import utils_net
 from virttest import gluster
 from virttest import remote
+from virttest.test_setup import LibvirtPolkitConfig
 from virttest.utils_libvirtd import service_libvirtd_control
 from autotest.client import utils
 from autotest.client.shared import error
@@ -2609,3 +2610,27 @@ def new_disk_vol_name(pool_name):
     disk = poolxml.get_source().device_path[5:]
     part_num = len(filter(lambda s: s.startswith(disk), get_parts_list()))
     return disk + str(part_num)
+
+
+def update_polkit_rule(params, pattern, new_value):
+    """
+    This function help to update the rule during testing.
+
+    :param params: Test run params
+    :param pattern: Regex pattern for updating
+    :param new_value: New value for updating
+    """
+    polkit = LibvirtPolkitConfig(params)
+    polkit_rules_path = polkit.polkit_rules_path
+    try:
+        polkit_f = open(polkit_rules_path, 'r+')
+        rule = polkit_f.read()
+        new_rule = re.sub(pattern, new_value, rule)
+        polkit_f.seek(0)
+        polkit_f.truncate()
+        polkit_f.write(new_rule)
+        polkit_f.close()
+        logging.debug("New polkit config rule is:\n%s", new_rule)
+        polkit.polkitd.restart()
+    except IOError, e:
+        logging.error(e)
