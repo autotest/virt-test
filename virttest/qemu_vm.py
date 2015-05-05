@@ -2675,7 +2675,8 @@ class VM(virt_vm.BaseVM):
 
         for f in file_list:
             try:
-                os.unlink(f)
+                if f:
+                    os.unlink(f)
             except OSError:
                 pass
 

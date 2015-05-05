@@ -120,6 +120,10 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             case of multi-host migration.
     """
     def mig_finished():
+        if dest_vm.is_dead():
+            raise error.TestFail("Dest VM died during migration.")
+        if not offline and vm.is_dead():
+            raise error.TestFail("Source VM died during migration")
         try:
             o = vm.monitor.info("migrate")
             if isinstance(o, str):

@@ -245,7 +245,7 @@ class VirtioGuestPosix(VirtioGuest):
             viop_names = os.listdir('%s/virtio-ports' % (DEBUGPATH))
             if in_files is not None:
                 dev_names = os.listdir('/dev')
-                rep = re.compile(r"vport[0-9]p[0-9]+")
+                rep = re.compile(r"vport[0-9]+p[0-9]+")
                 dev_names = filter(
                     lambda x: rep.match(x) is not None, dev_names)
                 if len(dev_names) != len(in_files):
