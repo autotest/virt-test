@@ -3953,9 +3953,9 @@ def virt_clone_cmd(original, newname=None, autoclone=False, **dargs):
 
     ignore_status = dargs.get("ignore_status", True)
     debug = dargs.get("debug", False)
-    timeout = dargs.get("timeout", 60)
+    timeout = dargs.get("timeout", 180)
 
-    return lgf_command(cmd, ignore_status, debug, timeout)
+    return lgf_command(cmd, ignore_status, debug, float(timeout))
 
 
 def virt_sparsify_cmd(indisk, outdisk, compress=False, convert=None,

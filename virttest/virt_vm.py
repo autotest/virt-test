@@ -1030,19 +1030,27 @@ class BaseVM(object):
             out = s_session.cmd_output("ip route || route print", timeout=60)
             txt = "Guest route table:\n %s" % out
             logging.debug(txt)
-            s_session.close()
 
-        if serial or restart_network:
-            # Try to login via serila console
-            session = self.wait_for_serial_login(timeout, internal_timeout,
-                                                 restart_network,
-                                                 username, password)
-            if restart_network:
-                # Try one more time after restarting guest network.
-                session = self.login(nic_index, internal_timeout, username,
-                                     password)
+        if serial:
+            return s_session
+
+        if restart_network:
+            os_type = self.params.get("os_type")
+            utils_net.restart_guest_network(s_session, os_type=os_type)
+            # Try one more time after restarting guest network.
+            session = self.login(nic_index, internal_timeout, username,
+                                 password)
+            s_session.close()
             return session
         else:
+            # Close serial session
+            s_session.close()
+            # TODO Need to clean up existed serial console,
+            # otherwise, following serial login will fail. Any other solution?
+            if self.serial_console:
+                self.cleanup_serial_console()
+            # In the case of address is changed, update arp cache
+            utils_net.update_mac_ip_address(self, self.params)
             # Try one more time but don't catch exceptions
             return self.login(nic_index, internal_timeout, username, password)
 
