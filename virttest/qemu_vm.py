@@ -2616,6 +2616,14 @@ class VM(virt_vm.BaseVM):
         True. If QEMU is running in -no-shutdown mode, the QEMU process
         may be still alive.
         """
+        def _shutdown_by_sendline():
+            try:
+                session.sendline(self.params.get("shutdown_command"))
+                if self.wait_for_shutdown(timeout):
+                    return True
+            finally:
+                session.close()
+
         if self.params.get("shutdown_command"):
             # Try to destroy with shell command
             logging.debug("Shutting down VM %s (shell)", self.name)
@@ -2629,16 +2637,14 @@ class VM(virt_vm.BaseVM):
                     session = self.serial_login()
                 except (remote.LoginError, virt_vm.VMError), e:
                     logging.debug(e)
+                else:
+                    # Successfully get session by serial_login()
+                    _shutdown_by_sendline()
             except (remote.LoginError, virt_vm.VMError), e:
                 logging.debug(e)
             else:
-                try:
-                    # Send the shutdown command
-                    session.sendline(self.params.get("shutdown_command"))
-                    if self.wait_for_shutdown(timeout):
-                        return True
-                finally:
-                    session.close()
+                # There is no exception occurs
+                _shutdown_by_sendline()
 
     def _cleanup(self, free_mac_addresses):
         """
