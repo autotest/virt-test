@@ -549,8 +549,7 @@ echo ttyS0 >> /etc/securetty]]>
       <script>
         <debug config:type="boolean">true</debug>
         <filename>config</filename>
-        <source><![CDATA[dhclient eth0
-chkconfig sshd on
+        <source><![CDATA[chkconfig sshd on
 sed -i -e 's/\(PasswordAuthentication\s\)no/\1yes/g'  /etc/ssh/sshd_config
 service sshd restart
 ]]></source>
