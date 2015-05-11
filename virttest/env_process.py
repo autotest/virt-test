@@ -539,11 +539,6 @@ def preprocess(test, params, env):
     if params.get('requires_root', 'no') == 'yes':
         utils_misc.verify_running_as_root()
 
-    port = params.get('shell_port')
-    prompt = params.get('shell_prompt')
-    address = params.get('ovirt_node_address')
-    username = params.get('ovirt_node_user')
-    password = params.get('ovirt_node_password')
     vm_type = params.get('vm_type')
 
     setup_pb = False
