@@ -556,6 +556,9 @@ sed -i -e 's/\(PasswordAuthentication\s\)no/\1yes/g'  /etc/ssh/sshd_config
 service sshd restart
 service network restart
 service NetworkManager restart
+mv /etc/sysconfig/network/ifcfg-eth-id-* /etc/sysconfig/network/ifcfg-eth0
+sed -i '/_nm_name/d' -e '/UNIQUE/d' /etc/sysconfig/network/ifcfg-eth0
+ln -sf /dev/null /etc/udev/rules.d/30-net_persistent_names.rules
 ]]></source>
       </script>
     </init-scripts>
