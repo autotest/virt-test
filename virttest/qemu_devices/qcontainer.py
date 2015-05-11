@@ -723,9 +723,6 @@ class DevContainer(object):
                 bus = qbuses.QSCSIBus("scsi.0", 'SCSI', [8, 16384],
                                       atype='spapr-vscsi')
                 self.insert(qdevices.QStringDevice(_name,
-                                                   parent_bus={'aobject':
-                                                               params.get('pci_bus',
-                                                                          'pci.0')},
                                                    child_bus=bus))
             else:
                 _name = 'lsi53c895a%s' % i
@@ -1150,7 +1147,9 @@ class DevContainer(object):
                 bus = _hba % bus
             if qbus == qbuses.QAHCIBus and unit is not None:
                 bus += ".%d" % unit
-            elif _bus is None:    # If bus was not set, don't set it
+            # If bus was not set, don't set it, unless the device is
+            # a spapr-vscsi device.
+            elif _bus is None and 'spapr_vscsi' not in _hba:
                 bus = None
             return devices, bus, {'type': qtype, 'atype': atype}
 
@@ -1225,7 +1224,7 @@ class DevContainer(object):
                 # In case we hotplug, lsi wasn't added during the startup hook
                 if arch.ARCH in ('ppc64', 'ppc64le'):
                     _ = define_hbas('SCSI', 'spapr-vscsi', None, None, None,
-                                    qbuses.QSCSIBus, pci_bus, [8, 16384])
+                                    qbuses.QSCSIBus, None, [8, 16384])
                 else:
                     _ = define_hbas('SCSI', 'lsi53c895a', None, None, None,
                                     qbuses.QSCSIBus, pci_bus, [8, 16384])
@@ -1253,6 +1252,8 @@ class DevContainer(object):
             elif scsi_hba == 'virtio-scsi-device':
                 addr_spec = [256, 16384]
                 pci_bus = {'type': 'virtio-bus'}
+            if scsi_hba == 'spapr-vscsi':
+                pci_bus = None
             _, bus, dev_parent = define_hbas('SCSI', scsi_hba, bus, unit, port,
                                              qbuses.QSCSIBus, pci_bus,
                                              addr_spec, num_queues=num_queues,
