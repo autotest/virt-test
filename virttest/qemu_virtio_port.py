@@ -369,7 +369,7 @@ class GuestWorker(object):
             logging.warn("Workaround the stuck thread on guest")
             # Thread is stuck in read/write
             for send_pt in send_pts:
-                send_pt.sock.sendall(".")
+                send_pt.sock.send(".")
         elif match != 0:
             # Something else
             raise VirtioPortException("Unexpected fail\nMatch: %s\nData:\n%s"
