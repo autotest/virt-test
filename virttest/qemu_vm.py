@@ -508,7 +508,10 @@ class VM(virt_vm.BaseVM):
             dev.set_param("server", 'NO_EQUAL_STRING')
             dev.set_param("nowait", 'NO_EQUAL_STRING')
             devices.insert(dev)
-            dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
+            if arch.ARCH == 'aarch64':
+                dev = QDevice('virtio-serial-device')
+            else:
+                dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
             dev.set_param("id", vioser_id)
             devices.insert(dev)
             dev = QDevice('virtserialport')
@@ -1318,13 +1321,19 @@ class VM(virt_vm.BaseVM):
             # when the port is a virtio console.
             if (port_params.get('virtio_port_type') == 'console' and
                     params.get('virtio_port_bus') is None):
-                dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
+                if arch.ARCH == 'aarch64':
+                    dev = QDevice('virtio-serial-device')
+                else:
+                    dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
                 dev.set_param('id',
                               'virtio_serial_pci%d' % no_virtio_serial_pcis)
                 devices.insert(dev)
                 no_virtio_serial_pcis += 1
             for i in range(no_virtio_serial_pcis, bus + 1):
-                dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
+                if arch.ARCH == 'aarch64':
+                    dev = QDevice('virtio-serial-device')
+                else:
+                    dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
                 dev.set_param('id', 'virtio_serial_pci%d' % i)
                 devices.insert(dev)
                 no_virtio_serial_pcis += 1
