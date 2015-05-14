@@ -369,7 +369,14 @@ class GuestWorker(object):
             logging.warn("Workaround the stuck thread on guest")
             # Thread is stuck in read/write
             for send_pt in send_pts:
-                send_pt.sock.sendall(".")
+                timeout = None
+                try:
+                    timeout = send_pt.sock.gettimeout()
+                    send_pt.sock.settimeout(1)
+                    send_pt.sock.send(".")
+                except socket.timeout:
+                    pass    # If still stuck VM gets destroyed below
+                send_pt.sock.settimeout(timeout)
         elif match != 0:
             # Something else
             raise VirtioPortException("Unexpected fail\nMatch: %s\nData:\n%s"
