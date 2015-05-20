@@ -300,7 +300,7 @@ class VirtioGuestPosix(VirtioGuest):
                         print "FAIL: Symlink %s is not correct." % dev_ppath
                 except AttributeError:
                     print ("Bad data on file %s:\n%s. " %
-                           (open_db_file, "".join(file).strip()))
+                           (open_db_file, "".join(line_list).strip()))
                     print "FAIL: Bad data on file %s." % open_db_file
                     return
 
