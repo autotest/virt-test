@@ -1277,8 +1277,7 @@ def _store_vm_register(test, params, env):
 
             if not vm.is_alive():
                 if vm_register_error_count[vm.instance] < 1:
-                    logging.warn("%s is not alive. Can not query the "
-                                 "register status" % vm.name)
+                    logging.warning("%s is not alive. Can't query the register status" % vm.name)
                 vm_register_error_count[vm.instance] += 1
                 continue
             vm_pid = vm.get_pid()
