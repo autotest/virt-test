@@ -5,10 +5,10 @@ import sys
 import time
 import traceback
 import Queue
-import glob
-import shutil
+
 from autotest.client.shared import error
 from autotest.client import utils
+
 import aexpect
 import asset
 import utils_misc
@@ -30,6 +30,134 @@ global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
 global TAG_INDEX
 TAG_INDEX = {}
+
+
+class StreamProxy(object):
+
+    """
+    Mechanism to redirect a stream to a file, allowing the original stream to
+    be restored later.
+    """
+
+    def __init__(self, filename=None, stream=sys.stdout):
+        """
+        Keep 2 streams to write to, and eventually switch.
+        """
+        self.stream = None
+        self.terminal = stream
+        if filename is None:
+            self.log = stream
+        else:
+            self.log = open(filename, "a")
+        self.redirect()
+
+    def write(self, message):
+        """
+        Write to the current stream.
+        """
+        self.stream.write(message)
+
+    def flush(self):
+        """
+        Flush the current stream.
+        """
+        self.stream.flush()
+
+    def restore(self):
+        """Restore original stream"""
+        self.stream = self.terminal
+
+    def redirect(self):
+        """Redirect stream to log file"""
+        self.stream = self.log
+
+
+def handle_stdout(options):
+    """
+    Replace stdout with a proxy object.
+
+    Depending on self.options.verbose, make proxy print to /dev/null, or
+    original sys.stdout stream.
+    """
+    if not options.vt_verbose:
+        # Replace stdout with our proxy pointing to /dev/null
+        sys.stdout = StreamProxy(filename="/dev/null", stream=sys.stdout)
+    else:
+        # Retain full stdout
+        sys.stdout = StreamProxy(filename=None, stream=sys.stdout)
+
+
+def _variant_only_file(filename):
+    """
+    Parse file containing flat list of items to append on an 'only' filter
+    """
+    result = []
+    fullpath = None
+    if not os.path.isabs(filename):
+        fullpath = os.path.realpath(os.path.join(data_dir.get_root_dir(),
+                                                 filename))
+    if fullpath is not None:
+        for line in open(fullpath).readlines():
+            line = line.strip()
+            if line.startswith('#') or len(line) < 3:
+                continue
+            result.append(line)
+
+    return ", ".join(result)
+
+
+SUPPORTED_LOG_LEVELS = ["debug", "info", "warning", "error", "critical"]
+
+SUPPORTED_TEST_TYPES = ['qemu', 'libvirt', 'libguestfs', 'openvswitch', 'v2v', 'lvsb']
+
+SUPPORTED_LIBVIRT_URIS = ['qemu:///system', 'lxc:///']
+SUPPORTED_LIBVIRT_DRIVERS = ['qemu', 'lxc', 'xen']
+
+SUPPORTED_IMAGE_TYPES = ['raw', 'qcow2', 'qed', 'vmdk']
+SUPPORTED_DISK_BUSES = ['ide', 'scsi', 'virtio_blk', 'virtio_scsi', 'lsi_scsi', 'ahci', 'usb2', 'xenblk']
+SUPPORTED_NIC_MODELS = ["virtio_net", "e1000", "rtl8139", "spapr-vlan"]
+SUPPORTED_NET_TYPES = ["bridge", "user", "none"]
+
+QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
+LIBVIRT_DEFAULT_SET = _variant_only_file('backends/libvirt/cfg/default_tests')
+LVSB_DEFAULT_SET = "lvsb_date"
+OVS_DEFAULT_SET = "load_module, ovs_basic"
+
+LIBVIRT_INSTALL = "unattended_install.import.import.default_install.aio_native"
+LIBVIRT_REMOVE = "remove_guest.without_disk"
+
+
+def find_default_qemu_paths(options_qemu=None, options_dst_qemu=None):
+    if options_qemu:
+        if not os.path.isfile(options_qemu):
+            raise RuntimeError("Invalid qemu binary provided (%s)" %
+                               options_qemu)
+        qemu_bin_path = options_qemu
+    else:
+        try:
+            qemu_bin_path = utils_misc.find_command('qemu-kvm')
+        except ValueError:
+            qemu_bin_path = utils_misc.find_command('kvm')
+
+    if options_dst_qemu is not None:
+        if not os.path.isfile(options_dst_qemu):
+            raise RuntimeError("Invalid dst qemu binary provided (%s)" %
+                               options_dst_qemu)
+        qemu_dst_bin_path = options_dst_qemu
+    else:
+        qemu_dst_bin_path = None
+
+    qemu_dirname = os.path.dirname(qemu_bin_path)
+    qemu_img_path = os.path.join(qemu_dirname, 'qemu-img')
+    qemu_io_path = os.path.join(qemu_dirname, 'qemu-io')
+
+    if not os.path.exists(qemu_img_path):
+        qemu_img_path = utils_misc.find_command('qemu-img')
+
+    if not os.path.exists(qemu_io_path):
+        qemu_io_path = utils_misc.find_command('qemu-io')
+
+    return [qemu_bin_path, qemu_img_path, qemu_io_path, qemu_dst_bin_path]
 
 
 class Test(object):
@@ -55,7 +183,7 @@ class Test(object):
             os.makedirs(self.tmpdir)
 
         self.iteration = 0
-        if options.config:
+        if options.vt_config:
             self.tag = params.get("shortname")
         else:
             self.tag = params.get("_short_name_map_file")["subtests.cfg"]
@@ -435,7 +563,7 @@ def configure_console_logging(loglevel=logging.DEBUG):
     Simple helper for adding a file logger to the root logger.
     """
     logger = logging.getLogger()
-    stream_handler = logging.StreamHandler()
+    stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setLevel(loglevel)
 
     fmt = '%(asctime)s %(levelname)-5.5s| %(message)s'
@@ -475,14 +603,14 @@ def create_config_files(options):
     shared_dir = os.path.dirname(data_dir.get_data_dir())
     test_dir = os.path.dirname(shared_dir)
 
-    if (options.type and options.config):
-        test_dir = data_dir.get_backend_dir(options.type)
-    elif options.type:
-        test_dir = data_dir.get_backend_dir(options.type)
-    elif options.config:
-        parent_config_dir = os.path.dirname(options.config)
+    if options.vt_type and options.vt_config:
+        test_dir = data_dir.get_backend_dir(options.vt_type)
+    elif options.vt_type:
+        test_dir = data_dir.get_backend_dir(options.vt_type)
+    elif options.vt_config:
+        parent_config_dir = os.path.dirname(options.vt_config)
         parent_config_dir = os.path.dirname(parent_config_dir)
-        options.type = parent_config_dir
+        options.vt_type = parent_config_dir
         test_dir = os.path.join(test_dir, parent_config_dir)
 
     if not os.path.exists(os.path.join(test_dir, "cfg")):
@@ -491,10 +619,10 @@ def create_config_files(options):
         print_stdout("Perhaps you have not specified -t?")
         sys.exit(1)
     # lvsb test doesn't use shared configs
-    if options.type != 'lvsb':
+    if options.vt_type != 'lvsb':
         bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
-        bootstrap.create_guest_os_cfg(options.type)
-    bootstrap.create_subtests_cfg(options.type)
+        bootstrap.create_guest_os_cfg(options.vt_type)
+    bootstrap.create_subtests_cfg(options.vt_type)
 
 
 def get_paginator():
@@ -555,13 +683,13 @@ def print_test_list(options, cartesian_parser):
     index = 0
 
     pipe.write(get_cartesian_parser_details(cartesian_parser))
-    if options.tests:
-        tests = options.tests.split(" ")
+    if options.vt_tests:
+        tests = options.vt_tests.split(" ")
         cartesian_parser.only_filter(", ".join(tests))
     for params in cartesian_parser.get_dicts():
         virt_test_type = params.get('virt_test_type', "")
         supported_virt_backends = virt_test_type.split(" ")
-        if options.type in supported_virt_backends:
+        if options.vt_type in supported_virt_backends:
             index += 1
             shortname = params.get("_short_name_map_file")["subtests.cfg"]
             needs_root = ((params.get('requires_root', 'no') == 'yes') or
@@ -581,18 +709,18 @@ def print_test_list(options, cartesian_parser):
 
 def get_guest_name_parser(options):
     cartesian_parser = cartesian_config.Parser()
-    machines_cfg_path = data_dir.get_backend_cfg_path(options.type,
+    machines_cfg_path = data_dir.get_backend_cfg_path(options.vt_type,
                                                       'machines.cfg')
-    guest_os_cfg_path = data_dir.get_backend_cfg_path(options.type,
+    guest_os_cfg_path = data_dir.get_backend_cfg_path(options.vt_type,
                                                       'guest-os.cfg')
     cartesian_parser.parse_file(machines_cfg_path)
     cartesian_parser.parse_file(guest_os_cfg_path)
-    if options.arch:
-        cartesian_parser.only_filter(options.arch)
-    if options.machine_type:
-        cartesian_parser.only_filter(options.machine_type)
-    if options.guest_os:
-        cartesian_parser.only_filter(options.guest_os)
+    if options.vt_arch:
+        cartesian_parser.only_filter(options.vt_arch)
+    if options.vt_machine_type:
+        cartesian_parser.only_filter(options.vt_machine_type)
+    if options.vt_guest_os:
+        cartesian_parser.only_filter(options.vt_guest_os)
     return cartesian_parser
 
 
@@ -620,7 +748,7 @@ def print_guest_list(options):
     """
     pipe = get_paginator()
     # lvsb testing has no concept of guests
-    if options.type == 'lvsb':
+    if options.vt_type == 'lvsb':
         pipe.write("No guest types available for lvsb testing")
         return
     index = 0
@@ -653,32 +781,32 @@ def bootstrap_tests(options):
 
     :param options: OptParse object with program command line options.
     """
-    if options.type:
-        test_dir = data_dir.get_backend_dir(options.type)
-    elif options.config:
-        parent_config_dir = os.path.dirname(os.path.dirname(options.config))
+    if options.vt_type:
+        test_dir = data_dir.get_backend_dir(options.vt_type)
+    elif options.vt_config:
+        parent_config_dir = os.path.dirname(os.path.dirname(options.vt_config))
         parent_config_dir = os.path.dirname(parent_config_dir)
-        options.type = parent_config_dir
+        options.vt_type = parent_config_dir
         test_dir = os.path.abspath(parent_config_dir)
 
-    if options.type == 'qemu':
+    if options.vt_type == 'qemu':
         check_modules = arch.get_kvm_module_list()
     else:
         check_modules = None
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
 
-    kwargs = {'test_name': options.type,
+    kwargs = {'test_name': options.vt_type,
               'test_dir': test_dir,
               'base_dir': data_dir.get_data_dir(),
               'default_userspace_paths': None,
               'check_modules': check_modules,
               'online_docs_url': online_docs_url,
-              'selinux': options.selinux_setup,
-              'restore_image': not(options.no_downloads or
-                                   options.keep_image),
+              'selinux': options.vt_selinux_setup,
+              'restore_image': not(options.vt_no_downloads or
+                                   options.vt_keep_image),
               'interactive': False,
-              'update_providers': options.update_providers,
-              'guest_os': options.guest_os or defaults.DEFAULT_GUEST_OS}
+              'update_providers': options.vt_update_providers,
+              'guest_os': options.vt_guest_os or defaults.DEFAULT_GUEST_OS}
 
     # Tolerance we have without printing a message for the user to wait (3 s)
     tolerance = 3
@@ -694,9 +822,6 @@ def bootstrap_tests(options):
         if t_elapsed > tolerance and not wait_message_printed:
             print_stdout("Running setup. Please wait...")
             wait_message_printed = True
-            # if bootstrap takes too long, we temporarily make stdout verbose
-            # again, so the user can see what's taking so long
-            sys.stdout.restore()
         time.sleep(0.1)
 
     # in case stdout was restored above, redirect it again
@@ -715,9 +840,9 @@ def bootstrap_tests(options):
     print_stdout(bcolors.HEADER + "SETUP:" + bcolors.ENDC, end=False)
 
     if not failed:
-        print_pass(t_elapsed, open_fd=options.show_open_fd)
+        print_pass(t_elapsed, open_fd=options.vt_show_open_fd)
     else:
-        print_fail(t_elapsed, open_fd=options.show_open_fd)
+        print_fail(t_elapsed, open_fd=options.vt_show_open_fd)
         print_stdout("Setup error: %s" % reason)
         sys.exit(-1)
 
@@ -731,7 +856,7 @@ def cleanup_env(parser, options):
     :param parser: Cartesian parser with run parameters.
     :param options: Test runner options object.
     """
-    if options.no_cleanup:
+    if options.vt_no_cleanup:
         logging.info("Option --no-cleanup requested, not cleaning temporary "
                      "files and VM processes...")
         logging.info("")
@@ -739,7 +864,7 @@ def cleanup_env(parser, options):
         logging.info("Cleaning tmp files and VM processes...")
         d = parser.get_dicts().next()
         env_filename = os.path.join(data_dir.get_root_dir(),
-                                    options.type, d.get("env", "env"))
+                                    options.vt_type, d.get("env", "env"))
         env = utils_env.Env(filename=env_filename, version=Test.env_version)
         env.destroy()
         # Kill all tail_threads which env constructor recreate.
@@ -806,7 +931,7 @@ def run_tests(parser, options):
     :return: True, if all tests ran passed, False if any of them failed.
     """
     test_start_time = time.strftime('%Y-%m-%d-%H.%M.%S')
-    logdir = options.logdir or os.path.join(data_dir.get_root_dir(), 'logs')
+    logdir = options.vt_log_dir or os.path.join(data_dir.get_root_dir(), 'logs')
     debugbase = 'run-%s' % test_start_time
     debugdir = os.path.join(logdir, debugbase)
     latestdir = os.path.join(logdir, "latest")
@@ -819,7 +944,7 @@ def run_tests(parser, options):
     os.symlink(debugbase, latestdir)
 
     debuglog = os.path.join(debugdir, "debug.log")
-    loglevel = options.log_level
+    loglevel = options.vt_log_level
     configure_file_logging(debuglog, loglevel)
 
     print_stdout(bcolors.HEADER +
@@ -840,8 +965,8 @@ def run_tests(parser, options):
 
     d = parser.get_dicts().next()
 
-    if not options.config:
-        if not options.keep_image_between_tests:
+    if not options.vt_config:
+        if not options.vt_keep_image_between_tests:
             logging.debug("Creating first backup of guest image")
             qemu_img = storage.QemuImg(d, data_dir.get_data_dir(), "image")
             qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
@@ -918,8 +1043,8 @@ def run_tests(parser, options):
                     dependencies_satisfied = False
                     break
 
-        if options.uri:
-            dct["connect_uri"] = options.uri
+        if options.vt_connect_uri:
+            dct["connect_uri"] = options.vt_connect_uri
 
         current_status = False
 
@@ -950,7 +1075,7 @@ def run_tests(parser, options):
                              reason.__class__.__name__, reason)
                 logging.info("")
                 t.stop_file_logging()
-                print_error(t_elapsed, open_fd=options.show_open_fd)
+                print_error(t_elapsed, open_fd=options.vt_show_open_fd)
                 status_dct[dct.get("name")] = False
                 continue
             except error.TestNAError, reason:
@@ -959,7 +1084,7 @@ def run_tests(parser, options):
                              reason.__class__.__name__, reason)
                 logging.info("")
                 t.stop_file_logging()
-                print_skip(open_fd=options.show_open_fd)
+                print_skip(open_fd=options.vt_show_open_fd)
                 status_dct[dct.get("name")] = False
                 continue
             except error.TestWarn, reason:
@@ -968,7 +1093,7 @@ def run_tests(parser, options):
                              reason)
                 logging.info("")
                 t.stop_file_logging()
-                print_warn(t_elapsed, open_fd=options.show_open_fd)
+                print_warn(t_elapsed, open_fd=options.vt_show_open_fd)
                 status_dct[dct.get("name")] = True
                 continue
             except Exception, reason:
@@ -988,16 +1113,16 @@ def run_tests(parser, options):
                 t.stop_file_logging()
                 current_status = False
         else:
-            print_skip(open_fd=options.show_open_fd)
+            print_skip(open_fd=options.vt_show_open_fd)
             status_dct[dct.get("name")] = False
             continue
 
         if not current_status:
             failed = True
-            print_fail(t_elapsed, open_fd=options.show_open_fd)
+            print_fail(t_elapsed, open_fd=options.vt_show_open_fd)
 
         else:
-            print_pass(t_elapsed, open_fd=options.show_open_fd)
+            print_pass(t_elapsed, open_fd=options.vt_show_open_fd)
 
         status_dct[dct.get("name")] = current_status
 
