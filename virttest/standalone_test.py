@@ -745,7 +745,6 @@ def bootstrap_tests(options):
     kwargs = {'test_name': options.vt_type,
               'test_dir': test_dir,
               'base_dir': data_dir.get_data_dir(),
-              'default_userspace_paths': None,
               'check_modules': check_modules,
               'online_docs_url': online_docs_url,
               'selinux': options.vt_selinux_setup,
