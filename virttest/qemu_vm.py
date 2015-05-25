@@ -3578,14 +3578,15 @@ class VM(virt_vm.BaseVM):
             serial = console and ("pts" not in console)
             session.sendline(self.params.get("reboot_command"))
             if serial:
-                patterns = ["Rebooting", "Restarting system",
-                            "machine restart", "Linux version"]
-                ret = session.read_until_any_line_matches(patterns, timeout=10)
-            else:
-                timeout = self.CLOSE_SESSION_TIMEOUT
-                ret = not session.is_responsive(timeout=timeout)
-            session.close()
-            return ret
+                patterns = [r".*[Rr]ebooting.*", r".*[Rr]estarting system.*",
+                            r".*[Mm]achine restart.*", r".*Linux version.*"]
+                try:
+                    timeout = go_down_timeout / 2
+                    return session.read_until_any_line_matches(patterns,
+                                                               timeout=timeout)
+                except Exception:
+                    return False
+            return not session.is_responsive(timeout=self.CLOSE_SESSION_TIMEOUT)
 
         error.base_context("rebooting '%s'" % self.name, logging.info)
         error.context("before reboot")
@@ -3597,8 +3598,9 @@ class VM(virt_vm.BaseVM):
                 else:
                     session = self.serial_login()
             error.context("waiting for guest to go down", logging.info)
+            go_down_timeout = timeout * 2 / 3
             if not utils_misc.wait_for(lambda: __reboot(session),
-                                       timeout=(timeout * 2 / 3)):
+                                       timeout=go_down_timeout):
                 raise virt_vm.VMRebootError("Guest refuses to go down")
             login_timeout = timeout / 2
         elif method == "system_reset":
