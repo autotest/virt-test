@@ -857,24 +857,9 @@ class VirtTestApp(object):
             online_docs_url = None
             interactive = True
             if self.options.vt_type == "qemu":
-                default_userspace_paths = [
-                    "/usr/bin/qemu-kvm", "/usr/bin/qemu-img"]
                 check_modules = arch.get_kvm_module_list()
-                online_docs_url = "https://github.com/autotest/virt-test/wiki/GetStarted"
-            elif self.options.vt_type == "libvirt":
-                default_userspace_paths = [
-                    "/usr/bin/qemu-kvm", "/usr/bin/qemu-img"]
-            elif self.options.vt_type == "libguestfs":
-                default_userspace_paths = ["/usr/bin/libguestfs-test-tool"]
-            elif self.options.vt_type == "lvsb":
-                default_userspace_paths = ["/usr/bin/virt-sandbox"]
             elif self.options.vt_type == "openvswitch":
-                default_userspace_paths = [
-                    "/usr/bin/qemu-kvm", "/usr/bin/qemu-img"]
                 check_modules = ["openvswitch"]
-                online_docs_url = "https://github.com/autotest/autotest/wiki/OpenVSwitch"
-            elif self.options.vt_type == "v2v":
-                default_userspace_paths = ["/usr/bin/virt-v2v"]
 
             if not self.options.vt_config:
                 restore_image = not(self.options.vt_no_downloads or
@@ -885,7 +870,6 @@ class VirtTestApp(object):
             test_dir = data_dir.get_backend_dir(self.options.vt_type)
             bootstrap.bootstrap(test_name=self.options.vt_type, test_dir=test_dir,
                                 base_dir=data_dir.get_data_dir(),
-                                default_userspace_paths=default_userspace_paths,
                                 check_modules=check_modules,
                                 online_docs_url=online_docs_url,
                                 interactive=interactive,
