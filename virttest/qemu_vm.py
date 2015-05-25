@@ -1989,7 +1989,8 @@ class VM(virt_vm.BaseVM):
                     output_params=(logfile,),
                     prompt=self.params.get("shell_prompt", "[\#\$]"))
                 return
-        logging.warn("Not virtio console created in VM.")
+        if self.virtio_ports:
+            logging.warning("No virtio console created in VM. Virtio ports: %s", self.virtio_ports)
         self.virtio_console = None
 
     def update_system_dependent_devs(self):
