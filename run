@@ -853,30 +853,8 @@ class VirtTestApp(object):
 
         if self.options.vt_bootstrap:
             _restore_stdout()
-            check_modules = []
-            interactive = True
-            if self.options.vt_type == "qemu":
-                check_modules = arch.get_kvm_module_list()
-            elif self.options.vt_type == "openvswitch":
-                check_modules = ["openvswitch"]
-
-            if not self.options.vt_config:
-                restore_image = not(self.options.vt_no_downloads or
-                                    self.options.vt_keep_image)
-            else:
-                restore_image = False
-
-            test_dir = data_dir.get_backend_dir(self.options.vt_type)
-            bootstrap.bootstrap(test_name=self.options.vt_type, test_dir=test_dir,
-                                base_dir=data_dir.get_data_dir(),
-                                check_modules=check_modules,
-                                interactive=interactive,
-                                selinux=self.options.vt_selinux_setup,
-                                restore_image=restore_image,
-                                verbose=self.options.vt_verbose,
-                                update_providers=self.options.vt_update_providers,
-                                guest_os=(self.options.vt_guest_os or
-                                          self.option_parser.default_guest_os))
+            bootstrap.bootstrap(options=self.options,
+                                interactive=True)
             sys.exit(0)
 
         if self.options.vt_type:
