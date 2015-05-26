@@ -723,7 +723,7 @@ def verify_selinux(datadir, imagesdir, isosdir, tmpdir,
 
 
 def bootstrap(test_name, test_dir, base_dir,
-              check_modules, online_docs_url, restore_image=False,
+              check_modules, restore_image=False,
               interactive=True, selinux=False,
               verbose=False, update_providers=False,
               guest_os=defaults.DEFAULT_GUEST_OS, force_update=False):
@@ -735,8 +735,6 @@ def bootstrap(test_name, test_dir, base_dir,
     :param base_dir: Base directory used to hold images and isos.
     :param check_modules: Whether we want to verify if a given list of modules
             is loaded in the system.
-    :param online_docs_url: URL to an online documentation system, such as a
-            wiki page.
     :param restore_image: Whether to restore the image from the pristine.
     :param interactive: Whether to ask for confirmation.
     :param verbose: Verbose output.
@@ -834,10 +832,10 @@ def bootstrap(test_name, test_dir, base_dir,
             else:
                 logging.debug("Module %s loaded", module)
 
-    if online_docs_url:
-        logging.info("")
-        step += 1
-        logging.info("%d - If you wish, take a look at the online docs for "
-                     "more info", step)
-        logging.info("")
-        logging.info(online_docs_url)
+    online_docs_url = 'http://virt-test.readthedocs.org/'
+    logging.info("")
+    step += 1
+    logging.info("%d - If you wish, you may take a look at the online docs for "
+                 "more info", step)
+    logging.info("")
+    logging.info(online_docs_url)
