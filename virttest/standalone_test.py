@@ -721,15 +721,14 @@ def bootstrap_tests(options):
         parent_config_dir = os.path.dirname(parent_config_dir)
         options.vt_type = parent_config_dir
 
-    kwargs = {'options': options,
-              'interactive': False}
+    kwargs = {'options': options}
 
     # Tolerance we have without printing a message for the user to wait (3 s)
     tolerance = 3
     failed = False
     wait_message_printed = False
 
-    bg = utils.InterruptedThread(bootstrap.bootstrap, kwargs=kwargs)
+    bg = utils.InterruptedThread(bootstrap.setup, kwargs=kwargs)
     t_begin = time.time()
     bg.start()
 
