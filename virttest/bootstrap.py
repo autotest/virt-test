@@ -10,6 +10,7 @@ import asset
 import cartesian_config
 import utils_selinux
 import defaults
+import arch
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
@@ -722,59 +723,46 @@ def verify_selinux(datadir, imagesdir, isosdir, tmpdir,
                          len(changes))
 
 
-def bootstrap(test_name, test_dir, base_dir,
-              check_modules, restore_image=False,
-              interactive=True, selinux=False,
-              verbose=False, update_providers=False,
-              guest_os=defaults.DEFAULT_GUEST_OS, force_update=False):
+def bootstrap(options, interactive=False):
     """
     Common virt test assistant module.
 
-    :param test_name: Test name, such as "qemu".
-    :param test_dir: Path with the test directory.
-    :param base_dir: Base directory used to hold images and isos.
-    :param check_modules: Whether we want to verify if a given list of modules
-            is loaded in the system.
-    :param restore_image: Whether to restore the image from the pristine.
+    :param options: Command line options.
     :param interactive: Whether to ask for confirmation.
-    :param verbose: Verbose output.
-    :param selinux: Whether setup SELinux contexts for shared/data.
-    :param update_providers: Whether to update test providers if they are already
-            downloaded.
-    :param guest_os: Specify the guest image used for bootstrapping. By default
-            the JeOS image is used.
 
     :raise error.CmdError: If JeOS image failed to uncompress
     :raise ValueError: If 7za was not found
     """
     if interactive:
         logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),
-                                          verbose=verbose)
-    logging.info("%s test config helper", test_name)
+                                          verbose=options.vt_verbose)
+    logging.info("%s test config helper", options.vt_type)
     step = 0
 
     logging.info("")
     step += 1
     logging.info("%d - Updating all test providers", step)
-    asset.download_all_test_providers(update_providers)
+    asset.download_all_test_providers(options.vt_update_providers)
 
     logging.info("")
     step += 1
     logging.info("%d - Checking the mandatory programs and headers", step)
-    verify_mandatory_programs(test_name, guest_os)
+    guest_os = options.vt_guest_os or defaults.DEFAULT_GUEST_OS
+    verify_mandatory_programs(options.vt_type, guest_os)
 
     logging.info("")
     step += 1
     logging.info("%d - Checking the recommended programs", step)
-    verify_recommended_programs(test_name)
+    verify_recommended_programs(options.vt_type)
 
     logging.info("")
     step += 1
     logging.info("%d - Verifying directories", step)
-    shared_dir = os.path.dirname(data_dir.get_data_dir())
+    datadir = data_dir.get_data_dir()
+    shared_dir = os.path.dirname(datadir)
     sub_dir_list = ["images", "isos", "steps_data", "gpg"]
     for sub_dir in sub_dir_list:
-        sub_dir_path = os.path.join(base_dir, sub_dir)
+        sub_dir_path = os.path.join(datadir, sub_dir)
         if not os.path.isdir(sub_dir_path):
             logging.debug("Creating %s", sub_dir_path)
             os.makedirs(sub_dir_path)
@@ -782,43 +770,54 @@ def bootstrap(test_name, test_dir, base_dir,
             logging.debug("Dir %s exists, not creating",
                           sub_dir_path)
 
-    datadir = data_dir.get_data_dir()
-    if test_name == 'libvirt':
-        step = create_config_files(test_dir, shared_dir, interactive, step, force_update)
-        create_subtests_cfg(test_name)
-        create_guest_os_cfg(test_name)
+    test_dir = data_dir.get_backend_dir(options.vt_type)
+    if options.vt_type == 'libvirt':
+        step = create_config_files(test_dir, shared_dir, interactive, step, True)
+        create_subtests_cfg(options.vt_type)
+        create_guest_os_cfg(options.vt_type)
         # Don't bother checking if changes can't be made
         if os.getuid() == 0:
             verify_selinux(datadir,
                            os.path.join(datadir, 'images'),
                            os.path.join(datadir, 'isos'),
                            data_dir.get_tmp_dir(),
-                           interactive, selinux)
+                           interactive, options.vt_selinux_setup)
 
     # lvsb test doesn't use any shared configs
-    elif test_name == 'lvsb':
-        create_subtests_cfg(test_name)
+    elif options.vt_type == 'lvsb':
+        create_subtests_cfg(options.vt_type)
         if os.getuid() == 0:
             # Don't bother checking if changes can't be made
             verify_selinux(datadir,
                            os.path.join(datadir, 'images'),
                            os.path.join(datadir, 'isos'),
                            data_dir.get_tmp_dir(),
-                           interactive, selinux)
+                           interactive, options.vt_selinux_setup)
     else:  # Some other test
-        step = create_config_files(test_dir, shared_dir, interactive, step, force_update)
-        create_subtests_cfg(test_name)
-        create_guest_os_cfg(test_name)
+        step = create_config_files(test_dir, shared_dir, interactive, step, True)
+        create_subtests_cfg(options.vt_type)
+        create_guest_os_cfg(options.vt_type)
+
+    if not options.vt_config:
+        restore_image = not (options.vt_no_downloads or options.vt_keep_image)
+    else:
+        restore_image = False
 
     if restore_image:
         logging.info("")
         step += 1
         logging.info("%s - Verifying (and possibly downloading) guest image",
                      step)
-        for os_info in get_guest_os_info_list(test_name, guest_os):
+        for os_info in get_guest_os_info_list(options.vt_type, guest_os):
             os_asset = os_info['asset']
             asset.download_asset(os_asset, interactive=interactive,
                                  restore_image=restore_image)
+
+    check_modules = []
+    if options.vt_type == "qemu":
+        check_modules = arch.get_kvm_module_list()
+    elif options.vt_type == "openvswitch":
+        check_modules = ["openvswitch"]
 
     if check_modules:
         logging.info("")

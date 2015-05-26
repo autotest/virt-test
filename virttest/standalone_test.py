@@ -728,29 +728,13 @@ def bootstrap_tests(options):
 
     :param options: OptParse object with program command line options.
     """
-    if options.vt_type:
-        test_dir = data_dir.get_backend_dir(options.vt_type)
-    elif options.vt_config:
+    if options.vt_config:
         parent_config_dir = os.path.dirname(os.path.dirname(options.vt_config))
         parent_config_dir = os.path.dirname(parent_config_dir)
         options.vt_type = parent_config_dir
-        test_dir = os.path.abspath(parent_config_dir)
 
-    if options.vt_type == 'qemu':
-        check_modules = arch.get_kvm_module_list()
-    else:
-        check_modules = None
-
-    kwargs = {'test_name': options.vt_type,
-              'test_dir': test_dir,
-              'base_dir': data_dir.get_data_dir(),
-              'check_modules': check_modules,
-              'selinux': options.vt_selinux_setup,
-              'restore_image': not(options.vt_no_downloads or
-                                   options.vt_keep_image),
-              'interactive': False,
-              'update_providers': options.vt_update_providers,
-              'guest_os': options.vt_guest_os or defaults.DEFAULT_GUEST_OS}
+    kwargs = {'options': options,
+              'interactive': False}
 
     # Tolerance we have without printing a message for the user to wait (3 s)
     tolerance = 3
