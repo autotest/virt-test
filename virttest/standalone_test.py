@@ -740,13 +740,11 @@ def bootstrap_tests(options):
         check_modules = arch.get_kvm_module_list()
     else:
         check_modules = None
-    online_docs_url = "https://github.com/autotest/virt-test/wiki"
 
     kwargs = {'test_name': options.vt_type,
               'test_dir': test_dir,
               'base_dir': data_dir.get_data_dir(),
               'check_modules': check_modules,
-              'online_docs_url': online_docs_url,
               'selinux': options.vt_selinux_setup,
               'restore_image': not(options.vt_no_downloads or
                                    options.vt_keep_image),
