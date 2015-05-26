@@ -95,11 +95,11 @@ def verify_recommended_programs(t_type):
             found = None
             try:
                 found = utils_misc.find_command(cmd)
-                logging.info(found)
+                logging.info('%s OK', found)
                 break
             except ValueError:
                 pass
-        if found is None:
+        if not found:
             if len(cmd_aliases) == 1:
                 logging.info("Recommended command %s missing. You may "
                              "want to install it if not building from "
@@ -115,7 +115,7 @@ def verify_mandatory_programs(t_type, guest_os):
     cmds = mandatory_programs[t_type]
     for cmd in cmds:
         try:
-            logging.info(utils_misc.find_command(cmd))
+            logging.info('%s OK', utils_misc.find_command(cmd))
         except ValueError:
             if cmd == '7za' and guest_os != defaults.DEFAULT_GUEST_OS:
                 logging.warn("Command 7za (required to uncompress JeOS) "
@@ -131,7 +131,7 @@ def verify_mandatory_programs(t_type, guest_os):
     for include in available_includes:
         include_basename = os.path.basename(include)
         if include_basename in includes:
-            logging.info(include)
+            logging.info('%s OK', include)
             includes.pop(includes.index(include_basename))
 
     if includes:
