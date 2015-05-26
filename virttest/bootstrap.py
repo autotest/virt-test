@@ -514,6 +514,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
                     logging.debug("Preserving existing %s file", dst_file)
             else:
                 logging.debug("Config file %s exists, not touching", dst_file)
+    return step
 
 
 def haz_defcon(datadir, imagesdir, isosdir, tmpdir):
@@ -785,7 +786,7 @@ def bootstrap(test_name, test_dir, base_dir,
 
     datadir = data_dir.get_data_dir()
     if test_name == 'libvirt':
-        create_config_files(test_dir, shared_dir, interactive, step, force_update)
+        step = create_config_files(test_dir, shared_dir, interactive, step, force_update)
         create_subtests_cfg(test_name)
         create_guest_os_cfg(test_name)
         # Don't bother checking if changes can't be made
@@ -807,7 +808,7 @@ def bootstrap(test_name, test_dir, base_dir,
                            data_dir.get_tmp_dir(),
                            interactive, selinux)
     else:  # Some other test
-        create_config_files(test_dir, shared_dir, interactive, step, force_update)
+        step = create_config_files(test_dir, shared_dir, interactive, step, force_update)
         create_subtests_cfg(test_name)
         create_guest_os_cfg(test_name)
 
