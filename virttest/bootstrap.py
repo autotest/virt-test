@@ -146,12 +146,12 @@ def verify_mandatory_programs(t_type, guest_os):
 
 
 def write_subtests_files(config_file_list, output_file_object, test_type=None):
-    '''
+    """
     Writes a collection of individual subtests config file to one output file
 
     Optionally, for tests that we know their type, write the 'virt_test_type'
     configuration automatically.
-    '''
+    """
     if test_type is not None:
         output_file_object.write("    - @type_specific:\n")
         output_file_object.write("        variants subtest:\n")
@@ -459,7 +459,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
     def is_file_tracked(fl):
         tracked_result = utils.run("git ls-files %s --error-unmatch" % fl,
                                    ignore_status=True, verbose=False)
-        return (tracked_result.exit_status == 0)
+        return tracked_result.exit_status == 0
 
     if step is None:
         step = 0
