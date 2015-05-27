@@ -892,6 +892,12 @@ class DevContainer(object):
             if machine_type in m_types:
                 if (self.has_option('M') or self.has_option('machine')):
                     cmd = "-M %s" % machine_type
+                    # default yes in qemu, only deal with 'no'
+                    if params['dump_guest_core'] == 'no':
+                        # new in 6.7 and 7.2
+                        if ('7.2' in params['host_kernel_ver_str'] or
+                                '6.7' in params['host_kernel_ver_str']):
+                            cmd += ",dump-guest-core=off"
                 else:
                     cmd = ""
                 if 'q35' in machine_type:   # Q35 + ICH9
