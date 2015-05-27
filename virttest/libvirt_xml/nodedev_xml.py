@@ -136,10 +136,11 @@ class PCIXML(CAPXML):
     #    <address domain='0x0000' bus='0x08' slot='0x10' function='0x0'/>
     #    <address domain='0x0000' bus='0x08' slot='0x10' function='0x4'/>
     #  </capability>
+    #  <numa node='0'/>
     #</capability>
 
     __slots__ = ('domain', 'bus', 'slot', 'function', 'product_id',
-                 'vendor_id', 'virt_functions')
+                 'vendor_id', 'virt_functions', 'numa_node')
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementInt('domain', self, parent_xpath='/',
@@ -154,6 +155,8 @@ class PCIXML(CAPXML):
                                tag_name='product', attribute='id')
         accessors.XMLAttribute('vendor_id', self, parent_xpath='/',
                                tag_name='vendor', attribute='id')
+        accessors.XMLAttribute('numa_node', self, parent_xpath='/',
+                               tag_name='numa', attribute='node')
         accessors.XMLElementList('virt_functions', self,
                                  parent_xpath='/capability',
                                  marshal_from=self.marshal_from_address,
@@ -232,7 +235,8 @@ class PCIXML(CAPXML):
         return PCIXML.make_sysfs_sub_path(domain, bus, slot, function)
 
     __key2filename_dict__ = {'product_id': 'device',
-                             'vendor_id': 'vendor'}
+                             'vendor_id': 'vendor',
+                             'numa_node': 'numa_node'}
 
     @staticmethod
     def get_key2filename_dict():
@@ -252,7 +256,13 @@ class PCIXML(CAPXML):
         """
         key2value_dict = {}
         for key in PCIXML.__key2filename_dict__:
-            key2value_dict[key] = self[key]
+            if key != "numa_node":
+                key2value_dict[key] = self[key]
+            else:
+                try:
+                    key2value_dict[key] = self[key]
+                except xcepts.LibvirtXMLNotFoundError:
+                    key2value_dict[key] = "-1"
 
         return key2value_dict
 
