@@ -939,7 +939,7 @@ class VM(virt_vm.BaseVM):
         (as specified in the VM's params).
         """
         return [self.get_serial_console_filename(_) for _ in
-                self.params.objects("isa_serials")]
+                self.params.objects("serials")]
 
     def create_serial_console(self):
         """
@@ -948,7 +948,7 @@ class VM(virt_vm.BaseVM):
         The libvirt version uses virsh console to manage it.
         """
         if not self.serial_ports:
-            for serial in self.params.objects("isa_serials"):
+            for serial in self.params.objects("serials"):
                 self.serial_ports.append(serial)
         if self.serial_console is None:
             try:
@@ -957,7 +957,7 @@ class VM(virt_vm.BaseVM):
                     cmd += ' -c %s' % self.connect_uri
                 cmd += (" console %s %s" % (self.name, self.serial_ports[0]))
             except IndexError:
-                raise virt_vm.VMConfigMissingError(self.name, "isa_serial")
+                raise virt_vm.VMConfigMissingError(self.name, "serial")
             output_func = utils_misc.log_line  # Because qemu-kvm uses this
             # Because qemu-kvm hard-codes this
             output_filename = self.get_serial_console_filename(self.serial_ports[0])

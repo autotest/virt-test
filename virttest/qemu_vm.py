@@ -285,7 +285,7 @@ class VM(virt_vm.BaseVM):
         (as specified in the VM's params).
         """
         return [self.get_serial_console_filename(_) for _ in
-                self.params.objects("isa_serials")]
+                self.params.objects("serials")]
 
     def get_virtio_port_filenames(self):
         """
@@ -426,8 +426,7 @@ class VM(virt_vm.BaseVM):
             return cmd
 
         def add_serial(devices, name, filename):
-            if (arch.ARCH in ('ppc64', 'ppc64le', 'aarch64') or
-                    not devices.has_option("chardev")):
+            if arch.ARCH == 'aarch64' or not devices.has_option("chardev"):
                 return " -serial unix:'%s',server,nowait" % filename
 
             serial_id = "serial_id_%s" % name
@@ -436,7 +435,10 @@ class VM(virt_vm.BaseVM):
             cmd += _add_option("path", filename)
             cmd += _add_option("server", "NO_EQUAL_STRING")
             cmd += _add_option("nowait", "NO_EQUAL_STRING")
-            cmd += " -device isa-serial"
+            if '86' in arch.ARCH:
+                cmd += " -device isa-serial"
+            elif 'ppc' in arch.ARCH:
+                cmd += " -device spapr-vty"
             cmd += _add_option("chardev", serial_id)
             return cmd
 
@@ -1288,7 +1290,7 @@ class VM(virt_vm.BaseVM):
                 devices.insert(StrDev('HMP-%s' % monitor_name, cmdline=cmd))
 
         # Add serial console redirection
-        for serial in params.objects("isa_serials"):
+        for serial in params.objects("serials"):
             serial_filename = vm.get_serial_console_filename(serial)
             cmd = add_serial(devices, serial, serial_filename)
             devices.insert(StrDev('SER-%s' % serial, cmdline=cmd))
@@ -1964,7 +1966,7 @@ class VM(virt_vm.BaseVM):
         try:
             tmp_serial = self.serial_ports[0]
         except IndexError:
-            raise virt_vm.VMConfigMissingError(self.name, "isa_serial")
+            raise virt_vm.VMConfigMissingError(self.name, "serial")
 
         self.serial_console = aexpect.ShellSession(
             "nc -U %s" % self.get_serial_console_filename(tmp_serial),
@@ -2465,8 +2467,8 @@ class VM(virt_vm.BaseVM):
                 # Add this monitor to the list
                 self.monitors.append(monitor)
 
-            # Create isa serial ports.
-            for serial in params.objects("isa_serials"):
+            # Create serial ports.
+            for serial in params.objects("serials"):
                 self.serial_ports.append(serial)
 
             # Create virtio_ports (virtio_serialports and virtio_consoles)
