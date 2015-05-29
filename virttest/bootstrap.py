@@ -2,6 +2,7 @@ import logging
 import os
 import glob
 import shutil
+import sys
 from autotest.client.shared import logging_manager, error
 from autotest.client import utils
 import utils_misc
@@ -748,7 +749,13 @@ def bootstrap(options, interactive=False):
     step += 1
     logging.info("%d - Checking the mandatory programs and headers", step)
     guest_os = options.vt_guest_os or defaults.DEFAULT_GUEST_OS
-    verify_mandatory_programs(options.vt_type, guest_os)
+    try:
+        verify_mandatory_programs(options.vt_type, guest_os)
+    except Exception, details:
+        logging.info(details)
+        logging.info('Install the missing programs and/or headers and '
+                     're-run boostrap')
+        sys.exit(1)
 
     logging.info("")
     step += 1
