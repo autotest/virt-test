@@ -1213,7 +1213,12 @@ def ping(dest=None, count=None, interval=None, interface=None,
     else:
         command += " localhost "
     if count is not None:
-        command += " -c %s" % count
+        count_str = " -c %s" % count
+        if session:
+            output = session.cmd_output("ping")
+            if "-n count" in output:
+                count_str = " -n %s" % count
+        command += count_str
     if interval is not None:
         command += " -i %s" % interval
     if interface is not None:
@@ -1233,8 +1238,15 @@ def ping(dest=None, count=None, interval=None, interface=None,
     if broadcast:
         command += " -b"
     if flood:
-        command += " -f -q"
-        command = "sleep %s && kill -2 `pidof ping` & %s" % (timeout, command)
+        pre_command = "sleep %s && kill -2 `pidof ping` & " % timeout
+        flood_str = " -f -q"
+        if session:
+            output = session.cmd_output("ping -q")
+            if "Bad option" in output:
+                pre_command = ""
+                flood_str = " -f -n %s" % timeout
+        command += flood_str
+        command = pre_command + command
         output_func = None
         timeout += 1
 
