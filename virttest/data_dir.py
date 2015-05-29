@@ -182,13 +182,21 @@ def get_deps_dir(target=None):
     # Get the frame that called this function
     frame = inspect.stack()[1]
     # This is the module that called the function
-    module = inspect.getmodule(frame[0])
     # With the module path, we can keep searching with a parent dir with 'deps'
     # in it, which should be the correct deps directory.
-    path = os.path.dirname(module.__file__)
+    try:
+        module = inspect.getmodule(frame[0])
+        path = os.path.dirname(module.__file__)
+    except TypeError:
+        path = os.path.dirname(frame[1])
     nesting_limit = 10
     for index in xrange(nesting_limit):
         files = os.listdir(path)
+        origin_path = ""
+        if 'shared' in files:
+            origin_path = path
+            path = os.path.join(path, 'shared')
+            files = os.listdir(path)
         if 'deps' in files:
             deps = os.path.join(path, 'deps')
             if target:
@@ -199,6 +207,8 @@ def get_deps_dir(target=None):
         if '.git' in os.listdir(path):
             raise MissingDepsDirError("Could not find specified deps dir for "
                                       "git repo %s" % path)
+        if origin_path:
+            path = origin_path
         path = os.path.dirname(path)
     raise MissingDepsDirError("Could not find specified deps dir after "
                               "looking %s parent directories" %
