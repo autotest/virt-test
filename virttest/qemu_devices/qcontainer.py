@@ -884,6 +884,7 @@ class DevContainer(object):
             return devices
 
         machine_type = params.get('machine_type')
+        machine_type_extra_params = params.get('machine_type_extra_params')
         if machine_type:
             m_types = []
             for _ in self.__machine_types.splitlines()[1:]:
@@ -891,7 +892,9 @@ class DevContainer(object):
 
             if machine_type in m_types:
                 if (self.has_option('M') or self.has_option('machine')):
-                    cmd = "-M %s" % machine_type
+                    cmd = "-machine %s" % machine_type
+                    if machine_type_extra_params:
+                        cmd += ",%s" % machine_type_extra_params.strip(',')
                 else:
                     cmd = ""
                 if 'q35' in machine_type:   # Q35 + ICH9
