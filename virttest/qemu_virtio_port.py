@@ -521,6 +521,7 @@ class ThSendCheck(Thread):
         """
         Thread.__init__(self)
         self.port = port
+        self.port.sock.settimeout(1)
         self.queues = queues
         # FIXME: socket.send(data>>127998) without read blocks thread
         if blocklen > 102400:
@@ -587,6 +588,8 @@ class ThSendCheck(Thread):
                 while not self.exitevent.isSet() and self.idx < target:
                     try:
                         idx = self.port.sock.send(buf)
+                    except socket.timeout:
+                        continue
                     except Exception, inst:
                         # Broken pipe
                         if not hasattr(inst, 'errno') or inst.errno != 32:
