@@ -590,41 +590,47 @@ class VMXML(VMXMLBase):
         :param vm: VM class type instance
         :param new_name: new name of vm
         :param uuid: new_vm's uuid, if None libvirt will generate.
-        :return: a new VM instance
+        :return: a new VM instance or raise LibvirtXMLError
         """
+        if vm.name == new_name:
+            logging.warning("New name is same as VM, No need to rename")
+            return vm
+        start_vm = False
         if vm.is_alive():
             vm.destroy(gracefully=True)
-        vmxml = VMXML.new_from_dumpxml(vm_name=vm.name,
-                                       virsh_instance=virsh_instance)
+            start_vm = True
+        vmxml = VMXML.new_from_dumpxml(vm.name, virsh_instance=virsh_instance)
         backup = vmxml.copy()
-        # can't do in-place rename, must operate on XML
+
+        def _cleanup(details=""):
+            # cleanup if rename failed
+            backup.define()
+            if start_vm:
+                vm.start()
+            raise xcepts.LibvirtXMLError("%s" % details)
+
+        # undefine original VM firstly
         if not vmxml.undefine():
-            del vmxml  # clean up temporary files
-            raise xcepts.LibvirtXMLError("Error reported while undefining VM")
-        # Alter the XML
+            _cleanup(details="Undefine VM %s failed" % vm.name)
+        # alter the XML
         vmxml.vm_name = new_name
         if uuid is None:
             # invalidate uuid so libvirt will regenerate
             del vmxml.uuid
-            vm.uuid = None
         else:
             vmxml.uuid = uuid
-            vm.uuid = uuid
-        # Re-define XML to libvirt
         logging.debug("Rename %s to %s.", vm.name, new_name)
-        # error message for failed define
-        error_msg = "Error reported while defining VM:\n"
-        try:
-            if not vmxml.define():
-                raise xcepts.LibvirtXMLError(error_msg + "%s"
-                                             % vmxml.get('xml'))
-        except error.CmdError, detail:
-            del vmxml  # clean up temporary files
-            # Allow exceptions thrown here since state will be undefined
-            backup.define()
-            raise xcepts.LibvirtXMLError(error_msg + "%s" % detail)
-        # Keep names uniform
+        if not vmxml.define():
+            _cleanup(details="Define VM %s failed" % new_name)
+        # update name and uuid if rename succeeded
         vm.name = new_name
+        # adopt the latest uuid
+        vm.uuid = VMXML.new_from_dumpxml(new_name,
+                                         virsh_instance=virsh_instance).uuid
+        if uuid is not None and vm.uuid != uuid:
+            _cleanup(details="UUID %s is not excepted %s" % (vm.uuid, uuid))
+        if start_vm:
+            vm.start()
         return vm
 
     @staticmethod
