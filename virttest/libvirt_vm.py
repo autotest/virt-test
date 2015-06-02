@@ -2379,7 +2379,9 @@ class VM(virt_vm.BaseVM):
         if not self.is_alive():
             self.start()
 
-        self.install_package('qemu-guest-agent')
+        if channel:
+            # Only install qemu-guest-agent when adding agent
+            self.install_package('qemu-guest-agent')
 
         session = self.wait_for_login()
 
