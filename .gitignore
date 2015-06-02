@@ -61,4 +61,5 @@ libguestfs/cfg/virtio-win.cfg
 tools/github/*cache
 tmp
 .*.swp
+.idea
 RELEASE-VERSION

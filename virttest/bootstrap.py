@@ -2,6 +2,7 @@ import logging
 import os
 import glob
 import shutil
+import sys
 from autotest.client.shared import logging_manager, error
 from autotest.client import utils
 import utils_misc
@@ -10,6 +11,7 @@ import asset
 import cartesian_config
 import utils_selinux
 import defaults
+import arch
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
@@ -19,7 +21,7 @@ recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',),
                                     ('fakeroot',), ('semanage',),
                                     ('getfattr',), ('restorecon',)],
                         'openvswitch': [],
-                        'lvsb': [('semanage',), ('getfattr',), ('restorecon',)],
+                        'lvsb': [('semanage',), ('getfattr',), ('restorecon',), ('virt-sandbox')],
                         'v2v': [],
                         'libguestfs': [('perl',)]}
 
@@ -95,11 +97,11 @@ def verify_recommended_programs(t_type):
             found = None
             try:
                 found = utils_misc.find_command(cmd)
-                logging.info(found)
+                logging.info('%s OK', found)
                 break
             except ValueError:
                 pass
-        if found is None:
+        if not found:
             if len(cmd_aliases) == 1:
                 logging.info("Recommended command %s missing. You may "
                              "want to install it if not building from "
@@ -115,7 +117,7 @@ def verify_mandatory_programs(t_type, guest_os):
     cmds = mandatory_programs[t_type]
     for cmd in cmds:
         try:
-            logging.info(utils_misc.find_command(cmd))
+            logging.info('%s OK', utils_misc.find_command(cmd))
         except ValueError:
             if cmd == '7za' and guest_os != defaults.DEFAULT_GUEST_OS:
                 logging.warn("Command 7za (required to uncompress JeOS) "
@@ -131,7 +133,7 @@ def verify_mandatory_programs(t_type, guest_os):
     for include in available_includes:
         include_basename = os.path.basename(include)
         if include_basename in includes:
-            logging.info(include)
+            logging.info('%s OK', include)
             includes.pop(includes.index(include_basename))
 
     if includes:
@@ -146,12 +148,12 @@ def verify_mandatory_programs(t_type, guest_os):
 
 
 def write_subtests_files(config_file_list, output_file_object, test_type=None):
-    '''
+    """
     Writes a collection of individual subtests config file to one output file
 
     Optionally, for tests that we know their type, write the 'virt_test_type'
     configuration automatically.
-    '''
+    """
     if test_type is not None:
         output_file_object.write("    - @type_specific:\n")
         output_file_object.write("        variants subtest:\n")
@@ -459,7 +461,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
     def is_file_tracked(fl):
         tracked_result = utils.run("git ls-files %s --error-unmatch" % fl,
                                    ignore_status=True, verbose=False)
-        return (tracked_result.exit_status == 0)
+        return tracked_result.exit_status == 0
 
     if step is None:
         step = 0
@@ -514,6 +516,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
                     logging.debug("Preserving existing %s file", dst_file)
             else:
                 logging.debug("Config file %s exists, not touching", dst_file)
+    return step
 
 
 def haz_defcon(datadir, imagesdir, isosdir, tmpdir):
@@ -721,63 +724,52 @@ def verify_selinux(datadir, imagesdir, isosdir, tmpdir,
                          len(changes))
 
 
-def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
-              check_modules, online_docs_url, restore_image=False,
-              interactive=True, selinux=False,
-              verbose=False, update_providers=False,
-              guest_os=defaults.DEFAULT_GUEST_OS, force_update=False):
+def bootstrap(options, interactive=False):
     """
     Common virt test assistant module.
 
-    :param test_name: Test name, such as "qemu".
-    :param test_dir: Path with the test directory.
-    :param base_dir: Base directory used to hold images and isos.
-    :param default_userspace_paths: Important programs for a successful test
-            execution.
-    :param check_modules: Whether we want to verify if a given list of modules
-            is loaded in the system.
-    :param online_docs_url: URL to an online documentation system, such as a
-            wiki page.
-    :param restore_image: Whether to restore the image from the pristine.
+    :param options: Command line options.
     :param interactive: Whether to ask for confirmation.
-    :param verbose: Verbose output.
-    :param selinux: Whether setup SELinux contexts for shared/data.
-    :param update_providers: Whether to update test providers if they are already
-            downloaded.
-    :param guest_os: Specify the guest image used for bootstrapping. By default
-            the JeOS image is used.
 
     :raise error.CmdError: If JeOS image failed to uncompress
     :raise ValueError: If 7za was not found
     """
     if interactive:
         logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),
-                                          verbose=verbose)
-    logging.info("%s test config helper", test_name)
+                                          verbose=options.vt_verbose)
+    logging.info("%s test config helper", options.vt_type)
     step = 0
 
     logging.info("")
     step += 1
     logging.info("%d - Updating all test providers", step)
-    asset.download_all_test_providers(update_providers)
+    asset.download_all_test_providers(options.vt_update_providers)
 
     logging.info("")
     step += 1
     logging.info("%d - Checking the mandatory programs and headers", step)
-    verify_mandatory_programs(test_name, guest_os)
+    guest_os = options.vt_guest_os or defaults.DEFAULT_GUEST_OS
+    try:
+        verify_mandatory_programs(options.vt_type, guest_os)
+    except Exception, details:
+        logging.info(details)
+        logging.info('Install the missing programs and/or headers and '
+                     're-run boostrap')
+        sys.exit(1)
 
     logging.info("")
     step += 1
     logging.info("%d - Checking the recommended programs", step)
-    verify_recommended_programs(test_name)
+    verify_recommended_programs(options.vt_type)
 
     logging.info("")
     step += 1
     logging.info("%d - Verifying directories", step)
-    shared_dir = os.path.dirname(data_dir.get_data_dir())
+    datadir = data_dir.get_data_dir()
+    shared_dir = os.path.dirname(datadir)
     sub_dir_list = ["images", "isos", "steps_data", "gpg"]
     for sub_dir in sub_dir_list:
-        sub_dir_path = os.path.join(base_dir, sub_dir)
+        sub_dir_path = os.path.join(datadir, sub_dir)
         if not os.path.isdir(sub_dir_path):
             logging.debug("Creating %s", sub_dir_path)
             os.makedirs(sub_dir_path)
@@ -785,43 +777,54 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
             logging.debug("Dir %s exists, not creating",
                           sub_dir_path)
 
-    datadir = data_dir.get_data_dir()
-    if test_name == 'libvirt':
-        create_config_files(test_dir, shared_dir, interactive, step, force_update)
-        create_subtests_cfg(test_name)
-        create_guest_os_cfg(test_name)
+    test_dir = data_dir.get_backend_dir(options.vt_type)
+    if options.vt_type == 'libvirt':
+        step = create_config_files(test_dir, shared_dir, interactive, step, True)
+        create_subtests_cfg(options.vt_type)
+        create_guest_os_cfg(options.vt_type)
         # Don't bother checking if changes can't be made
         if os.getuid() == 0:
             verify_selinux(datadir,
                            os.path.join(datadir, 'images'),
                            os.path.join(datadir, 'isos'),
                            data_dir.get_tmp_dir(),
-                           interactive, selinux)
+                           interactive, options.vt_selinux_setup)
 
     # lvsb test doesn't use any shared configs
-    elif test_name == 'lvsb':
-        create_subtests_cfg(test_name)
+    elif options.vt_type == 'lvsb':
+        create_subtests_cfg(options.vt_type)
         if os.getuid() == 0:
             # Don't bother checking if changes can't be made
             verify_selinux(datadir,
                            os.path.join(datadir, 'images'),
                            os.path.join(datadir, 'isos'),
                            data_dir.get_tmp_dir(),
-                           interactive, selinux)
+                           interactive, options.vt_selinux_setup)
     else:  # Some other test
-        create_config_files(test_dir, shared_dir, interactive, step, force_update)
-        create_subtests_cfg(test_name)
-        create_guest_os_cfg(test_name)
+        step = create_config_files(test_dir, shared_dir, interactive, step, True)
+        create_subtests_cfg(options.vt_type)
+        create_guest_os_cfg(options.vt_type)
+
+    if not options.vt_config:
+        restore_image = not (options.vt_no_downloads or options.vt_keep_image)
+    else:
+        restore_image = False
 
     if restore_image:
         logging.info("")
         step += 1
         logging.info("%s - Verifying (and possibly downloading) guest image",
                      step)
-        for os_info in get_guest_os_info_list(test_name, guest_os):
+        for os_info in get_guest_os_info_list(options.vt_type, guest_os):
             os_asset = os_info['asset']
             asset.download_asset(os_asset, interactive=interactive,
                                  restore_image=restore_image)
+
+    check_modules = []
+    if options.vt_type == "qemu":
+        check_modules = arch.get_kvm_module_list()
+    elif options.vt_type == "openvswitch":
+        check_modules = ["openvswitch"]
 
     if check_modules:
         logging.info("")
@@ -835,10 +838,27 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
             else:
                 logging.debug("Module %s loaded", module)
 
-    if online_docs_url:
-        logging.info("")
-        step += 1
-        logging.info("%d - If you wish, take a look at the online docs for "
-                     "more info", step)
-        logging.info("")
-        logging.info(online_docs_url)
+    online_docs_url = 'http://virt-test.readthedocs.org/'
+    logging.info("")
+    step += 1
+    logging.info("%d - If you wish, you may take a look at the online docs for "
+                 "more info", step)
+    logging.info("")
+    logging.info(online_docs_url)
+
+
+def setup(options):
+    """
+    Run pre tests setup (Uncompress test image(s), such as the JeOS image).
+
+    :param test_name: Test name, such as "qemu".
+    :param guest_os: Specify the guest image used for bootstrapping. By default
+            the JeOS image is used.
+    """
+    if not options.vt_keep_image:
+        test_name = options.vt_type
+        guest_os = options.vt_guest_os or defaults.DEFAULT_GUEST_OS
+        logging.info("Running pre tests setup for test type %s and guest OS %s", test_name, guest_os)
+        for os_info in get_guest_os_info_list(test_name, guest_os):
+            asset_info = asset.get_asset_info(os_info['asset'])
+            asset.uncompress_asset(asset_info, force=True)
