@@ -1512,7 +1512,6 @@ def update_device(domainarg=None, filearg=None,
     :param dargs: standardized virsh function API keywords
     :return: CmdResult instance
     """
-    cmd = "update-device"
     return _adu_device("update-device", domainarg=domainarg, filearg=filearg,
                        domain_opt=domain_opt, file_opt=file_opt,
                        flagstr=flagstr, **dargs)
