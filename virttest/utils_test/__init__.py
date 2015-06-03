@@ -1800,28 +1800,39 @@ class RemoteDiskManager(object):
     def get_free_space(self, disk_type, path='/', vgname=None):
         """
         Get free space of remote host for path.
+
+        :return : the unit is 'G'.
         """
         if disk_type == "file":
-            directory = os.path.dirname(path)
-            try:
-                output = self.runner.run("df %s" % directory).stdout
-                logging.debug(output)
-            except error.CmdError, detail:
-                raise error.TestError("Get %s space failed:%s" % (directory,
-                                                                  detail))
-            for line in output.splitlines()[1:]:
-                g_size = int(line.split()[3]) / 1048576
-                return g_size
-            raise error.TestError("Get %s space failed." % directory)
+            cmd = "df -BG %s" % os.path.dirname(path)
         elif disk_type == "lvm":
-            output = self.runner.run("vgs --units=g | grep %s" % vgname).stdout
-            if re.search(vgname, output.stdout):
+            cmd = "vgs --units=g | grep %s" % vgname
+        else:
+            raise error.TestError("Unsupported Disk Type %s" % disk_type)
+
+        try:
+            output = self.runner.run(cmd).stdout
+        except error.CmdError, detail:
+            logging.debug(output)
+            raise error.TestError("Get space failed: %s." % str(detail))
+
+        if disk_type == "file":
+            try:
+                return int(output.splitlines()[1].split()[3].split('G')[0])
+            except IndexError, detail:
+                raise error.TestError("Get %s space failed: %s." %
+                                      (os.path.dirname(path), str(detail)))
+        elif disk_type == "lvm":
+            if re.search(vgname, output):
                 try:
-                    return int(output.split('g')[0])
+                    # "int('50.00')" will ValueError, so needs float()
+                    return int(float(output.split()[6].split('g')[0]))
                 except (IndexError, ValueError), detail:
-                    output = detail
-            raise error.TestError("Get VG %s space failed:%s" % (vgname,
-                                                                 output))
+                    raise error.TestError("Get %s space failed: %s." %
+                                          (vgname, str(detail)))
+            else:
+                raise error.TestError("Get %s space failed: %s." %
+                                      (vgname, output))
 
     def occupy_space(self, disk_type, need_size, path=None, vgname=None,
                      timeout=60):
