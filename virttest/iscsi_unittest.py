@@ -173,7 +173,7 @@ class iscsi_test(unittest.TestCase):
 
     def test_iscsi_get_device_name(self):
         self.setup_stubs_init()
-        iscsi_emulated = iscsi.Iscsi(self.iscsi_emulated_params)
+        iscsi_emulated = iscsi.Iscsi.create_iSCSI(self.iscsi_emulated_params)
         iscsi_emulated.emulated_id = "1"
         self.setup_stubs_login(iscsi_emulated)
         iscsi_emulated.login()
@@ -186,7 +186,7 @@ class iscsi_test(unittest.TestCase):
 
     def test_iscsi_login(self):
         self.setup_stubs_init()
-        iscsi_emulated = iscsi.Iscsi(self.iscsi_emulated_params)
+        iscsi_emulated = iscsi.Iscsi.create_iSCSI(self.iscsi_emulated_params)
         self.setup_stubs_logged_in()
         self.assertFalse(iscsi_emulated.logged_in())
         result = "tcp [15] 127.0.0.1:3260,1 %s" % iscsi_emulated.target
@@ -195,7 +195,7 @@ class iscsi_test(unittest.TestCase):
 
     def test_iscsi_visible(self):
         self.setup_stubs_init()
-        iscsi_emulated = iscsi.Iscsi(self.iscsi_emulated_params)
+        iscsi_emulated = iscsi.Iscsi.create_iSCSI(self.iscsi_emulated_params)
         self.setup_stubs_portal_visible(iscsi_emulated)
         self.assertFalse(iscsi_emulated.portal_visible())
         self.setup_stubs_portal_visible(iscsi_emulated, "127.0.0.1:3260,1 %s"
@@ -203,7 +203,7 @@ class iscsi_test(unittest.TestCase):
 
     def test_iscsi_target_id(self):
         self.setup_stubs_init()
-        iscsi_emulated = iscsi.Iscsi(self.iscsi_emulated_params)
+        iscsi_emulated = iscsi.Iscsi.create_iSCSI(self.iscsi_emulated_params)
         self.setup_stubs_get_target_id()
         self.assertNotEqual(iscsi_emulated.get_target_id(), "")
 
