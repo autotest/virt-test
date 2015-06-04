@@ -432,7 +432,7 @@ def setup_or_cleanup_nfs(is_setup, mount_dir="nfs-mount", is_mount=False,
 
 
 def setup_or_cleanup_iscsi(is_setup, is_login=True,
-                           emulated_image="emulated_iscsi", image_size="1G",
+                           emulated_image="emulated-iscsi", image_size="1G",
                            chap_user="", chap_passwd="", restart_tgtd="no"):
     """
     Set up(and login iscsi target) or clean up iscsi service on localhost.
@@ -445,20 +445,15 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
     :param chap_passwd: CHAP authentication password
     :return: iscsi device name or iscsi target
     """
-    try:
-        utils_misc.find_command("tgtadm")
-        utils_misc.find_command("iscsiadm")
-    except ValueError:
-        raise error.TestNAError("Missing command 'tgtadm' and/or 'iscsiadm'.")
-
     tmpdir = os.path.join(data_dir.get_root_dir(), 'tmp')
     emulated_path = os.path.join(tmpdir, emulated_image)
-    emulated_target = "iqn.2001-01.com.virttest:%s.target" % emulated_image
+    emulated_target = ("iqn.%s.com.virttest:%s.target" %
+                       (time.strftime("%Y-%m"), emulated_image))
     iscsi_params = {"emulated_image": emulated_path, "target": emulated_target,
                     "image_size": image_size, "iscsi_thread_id": "virt",
                     "chap_user": chap_user, "chap_passwd": chap_passwd,
                     "restart_tgtd": restart_tgtd}
-    _iscsi = iscsi.Iscsi(iscsi_params)
+    _iscsi = iscsi.Iscsi.create_iSCSI(iscsi_params)
     if is_setup:
         _iscsi.export_target()
         if is_login:
