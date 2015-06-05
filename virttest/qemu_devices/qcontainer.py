@@ -974,7 +974,8 @@ class DevContainer(object):
         usb.set_param('freq', freq)
         usb.set_param('addr', pci_addr)
 
-        if usb_type == "ich9-usb-ehci1":
+        # NOTE: ich9-usb-uhci* must combain with ich9-usb-ehci*.
+        if usb_type in ["ich9-usb-ehci2"]:
             usb.set_param('addr', '1d.7')
             usb.set_param('multifunction', 'on')
             for i in xrange(3):
