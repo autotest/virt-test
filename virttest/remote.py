@@ -772,6 +772,8 @@ def copy_files_to(address, client, username, password, port, local_path,
         log_func = None
         if verbose:
             log_func = logging.debug
+        if interface:
+            address = "%s%%%s" % (address, interface)
         c = rss_client.FileUploadClient(address, port, log_func)
         c.upload(local_path, remote_path, timeout)
         c.close()
@@ -809,6 +811,8 @@ def copy_files_from(address, client, username, password, port, remote_path,
         log_func = None
         if verbose:
             log_func = logging.debug
+        if interface:
+            address = "%s%%%s" % (address, interface)
         c = rss_client.FileDownloadClient(address, port, log_func)
         c.download(remote_path, local_path, timeout)
         c.close()

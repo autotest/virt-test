@@ -99,10 +99,14 @@ class FileTransferClient(object):
         :param timeout: Time duration to wait for connection to succeed
         :raise FileTransferConnectError: Raised if the connection fails
         """
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        family = ":" in address and socket.AF_INET6 or socket.AF_INET
+        self._socket = socket.socket(family, socket.SOCK_STREAM)
         self._socket.settimeout(timeout)
         try:
-            self._socket.connect((address, port))
+            addrinfo = socket.getaddrinfo(address, port, family,
+                                          socket.SOCK_STREAM,
+                                          socket.IPPROTO_TCP)
+            self._socket.connect(addrinfo[0][4])
         except socket.error, e:
             raise FileTransferConnectError("Cannot connect to server at "
                                            "%s:%s" % (address, port), e)
