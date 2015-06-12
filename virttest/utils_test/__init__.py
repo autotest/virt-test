@@ -524,15 +524,13 @@ def run_virtio_serial_file_transfer(test, params, env, port_name=None,
         :param vm: VM object
         :return: All virtserialports
         """
-        ports = []
         for port in vm.virtio_ports:
             if isinstance(port, qemu_virtio_port.VirtioSerial):
                 if port.name == port_name:
                     return port.hostfile
 
     def run_host_cmd(host_cmd, timeout=720):
-        output = utils.system_output(host_cmd, timeout=timeout)
-        return output
+        return utils.system_output(host_cmd, timeout=timeout)
 
     def transfer_data(session, host_cmd, guest_cmd, n_time, timeout,
                       md5_check, action):
@@ -610,7 +608,6 @@ def run_virtio_serial_file_transfer(test, params, env, port_name=None,
     dir_name = test.tmpdir
     transfer_timeout = int(params.get("transfer_timeout", 720))
     tmp_dir = params.get("tmp_dir", "/var/tmp/")
-    clean_cmd = params.get("clean_cmd", "rm -f")
     filesize = int(params.get("filesize", 10))
     count = int(filesize)
 
