@@ -161,6 +161,10 @@ class UnattendedInstallConfig(object):
             self.unattended_file = os.path.join(test.virtdir,
                                                 self.unattended_file)
 
+        if params.get('use_ovmf_autounattend'):
+            self.unattended_file = re.sub("\.", "_ovmf.",
+                                          self.unattended_file)
+
         if getattr(self, 'finish_program'):
             self.finish_program = os.path.join(test.virtdir,
                                                self.finish_program)
@@ -1090,9 +1094,13 @@ def run(test, params, env):
         funcatexit.unregister(env, params.get("type"), copy_file_from_nfs,
                               src, dst, mount_point, image_name)
 
+    send_key_timeout = int(params.get("send_key_timeout", 60))
     while (time.time() - start_time) < install_timeout:
         try:
             vm.verify_alive()
+            if (params.get("send_key_at_install") and
+                    (time.time() - start_time) < send_key_timeout):
+                vm.send_key(params.get("send_key_at_install"))
         # Due to a race condition, sometimes we might get a MonitorError
         # before the VM gracefully shuts down, so let's capture MonitorErrors.
         except (virt_vm.VMDeadError, qemu_monitor.MonitorError), e:

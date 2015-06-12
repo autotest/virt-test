@@ -23,6 +23,7 @@ import remote
 import data_dir
 import utils_net
 import arch
+import storage
 
 
 class QemuSegFaultError(virt_vm.VMError):
@@ -1862,6 +1863,37 @@ class VM(virt_vm.BaseVM):
         bios_path = params.get("bios_path")
         if bios_path:
             devices.insert(StrDev('bios', cmdline="-bios %s" % bios_path))
+
+        if params.get('ovmf_path'):
+            if not os.path.exists(params['ovmf_path']):
+                raise error.TestError("The OVMF path is not exist. Maybe you"
+                                      " need to install related packages.")
+            autotest_data_dir = data_dir.get_data_dir()
+            ovmf_code_filename = params["ovmf_code_filename"]
+            ovmf_code_path = os.path.join(params['ovmf_path'],
+                                          ovmf_code_filename)
+            ovmf_vars_filename = params["ovmf_vars_filename"]
+            ovmf_vars_src_path = os.path.join(params['ovmf_path'],
+                                              ovmf_vars_filename)
+            # To ignore the influence from backends
+            path = storage.get_image_filename_filesytem(params,
+                                                        autotest_data_dir)
+            ovmf_vars_path = "%s.fd" % path
+            dev = qdevices.QDrive('ovmf_code', use_device=False)
+            dev.set_param("if", "pflash")
+            dev.set_param("format", "raw")
+            dev.set_param("readonly", "on")
+            dev.set_param("file", ovmf_code_path)
+            devices.insert(dev)
+            if (not os.path.exists(ovmf_vars_path) or
+                    params.get("restore_ovmf_vars") == "yse"):
+                cp_cmd = "cp -f %s %s" % (ovmf_vars_src_path, ovmf_vars_path)
+                utils.system(cp_cmd)
+            dev = qdevices.QDrive('ovmf_vars', use_device=False)
+            dev.set_param("if", "pflash")
+            dev.set_param("format", "raw")
+            dev.set_param("file", ovmf_vars_path)
+            devices.insert(dev)
 
         disable_kvm_option = ""
         if (devices.has_option("no-kvm")):
