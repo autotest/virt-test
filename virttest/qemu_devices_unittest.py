@@ -759,7 +759,7 @@ fdc
         self.assertNotEqual(qdev2, qdev, "Other qdev matches this one:\n%s\n%s"
                             % (qdev, qdev2))
         # cmdline
-        exp = ("-M pc -device HBA,id=hba1,addr=0a,bus=pci.0 -device dev "
+        exp = ("-machine pc -device HBA,id=hba1,addr=0a,bus=pci.0 -device dev "
                "-device dev -device dev")
         out = qdev.cmdline()
         self.assertEqual(out, exp, 'Corrupted qdev.cmdline() output:\n%s\n%s'
@@ -1115,7 +1115,7 @@ fdc
                                      parent_bus={'type': ('PCI', 'PCIE'),
                                                  'aobject': 'pci.0'}))
 
-        exp = ("-M pc -device ioh3420,id=root.1,bus=pci.0,addr=02 "
+        exp = ("-machine pc -device ioh3420,id=root.1,bus=pci.0,addr=02 "
                "-device x3130-upstream,id=pci_switch,bus=root.1,addr=00 "
                "-device pci-bridge,id=pci_bridge,bus=root.1,addr=01,"
                "chassis_nr=1 -device ahci,id=in_bridge,bus=pci_bridge,addr=01"
