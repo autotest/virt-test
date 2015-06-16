@@ -794,7 +794,7 @@ def preprocess(test, params, env):
     if params.get("take_regular_screendumps") == "yes":
         global _screendump_thread, _screendump_thread_termination_event
         _screendump_thread_termination_event = threading.Event()
-        _screendump_thread = threading.Thread(target=_take_screendumps,
+        _screendump_thread = threading.Thread(target=_vm_watchdog,
                                               name='ScreenDump',
                                               args=(test, params, env))
         _screendump_thread.start()
@@ -1112,7 +1112,83 @@ def postprocess_on_error(test, params, env):
     params.update(params.object_params("on_error"))
 
 
-def _take_screendumps(test, params, env):
+def _vm_watchdog(test, params, env):
+    def log_err(vm, action, details, logged_errors):
+        if action not in logged_errors:
+            logging.warn("VM '%s' failed to %s: %s", vm.name, action,
+                         details)
+            logged_errors.append(action)
+        return None
+
+    def check_screendump(vm, temp_filename, counter, cache, test_iteration,
+                         quality, logged_errors):
+        """
+        Get's screendump and if not in cache, stores it.
+        :return: True if in cache, False if not in cache, string on failure
+        """
+        # Get the screendump
+        try:
+            vm.screendump(filename=temp_filename, debug=False)
+        except (AttributeError, qemu_monitor.MonitorError), details:
+            log_err(vm, "query for sceendump", details, logged_errors)
+            return None
+        if not os.path.exists(temp_filename):
+            log_err(vm, "produce a screendump",
+                    "File %s does not exists" % temp_filename, logged_errors)
+            return None
+        if not ppm_utils.image_verify_ppm_file(temp_filename):
+            log_err(vm, "produce correct screendump", "Invalid ppm file",
+                    logged_errors)
+            os.unlink(temp_filename)
+            logged_errors.append("produce correct screendump")
+            return None
+        screendump_dir = "screendumps_%s_%s_iter%s" % (vm.name, vm.get_pid(),
+                                                       test_iteration)
+        screendump_dir = os.path.join(test.debugdir, screendump_dir)
+        if not os.path.exists(screendump_dir):
+            try:
+                os.makedirs(screendump_dir)
+            except OSError:
+                pass
+        img_hash = utils.hash_file(temp_filename)
+        if img_hash in cache:
+            return True    # Is in cache, image not produced
+        else:
+            cache.append(img_hash)
+            # Convert the ppm to jpeg
+            idx = counter.get(vm.instance, 0) + 1
+            filename = "%04d.jpg" % idx
+            screendump_filename = os.path.join(screendump_dir, filename)
+            try:
+                image = PIL.Image.open(temp_filename)
+                image.save(screendump_filename, format="JPEG",
+                           quality=quality)
+                counter[vm.instance] = idx   # Image is produced
+            except IOError, details:
+                log_err(vm, 'convert the screendump', details, logged_errors)
+
+            vm.verify_bsod(temp_filename)
+            return False
+
+    def check_serialport(vm, cache, logged_errors):
+        """
+        Checks serialport length
+        :return: True if in cache, False if not in cache, string on failure
+        """
+        if not vm.serial_console:
+            return True
+        try:
+            port_path = vm.serial_console.output_filename
+            length = os.path.getsize(port_path)
+            if length == cache.get(vm.instance):
+                return True
+            else:
+                cache[vm.instance] = length
+                return False
+        except (AttributeError, OSError), details:
+            log_err(vm, 'get serial console log', details, logged_errors)
+            return None
+
     global _screendump_thread_termination_event
     temp_dir = test.debugdir
     if params.get("screendump_temp_dir"):
@@ -1130,52 +1206,34 @@ def _take_screendumps(test, params, env):
     inactivity_treshold = float(params.get("inactivity_treshold", 1800))
     inactivity_watcher = params.get("inactivity_watcher", "log")
 
-    cache = {}
+    img_cache = []      # Shared cache of screendump hashes for all vms
+    serial_cache = {}   # per-vm last lengths of the VM's serial logs
+    logged_errors = []
     counter = {}
     inactivity = {}
 
     while True:
         for vm in env.get_all_vms():
-            if vm.instance not in counter.keys():
-                counter[vm.instance] = 0
-            if vm.instance not in inactivity.keys():
-                inactivity[vm.instance] = time.time()
+            # Initialization
             if not vm.is_alive():
-                continue
-            vm_pid = vm.get_pid()
-            try:
-                vm.screendump(filename=temp_filename, debug=False)
-            except qemu_monitor.MonitorError, e:
-                logging.warn(e)
-                continue
-            except AttributeError, e:
-                logging.warn(e)
-                continue
-            if not os.path.exists(temp_filename):
-                logging.warn("VM '%s' failed to produce a screendump", vm.name)
-                continue
-            if not ppm_utils.image_verify_ppm_file(temp_filename):
-                logging.warn("VM '%s' produced an invalid screendump", vm.name)
-                os.unlink(temp_filename)
-                continue
-            screendump_dir = "screendumps_%s_%s_iter%s" % (vm.name, vm_pid,
-                                                           test.iteration)
-            screendump_dir = os.path.join(test.debugdir, screendump_dir)
-            try:
-                os.makedirs(screendump_dir)
-            except OSError:
-                pass
-            counter[vm.instance] += 1
-            filename = "%04d.jpg" % counter[vm.instance]
-            screendump_filename = os.path.join(screendump_dir, filename)
-            vm.verify_bsod(screendump_filename)
-            image_hash = utils.hash_file(temp_filename)
-            if image_hash in cache:
-                time_inactive = time.time() - inactivity[vm.instance]
+                continue    # Not alive, skip the inactivity check
+            if vm.instance not in inactivity:
+                inactivity[vm.instance] = time.time()
+            # Get hashes
+            screendump = check_screendump(vm, temp_filename, counter,
+                                          img_cache, test.iteration,
+                                          quality, logged_errors)
+            serial = check_serialport(vm, serial_cache, logged_errors)
+            # Detect inactivity
+            if not inactivity_watcher:
+                continue    # Inactivity check disabled
+            if screendump is True and serial is True:
+                # VM is probably inactive
+                time_inactive = time.time() - inactivity.get(vm.instance)
                 if time_inactive > inactivity_treshold:
-                    msg = (
-                        "%s screen is inactive for more than %d s (%d min)" %
-                        (vm.name, time_inactive, time_inactive / 60))
+                    msg = ("%s screen+serial log is inactive for more than %ds"
+                           " (%d min)" % (vm.name, time_inactive,
+                                          time_inactive / 60))
                     if inactivity_watcher == "error":
                         try:
                             raise virt_vm.VMScreenInactiveError(vm,
@@ -1187,27 +1245,8 @@ def _take_screendumps(test, params, env):
                             test.background_errors.put(sys.exc_info())
                     elif inactivity_watcher == 'log':
                         logging.debug(msg)
-                try:
-                    os.link(cache[image_hash], screendump_filename)
-                except OSError:
-                    pass
             else:
                 inactivity[vm.instance] = time.time()
-                try:
-                    try:
-                        image = PIL.Image.open(temp_filename)
-                        image.save(screendump_filename, format="JPEG",
-                                   quality=quality)
-                        cache[image_hash] = screendump_filename
-                    except IOError, error_detail:
-                        logging.warning("VM '%s' failed to produce a "
-                                        "screendump: %s", vm.name, error_detail)
-                        # Decrement the counter as we in fact failed to
-                        # produce a converted screendump
-                        counter[vm.instance] -= 1
-                except NameError:
-                    pass
-            os.unlink(temp_filename)
 
         if _screendump_thread_termination_event is not None:
             if _screendump_thread_termination_event.isSet():
