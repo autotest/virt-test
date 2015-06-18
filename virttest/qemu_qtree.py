@@ -163,15 +163,7 @@ class QtreeDev(QtreeNode):
         super(QtreeDev, self).add_child(child)
 
     def guess_type(self):
-        if self.qtree['type'] == 'virtio-blk-device':
-            return QtreeDisk
-        elif ('drive' in self.qtree and
-              self.qtree['type'] != 'usb-storage' and
-              self.qtree['type'] != 'virtio-blk-pci'):
-            # ^^ HOOK when usb-storage-containter is detected as disk
-            return QtreeDisk
-        else:
-            return QtreeDev
+        return QtreeDev
 
 
 class QtreeDisk(QtreeDev):
@@ -225,6 +217,9 @@ class QtreeDisk(QtreeDev):
 
     def get_qname(self):
         return re.sub("['\"]", "", self.qtree.get('drive'))
+
+    def guess_type(self):
+        return QtreeDisk
 
 
 class QtreeContainer(object):
@@ -280,6 +275,7 @@ class QtreeContainer(object):
                 return  # grand-grand parent is not usb-storage
             # This disk is not scsi disk, it's virtual usb-storage drive
             node.update_qtree_prop('type', 'usb2')
+
         info = info.split('\n')
         current = None
         offset = 0
@@ -364,6 +360,11 @@ class QtreeContainer(object):
             offset -= OFFSET_PER_LEVEL
         # This is the place to put HOOKs for nasty qtree devices
         for i in xrange(len(self.nodes)):
+            if ('drive' in self.nodes[i].get_qtree() and
+                self.nodes[i].get_qtree().get('type') != 'usb-storage'):
+                _ = QtreeDisk()
+                self.nodes[i] = _replace_node(self.nodes[i], _.guess_type())
+
             _hook_usb2_disk(self.nodes[i])
 
 
