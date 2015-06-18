@@ -389,6 +389,7 @@ class MultihostMigration(object):
         else:
             self.clone_master = False
 
+        self.mig_protocol = params.get("mig_protocol", "tcp")
         self.mig_timeout = int(params.get("mig_timeout"))
         # Port used to communicate info between source and destination
         self.regain_ip_cmd = params.get("regain_ip_cmd", None)
@@ -428,7 +429,8 @@ class MultihostMigration(object):
         """
         def mig_wrapper(vm, cancel_delay, dsthost, vm_ports,
                         not_wait_for_migration, mig_offline, mig_data):
-            vm.migrate(cancel_delay=cancel_delay, offline=mig_offline,
+            vm.migrate(protocol=self.mig_protocol, cancel_delay=cancel_delay,
+                       offline=mig_offline,
                        dest_host=dsthost, remote_port=vm_ports[vm.name],
                        not_wait_for_migration=not_wait_for_migration)
 
