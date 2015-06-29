@@ -1881,7 +1881,7 @@ def set_guest_agent(vm):
             raise error.TestFail("Fail to run qemu-ga in guest")
 
 
-def set_vm_disk(vm, params, tmp_dir=None):
+def set_vm_disk(vm, params, tmp_dir=None, test=None):
     """
     Replace vm first disk with given type in domain xml, including file type
     (local, nfs), network type(gluster, iscsi), block type(use connected iscsi
@@ -1933,6 +1933,7 @@ def set_vm_disk(vm, params, tmp_dir=None):
     disk_src_protocol = params.get("disk_source_protocol")
     disk_src_host = params.get("disk_source_host", "127.0.0.1")
     disk_src_port = params.get("disk_source_port", "3260")
+    emu_image = params.get("emulated_image", "emulated-iscsi")
     image_size = params.get("image_size", "10G")
     disk_format = params.get("disk_format", "qcow2")
     mnt_path_name = params.get("mnt_path_name", "nfs-mount")
@@ -1944,6 +1945,8 @@ def set_vm_disk(vm, params, tmp_dir=None):
     sec_model = params.get('sec_model')
     relabel = params.get('relabel')
     sec_label = params.get('sec_label')
+    pool_name = params.get("pool_name", "set-vm-disk-pool")
+    disk_src_mode = params.get('disk_src_mode', 'host')
     disk_params = {'device_type': disk_device,
                    'disk_snapshot_attr': disk_snapshot_attr,
                    'type_name': disk_type,
@@ -1960,7 +1963,6 @@ def set_vm_disk(vm, params, tmp_dir=None):
 
     # gluster only params
     vol_name = params.get("vol_name")
-    pool_name = params.get("pool_name", "gluster-pool")
     transport = params.get("transport", "")
     brick_path = os.path.join(tmp_dir, pool_name)
     image_convert = "yes" == params.get("image_convert", 'yes')
@@ -1971,29 +1973,49 @@ def set_vm_disk(vm, params, tmp_dir=None):
     if disk_src_protocol == 'iscsi':
         if disk_type == 'block':
             is_login = True
-        elif disk_type == 'network':
+        elif disk_type == 'network' or disk_type == 'volume':
             is_login = False
         else:
             raise error.TestFail("Disk type '%s' not expected, only disk "
-                                 "type 'block' or 'network' work with "
-                                 "'iscsi'" % disk_type)
+                                 "type 'block', 'network' or 'volume' work "
+                                 "with 'iscsi'" % disk_type)
 
-        # Setup iscsi target
-        emu_n = "emulated_iscsi"
-        iscsi_target = setup_or_cleanup_iscsi(is_setup=True,
-                                              is_login=is_login,
-                                              image_size=image_size,
-                                              emulated_image=emu_n)
+        if disk_type == 'volume':
+            pvt = PoolVolumeTest(test, params)
+            pvt.pre_pool(pool_name, 'iscsi', "/dev/disk/by-path",
+                         emulated_image=emu_image,
+                         image_size=image_size)
+            # Get volume name
+            cmd_result = virsh.vol_list(pool_name)
+            try:
+                vol_name = re.findall(r"(\S+)\ +(\S+)[\ +\n]",
+                                      str(cmd_result.stdout))[1][0]
+            except IndexError:
+                raise error.TestError("Fail to get volume name in pool %s" %
+                                      pool_name)
+            emulated_path = virsh.vol_path(vol_name, pool_name,
+                                           debug=True).stdout.strip()
+        else:
+            # Setup iscsi target
+            iscsi_target = setup_or_cleanup_iscsi(is_setup=True,
+                                                  is_login=is_login,
+                                                  image_size=image_size,
+                                                  emulated_image=emu_image)
+            emulated_path = os.path.join(tmp_dir, emu_image)
 
         # Copy first disk to emulated backing store path
-        emulated_path = os.path.join(tmp_dir, emu_n)
-        cmd = "qemu-img convert -f %s -O raw %s %s" % (src_disk_format,
-                                                       blk_source,
-                                                       emulated_path)
+        cmd = "qemu-img convert -f %s -O %s %s %s" % (src_disk_format,
+                                                      disk_format,
+                                                      blk_source,
+                                                      emulated_path)
         utils.run(cmd, ignore_status=False)
 
         if disk_type == 'block':
             disk_params_src = {'source_file': iscsi_target}
+        elif disk_type == "volume":
+            disk_params_src = {'source_pool': pool_name,
+                               'source_volume': vol_name,
+                               'source_mode': disk_src_mode}
         else:
             disk_params_src = {'source_protocol': disk_src_protocol,
                                'source_name': iscsi_target + "/1",
