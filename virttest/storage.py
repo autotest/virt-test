@@ -465,7 +465,7 @@ class Iscsidev(Rawdev):
             if params.get("emulated_file_remove", "no") == "yes":
                 self.emulated_file_remove = True
         params["iscsi_thread_id"] = self.image_name
-        self.iscsidevice = iscsi.Iscsi(params, root_dir=root_dir)
+        self.iscsidevice = iscsi.Iscsi.create_iSCSI(params, root_dir=root_dir)
         self.device_id = params.get("device_id")
         self.iscsi_init_timeout = int(params.get("iscsi_init_timeout", 10))
 

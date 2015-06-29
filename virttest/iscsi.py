@@ -127,22 +127,26 @@ def iscsi_discover(portal_ip):
     return session
 
 
-class Iscsi(object):
+class _IscsiComm(object):
 
     """
-    Basic iscsi support class. Will handle the emulated iscsi export and
-    access to both real iscsi and emulated iscsi device.
+    Provide an interface to complete the similar initialization
     """
 
-    def __init__(self, params, root_dir="/tmp"):
-        os_dep.command("iscsiadm")
+    def __init__(self, params, root_dir):
+        """
+        common __init__ function used to initialize iSCSI service
+
+        :param params:      parameters dict for iSCSI
+        :param root_dir:    path for image
+        """
         self.target = params.get("target")
         self.export_flag = False
         self.restart_tgtd = 'yes' == params.get("restart_tgtd", "no")
         if params.get("portal_ip"):
             self.portal_ip = params.get("portal_ip")
         else:
-            self.portal_ip = "localhost"
+            self.portal_ip = "127.0.0.1"
         if params.get("iscsi_thread_id"):
             self.id = params.get("iscsi_thread_id")
         else:
@@ -158,7 +162,6 @@ class Iscsi(object):
 
         if params.get("emulated_image"):
             self.initiator = None
-            os_dep.command("tgtadm")
             emulated_image = params.get("emulated_image")
             self.emulated_image = os.path.join(root_dir, emulated_image)
             self.emulated_id = ""
@@ -240,6 +243,58 @@ class Iscsi(object):
         else:
             logging.error("Session is not logged in yet.")
         return device_name
+
+    def set_chap_auth_initiator(self):
+        """
+        Set CHAP authentication for initiator.
+        """
+        name_dict = {'node.session.auth.authmethod': 'CHAP'}
+        name_dict['node.session.auth.username'] = self.chap_user
+        name_dict['node.session.auth.password'] = self.chap_passwd
+        for name in name_dict.keys():
+            cmd = "iscsiadm --mode node --targetname %s " % self.target
+            cmd += "--op update --name %s --value %s" % (name, name_dict[name])
+            try:
+                utils.system(cmd)
+            except error.CmdError:
+                logging.error("Fail to set CHAP authentication for initiator")
+
+    def logout(self):
+        """
+        Logout from target.
+        """
+        if self.logged_in():
+            iscsi_logout(self.target)
+
+    def cleanup(self):
+        """
+        Clean up env after iscsi used.
+        """
+        self.logout()
+        iscsi_node_del(self.target)
+        if os.path.isfile("/etc/iscsi/initiatorname.iscsi-%s" % self.id):
+            cmd = " mv /etc/iscsi/initiatorname.iscsi-%s" % self.id
+            cmd += " /etc/iscsi/initiatorname.iscsi"
+            utils.system(cmd)
+            cmd = "service iscsid restart"
+            utils.system(cmd)
+        if self.export_flag:
+            self.delete_target()
+
+
+class IscsiTGT(_IscsiComm):
+
+    """
+    iscsi support TGT backend used in RHEL6.
+    """
+
+    def __init__(self, params, root_dir):
+        """
+        initialize TGT backend for iSCSI
+
+        :param params: parameters dict for TGT backend of iSCSI.
+        """
+        super(IscsiTGT, self).__init__(params, root_dir)
 
     def get_target_id(self):
         """
@@ -323,21 +378,6 @@ class Iscsi(object):
             cmd = "tgtadm --lld iscsi --op bind --mode account"
             cmd += " --tid %s --user %s" % (self.emulated_id, self.chap_user)
             utils.system(cmd)
-
-    def set_chap_auth_initiator(self):
-        """
-        Set CHAP authentication for initiator.
-        """
-        name_dict = {'node.session.auth.authmethod': 'CHAP'}
-        name_dict['node.session.auth.username'] = self.chap_user
-        name_dict['node.session.auth.password'] = self.chap_passwd
-        for name in name_dict.keys():
-            cmd = "iscsiadm --mode node --targetname %s " % self.target
-            cmd += "--op update --name %s --value %s" % (name, name_dict[name])
-            try:
-                utils.system(cmd)
-            except error.CmdError:
-                logging.error("Fail to set CHAP authentication for initiator")
 
     def export_target(self):
         """
@@ -437,24 +477,282 @@ class Iscsi(object):
             cmd = "service tgtd restart"
             utils.system(cmd)
 
-    def logout(self):
-        """
-        Logout from target.
-        """
-        if self.logged_in():
-            iscsi_logout(self.target)
 
-    def cleanup(self):
+class IscsiLIO(_IscsiComm):
+
+    """
+    iscsi support class for LIO backend used in RHEL7.
+    """
+
+    def __init__(self, params, root_dir):
         """
-        Clean up env after iscsi used.
+        initialize LIO backend for iSCSI
+
+        :param params: parameters dict for LIO backend of iSCSI
         """
-        self.logout()
-        iscsi_node_del(self.target)
-        if os.path.isfile("/etc/iscsi/initiatorname.iscsi-%s" % self.id):
-            cmd = " mv /etc/iscsi/initiatorname.iscsi-%s" % self.id
-            cmd += " /etc/iscsi/initiatorname.iscsi"
-            utils.system(cmd)
-            cmd = "service iscsid restart"
-            utils.system(cmd)
-        if self.export_flag:
-            self.delete_target()
+        super(IscsiLIO, self).__init__(params, root_dir)
+        self.device = "device.%s" % os.path.basename(self.emulated_image)
+
+    def get_target_id(self):
+        """
+        Get target id from image name.
+        """
+        cmd = "targetcli ls /iscsi 1"
+        target_info = utils.system_output(cmd)
+        target = None
+        for line in re.split("\n", target_info)[1:]:
+            if re.findall("o-\s\S+\s[\.]+\s\[TPGs:\s\d\]$", line):
+                # eg: iqn.2015-05.com.example:iscsi.disk
+                try:
+                    target = re.findall("iqn[\.]\S+:\S+", line)[0]
+                except IndexError:
+                    logging.info("No found target in %s", line)
+                    continue
+            else:
+                continue
+
+            cmd = "targetcli ls /iscsi/%s/tpg1/luns" % target
+            luns_info = utils.system_output(cmd)
+            for lun_line in re.split("\n", luns_info):
+                if re.findall("o-\slun\d+", lun_line):
+                    if self.emulated_image in lun_line:
+                        break
+                    else:
+                        target = None
+        return target
+
+    def set_chap_acls_target(self):
+        """
+        set CHAP(acls) authentication on a target.
+        it will require authentication
+        before an initiator is allowed to log in and access devices.
+
+        notice:
+            Individual ACL entries override common TPG Authentication,
+            which can be set by set_chap_auth_target().
+        """
+        # Enable ACL nodes
+        acls_cmd = "targetcli /iscsi/%s/tpg1/ " % self.target
+        attr_cmd = "set attribute generate_node_acls=0"
+        utils.system(acls_cmd + attr_cmd)
+
+        # Create user and allow access
+        acls_cmd = ("targetcli /iscsi/%s/tpg1/acls/ create %s:client"
+                    % (self.target, self.target.split(":")[0]))
+        output = utils.system_output(acls_cmd)
+        if "Created Node ACL" not in output:
+            raise error.TestFail("Failed to create ACL. (%s)", output)
+
+        comm_cmd = ("targetcli /iscsi/%s/tpg1/acls/%s:client/"
+                    % (self.target, self.target.split(":")[0]))
+        # Set userid
+        userid_cmd = "%s set auth userid=%s" % (comm_cmd, self.chap_user)
+        output = utils.system_output(userid_cmd)
+        if self.chap_user not in output:
+            raise error.TestFail("Failed to set user. (%s)", output)
+
+        # Set password
+        passwd_cmd = "%s set auth password=%s" % (comm_cmd, self.chap_passwd)
+        output = utils.system_output(passwd_cmd)
+        if self.chap_passwd not in output:
+            raise error.TestFail("Failed to set password. (%s)", output)
+
+        # Save configuration
+        utils.system("targetcli / saveconfig")
+
+    def set_chap_auth_target(self):
+        """
+        set up authentication information for every single initiator,
+        which provides the capability to define common login information
+        for all Endpoints in a TPG
+        """
+        auth_cmd = "targetcli /iscsi/%s/tpg1/ " % self.target
+        attr_cmd = ("set attribute %s %s %s" %
+                    ("demo_mode_write_protect=0",
+                     "generate_node_acls=1",
+                     "cache_dynamic_acls=1"))
+        utils.system(auth_cmd + attr_cmd)
+
+        # Set userid
+        userid_cmd = "%s set auth userid=%s" % (auth_cmd, self.chap_user)
+        output = utils.system_output(userid_cmd)
+        if self.chap_user not in output:
+            raise error.TestFail("Failed to set user. (%s)", output)
+
+        # Set password
+        passwd_cmd = "%s set auth password=%s" % (auth_cmd, self.chap_passwd)
+        output = utils.system_output(passwd_cmd)
+        if self.chap_passwd not in output:
+            raise error.TestFail("Failed to set password. (%s)", output)
+
+        # Save configuration
+        utils.system("targetcli / saveconfig")
+
+    def export_target(self):
+        """
+        Export target in localhost for emulated iscsi
+        """
+        selinux_mode = None
+
+        # create image disk
+        if not os.path.isfile(self.emulated_image):
+            utils.system(self.create_cmd)
+        else:
+            emulated_image_size = os.path.getsize(self.emulated_image) / 1024
+            if emulated_image_size != self.emulated_expect_size:
+                # No need to remvoe, rebuild is fine
+                utils.system(self.create_cmd)
+
+        # confirm if the target exists and create iSCSI target
+        cmd = "targetcli ls /iscsi 1"
+        output = utils.system_output(cmd)
+        if not re.findall("%s$" % self.target, output, re.M):
+            logging.debug("Need to export target in host")
+
+            # Set selinux to permissive mode to make sure
+            # iscsi target export successfully
+            if utils_selinux.is_enforcing():
+                selinux_mode = utils_selinux.get_status()
+                utils_selinux.set_status("permissive")
+
+            # In fact, We've got two options here
+            #
+            # 1) Create a block backstore that usually provides the best
+            #    performance. We can use a block device like /dev/sdb or
+            #    a logical volume previously created,
+            #     (lvcreate -name lv_iscsi -size 1G vg)
+            # 2) Create a fileio backstore,
+            #    which enables the local file system cache.
+            #
+            # This class Only works for emulated iscsi device,
+            # So fileio backstore is enough and safe.
+
+            # Create a fileio backstore
+            device_cmd = ("targetcli /backstores/fileio/ create %s %s" %
+                          (self.device, self.emulated_image))
+            output = utils.system_output(device_cmd)
+            if "Created fileio" not in output:
+                raise error.TestFail("Failed to create fileio %s. (%s)",
+                                     self.device, output)
+
+            # Create an IQN with a target named target_name
+            target_cmd = "targetcli /iscsi/ create %s" % self.target
+            output = utils.system_output(target_cmd)
+            if "Created target" not in output:
+                raise error.TestFail("Failed to create target %s. (%s)",
+                                     self.target, output)
+
+            check_portal = "targetcli /iscsi/%s/tpg1/portals ls" % self.target
+            if "0.0.0.0:3260" not in utils.system_output(check_portal):
+                # Create portal
+                # 0.0.0.0 means binding to INADDR_ANY
+                # and using default IP port 3260
+                portal_cmd = ("targetcli /iscsi/%s/tpg1/portals/ create %s"
+                              % (self.target, "0.0.0.0"))
+                output = utils.system_output(portal_cmd)
+                if "Created network portal" not in output:
+                    raise error.TestFail("Failed to create portal. (%s)",
+                                         output)
+
+            # Create lun
+            lun_cmd = "targetcli /iscsi/%s/tpg1/luns/ " % self.target
+            dev_cmd = "create /backstores/fileio/%s" % self.device
+            output = utils.system_output(lun_cmd + dev_cmd)
+            if "Created LUN" not in output:
+                raise error.TestFail("Failed to create lun. (%s)",
+                                     output)
+
+            # Set firewall if it's enabled
+            output = utils.system_output("firewall-cmd --state",
+                                         ignore_status=True)
+            if re.findall("^running", output, re.M):
+                # firewall is running
+                utils.system("firewall-cmd --permanent --add-port=3260/tcp")
+                utils.system("firewall-cmd --reload")
+
+            # Restore selinux
+            if selinux_mode is not None:
+                utils_selinux.set_status(selinux_mode)
+
+            self.export_flag = True
+        else:
+            logging.info("Target %s has already existed!" % self.target)
+
+        if self.chap_flag:
+            # Set CHAP authentication on the exported target
+            self.set_chap_auth_target()
+            # Set CHAP authentication for initiator to login target
+            if self.portal_visible():
+                self.set_chap_auth_initiator()
+        else:
+            # To enable that so-called "demo mode" TPG operation,
+            # disable all authentication for the corresponding Endpoint.
+            # which means grant access to all initiators,
+            # so that they can access all LUNs in the TPG
+            # without further authentication.
+            auth_cmd = "targetcli /iscsi/%s/tpg1/ " % self.target
+            attr_cmd = ("set attribute %s %s %s %s" %
+                        ("authentication=0",
+                         "demo_mode_write_protect=0",
+                         "generate_node_acls=1",
+                         "cache_dynamic_acls=1"))
+            output = utils.system_output(auth_cmd + attr_cmd)
+            logging.info("Define access rights: %s" % output)
+
+        # Save configuration
+        utils.system("targetcli / saveconfig")
+
+        # Restart iSCSI service
+        utils.system("systemctl restart iscsid.service")
+
+    def delete_target(self):
+        """
+        Delete target from host.
+        """
+        # Delete block
+        if self.device is not None:
+            cmd = "targetcli /backstores/fileio ls"
+            output = utils.system_output(cmd)
+            if re.findall("%s" % self.device, output, re.M):
+                dev_del = ("targetcli /backstores/fileio/ delete %s"
+                           % self.device)
+                utils.system(dev_del)
+
+        # Delete IQN
+        cmd = "targetcli ls /iscsi 1"
+        output = utils.system_output(cmd)
+        if re.findall("%s" % self.target, output, re.M):
+            del_cmd = "targetcli /iscsi delete %s" % self.target
+            utils.system(del_cmd)
+
+        # Clear all configuration to avoid restoring
+        cmd = "targetcli clearconfig confirm=True"
+        utils.system(cmd)
+
+
+class Iscsi(object):
+
+    """
+    Basic iSCSI support class,
+    which will handle the emulated iscsi export and
+    access to both real iscsi and emulated iscsi device.
+
+    The class support different kinds of iSCSI backend (TGT and LIO),
+    and return ISCSI instance.
+    """
+    @staticmethod
+    def create_iSCSI(params, root_dir="/tmp"):
+        iscsi_instance = None
+        try:
+            os_dep.command("iscsiadm")
+            os_dep.command("tgtadm")
+            iscsi_instance = IscsiTGT(params, root_dir)
+        except ValueError:
+            try:
+                os_dep.command("iscsiadm")
+                os_dep.command("targetcli")
+                iscsi_instance = IscsiLIO(params, root_dir)
+            except ValueError:
+                pass
+
+        return iscsi_instance
