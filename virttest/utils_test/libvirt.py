@@ -455,7 +455,6 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
                     "restart_tgtd": restart_tgtd}
     _iscsi = iscsi.Iscsi.create_iSCSI(iscsi_params)
     if is_setup:
-        _iscsi.export_target()
         if is_login:
             _iscsi.login()
             # The device doesn't necessarily appear instantaneously, so give
@@ -473,6 +472,7 @@ def setup_or_cleanup_iscsi(is_setup, is_login=True,
             _iscsi.cleanup()
             utils.run("rm -f %s" % emulated_path)
         else:
+            _iscsi.export_target()
             return emulated_target
     else:
         _iscsi.export_flag = True
