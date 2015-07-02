@@ -523,8 +523,44 @@ class VM(virt_vm.BaseVM):
             dev.set_param("name", "org.fedoraproject.anaconda.log.0")
             devices.insert(dev)
 
-        def add_mem(devices, mem):
-            return " -m %s" % mem
+        def add_mem(devices, size, params):
+            """
+            Add memory devices
+            """
+            options = ["-m %s" % size]
+            slots = params.get("mem_slots")
+            if slots:
+                options.append("slots=%s" % slots)
+            maxmem = params.get("mem_maxmem")
+            if maxmem:
+                options.append("maxmem=%s" % maxmem)
+            dev = StrDev("mem", cmdline=",".join(options))
+            devices.insert(dev)
+
+            if not devices.has_option("object"):
+                return None
+
+            for dev in params.get("memdevs", "").split():
+                dev_params = params.object_params(dev)
+                backend_type = dev_params.get("memory_backend", "ram")
+                backend = "memory-backend-%s" % backend_type
+                _params = {"backend": backend}
+                if backend_type == "file":
+                    _params["mem-path"] = dev_params["mem_path"]
+                _params["size"] = dev_params["mem_size"]
+                mem_obj = qdevices.QCustomDevice("object",
+                                                 params=_params,
+                                                 backend='backend')
+                mem_id = "mem-%s" % utils_misc.generate_random_string(4)
+                mem_obj.set_param("id", mem_id)
+                _params = {"backend": "pc-dimm", "memdev": mem_obj.get_qid()}
+                pc_dimm = qdevices.QCustomDevice("device",
+                                                 params=_params,
+                                                 backend="backend")
+                dimm_id = "dimm-%s" % utils_misc.generate_random_string(4)
+                pc_dimm.set_param("id", dimm_id)
+                devices.insert(mem_obj)
+                devices.insert(pc_dimm)
 
         def add_smp(devices):
             smp_str = " -smp %d" % self.cpuinfo.smp
@@ -1550,7 +1586,7 @@ class VM(virt_vm.BaseVM):
 
         mem = params.get("mem")
         if mem:
-            devices.insert(StrDev('mem', cmdline=add_mem(devices, mem)))
+            add_mem(devices, mem, params)
 
         smp = int(params.get("smp", 0))
         vcpu_maxcpus = int(params.get("vcpu_maxcpus", 0))
