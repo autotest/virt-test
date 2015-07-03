@@ -2191,6 +2191,8 @@ class VM(virt_vm.BaseVM):
             cdrom_params = params.object_params(cdrom)
             if cdrom_params.get("enable_gluster") == "yes":
                 continue
+            if cdrom_params.get("enable_ceph") == "yes":
+                continue
             iso = cdrom_params.get("cdrom")
             if iso:
                 iso = utils_misc.get_path(data_dir.get_data_dir(), iso)

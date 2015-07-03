@@ -19,6 +19,7 @@ import utils_misc
 import virt_vm
 import gluster
 import lvm
+import ceph
 
 
 def preprocess_images(bindir, params, env):
@@ -66,7 +67,31 @@ def file_exists(params, filename_path):
     if gluster_image:
         return gluster.file_exists(params, filename_path)
 
+    if params.get("enable_ceph") == "yes":
+        image_name = params.get("image_name")
+        image_format = params.get("image_format", "qcow2")
+        ceph_monitor = params["ceph_monitor"]
+        rbd_pool_name = params["rbd_pool_name"]
+        rbd_image_name = "%s.%s" % (image_name.split("/")[-1], image_format)
+        return ceph.rbd_image_exist(ceph_monitor, rbd_pool_name,
+                                    rbd_image_name)
+
     return os.path.exists(filename_path)
+
+
+def file_remove(params, filename_path):
+    """
+    Remove the image
+    :param params: Dictionary containing the test parameters.
+    :param filename_path: path to file
+    """
+    if params.get("enable_ceph") == "yes":
+        image_name = params.get("image_name")
+        image_format = params.get("image_format", "qcow2")
+        ceph_monitor = params["ceph_monitor"]
+        rbd_pool_name = params["rbd_pool_name"]
+        rbd_image_name = "%s.%s" % (image_name.split("/")[-1], image_format)
+        return ceph.rbd_image_rm(ceph_monitor, rbd_pool_name, rbd_image_name)
 
 
 def get_image_blkdebug_filename(params, root_dir):
@@ -104,13 +129,21 @@ def get_image_filename(params, root_dir):
     :raise VMDeviceError: When no matching disk found (in indirect method).
     """
     enable_gluster = params.get("enable_gluster", "no") == "yes"
+    enable_ceph = params.get("enable_ceph", "no") == "yes"
     image_name = params.get("image_name")
     if image_name:
         if enable_gluster:
             image_name = params.get("image_name", "image")
             image_format = params.get("image_format", "qcow2")
             return gluster.get_image_filename(params, image_name, image_format)
-
+        if enable_ceph:
+            image_format = params.get("image_format", "qcow2")
+            ceph_monitor = params["ceph_monitor"]
+            rbd_pool_name = params["rbd_pool_name"]
+            rbd_image_name = "%s.%s" % (image_name.split("/")[-1],
+                                        image_format)
+            return ceph.get_image_filename(ceph_monitor, rbd_pool_name,
+                                           rbd_image_name)
         return get_image_filename_filesytem(params, root_dir)
     else:
         logging.warn("image_name parameter not set.")
@@ -220,9 +253,12 @@ class QemuImg(object):
         self.image_filename = get_image_filename(params, root_dir)
         self.image_format = params.get("image_format", "qcow2")
         self.size = params.get("image_size", "10G")
+        self.storage_type = params.get("storage_type", "local fs")
         self.check_output = params.get("check_output") == "yes"
         self.image_blkdebug_filename = get_image_blkdebug_filename(params,
                                                                    root_dir)
+        self.remote_keywords = params.get("remote_image",
+                                          "gluster iscsi ceph").split()
         image_chain = params.get("image_chain")
         self.root_dir = root_dir
         self.base_tag = None
@@ -254,6 +290,17 @@ class QemuImg(object):
         """
         if option not in self.__dict__:
             raise OptionMissing(option)
+
+    def is_remote_image(self):
+        """
+        Check if image is from a remote server or not
+        """
+
+        for keyword in self.remote_keywords:
+            if keyword in self.image_filename:
+                return True
+
+        return False
 
     def backup_image(self, params, root_dir, action, good=True,
                      skip_existing=False):

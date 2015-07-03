@@ -9,6 +9,7 @@ import shutil
 import sys
 import copy
 from autotest.client import utils
+from autotest.client import os_dep
 from autotest.client.shared import error
 import aexpect
 import qemu_monitor
@@ -76,7 +77,12 @@ def preprocess_image(test, params, image_name, vm_process_status=None):
         image = qemu_storage.QemuImg(params, base_dir, image_name)
         image.backup_image(params, base_dir, "backup", True, True)
     if create_image:
+        if storage.file_exists(params, image_filename):
+            # As rbd image can not be covered, so need remove it if we need
+            # force create a new image.
+            storage.file_remove(params, image_filename)
         image = qemu_storage.QemuImg(params, base_dir, image_name)
+        logging.info("Create image on %s." % image.storage_type)
         image.create(params)
 
 
@@ -306,6 +312,7 @@ def postprocess_image(test, params, image_name, vm_process_status=None):
     if params.get("restore_image_after_testing", "no") == "yes":
         image.backup_image(params, base_dir, "restore", True)
     if params.get("remove_image") == "yes":
+        logging.info("Remove image on %s." % image.storage_type)
         if clone_master is None:
             image.remove()
         elif clone_master == "yes":
@@ -538,6 +545,15 @@ def preprocess(test, params, env):
     # throw a TestNAError exception, which will skip the test.
     if params.get('requires_root', 'no') == 'yes':
         utils_misc.verify_running_as_root()
+
+    # throw a TestNAError exception if command requested by test is not
+    # installed.
+    if params.get("cmds_installed_host"):
+        for cmd in params.get("cmds_installed_host").split():
+            try:
+                os_dep.command(cmd)
+            except ValueError, msg:
+                raise error.TestNAError(msg.message)
 
     vm_type = params.get('vm_type')
 

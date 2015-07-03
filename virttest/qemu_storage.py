@@ -349,9 +349,7 @@ class QemuImg(storage.QemuImg):
         """
         logging.debug("Run qemu-img info comamnd on %s", self.image_filename)
         cmd = self.image_cmd
-        if (os.path.exists(self.image_filename) or
-                "gluster:" in self.image_filename or
-                "iscsi:" in self.image_filename):
+        if (os.path.exists(self.image_filename) or self.is_remote_image()):
             cmd += " info %s" % self.image_filename
             output = utils.system_output(cmd)
         else:
@@ -431,7 +429,7 @@ class QemuImg(storage.QemuImg):
         image_is_checkable = self.image_format in ['qcow2', 'qed']
 
         if (storage.file_exists(params, image_filename) or
-                params.get("enable_gluster", "no") == "yes") and image_is_checkable:
+                self.is_remote_image()) and image_is_checkable:
             check_img = self.support_cmd("check") and self.support_cmd("info")
             if not check_img:
                 logging.debug("Skipping image check "
