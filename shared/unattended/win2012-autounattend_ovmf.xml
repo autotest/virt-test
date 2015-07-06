@@ -229,8 +229,44 @@
 					<Order>16</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c wmic datafile where "filename='finish' and extension='bat'" call copy "c:\\finish.bat" &amp;&amp; c:\finish.bat PROCESS_CHECK</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c SCHTASKS /Create /SC ONLOGON /TN Desktop-Start-W8 /TR explorer</CommandLine>
 					<Order>17</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c powercfg -Change monitor-timeout-ac 0</CommandLine>
+					<Order>18</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c powercfg -Change monitor-timeout-dc 0</CommandLine>
+					<Order>19</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c powercfg -Change disk-timeout-ac 0</CommandLine>
+					<Order>20</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c powercfg -Change disk-timeout-dc 0</CommandLine>
+					<Order>21</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c powercfg -Change standby-timeout-ac 0</CommandLine>
+					<Order>22</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c powercfg -Change standby-timeout-dc 0</CommandLine>
+					<Order>23</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c powercfg -Change hibernate-timeout-ac 0</CommandLine>
+					<Order>24</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c powercfg -Change hibernate-timeout-dc 0</CommandLine>
+					<Order>25</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c wmic datafile where "filename='finish' and extension='bat'" call copy "c:\\finish.bat" &amp;&amp; c:\finish.bat PROCESS_CHECK</CommandLine>
+					<Order>26</Order>
 				</SynchronousCommand>
 			</FirstLogonCommands>
 		</component>
