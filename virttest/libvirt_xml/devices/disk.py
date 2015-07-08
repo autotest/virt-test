@@ -187,7 +187,8 @@ class Disk(base.TypedDeviceBase):
         hosts: list of dictionaries describing network host properties
         """
 
-        __slots__ = ('attrs', 'seclabels', 'hosts',)
+        __slots__ = ('attrs', 'seclabels', 'hosts', 'config_file',
+                     'snapshot_name',)
 
         def __init__(self, virsh_instance=base.base.virsh):
             accessors.XMLElementDict('attrs', self, parent_xpath='/',
@@ -198,6 +199,10 @@ class Disk(base.TypedDeviceBase):
             accessors.XMLElementList('hosts', self, parent_xpath='/',
                                      marshal_from=self.marshal_from_host,
                                      marshal_to=self.marshal_to_host)
+            accessors.XMLAttribute('config_file', self, parent_xpath='/',
+                                   tag_name='config', attribute='file')
+            accessors.XMLAttribute('snapshot_name', self, parent_xpath='/',
+                                   tag_name='snapshot', attribute='name')
             super(self.__class__, self).__init__(virsh_instance=virsh_instance)
             self.xml = '<source/>'
 
