@@ -1417,16 +1417,20 @@ def create_disk_xml(params):
             source_pool = params.get("source_pool")
             source_volume = params.get("source_volume")
             source_mode = params.get("source_mode", "")
-            source_attrs = {'pool': source_pool, 'volume': source_volume,
-                            'mode': source_mode}
+            source_attrs = {'pool': source_pool, 'volume': source_volume}
+            if source_mode:
+                source_attrs.update({"mode": source_mode})
         elif type_name == "network":
             source_protocol = params.get("source_protocol")
             source_name = params.get("source_name")
-            source_host_name = params.get("source_host_name")
-            source_host_port = params.get("source_host_port")
+            source_host_name = params.get("source_host_name").split()
+            source_host_port = params.get("source_host_port").split()
             transport = params.get("transport")
             source_attrs = {'protocol': source_protocol, 'name': source_name}
-            source_host = [{'name': source_host_name, 'port': source_host_port}]
+            source_host = []
+            for host_name, host_port in zip(source_host_name, source_host_port):
+                source_host.append({'name': host_name,
+                                    'port': host_port})
             if transport:
                 source_host[0].update({'transport': transport})
         else:
@@ -1451,17 +1455,29 @@ def create_disk_xml(params):
             logging.debug("The sec xml is %s", sec_xml.xmltreefile)
             source_seclabel.append(sec_xml)
 
-        diskxml.source = diskxml.new_disk_source(attrs=source_attrs,
-                                                 seclabels=source_seclabel,
-                                                 hosts=source_host)
+        source_params = {"attrs": source_attrs, "seclabels": source_seclabel,
+                         "hosts": source_host}
+        src_config_file = params.get("source_config_file")
+        if src_config_file:
+            source_params.update({"config_file": src_config_file})
+            # If we use config file, "hosts" isn't needed
+            if "hosts" in source_params:
+                source_params.pop("hosts")
+        snapshot_name = params.get('source_snap_name')
+        if snapshot_name:
+            source_params.update({"snapshot_name": snapshot_name})
+        diskxml.source = diskxml.new_disk_source(**source_params)
         auth_user = params.get("auth_user")
         secret_type = params.get("secret_type")
+        secret_uuid = params.get("secret_uuid")
         secret_usage = params.get("secret_usage")
         if auth_user:
             auth_attrs['auth_user'] = auth_user
         if secret_type:
             auth_attrs['secret_type'] = secret_type
-        if secret_usage:
+        if secret_uuid:
+            auth_attrs['secret_uuid'] = secret_uuid
+        elif secret_usage:
             auth_attrs['secret_usage'] = secret_usage
         if auth_attrs:
             diskxml.auth = diskxml.new_auth(**auth_attrs)
@@ -1931,8 +1947,11 @@ def set_vm_disk(vm, params, tmp_dir=None, test=None):
     disk_target = params.get("disk_target", 'vda')
     disk_target_bus = params.get("disk_target_bus", "virtio")
     disk_src_protocol = params.get("disk_source_protocol")
+    disk_src_name = params.get("disk_source_name")
     disk_src_host = params.get("disk_source_host", "127.0.0.1")
     disk_src_port = params.get("disk_source_port", "3260")
+    disk_src_config = params.get("disk_source_config")
+    disk_snap_name = params.get("disk_snap_name")
     emu_image = params.get("emulated_image", "emulated-iscsi")
     image_size = params.get("image_size", "10G")
     disk_format = params.get("disk_format", "qcow2")
@@ -1947,6 +1966,10 @@ def set_vm_disk(vm, params, tmp_dir=None, test=None):
     sec_label = params.get('sec_label')
     pool_name = params.get("pool_name", "set-vm-disk-pool")
     disk_src_mode = params.get('disk_src_mode', 'host')
+    auth_user = params.get("auth_user")
+    secret_type = params.get("secret_type")
+    secret_usage = params.get("secret_usage")
+    secret_uuid = params.get("secret_uuid")
     disk_params = {'device_type': disk_device,
                    'disk_snapshot_attr': disk_snapshot_attr,
                    'type_name': disk_type,
@@ -1956,7 +1979,11 @@ def set_vm_disk(vm, params, tmp_dir=None, test=None):
                    'driver_cache': 'none',
                    'sec_model': sec_model,
                    'relabel': relabel,
-                   'sec_label': sec_label}
+                   'sec_label': sec_label,
+                   'auth_user': auth_user,
+                   'secret_type': secret_type,
+                   'secret_uuid': secret_uuid,
+                   'secret_usage': secret_usage}
 
     if not tmp_dir:
         tmp_dir = data_dir.get_tmp_dir()
@@ -2065,6 +2092,20 @@ def set_vm_disk(vm, params, tmp_dir=None, test=None):
 
         src_file_path = "%s/%s" % (mnt_path, dist_img)
         disk_params_src = {'source_file': src_file_path}
+    elif disk_src_protocol == 'rbd':
+        mon_host = params.get("mon_host")
+        if image_convert:
+            disk_cmd = ("qemu-img convert -f %s -O %s %s rbd:%s:mon_host=%s"
+                        % (src_disk_format, disk_format, blk_source,
+                           disk_src_name, mon_host))
+            utils.run(disk_cmd, ignore_status=False)
+        disk_params_src = {'source_protocol': disk_src_protocol,
+                           'source_name': disk_src_name,
+                           'source_host_name': disk_src_host,
+                           'source_host_port': disk_src_port,
+                           'source_config_file': disk_src_config}
+        if disk_snap_name:
+            disk_params_src.update({'source_snap_name': disk_snap_name})
     else:
         # use current source file with update params
         disk_params_src = {'source_file': blk_source}
