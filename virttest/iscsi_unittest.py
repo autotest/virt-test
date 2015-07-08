@@ -13,12 +13,17 @@ from autotest.client.shared.test_utils import mock
 from autotest.client import os_dep
 from autotest.client.shared import utils
 
+ISCSI_CONFIG_FILE = "/etc/iscsi/initiatorname.iscsi"
+
 
 class iscsi_test(unittest.TestCase):
 
     def setup_stubs_init(self):
         os_dep.command.expect_call("iscsiadm")
         os_dep.command.expect_call("tgtadm")
+
+    def setup_stubs_set_initiatorName(self, iscsi_obj):
+        os.path.isfile.expect_call(ISCSI_CONFIG_FILE).and_return(False)
 
     def setup_stubs_login(self, iscsi_obj):
         c_cmd = "dd if=/dev/zero of=/tmp/iscsitest count=1024 bs=1K"
@@ -29,7 +34,8 @@ class iscsi_test(unittest.TestCase):
         os.path.isfile.expect_call(iscsi_obj.emulated_image).and_return(False)
         utils.system.expect_call(c_cmd)
         self.setup_stubs_export_target(iscsi_obj)
-        utils.system.expect_call("service iscsid restart")
+        if "127.0.0.1" in iscsi_obj.portal_ip:
+            self.setup_stubs_set_initiatorName(iscsi_obj)
         self.setup_stubs_portal_visible(iscsi_obj, "127.0.0.1:3260,1 %s"
                                         % iscsi_obj.target)
         lg_msg = "successful"
@@ -179,7 +185,7 @@ class iscsi_test(unittest.TestCase):
         iscsi_emulated.login()
         self.setup_stubs_get_device_name(iscsi_emulated)
         self.assertNotEqual(iscsi_emulated.get_device_name(), "")
-        fname = "/etc/iscsi/initiatorname.iscsi-%s" % iscsi_emulated.id
+        fname = "%s-%s" % (ISCSI_CONFIG_FILE, iscsi_emulated.id)
         self.setup_stubs_cleanup(iscsi_emulated, fname=fname)
         iscsi_emulated.cleanup()
         self.god.check_playback()

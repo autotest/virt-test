@@ -15,6 +15,8 @@ from autotest.client import os_dep
 from autotest.client.shared import utils, error
 from virttest import utils_selinux
 
+ISCSI_CONFIG_FILE = "/etc/iscsi/initiatorname.iscsi"
+
 
 def iscsi_get_sessions():
     """
@@ -198,28 +200,37 @@ class _IscsiComm(object):
         return bool(re.findall("%s$" % self.target,
                                iscsi_discover(self.portal_ip), re.M))
 
+    def set_initiatorName(self, id, name):
+        """
+        back up and set up the InitiatorName
+        """
+        if os.path.isfile("%s" % ISCSI_CONFIG_FILE):
+            logging.debug("Try to update iscsi initiatorname")
+            cmd = "mv %s %s-%s" % (ISCSI_CONFIG_FILE, ISCSI_CONFIG_FILE, id)
+            utils.system(cmd)
+            fd = open(ISCSI_CONFIG_FILE, 'w')
+            fd.write("InitiatorName=%s" % name)
+            fd.close()
+            utils.system("service iscsid restart")
+
     def login(self):
         """
-        Login session for both real iscsi device and emulated iscsi. Include
-        env check and setup.
+        Login session for both real iscsi device and emulated iscsi.
+        Include env check and setup.
         """
         login_flag = False
         if self.portal_visible():
             login_flag = True
         elif self.initiator:
-            logging.debug("Try to update iscsi initiatorname")
-            cmd = "mv /etc/iscsi/initiatorname.iscsi "
-            cmd += "/etc/iscsi/initiatorname.iscsi-%s" % self.id
-            utils.system(cmd)
-            fd = open("/etc/iscsi/initiatorname.iscsi", 'w')
-            fd.write("InitiatorName=%s" % self.initiator)
-            fd.close()
-            utils.system("service iscsid restart")
+            self.set_initiatorName(id=self.id, name=self.initiator)
             if self.portal_visible():
                 login_flag = True
         elif self.emulated_image:
             self.export_target()
-            utils.system("service iscsid restart")
+            # If both iSCSI server and iSCSI client are on localhost.
+            # It's necessary to set up the InitiatorName.
+            if "127.0.0.1" in self.portal_ip:
+                self.set_initiatorName(id=self.id, name=self.target)
             if self.portal_visible():
                 login_flag = True
 
@@ -272,9 +283,8 @@ class _IscsiComm(object):
         """
         self.logout()
         iscsi_node_del(self.target)
-        if os.path.isfile("/etc/iscsi/initiatorname.iscsi-%s" % self.id):
-            cmd = " mv /etc/iscsi/initiatorname.iscsi-%s" % self.id
-            cmd += " /etc/iscsi/initiatorname.iscsi"
+        if os.path.isfile("%s-%s" % (ISCSI_CONFIG_FILE, self.id)):
+            cmd = "mv %s-%s %s" % (ISCSI_CONFIG_FILE, self.id, ISCSI_CONFIG_FILE)
             utils.system(cmd)
             cmd = "service iscsid restart"
             utils.system(cmd)
@@ -701,9 +711,6 @@ class IscsiLIO(_IscsiComm):
 
         # Save configuration
         utils.system("targetcli / saveconfig")
-
-        # Restart iSCSI service
-        utils.system("systemctl restart iscsid.service")
 
     def delete_target(self):
         """
