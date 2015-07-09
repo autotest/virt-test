@@ -48,19 +48,9 @@ def _update_address_cache(env, line):
     Update mac <-> ip releation ship dict when we got a dhcpack packet.
     """
     address_cache = env["address_cache"]
-    # counter to record how may line searched
-    count = address_cache.get("line_count", 0) + 1
-    address_cache["line_count"] = count
-    # Container to save missed dhcpack packet IP
-    ip_pool = address_cache.get("ip_pool", set())
-    address_cache["ip_pool"] = ip_pool
     matches = re.search(r"Your.IP\s+(\S+)", line, re.I)
     if matches:
-        # Counter line num. when match IP
-        address_cache["count_ip"] = count
         ip = matches.group(1)
-        ip_pool.add(ip)
-        address_cache["ip_pool"] = ip_pool
         if ip != address_cache.get("last_seen_ip"):
             address_cache["last_seen_ip"] = ip
         return
@@ -68,8 +58,6 @@ def _update_address_cache(env, line):
     matches = re.search(r"Client.Ethernet.Address\s+(\S+)", line, re.I)
     if matches:
         mac = matches.group(1).lower()
-        # Counter line num. when match MAC
-        address_cache["count_mac"] = count
         if mac != address_cache.get("last_seen_mac"):
             address_cache["last_seen_mac"] = mac
         return
@@ -79,20 +67,12 @@ def _update_address_cache(env, line):
                 address_cache.get('last_seen_ip')):
             mac = address_cache['last_seen_mac']
             ip = address_cache['last_seen_ip']
-            if address_cache.get(mac) == ip:
-                return
-            # Check is match packet is a dhcpack packet
-            if address_cache["count_mac"] - address_cache["count_ip"] == 3:
+            if address_cache.get(mac) != ip:
                 address_cache[mac] = ip
-                ip_pool.discard(ip)
-                address_cache["ip_pool"] = ip_pool
-                del address_cache["line_count"]
-                del address_cache["count_ip"]
-                del address_cache["count_mac"]
-                del address_cache["last_seen_mac"]
-                del address_cache["last_seen_ip"]
-                logging.info("tcpdump updated address_cache" +
-                             "(%s <-> %s)" % (mac, ip))
+                logging.info("Update MAC(%s)<->(%s)IP" % (mac, ip) +
+                             " pair into address_cache")
+            address_cache["last_seen_mac"] = None
+            address_cache["last_seen_ip"] = None
         return
 
     # ipv6 address cache:
