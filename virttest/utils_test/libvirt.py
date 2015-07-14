@@ -822,10 +822,11 @@ class PoolVolumeTest(object):
             if sp.pool_exists(pool_name):
                 pv = libvirt_storage.PoolVolume(pool_name)
                 if pool_type in ["dir", "netfs", "logical", "disk"]:
-                    vols = pv.list_volumes()
-                    for vol in vols:
-                        # Ignore failed deletion here for deleting pool
-                        pv.delete_volume(vol)
+                    if sp.is_pool_active(pool_name):
+                        vols = pv.list_volumes()
+                        for vol in vols:
+                            # Ignore failed deletion here for deleting pool
+                            pv.delete_volume(vol)
                 if not sp.delete_pool(pool_name):
                     raise error.TestFail("Delete pool %s failed" % pool_name)
         finally:
@@ -888,7 +889,7 @@ class PoolVolumeTest(object):
                                                  emulated_image=emulated_image,
                                                  image_size=image_size)
 
-        if pool_type == "dir":
+        if pool_type == "dir" and not persistent:
             pool_target = os.path.join(self.tmpdir, pool_target)
             if not os.path.exists(pool_target):
                 os.mkdir(pool_target)
