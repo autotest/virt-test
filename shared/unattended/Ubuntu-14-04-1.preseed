@@ -64,4 +64,5 @@ echo "GRUB_RECORDFAIL_TIMEOUT=0" >> /target/etc/default/grub; \
 echo "#!/bin/sh -e" > /target/etc/rc.local; \
 echo "/usr/sbin/update-grub" >> /target/etc/rc.local; \
 echo "exit 0" >> /target/etc/rc.local; \
-sed -i "s/ alias/ #alias/g" /target/root/.bashrc
+sed -i "s/ alias/ #alias/g" /target/root/.bashrc; \
+sed -i "s/^PermitRootLogin without-password/PermitRootLogin yes/g" /target/etc/ssh/sshd_config
