@@ -166,6 +166,7 @@ class _IscsiComm(object):
             self.initiator = None
             emulated_image = params.get("emulated_image")
             self.emulated_image = os.path.join(root_dir, emulated_image)
+            self.device = "device.%s" % os.path.basename(self.emulated_image)
             self.emulated_id = ""
             self.emulated_size = params.get("image_size")
             self.unit = self.emulated_size[-1].upper()
@@ -182,6 +183,8 @@ class _IscsiComm(object):
                 self.emulated_expect_size = block_size * size
                 self.create_cmd = ("dd if=/dev/zero of=%s count=%s bs=%sK"
                                    % (self.emulated_image, size, block_size))
+        else:
+            self.device = None
 
     def logged_in(self):
         """
@@ -501,7 +504,6 @@ class IscsiLIO(_IscsiComm):
         :param params: parameters dict for LIO backend of iSCSI
         """
         super(IscsiLIO, self).__init__(params, root_dir)
-        self.device = "device.%s" % os.path.basename(self.emulated_image)
 
     def get_target_id(self):
         """
