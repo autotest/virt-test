@@ -646,8 +646,9 @@ class VirtTestApp(object):
 
     def _process_qemu_sandbox(self):
         if not self.options.vt_config:
-            if self.options.vt_qemu_sandbox == "off":
-                self.cartesian_parser.assign("qemu_sandbox", "off")
+            if self.options.vt_qemu_sandbox:
+                self.cartesian_parser.assign("qemu_sandbox",
+                                             self.options.vt_qemu_sandbox)
         else:
             logging.info(
                 "Config provided, ignoring \"--sandbox <on|off>\" option")
