@@ -992,7 +992,7 @@ class VM(virt_vm.BaseVM):
             if devices.has_option("rtc"):
                 cmd = " -rtc base=%s" % params.get("rtc_base", "utc")
                 cmd += _add_option("clock", params.get("rtc_clock", "host"))
-                cmd += _add_option("driftfix", params.get("rtc_drift", "none"))
+                cmd += _add_option("driftfix", params.get("rtc_drift", None))
                 return cmd
             elif devices.has_option("rtc-td-hack"):
                 return " -rtc-td-hack"
