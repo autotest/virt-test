@@ -2393,6 +2393,13 @@ class VM(virt_vm.BaseVM):
             if not _is_ga_running():
                 cmd = "service qemu-guest-agent start"
                 status, output = session.cmd_status_output(cmd)
+                # Sometimes the binary of the guest agent was corrupted on the
+                # filesystem due to the guest being destroyed and cause service
+                # masked, so need to reinstall agent to fix it
+                if status and "is masked" in output:
+                    self.remove_package('qemu-guest-agent')
+                    self.install_package('qemu-guest-agent')
+                    status, output = session.cmd_status_output(cmd)
                 if status and "unrecognized service" in output:
                     cmd = "service qemu-ga start"
                     status, output = session.cmd_status_output(cmd)
