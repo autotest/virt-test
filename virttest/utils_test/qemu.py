@@ -389,7 +389,7 @@ class MultihostMigration(object):
         else:
             self.clone_master = False
 
-        self.mig_protocol = params.get("mig_protocol", "tcp")
+        self.mig_protocol = params.get("mig_protocol")
         self.mig_timeout = int(params.get("mig_timeout"))
         # Port used to communicate info between source and destination
         self.regain_ip_cmd = params.get("regain_ip_cmd", None)
@@ -430,8 +430,8 @@ class MultihostMigration(object):
         def mig_wrapper(vm, cancel_delay, dsthost, vm_ports,
                         not_wait_for_migration, mig_offline, mig_data):
             vm.migrate(protocol=self.mig_protocol, cancel_delay=cancel_delay,
-                       offline=mig_offline,
-                       dest_host=dsthost, remote_port=vm_ports[vm.name],
+                       offline=mig_offline, dest_host=dsthost,
+                       remote_port=vm_ports[vm.name],
                        not_wait_for_migration=not_wait_for_migration)
 
             self.post_migration(vm, cancel_delay, mig_offline, dsthost,
@@ -665,7 +665,7 @@ class MultihostMigration(object):
         pass
 
     def migrate(self, vms_name, srchost, dsthost, start_work=None,
-                check_work=None, mig_mode="tcp", params_append=None):
+                check_work=None, params_append=None):
         """
         Migrate machine from srchost to dsthost. It executes start_work on
         source machine before migration and executes check_work on dsthost
@@ -695,7 +695,6 @@ class MultihostMigration(object):
         :param dsthost: dst host id.
         :param start_work: Function started before migration.
         :param check_work: Function started after migration.
-        :param mig_mode: Migration mode.
         :param params_append: Append params to self.params only for migration.
         """
         def migrate_wrap(vms_name, srchost, dsthost, start_work=None,
@@ -715,7 +714,7 @@ class MultihostMigration(object):
                         self.prepare_for_migration(mig_data, None)
                     elif self.hostid == dsthost:
                         if host_offline_migration != "yes":
-                            self.prepare_for_migration(mig_data, mig_mode)
+                            self.prepare_for_migration(mig_data, self.mig_protocol)
                     else:
                         return
 
@@ -748,7 +747,7 @@ class MultihostMigration(object):
                                                 'wait_for_offline_mig',
                                                 self.finish_timeout)
                             if mig_data.is_dst():
-                                self.prepare_for_migration(mig_data, mig_mode)
+                                self.prepare_for_migration(mig_data, self.mig_protocol)
                             self._hosts_barrier(self.hosts,
                                                 mig_data.mig_id,
                                                 'wait2_for_offline_mig',
@@ -803,7 +802,7 @@ class MultihostMigration(object):
         return mig_thread
 
     def migrate_wait(self, vms_name, srchost, dsthost, start_work=None,
-                     check_work=None, mig_mode="tcp", params_append=None):
+                     check_work=None, params_append=None):
         """
         Migrate machine from srchost to dsthost and wait for finish.
         It executes start_work on source machine before migration and executes
@@ -817,7 +816,7 @@ class MultihostMigration(object):
                            done of migration.
         """
         self.migrate(vms_name, srchost, dsthost, start_work, check_work,
-                     mig_mode, params_append).join()
+                     params_append).join()
 
     def cleanup(self):
         """
@@ -862,7 +861,7 @@ class MultihostMigrationFd(MultihostMigration):
             vm.migrate(cancel_delay=cancel_delay, offline=mig_offline,
                        dest_host=dsthost,
                        not_wait_for_migration=not_wait_for_migration,
-                       protocol="fd",
+                       protocol=self.mig_protocol,
                        fd_src=fd)
 
             self.post_migration(vm, cancel_delay, mig_offline, dsthost,
@@ -936,7 +935,7 @@ class MultihostMigrationFd(MultihostMigration):
         return sock
 
     def migrate_wait(self, vms_name, srchost, dsthost, start_work=None,
-                     check_work=None, mig_mode="fd", params_append=None):
+                     check_work=None, params_append=None):
         vms_count = len(vms_name)
         mig_ports = []
 
@@ -968,7 +967,7 @@ class MultihostMigrationFd(MultihostMigration):
 
                 super_cls = super(MultihostMigrationFd, self)
                 super_cls.migrate_wait(vms_name, srchost, dsthost,
-                                       start_work=start_work, mig_mode="fd",
+                                       start_work=start_work,
                                        params_append=fds)
             finally:
                 for s in sockets:
@@ -995,7 +994,7 @@ class MultihostMigrationFd(MultihostMigration):
 
                 super_cls = super(MultihostMigrationFd, self)
                 super_cls.migrate_wait(vms_name, srchost, dsthost,
-                                       start_work=start_work, mig_mode="fd",
+                                       start_work=start_work,
                                        params_append=fds)
                 for conn in conns:
                     conn.close()
@@ -1036,7 +1035,7 @@ class MultihostMigrationExec(MultihostMigration):
                        offline=mig_offline,
                        dest_host=dsthost,
                        not_wait_for_migration=not_wait_for_migration,
-                       protocol="exec",
+                       protocol=self.mig_protocol,
                        migration_exec_cmd_src=mig_exec_cmd)
 
             self.post_migration(vm, cancel_delay, mig_offline,
@@ -1083,7 +1082,7 @@ class MultihostMigrationExec(MultihostMigration):
                                 'prepare_VMS', 120)
 
     def migrate_wait(self, vms_name, srchost, dsthost, start_work=None,
-                     check_work=None, mig_mode="exec", params_append=None):
+                     check_work=None, params_append=None):
         vms_count = len(vms_name)
         mig_ports = []
 
@@ -1150,8 +1149,61 @@ class MultihostMigrationExec(MultihostMigration):
 
         super_cls = super(MultihostMigrationExec, self)
         super_cls.migrate_wait(vms_name, srchost, dsthost,
-                               start_work=start_work, mig_mode=mig_mode,
+                               start_work=start_work,
                                params_append=mig_params)
+
+
+class MultihostMigrationRdma(MultihostMigration):
+
+    def __init__(self, test, params, env, preprocess_env=True):
+        super(MultihostMigrationRdma, self).__init__(test, params, env,
+                                                     preprocess_env)
+
+    def migrate_vms_src(self, mig_data):
+        """
+        Migrate vms source.
+
+        :param mig_Data: Data for migration.
+
+        For change way how machine migrates is necessary
+        re implement this method.
+        """
+        def mig_wrapper(vm, cancel_delay, dsthost, vm_ports,
+                        not_wait_for_migration, mig_offline, mig_data):
+            vm.migrate(cancel_delay=cancel_delay, offline=mig_offline,
+                       dest_host=dsthost, remote_port=vm_ports[vm.name],
+                       not_wait_for_migration=not_wait_for_migration,
+                       protocol=self.mig_protocol)
+
+            self.post_migration(vm, cancel_delay, mig_offline, dsthost,
+                                vm_ports, not_wait_for_migration, None,
+                                mig_data)
+
+        logging.info("Start migrating now...")
+        # Use of RDMA during migration requires pinning and registering memory
+        # with the hardware.
+        enable_rdma_pin_all = mig_data.params.get("enable_rdma_pin_all",
+                                                  "migrate_set_capability rdma-pin-all on")
+        cancel_delay = mig_data.params.get("cancel_delay")
+        if cancel_delay is not None:
+            cancel_delay = int(cancel_delay)
+        not_wait_for_migration = mig_data.params.get("not_wait_for_migration")
+        if not_wait_for_migration == "yes":
+            not_wait_for_migration = True
+        mig_offline = mig_data.params.get("mig_offline")
+        if mig_offline == "yes":
+            mig_offline = True
+        else:
+            mig_offline = False
+
+        multi_mig = []
+        for vm in mig_data.vms:
+            vm.monitor.human_monitor_cmd(enable_rdma_pin_all)
+            multi_mig.append((mig_wrapper, (vm, cancel_delay, mig_data.dst,
+                                            mig_data.vm_ports,
+                                            not_wait_for_migration,
+                                            mig_offline, mig_data)))
+        utils_misc.parallel(multi_mig)
 
 
 class GuestSuspend(object):
