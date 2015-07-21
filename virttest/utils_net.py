@@ -43,6 +43,7 @@ class TAPModuleError(NetError):
     def __init__(self, devname, action="open", details=None):
         NetError.__init__(self, devname)
         self.devname = devname
+        self.action = action
         self.details = details
 
     def __str__(self):
