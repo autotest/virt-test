@@ -578,6 +578,8 @@ def preprocess(test, params, env):
     base_dir = data_dir.get_data_dir()
     if params.get("storage_type") == "iscsi":
         iscsidev = qemu_storage.Iscsidev(params, base_dir, "iscsi")
+        image_name_origin = params["image_name"]
+        params["image_name_origin"] = image_name_origin
         params["image_name"] = iscsidev.setup()
         params["image_raw_device"] = "yes"
 
