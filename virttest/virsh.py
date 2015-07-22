@@ -3953,7 +3953,7 @@ def blkdeviotune(name, device=None, options=None,
     """
     cmd = "blkdeviotune %s" % name
     if options:
-        cmd += " --%s" % options
+        cmd += " %s" % options
     if device:
         cmd += " --device %s" % device
     if total_bytes_sec:
