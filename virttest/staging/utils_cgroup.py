@@ -17,7 +17,7 @@ import commands
 from tempfile import mkdtemp
 from autotest.client import utils
 from autotest.client.shared import error
-
+from virttest import utils_misc
 import service
 
 
@@ -697,6 +697,16 @@ class CgconfigService(object):
     """
 
     def __init__(self):
+        # libcgroup lack libcgroup-tools dependency will introduces
+        # following error,
+        #     Failed to issue method call:
+        #     Unit cgconfig.service failed to load:
+        #     No such file or directory
+        #
+        # Please refer to
+        # https://bugzilla.redhat.com/show_bug.cgi?format=multiple&id=882887
+        if not utils_misc.yum_install(['libcgroup-tools']):
+            error.TestError("Failed to install libcgroup-tools on host")
         self._service_manager = service.Factory.create_service("cgconfig")
 
     def _service_cgconfig_control(self, action):
