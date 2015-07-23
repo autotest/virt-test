@@ -729,13 +729,11 @@ def mk_part(disk, size="100M", session=None):
     """
     Create a partition for disk
     """
-    mklabel_cmd = "parted -s %s mklabel msdos" % disk
-    mkpart_cmd = "parted -s %s mkpart primary ext4 0 %s" % (disk, size)
+    mkpart_cmd = ("parted -s -a optimal %s mklabel msdos -- "
+                  "mkpart primary ext4 0 %s" % (disk, size))
     if session:
-        session.cmd(mklabel_cmd)
         session.cmd(mkpart_cmd)
     else:
-        utils.run(mklabel_cmd)
         utils.run(mkpart_cmd)
 
 
@@ -1487,6 +1485,7 @@ def create_disk_xml(params):
         driver_type = params.get("driver_type", "")
         driver_cache = params.get("driver_cache", "")
         driver_discard = params.get("driver_discard", "")
+        driver_iothread = params.get("driver_iothread", "")
         if driver_name:
             driver_attrs['name'] = driver_name
         if driver_type:
@@ -1495,6 +1494,8 @@ def create_disk_xml(params):
             driver_attrs['cache'] = driver_cache
         if driver_discard:
             driver_attrs['discard'] = driver_discard
+        if driver_iothread:
+            driver_attrs['iothread'] = driver_iothread
         if driver_attrs:
             diskxml.driver = driver_attrs
         diskxml.readonly = "yes" == params.get("readonly", "no")
@@ -2126,6 +2127,11 @@ def set_vm_disk(vm, params, tmp_dir=None, test=None):
     new_disk.xml = disk_xml
     # Add new disk xml and redefine vm
     vmxml.add_device(new_disk)
+
+    # Set domain options
+    dom_iothreads = params.get("dom_iothreads")
+    if dom_iothreads:
+        vmxml.iothreads = int(dom_iothreads)
     logging.debug("The vm xml now is: %s" % vmxml.xmltreefile)
     vmxml.sync()
     vm.start()
