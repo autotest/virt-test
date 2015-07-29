@@ -1250,7 +1250,7 @@ class VMXML(VMXMLBase):
         dev.managed = managed
         if boot_order:
             dev.boot_order = boot_order
-        if hostdev_type=='usb':
+        if hostdev_type == 'usb':
             dev.source_address = dev.new_sourceusb_address(**source_address)
         else:
             dev.source_address = dev.new_source_address(**source_address)
