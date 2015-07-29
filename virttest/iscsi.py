@@ -11,10 +11,10 @@ iscsi in localhost then access it.
 import re
 import os
 import logging
-import ipaddr
 from autotest.client import os_dep
 from autotest.client.shared import utils, error
 from virttest import utils_selinux
+from virttest import utils_net
 
 ISCSI_CONFIG_FILE = "/etc/iscsi/initiatorname.iscsi"
 
@@ -667,7 +667,7 @@ class IscsiLIO(_IscsiComm):
                 if "Created network portal" not in output:
                     raise error.TestFail("Failed to create portal. (%s)",
                                          output)
-            if (6 == ipaddr.IPAddress(self.portal_ip).version and
+            if ("ipv6" == utils_net.IPAddress(self.portal_ip).version and
                     self.portal_ip not in portal_info):
                 # Ipv6 portal address can't be created by default,
                 # create ipv6 portal if needed.
