@@ -3048,6 +3048,21 @@ def get_host_iface():
     return [_.strip() for _ in re.findall("(.*):", host_iface_info)]
 
 
+def get_host_default_gateway():
+    """
+    Get the Default Gateway in host.
+    :return: a string of the host's default gateway.
+    :rtype: string
+    """
+    cmd = "ip route | awk '/default/ { print $3 }'"
+    try:
+        output = utils.system_output(cmd)
+    except:
+        raise error.TestError("Failed to get the host's default GateWay.")
+
+    return output
+
+
 def check_listening_port_by_service(service, port, listen_addr='0.0.0.0',
                                     runner=None):
     """
