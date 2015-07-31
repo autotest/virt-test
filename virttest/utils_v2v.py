@@ -6,9 +6,11 @@ Virt-v2v test utility functions.
 
 import os
 import re
+import time
 import logging
 
 import ovirt
+import aexpect
 from autotest.client import os_dep, utils
 from autotest.client.shared import ssh_key
 
@@ -20,26 +22,6 @@ try:
     V2V_EXEC = os_dep.command('virt-v2v')
 except ValueError:
     V2V_EXEC = None
-
-
-def build_esx_no_verify(params):
-    """
-    Build esx no verify relationship.
-    """
-    netrc = params.get('netrc')
-    path = os.path.join(os.getenv("HOME"), '.netrc')
-
-    fp = open(path, 'a+')
-
-    if netrc not in fp.read():
-        fp.write(netrc + '\n')
-
-    fp.close()
-
-    # The .netrc file must have a permission mask of 0600
-    # to be read correctly by virt-v2v
-    if oct(os.stat(path).st_mode & 0777) != '0600':
-        os.chmod(path, 0600)
 
 
 class Uri(object):
@@ -54,7 +36,7 @@ class Uri(object):
             hypervisor = "kvm"
         self.hyper = hypervisor
 
-    def get_uri(self, hostname):
+    def get_uri(self, hostname, vpx_dc=None, esx_ip=None):
         """
         Uri dispatcher.
 
@@ -62,13 +44,15 @@ class Uri(object):
         """
         uri_func = getattr(self, "_get_%s_uri" % self.hyper)
         self.host = hostname
+        self.vpx_dc = vpx_dc
+        self.esx_ip = esx_ip
         return uri_func()
 
     def _get_kvm_uri(self):
         """
         Return kvm uri.
         """
-        uri = "qemu+ssh://" + self.host + "/system"
+        uri = "qemu:///system"
         return uri
 
     def _get_xen_uri(self):
@@ -82,7 +66,9 @@ class Uri(object):
         """
         Return esx uri.
         """
-        uri = "esx://" + self.host + "/?no_verify=1"
+        uri = "vpx://root@%s/%s/%s/?no_verify=1" % (self.host,
+                                                    self.vpx_dc,
+                                                    self.esx_ip)
         return uri
 
     # add new hypervisor in here.
@@ -107,10 +93,25 @@ class Target(object):
         """
         opts_func = getattr(self, "_get_%s_options" % self.tgt)
         self.params = params
+        self.input = self.params.get('input')
+        self.files = self.params.get('files')
+        self.vm_name = self.params.get('main_vm')
+        self.bridge = self.params.get('bridge')
+        self.network = self.params.get('network')
+        self.storage = self.params.get('storage')
+        self.format = self.params.get('output_format', 'raw')
+        self.net_vm_opts = ""
+
+        if self.bridge:
+            self.net_vm_opts += " -b %s" % self.bridge
+
+        if self.network:
+            self.net_vm_opts += " -n %s" % self.network
+
+        self.net_vm_opts += " %s" % self.vm_name
+
         options = opts_func()
 
-        self.input = params.get('input')
-        self.files = params.get('files')
         if self.files is not None:
             # add files as its sequence
             file_list = self.files.split().reverse()
@@ -124,12 +125,10 @@ class Target(object):
         """
         Return command options.
         """
-        options = " -ic %s -os %s" % (self.uri, self.params.get('storage'))
-        if self.params.get('bridge'):
-            options += " -b %s" % self.params.get('bridge')
-        else:
-            options += " -n %s" % self.params.get('network')
-        options += " %s" % self.params.get('vms')
+        options = " -ic %s -os %s -of %s" % (self.uri,
+                                             self.storage,
+                                             self.format)
+        options = options + self.net_vm_opts
 
         return options
 
@@ -137,12 +136,8 @@ class Target(object):
         """
         Return command options.
         """
-        options = " -os %s" % self.params.get('storage')
-        if self.params.get('bridge'):
-            options += " -b %s" % self.params.get('bridge')
-        else:
-            options += " -n %s" % self.params.get('network')
-        options += " %s" % self.params.get('vms')
+        options = " -os %s" % self.storage
+        options = options + self.net_vm_opts
 
         return options
 
@@ -150,30 +145,45 @@ class Target(object):
         """
         Return command options.
         """
-        options = " -ic %s -o rhev -os %s -n %s %s " % (self.uri,
-                                                        self.params.get('storage'), self.params.get('network'),
-                                                        self.params.get('vms'))
+        options = " -ic %s -o rhev -os %s -of %s" % (self.uri,
+                                                     self.storage,
+                                                     self.format)
+        options = options + self.net_vm_opts
 
         return options
 
     # add new target in here.
 
 
-class LinuxVMCheck(object):
+class VMCheck(object):
 
     """
-    This class handles all basic linux VM check operations.
+    This is VM check class dispatcher.
     """
-    # Timeout definition for session login.
-    LOGIN_TIMEOUT = 480
+
+    def __new__(cls, test, params, env):
+        # 'linux' is default os type
+        os_type = params.get('os_type', 'linux')
+
+        if cls is VMCheck:
+            class_name = eval(os_type.capitalize() + str(cls.__name__))
+            return super(VMCheck, cls).__new__(class_name)
+        else:
+            return super(VMCheck, cls).__new__(cls, test, params, env)
 
     def __init__(self, test, params, env):
         self.vm = None
         self.test = test
         self.env = env
         self.params = params
-        self.name = params.get('vms')
+        self.name = params.get('main_vm')
         self.target = params.get('target')
+        self.username = params.get('vm_user', 'root')
+        self.password = params.get('vm_pwd')
+        self.timeout = params.get('timeout', 480)
+        self.nic_index = params.get('nic_index', 0)
+        self.export_name = params.get('export_name')
+        self.delete_vm = 'yes' == params.get('vm_cleanup', 'yes')
 
         if self.name is None:
             logging.error("vm name not exist")
@@ -194,41 +204,69 @@ class LinuxVMCheck(object):
         else:
             self.vm.start()
 
-    def get_vm_kernel(self, session=None, nic_index=0, timeout=LOGIN_TIMEOUT):
+        logging.debug("Succeed to start '%s'", self.name)
+        self.session = self.vm.wait_for_login(nic_index=self.nic_index,
+                                              timeout=self.timeout,
+                                              username=self.username,
+                                              password=self.password)
+
+    def vm_cleanup(self):
+        """
+        Cleanup VM including remove all storage files about guest
+        """
+        if self.vm.is_alive():
+            self.vm.destroy()
+            time.sleep(5)
+        self.vm.delete()
+        if self.target == "ovirt":
+            self.vm.delete_from_export_domain(self.export_name)
+
+    def __del__(self):
+        """
+        Cleanup test environment
+        """
+        if self.delete_vm:
+            self.vm_cleanup()
+
+        if self.session:
+            self.session.close()
+
+
+class LinuxVMCheck(VMCheck):
+
+    """
+    This class handles all basic linux VM check operations.
+    """
+
+    def get_vm_kernel(self):
         """
         Get vm kernel info.
         """
         cmd = "uname -r"
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            kernel_version = session.cmd(cmd)
-            session.close()
-        else:
-            kernel_version = session.cmd(cmd)
+        kernel_version = self.session.cmd(cmd)
         logging.debug("The kernel of VM '%s' is: %s" %
                       (self.vm.name, kernel_version))
         return kernel_version
 
-    def get_vm_os_info(self, session=None, nic_index=0, timeout=LOGIN_TIMEOUT):
+    def get_vm_os_info(self):
         """
         Get vm os info.
         """
-        cmd = "cat /etc/issue"
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            output = session.cmd(cmd).split('\n', 1)[0]
-            session.close()
-        else:
-            output = session.cmd(cmd).split('\n', 1)[0]
+        cmd = "cat /etc/os-release"
+        try:
+            output = self.session.cmd(cmd)
+            output = output.split('\n')[5].split('=')[1]
+        except aexpect.ShellError, e:
+            cmd = "cat /etc/issue"
+            output = self.session.cmd(cmd).split('\n', 1)[0]
         logging.debug("The os info is: %s" % output)
         return output
 
-    def get_vm_os_vendor(self, session=None, nic_index=0,
-                         timeout=LOGIN_TIMEOUT):
+    def get_vm_os_vendor(self):
         """
         Get vm os vendor.
         """
-        os_info = self.get_vm_os_info(session, nic_index, timeout)
+        os_info = self.get_vm_os_info()
         if re.search('Red Hat', os_info):
             vendor = 'Red Hat'
         elif re.search('Fedora', os_info):
@@ -245,164 +283,126 @@ class LinuxVMCheck(object):
                       (self.vm.name, vendor))
         return vendor
 
-    def get_vm_parted(self, session=None, nic_index=0, timeout=LOGIN_TIMEOUT):
+    def get_vm_parted(self):
         """
         Get vm parted info.
         """
         cmd = "parted -l"
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            parted_output = session.cmd(cmd)
-            session.close()
-        else:
-            parted_output = session.cmd(cmd)
+        parted_output = self.session.cmd(cmd)
         logging.debug("The parted output is:\n %s" % parted_output)
         return parted_output
 
-    def get_vm_modprobe_conf(self, session=None, nic_index=0,
-                             timeout=LOGIN_TIMEOUT):
+    def get_vm_modprobe_conf(self):
         """
         Get /etc/modprobe.conf info.
         """
         cmd = "cat /etc/modprobe.conf"
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            modprobe_output = session.cmd(cmd, ok_status=[0, 1])
-            session.close()
-        else:
-            modprobe_output = session.cmd(cmd, ok_status=[0, 1])
+        modprobe_output = self.session.cmd(cmd, ok_status=[0, 1])
         logging.debug("modprobe conf is:\n %s" % modprobe_output)
         return modprobe_output
 
-    def get_vm_modules(self, session=None, nic_index=0, timeout=LOGIN_TIMEOUT):
+    def get_vm_modules(self):
         """
         Get vm modules list.
         """
         cmd = "lsmod"
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            modules = session.cmd(cmd)
-            session.close()
-        else:
-            modules = session.cmd(cmd)
+        modules = self.session.cmd(cmd)
         logging.debug("VM modules list is:\n %s" % modules)
         return modules
 
-    def get_vm_pci_list(self, session=None, nic_index=0, timeout=LOGIN_TIMEOUT):
+    def get_vm_pci_list(self):
         """
         Get vm pci list.
         """
         cmd = "lspci"
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            lspci_output = session.cmd(cmd)
-            session.close()
-        else:
-            lspci_output = session.cmd(cmd)
+        lspci_output = self.session.cmd(cmd)
         logging.debug("VM pci devices list is:\n %s" % lspci_output)
         return lspci_output
 
-    def get_vm_rc_local(self, session=None, nic_index=0, timeout=LOGIN_TIMEOUT):
+    def get_vm_rc_local(self):
         """
         Get vm /etc/rc.local output.
         """
         cmd = "cat /etc/rc.local"
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            rc_output = session.cmd(cmd, ok_status=[0, 1])
-            session.close()
-        else:
-            rc_output = session.cmd(cmd, ok_status=[0, 1])
+        rc_output = self.session.cmd(cmd, ok_status=[0, 1])
         return rc_output
 
-    def has_vmware_tools(self, session=None, nic_index=0,
-                         timeout=LOGIN_TIMEOUT):
+    def has_vmware_tools(self):
         """
         Check vmware tools.
         """
         rpm_cmd = "rpm -q VMwareTools"
         ls_cmd = "ls /usr/bin/vmware-uninstall-tools.pl"
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            rpm_cmd_status = session.cmd_status(rpm_cmd)
-            ls_cmd_status = session.cmd_status(ls_cmd)
-            session.close()
-        else:
-            rpm_cmd_status = session.cmd_status(rpm_cmd)
-            ls_cmd_status = session.cmd_status(ls_cmd)
+        rpm_cmd_status = self.session.cmd_status(rpm_cmd)
+        ls_cmd_status = self.session.cmd_status(ls_cmd)
 
         if (rpm_cmd_status == 0 or ls_cmd_status == 0):
             return True
         else:
             return False
 
-    def get_vm_tty(self, session=None, nic_index=0, timeout=LOGIN_TIMEOUT):
+    def get_vm_tty(self):
         """
         Get vm tty config.
         """
         confs = ('/etc/securetty', '/etc/inittab', '/boot/grub/grub.conf',
                  '/etc/default/grub')
         tty = ''
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            for conf in confs:
-                cmd = "cat " + conf
-                tty += session.cmd(cmd, ok_status=[0, 1])
-            session.close()
-        else:
-            for conf in confs:
-                cmd = "cat " + conf
-                tty += session.cmd(cmd, ok_status=[0, 1])
+        for conf in confs:
+            cmd = "cat " + conf
+            tty += self.session.cmd(cmd, ok_status=[0, 1])
         return tty
 
-    def get_vm_video(self, session=None, nic_index=0, timeout=LOGIN_TIMEOUT):
+    def get_vm_video(self):
         """
         Get vm video config.
         """
-        cmd = "cat /etc/X11/xorg.conf /etc/X11/XF86Config"
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            xorg_output = session.cmd(cmd, ok_status=[0, 1])
-            session.close()
-        else:
-            xorg_output = session.cmd(cmd, ok_status=[0, 1])
+        cmd = "cat /etc/X11/xorg.conf /var/log/Xorg.0.log"
+        xorg_output = self.session.cmd(cmd, ok_status=[0, 1])
         return xorg_output
 
-    def is_net_virtio(self, session=None, nic_index=0, timeout=LOGIN_TIMEOUT):
+    def is_net_virtio(self):
         """
         Check whether vm's interface is virtio
         """
-        cmd = "ls -l /sys/class/net/eth%s/device" % nic_index
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            driver_output = session.cmd(cmd, ok_status=[0, 1])
-            session.close()
-        else:
-            driver_output = session.cmd(cmd, ok_status=[0, 1])
+        cmd = "ls -l /sys/class/net/eth%s/device" % self.nic_index
+        driver_output = self.session.cmd(cmd, ok_status=[0, 1])
 
         if re.search("virtio", driver_output.split('/')[-1]):
             return True
         return False
 
-    def is_disk_virtio(self, session=None, disk="/dev/vda",
-                       nic_index=0, timeout=LOGIN_TIMEOUT):
+    def is_disk_virtio(self, disk="/dev/vda"):
         """
         Check whether disk is virtio.
         """
         cmd = "fdisk -l %s" % disk
-        if not session:
-            session = self.vm.wait_for_login(nic_index, timeout)
-            disk_output = session.cmd(cmd, ok_status=[0, 1])
-            session.close()
-        else:
-            disk_output = session.cmd(cmd, ok_status=[0, 1])
+        disk_output = self.session.cmd(cmd, ok_status=[0, 1])
 
         if re.search(disk, disk_output):
             return True
         return False
 
+    def get_grub_device(self, dev_map="/boot/grub2/device.map"):
+        """
+        Check whether vd[a-z] device is in device map.
+        """
+        cmd = "grep -E '(sda|hda)' %s" % dev_map
+        dev_output = self.session.cmd(cmd, ok_status=[0, 1])
+        if dev_output:
+            logging.info(dev_output)
+            return False
 
-class WindowsVMCheck(object):
+        cmd = "grep -E 'vd[a-z]' %s" % dev_map
+        dev_output = self.session.cmd(cmd, ok_status=[0, 1])
+        if not dev_output:
+            logging.info(dev_output)
+            return False
+
+        return True
+
+
+class WindowsVMCheck(VMCheck):
 
     """
     This class handles all basic windows VM check operations.
@@ -424,26 +424,20 @@ def v2v_cmd(params):
     target = params.get('target')
     hypervisor = params.get('hypervisor')
     hostname = params.get('hostname')
-    username = params.get('username')
-    password = params.get('password')
+    vpx_dc = params.get('vpx_dc')
+    esx_ip = params.get('esx_ip')
+    opts_extra = params.get('v2v_opts')
 
     uri_obj = Uri(hypervisor)
     # Return actual 'uri' according to 'hostname' and 'hypervisor'
-    uri = uri_obj.get_uri(hostname)
+    uri = uri_obj.get_uri(hostname, vpx_dc, esx_ip)
 
     tgt_obj = Target(target, uri)
     # Return virt-v2v command line options based on 'target' and 'hypervisor'
     options = tgt_obj.get_cmd_options(params)
 
-    # Convert a existing VM without or with connection authorization.
-    if hypervisor == 'esx':
-        build_esx_no_verify(params)
-    elif hypervisor == 'xen' or hypervisor == 'kvm':
-        # Setup ssh key for build connection without password.
-        ssh_key.setup_ssh_key(hostname, user=username, port=22,
-                              password=password)
-    else:
-        pass
+    if opts_extra:
+        options = options + ' ' + opts_extra
 
     # Construct a final virt-v2v command
     cmd = '%s %s' % (V2V_EXEC, options)
