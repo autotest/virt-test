@@ -453,7 +453,7 @@ class VirshPersistent(Virsh):
             # try nicely first
             session.close()
             if session.is_alive():
-                # Be mean, incase it's hung
+                # Be mean, in case it's hung
                 session.close(sig=signal.SIGTERM)
             del self.__class__.COUNTERS[session_id]
             return True
@@ -1291,7 +1291,7 @@ def destroy(name, options="", **dargs):
 
 def define(xml_path, **dargs):
     """
-    Return True on successful domain define.
+    Return cmd result of domain define.
 
     :param xml_path: XML file path
     :param dargs: standardized virsh function API keywords
@@ -1483,7 +1483,7 @@ def detach_device(domainarg=None, filearg=None,
                   domain_opt=None, file_opt=None,
                   flagstr=None, **dargs):
     """
-    Attach a device using full parameter/argument set.
+    Detach a device using full parameter/argument set.
 
     :param domainarg: Domain name (first pos. parameter)
     :param filearg: File name (second pos. parameter)
@@ -1955,7 +1955,7 @@ def pool_refresh(name, **dargs):
 
 def pool_delete(name, **dargs):
     """
-    Destroy the resources used by a given pool object
+    Delete the resources used by a given pool object
 
     :param name: Name of the pool
     :param dargs: standardized virsh function API keywords
@@ -2162,7 +2162,7 @@ def pool_dumpxml(name, extra="", to_file="", **dargs):
 
 def pool_define(xml_path, **dargs):
     """
-    Return True on successful pool define.
+    To create the pool from xml file.
 
     :param xml_path: XML file path
     :param dargs: standardized virsh function API keywords
@@ -3452,7 +3452,7 @@ def secret_list(options="", **dargs):
 
 def secret_define(xml_file, options=None, **dargs):
     """
-    Return True on successful secret define.
+    Return cmd result of secret define.
 
     :param xml_file: secret XML file
     :param dargs: standardized virsh function API keywords
@@ -3668,7 +3668,7 @@ def nwfilter_dumpxml(name, options="", to_file=None, **dargs):
 
 def nwfilter_define(xml_file, options="", **dargs):
     """
-    Return True on successful network filter define.
+    Return cmd result of network filter define.
 
     :param xml_file: network filter XML file
     :param options: extra options to nwfilter-define cmd.
