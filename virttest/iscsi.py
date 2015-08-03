@@ -14,6 +14,7 @@ import logging
 from autotest.client import os_dep
 from autotest.client.shared import utils, error
 from virttest import utils_selinux
+from virttest import utils_net
 
 ISCSI_CONFIG_FILE = "/etc/iscsi/initiatorname.iscsi"
 
@@ -655,12 +656,23 @@ class IscsiLIO(_IscsiComm):
                                      self.target, output)
 
             check_portal = "targetcli /iscsi/%s/tpg1/portals ls" % self.target
-            if "0.0.0.0:3260" not in utils.system_output(check_portal):
+            portal_info = utils.system_output(check_portal)
+            if "0.0.0.0:3260" not in portal_info:
                 # Create portal
                 # 0.0.0.0 means binding to INADDR_ANY
                 # and using default IP port 3260
                 portal_cmd = ("targetcli /iscsi/%s/tpg1/portals/ create %s"
                               % (self.target, "0.0.0.0"))
+                output = utils.system_output(portal_cmd)
+                if "Created network portal" not in output:
+                    raise error.TestFail("Failed to create portal. (%s)",
+                                         output)
+            if ("ipv6" == utils_net.IPAddress(self.portal_ip).version and
+                    self.portal_ip not in portal_info):
+                # Ipv6 portal address can't be created by default,
+                # create ipv6 portal if needed.
+                portal_cmd = ("targetcli /iscsi/%s/tpg1/portals/ create %s"
+                              % (self.target, self.portal_ip))
                 output = utils.system_output(portal_cmd)
                 if "Created network portal" not in output:
                     raise error.TestFail("Failed to create portal. (%s)",
