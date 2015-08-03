@@ -8,6 +8,7 @@ import virt_vm
 import aexpect
 import remote
 import threading
+from autotest.client.shared import error
 
 ENV_VERSION = 1
 
@@ -310,15 +311,28 @@ class Env(UserDict.IterableUserDict):
         return self.data.get("lvmdev__%s" % name)
 
     def _start_tcpdump(self):
-        port = self._params.get('shell_port')
-        prompt = self._params.get('shell_prompt')
-        address = self._params.get('ovirt_node_address')
-        username = self._params.get('ovirt_node_user')
-        password = self._params.get('ovirt_node_password')
 
         cmd_template = "%s -npvvvi any 'port 68 or port 546'"
-        cmd = cmd_template % utils_misc.find_command("tcpdump")
         if self._params.get("remote_preprocess") == "yes":
+            client = self._params.get('remote_shell_client', 'ssh')
+            port = self._params.get('remote_shell_port', '22')
+            prompt = self._params.get('remote_shell_prompt', '#')
+            address = self._params.get('remote_node_address')
+            username = self._params.get('remote_node_user')
+            password = self._params.get('remote_node_password')
+            rsession = None
+            try:
+                rsession = remote.remote_login(client, address,
+                                               port, username,
+                                               password, prompt)
+                tcpdump_bin = rsession.cmd_output("which tcpdump")
+                rsession.close()
+            except error.CmdError:
+                rsession.close()
+                raise error.TestError("Can't find tcpdump binary!")
+
+            cmd = cmd_template % tcpdump_bin.strip()
+            logging.debug("Run '%s' on host '%s'", cmd, address)
             login_cmd = ("ssh -o UserKnownHostsFile=/dev/null "
                          "-o StrictHostKeyChecking=no "
                          "-o PreferredAuthentications=password -p %s %s@%s" %
@@ -333,6 +347,7 @@ class Env(UserDict.IterableUserDict):
             self._tcpdump.sendline(cmd)
 
         else:
+            cmd = cmd_template % utils_misc.find_command("tcpdump")
             self._tcpdump = aexpect.Tail(command=cmd,
                                          output_func=_tcpdump_handler,
                                          output_params=(self, "tcpdump.log"))
