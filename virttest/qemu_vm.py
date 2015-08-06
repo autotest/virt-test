@@ -1652,6 +1652,15 @@ class VM(virt_vm.BaseVM):
             cmd = add_cpu_flags(devices, cpu_model, flags, vendor, family)
             devices.insert(StrDev('cpu', cmdline=cmd))
 
+        if params.get("msg_timestamp"):
+            if devices.has_option("msg"):
+                device = qdevices.QCustomDevice("msg", backend=None)
+                msg_timestamp = params["msg_timestamp"]
+                device.set_param("timestamp", msg_timestamp, option_type=bool)
+                devices.insert(device)
+            else:
+                logging.warn("qemu does not support option '-msg'")
+
         # Add cdroms
         for cdrom in params.objects("cdroms"):
             image_params = params.object_params(cdrom)
