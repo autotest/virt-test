@@ -746,8 +746,8 @@ class IscsiLIO(_IscsiComm):
             del_cmd = "targetcli /iscsi delete %s" % self.target
             utils.system(del_cmd)
 
-        # Clear all configuration to avoid restoring
-        cmd = "targetcli clearconfig confirm=True"
+        # Save deleted configuration to avoid restoring
+        cmd = "targetcli / saveconfig"
         utils.system(cmd)
 
 
