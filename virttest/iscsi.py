@@ -554,7 +554,7 @@ class IscsiLIO(_IscsiComm):
                     % (self.target, self.target.split(":")[0]))
         output = utils.system_output(acls_cmd)
         if "Created Node ACL" not in output:
-            raise error.TestFail("Failed to create ACL. (%s)", output)
+            raise error.TestFail("Failed to create ACL. (%s)" % output)
 
         comm_cmd = ("targetcli /iscsi/%s/tpg1/acls/%s:client/"
                     % (self.target, self.target.split(":")[0]))
@@ -562,13 +562,13 @@ class IscsiLIO(_IscsiComm):
         userid_cmd = "%s set auth userid=%s" % (comm_cmd, self.chap_user)
         output = utils.system_output(userid_cmd)
         if self.chap_user not in output:
-            raise error.TestFail("Failed to set user. (%s)", output)
+            raise error.TestFail("Failed to set user. (%s)" % output)
 
         # Set password
         passwd_cmd = "%s set auth password=%s" % (comm_cmd, self.chap_passwd)
         output = utils.system_output(passwd_cmd)
         if self.chap_passwd not in output:
-            raise error.TestFail("Failed to set password. (%s)", output)
+            raise error.TestFail("Failed to set password. (%s)" % output)
 
         # Save configuration
         utils.system("targetcli / saveconfig")
@@ -590,13 +590,13 @@ class IscsiLIO(_IscsiComm):
         userid_cmd = "%s set auth userid=%s" % (auth_cmd, self.chap_user)
         output = utils.system_output(userid_cmd)
         if self.chap_user not in output:
-            raise error.TestFail("Failed to set user. (%s)", output)
+            raise error.TestFail("Failed to set user. (%s)" % output)
 
         # Set password
         passwd_cmd = "%s set auth password=%s" % (auth_cmd, self.chap_passwd)
         output = utils.system_output(passwd_cmd)
         if self.chap_passwd not in output:
-            raise error.TestFail("Failed to set password. (%s)", output)
+            raise error.TestFail("Failed to set password. (%s)" % output)
 
         # Save configuration
         utils.system("targetcli / saveconfig")
@@ -645,15 +645,15 @@ class IscsiLIO(_IscsiComm):
                           (self.device, self.emulated_image))
             output = utils.system_output(device_cmd)
             if "Created fileio" not in output:
-                raise error.TestFail("Failed to create fileio %s. (%s)",
-                                     self.device, output)
+                raise error.TestFail("Failed to create fileio %s. (%s)"
+                                     % (self.device, output))
 
             # Create an IQN with a target named target_name
             target_cmd = "targetcli /iscsi/ create %s" % self.target
             output = utils.system_output(target_cmd)
             if "Created target" not in output:
-                raise error.TestFail("Failed to create target %s. (%s)",
-                                     self.target, output)
+                raise error.TestFail("Failed to create target %s. (%s)"
+                                     % (self.target, output))
 
             check_portal = "targetcli /iscsi/%s/tpg1/portals ls" % self.target
             portal_info = utils.system_output(check_portal)
@@ -665,8 +665,8 @@ class IscsiLIO(_IscsiComm):
                               % (self.target, "0.0.0.0"))
                 output = utils.system_output(portal_cmd)
                 if "Created network portal" not in output:
-                    raise error.TestFail("Failed to create portal. (%s)",
-                                         output)
+                    raise error.TestFail("Failed to create portal. (%s)"
+                                         % output)
             if ("ipv6" == utils_net.IPAddress(self.portal_ip).version and
                     self.portal_ip not in portal_info):
                 # Ipv6 portal address can't be created by default,
@@ -675,16 +675,15 @@ class IscsiLIO(_IscsiComm):
                               % (self.target, self.portal_ip))
                 output = utils.system_output(portal_cmd)
                 if "Created network portal" not in output:
-                    raise error.TestFail("Failed to create portal. (%s)",
-                                         output)
+                    raise error.TestFail("Failed to create portal. (%s)"
+                                         % output)
 
             # Create lun
             lun_cmd = "targetcli /iscsi/%s/tpg1/luns/ " % self.target
             dev_cmd = "create /backstores/fileio/%s" % self.device
             output = utils.system_output(lun_cmd + dev_cmd)
             if "Created LUN" not in output:
-                raise error.TestFail("Failed to create lun. (%s)",
-                                     output)
+                raise error.TestFail("Failed to create lun. (%s)" % output)
 
             # Set firewall if it's enabled
             output = utils.system_output("firewall-cmd --state",
