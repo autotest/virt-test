@@ -370,7 +370,10 @@ class QemuImg(storage.QemuImg):
         if (os.path.exists(self.image_filename) or self.is_remote_image()):
             cmd += " info %s" % self.image_filename
             if backing_chain == "yes":
-                cmd += " --backing-chain"
+                if "--backing_chain" in self.help_text:
+                    cmd += " --backing-chain"
+                else:
+                    logging.warn("'--backing-chain' option is not supportted")
             output = utils.system_output(cmd)
         else:
             logging.debug("Image file %s not found", self.image_filename)
