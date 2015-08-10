@@ -1008,9 +1008,30 @@ def run(test, params, env):
                 vm.monitor.quit()
             except Exception, e:
                 logging.warn(e)
-            from virttest import utils_test
+
             error.context("Copy image from NFS Server")
-            utils_test.run_image_copy(test, params, env)
+            try:
+                image = storage.QemuImg(params, base_dir, image_name)
+                image.copy_image(test, params, env)
+            finally:
+                sub_type = params.get("sub_type")
+                if sub_type:
+                    error.context("Run sub test '%s'" % sub_type, logging.info)
+                    params['image_name'] += "-error"
+                    params['boot_once'] = "c"
+                    vm.create(params=params)
+                    utils_test.run_virt_sub_test(test, params, env,
+                                                 params.get("sub_type"))
+
+                gluster_mount_dir = params.get("gluster_mount_dir")
+                if gluster_mount_dir:
+                    try:
+                        umount_cmd = "umount %s" % gluster_mount_dir
+                        utils.system(umount_cmd, timeout=60)
+                        shutil.rmtree(gluster_mount_dir)
+                    except Exception, err:
+                        logging.warning("Failed to unmount tmp directory %s with "
+                                        "glusterfs mount.", gluster_mount_dir)
 
     src = params.get('images_good')
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())

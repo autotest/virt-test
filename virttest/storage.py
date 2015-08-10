@@ -9,7 +9,9 @@ import logging
 import os
 import shutil
 import re
+import tempfile
 from autotest.client import utils
+from autotest.client.shared import error
 try:
     from virttest import iscsi
 except ImportError:
@@ -20,6 +22,8 @@ import virt_vm
 import gluster
 import lvm
 import ceph
+import data_dir
+import asset
 
 
 def preprocess_images(bindir, params, env):
@@ -464,6 +468,98 @@ class QemuImg(object):
                     utils.run(params.get("image_remove_command") % (image_fn))
                 else:
                     logging.debug("Image file %s not found", image_fn)
+
+    @error.context_aware
+    def copy_image(self, test, params, env):
+        """
+        Copy guest images from nfs server after installation failure.
+        1) Mount the NFS share directory
+        2) Check the existence of source image
+        3) If it exists, copy the image from NFS
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        vm = env.get_vm(params["main_vm"])
+        if vm is not None:
+            vm.destroy()
+
+        src = params.get('images_good')
+        asset_name = '%s' % (os.path.split(params['image_name'])[1])
+        dst_path = get_image_filename(params, data_dir.get_data_dir())
+        image = os.path.basename(dst_path)
+        image_dir = os.path.dirname(dst_path)
+
+        # Copy the image from nfs to glusterfs server when use it
+        gluster_mount_dir = ""
+
+        if params.get("enable_gluster_install", "no") == "yes":
+            gluster_uri = gluster.create_gluster_uri(params, stripped=True)
+            try:
+                gluster_mount_dir = tempfile.mkdtemp("-gluster")
+                gluster.glusterfs_mount(gluster_uri, gluster_mount_dir)
+            except Exception, err:
+                shutil.rmtree(gluster_mount_dir)
+                raise error.TestError("Failed to mount gluster volume %s to "
+                                      "mount dir %s: %s" % (gluster_uri,
+                                                            gluster_mount_dir,
+                                                            err))
+
+            params['gluster_mount_dir'] = gluster_mount_dir
+            dst_path = os.path.join(gluster_mount_dir, asset_name)
+            dst_path += ".%s" % params['image_format']
+
+        if params.get("rename_error_image", "no") == "yes":
+            if gluster_mount_dir:
+                error_image = os.path.join(gluster_mount_dir, asset_name)
+                error_image += "-error"
+                error_image += '.' + params['image_format']
+                error_dst_path = error_image
+            else:
+                error_image = os.path.basename(params['image_name']) + "-error"
+                error_image += '.' + params['image_format']
+                error_dst_path = os.path.join(image_dir, error_image)
+
+            shutil.copyfile(dst_path, error_dst_path)
+
+        if src:
+            mount_dest_dir = params.get('dst_dir', '/mnt/images')
+            if not os.path.exists(mount_dest_dir):
+                try:
+                    os.makedirs(mount_dest_dir)
+                except OSError, err:
+                    logging.warning('mkdir %s error:\n%s', mount_dest_dir, err)
+
+            if not os.path.exists(mount_dest_dir):
+                raise error.TestError('Failed to create NFS share dir %s' %
+                                      mount_dest_dir)
+
+            error.context("Mount the NFS share directory")
+            if not utils_misc.mount(src, mount_dest_dir, 'nfs', 'ro'):
+                raise error.TestError('Could not mount NFS share %s to %s' %
+                                      (src, mount_dest_dir))
+
+            error.context("Check the existence of source image")
+            src_path = '%s/%s.%s' % (mount_dest_dir, asset_name,
+                                     params['image_format'])
+            asset_info = asset.get_file_asset(asset_name, src_path, dst_path)
+            if asset_info is None:
+                raise error.TestError('Could not find %s' % image)
+        else:
+            asset_info = asset.get_asset_info(asset_name)
+
+        # Do not force extraction if integrity information is available
+        if asset_info['sha1_url']:
+            force = params.get("force_copy", "no") == "yes"
+        else:
+            force = params.get("force_copy", "yes") == "yes"
+
+        error.context("Copy image '%s'" % image, logging.info)
+        if utils.is_url(asset_info['url']):
+            asset.download_file(asset_info, interactive=False, force=force)
+        else:
+            utils.get_file(asset_info['url'], asset_info['destination'])
 
 
 class Rawdev(object):
