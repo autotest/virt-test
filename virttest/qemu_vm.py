@@ -1109,7 +1109,8 @@ class VM(virt_vm.BaseVM):
 
             return sc_cmd
 
-        def add_numa_node(devices, mem=None, cpus=None, nodeid=None):
+        def add_numa_node(devices, mem=None, cpus=None,
+                          nodeid=None, memdev=None):
             """
             This function is used to add numa node to guest command line
             """
@@ -1122,6 +1123,8 @@ class VM(virt_vm.BaseVM):
                 numa_cmd += ",cpus=%s" % cpus
             if nodeid is not None:
                 numa_cmd += ",nodeid=%s" % nodeid
+            if memdev is not None:
+                numa_cmd += ",memdev=%s" % memdev
             return numa_cmd
 
         def add_balloon(devices, devid=None, bus=None, use_old_format=None):
@@ -1630,11 +1633,15 @@ class VM(virt_vm.BaseVM):
             numa_mem = numa_params.get("numa_mem")
             numa_cpus = numa_params.get("numa_cpus")
             numa_nodeid = numa_params.get("numa_nodeid")
+            numa_memdev = numa_params.get("numa_memdev")
             if numa_mem is not None:
                 numa_total_mem += int(numa_mem)
             if numa_cpus is not None:
                 numa_total_cpus += len(utils_misc.cpu_str_to_list(numa_cpus))
-            cmdline = add_numa_node(devices, numa_mem, numa_cpus, numa_nodeid)
+            if numa_memdev is not None:
+                numa_memdev = "mem-%s" % numa_memdev
+            cmdline = add_numa_node(devices, numa_mem, numa_cpus,
+                                    numa_nodeid, numa_memdev)
             devices.insert(StrDev('numa', cmdline=cmdline))
 
         if params.get("numa_consistency_check_cpu_mem", "no") == "yes":
