@@ -359,6 +359,21 @@ class QemuImg(storage.QemuImg):
             output = None
         return output
 
+    def resize(self):
+        """
+        Run qemu-img resize command on image file
+        """
+        re_size = self.params.get("re_size")
+        cmd = self.image_cmd
+        if (os.path.exists(self.image_filename) or self.is_remote_image()):
+            cmd += " resize %s %s" % (self.image_filename, re_size)
+            logging.info("resize image %s" % self.image_filename)
+            utils.system(cmd)
+        else:
+            logging.debug("Image file %s not found", self.image_filename)
+
+        return self.get_size()
+
     def get_format(self):
         """
         Get the fimage file format.
@@ -369,6 +384,17 @@ class QemuImg(storage.QemuImg):
         else:
             image_format = None
         return image_format
+
+    def get_size(self):
+        """
+        Get the fimage file size.
+        """
+        image_info = self.info()
+        if image_info:
+            image_size = re.findall("(\d+) bytes", image_info)
+        else:
+            image_size = 0
+        return int(image_size[0])
 
     def support_cmd(self, cmd):
         """
