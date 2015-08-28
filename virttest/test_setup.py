@@ -12,6 +12,7 @@ from virttest.staging import service
 from autotest.client.shared import error, utils
 import data_dir
 import utils_misc
+import arch
 import versionable_class
 import openvswitch
 
@@ -212,8 +213,8 @@ class TransparentHugePageConfig(object):
                                                  "transparent huge page is "
                                                  "disabled")
                     else:
-                        raise THPKhugepagedError("Khugepaged could not be set to"
-                                                 "status %s" % act)
+                        raise THPKhugepagedError("Khugepaged could not be set"
+                                                 "to status %s" % act)
 
         logging.info("Testing khugepaged")
         for file_path in self.file_list_str:
@@ -968,8 +969,6 @@ class PciAssignable(object):
         :rtype: bool
         """
         base_dir = "/sys/bus/pci"
-        short_id = pci_id[5:]
-        vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
         drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
         if self.device_driver in os.readlink(drv_path):
             error.context("Release device %s to host" % pci_id, logging.info)
@@ -1055,7 +1054,6 @@ class PciAssignable(object):
         :rtype: list of dict
         """
 
-        base_dir = "/sys/bus/pci/devices"
         cmd = "lspci | awk '/%s/ {print $1}'" % self.pf_filter_re
         pf_ids = [i for i in utils.system_output(cmd).splitlines()]
         pf_vf_dict = []
@@ -1078,6 +1076,18 @@ class PciAssignable(object):
                 vf_ids.append(vf_info)
             pf_info["vf_ids"] = vf_ids
             pf_vf_dict.append(pf_info)
+        # On Power Architecture, while running SR-IOV tests using
+        # Mellanox Connectx cards on PowerKVM 3.1v, the probed interfaces on
+        # host by default would get named in ethX format and then would be
+        # renamed to new naming scheme which is to assign ifaces fixed names
+        # based on firmware, topology and location information.
+        # This process is observed to take close to 4-5 seconds when the number
+        # of probed VF PCI devices are close to the max_supported_VFs('16').
+        # After modprobe driver is run, sufficient time should be provided
+        # for above mentioned opertion to complete else running `ifconfig -a`
+        # will report failure saying interface 'ethX' not found.
+        # So calling sleep for 10 seconds before getting `ifconfig -a`
+        time.sleep(10)
         if_out = utils.system_output("ifconfig -a")
         ethnames = re.findall(self.nic_name_re, if_out)
         for eth in ethnames:
@@ -1244,41 +1254,48 @@ class PciAssignable(object):
         """
         # Check if the host support interrupt remapping
         error.context("Set up host env for PCI assign test", logging.info)
-        kvm_re_probe = True
-        o = utils.system_output("dmesg")
-        ecap = re.findall("ecap\s+(.\w+)", o)
-        if not ecap:
-            logging.error("Fail to check host interrupt remapping support.")
-        else:
-            if int(ecap[0], 16) & 8 == 8:
-                # host support interrupt remapping.
-                # No need enable allow_unsafe_assigned_interrupts.
-                kvm_re_probe = False
-            if self.kvm_params is not None:
-                if self.auai_path and self.kvm_params[self.auai_path] == "Y":
+        # For Power architecture there is no need to
+        # 1. Enable interrupt remapping
+        # 2. Load vfio-pci
+        # above are enabled/loaded by default
+        if arch.ARCH != 'ppc64le':
+            kvm_re_probe = True
+            o = utils.system_output("dmesg")
+            ecap = re.findall("ecap\s+(.\w+)", o)
+            if not ecap:
+                logging.error(
+                    "Fail to check host interrupt remapping support.")
+            else:
+                if int(ecap[0], 16) & 8 == 8:
+                    # host support interrupt remapping.
+                    # No need enable allow_unsafe_assigned_interrupts.
                     kvm_re_probe = False
-        # Try to re probe kvm module with interrupt remapping support
-        if kvm_re_probe and self.auai_path:
-            cmd = "echo Y > %s" % self.auai_path
-            error.context("enable PCI passthrough with '%s'" % cmd,
-                          logging.info)
-            try:
-                utils.system(cmd)
-            except Exception:
-                logging.debug("Can not enable the interrupt remapping support")
-        lnk = "/sys/module/vfio_iommu_type1/parameters/allow_unsafe_interrupts"
-        if self.device_driver == "vfio-pci":
-            status = utils.system('lsmod | grep vfio', ignore_status=True)
-            if status:
-                logging.info("Load vfio-pci module.")
-                cmd = "modprobe vfio-pci"
-                utils.run(cmd)
-                time.sleep(3)
-            if not ecap or (int(ecap[0], 16) & 8 != 8):
-                cmd = "echo Y > %s" % lnk
+                if self.kvm_params is not None:
+                    if self.auai_path and self.kvm_params[self.auai_path] == "Y":
+                        kvm_re_probe = False
+            # Try to re probe kvm module with interrupt remapping support
+            if kvm_re_probe and self.auai_path:
+                cmd = "echo Y > %s" % self.auai_path
                 error.context("enable PCI passthrough with '%s'" % cmd,
                               logging.info)
-                utils.run(cmd)
+                try:
+                    utils.system(cmd)
+                except Exception:
+                    logging.debug(
+                        "Can not enable the interrupt remapping support")
+            lnk = "/sys/module/vfio_iommu_type1/parameters/allow_unsafe_interrupts"
+            if self.device_driver == "vfio-pci":
+                status = utils.system('lsmod | grep vfio', ignore_status=True)
+                if status:
+                    logging.info("Load vfio-pci module.")
+                    cmd = "modprobe vfio-pci"
+                    utils.run(cmd)
+                    time.sleep(3)
+                if not ecap or (int(ecap[0], 16) & 8 != 8):
+                    cmd = "echo Y > %s" % lnk
+                    error.context("enable PCI passthrough with '%s'" % cmd,
+                                  logging.info)
+                    utils.run(cmd)
         re_probe = False
         status = utils.system("lsmod | grep %s" % self.driver,
                               ignore_status=True)
@@ -1286,7 +1303,16 @@ class PciAssignable(object):
             re_probe = True
         elif not self.check_vfs_count():
             if self.driver:
-                utils.system_output("modprobe -r %s" % self.driver, timeout=60)
+                # Incase of SR-IOV on Power architecture with Mellanox
+                # Connectx-3EN or Connectx-Pro cards, the dependent modules
+                # also should be removed before removing the main driver
+                # which is 'mlx4_core'.
+                if arch.ARCH == 'ppc64le' and self.driver == 'mlx4_core':
+                    utils.system_output(
+                        "rmmod mlx4_en;rmmod mlx4_ib;rmmod %s" % self.driver, timeout=60)
+                else:
+                    utils.system_output("modprobe -r %s" %
+                                        self.driver, timeout=60)
             re_probe = True
         else:
             self.setup = None
@@ -1304,7 +1330,8 @@ class PciAssignable(object):
                 error.context("Loading the driver '%s' with command '%s'" %
                               (self.driver, cmd), logging.info)
                 status = utils.system(cmd, ignore_status=True)
-            dmesg = utils.system_output("dmesg", timeout=60, ignore_status=True)
+            dmesg = utils.system_output(
+                "dmesg", timeout=60, ignore_status=True)
             file_name = "host_dmesg_after_load_%s.txt" % self.driver
             logging.info("Log dmesg after loading '%s' to '%s'.", self.driver,
                          file_name)
@@ -1326,7 +1353,6 @@ class PciAssignable(object):
         """
         # Check if the host support interrupt remapping
         error.context("Clean up host env after PCI assign test", logging.info)
-        kvm_re_probe = False
         if self.kvm_params is not None:
             for kvm_param, value in self.kvm_params.items():
                 if open(kvm_param, "r").read().strip() != value:
@@ -1378,36 +1404,51 @@ class PciAssignable(object):
         self.pci_ids = self.get_devs(devices)
         logging.info("The following pci_ids were found: %s", self.pci_ids)
         requested_pci_ids = []
-
         # Setup all devices specified for assignment to guest
         for p_id in self.pci_ids:
             if self.device_driver == "vfio-pci":
                 pci_ids = self.get_same_group_devs(p_id)
-                logging.info("Following devices are in same group: %s", pci_ids)
+                logging.info(
+                    "Following devices are in same group: %s", pci_ids)
             else:
                 pci_ids = [p_id]
             for pci_id in pci_ids:
-                short_id = pci_id[5:]
                 drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
-                dev_prev_driver = os.path.realpath(os.path.join(drv_path,
-                                                                os.readlink(drv_path)))
+                # In some cases, for example on ppc64le platform when using
+                # Mellanox Connectx 3EN or Mellanox Connectx-Pro SR-IOV enabled
+                # cards, initially drv_path will not exist for the VF PCI device
+                # and the test_setup will fail. Introducing below check to
+                # handle such situations
+                if not os.path.exists(drv_path):
+                    dev_prev_driver = ""
+                else:
+                    dev_prev_driver = os.path.realpath(os.path.join(drv_path,
+                                                                    os.readlink(drv_path)))
                 self.dev_drivers[pci_id] = dev_prev_driver
 
                 # Judge whether the device driver has been binded to stub
                 if not self.is_binded_to_stub(pci_id):
                     error.context("Bind device %s to stub" % pci_id,
                                   logging.info)
-                    vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
+                    # On Power architecture using short id would result in
+                    # pci device lookup failure while writing vendor id to
+                    # stub_new_id/stub_remove_id. Instead we should be using
+                    # pci id as-is for vendor id.
+                    if arch.ARCH != 'ppc64le':
+                        short_id = pci_id[5:]
+                        vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
+                    else:
+                        vendor_id = utils_misc.get_vendor_from_pci_id(pci_id)
                     stub_new_id = os.path.join(stub_path, 'new_id')
                     unbind_dev = os.path.join(drv_path, 'unbind')
                     stub_bind = os.path.join(stub_path, 'bind')
+                    logging.info("stub_bind : %s", stub_bind)
                     stub_remove_id = os.path.join(stub_path, 'remove_id')
-
+                    logging.info("stub_remove_id : %s", stub_remove_id)
                     info_write_to_files = [(vendor_id, stub_new_id),
                                            (pci_id, unbind_dev),
                                            (pci_id, stub_bind),
                                            (vendor_id, stub_remove_id)]
-
                     for content, f_name in info_write_to_files:
                         try:
                             logging.info("Write '%s' to file '%s'", content,
@@ -1416,11 +1457,12 @@ class PciAssignable(object):
                         except IOError:
                             logging.debug("Failed to write %s to file %s",
                                           content, f_name)
-                            continue
+                        continue
 
                     if not self.is_binded_to_stub(pci_id):
-                        logging.error("Binding device %s to stub failed", pci_id)
-                    continue
+                        logging.error(
+                            "Binding device %s to stub failed", pci_id)
+                        continue
                 else:
                     logging.debug("Device %s already binded to stub", pci_id)
             requested_pci_ids.append(p_id)
