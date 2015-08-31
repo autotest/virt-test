@@ -1120,7 +1120,9 @@ class VM(virt_vm.BaseVM):
             if mem is not None:
                 numa_cmd += ",mem=%s" % mem
             if cpus is not None:
-                numa_cmd += ",cpus=%s" % cpus
+                cpus = set(map(str.strip, cpus,split(',')))
+                for cpu in cpus:
+                    numa_cmd += ",cpus=%s" % cpu
             if nodeid is not None:
                 numa_cmd += ",nodeid=%s" % nodeid
             if memdev is not None:
