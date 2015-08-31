@@ -885,7 +885,9 @@ class Memory(QomObject):
         -object memory-backend-file/ram size=xx,id=xxx ...
     """
 
-    __attributes__ = ["size", "mem-path", "backend", "policy", "host-nodes"]
+    __attributes__ = ["size", "mem-path",
+                      "backend", "policy",
+                      "host-nodes", "prealloc"]
 
     def __init__(self, backend, params=None):
         super(Memory, self).__init__(backend, params)
