@@ -623,7 +623,13 @@ class VMXML(VMXMLBase):
             del vmxml  # clean up temporary files
             raise xcepts.LibvirtXMLError("Error reported while undefining VM")
         # Alter the XML
+        str_old = "domain-" + vm.name
+        str_new = "domain-" + new_name
         vmxml.vm_name = new_name
+        for channel in vmxml.get_agent_channels():
+            for child in channel._children:
+                if 'path' in child.attrib.keys():
+                    child.attrib['path'] = child.attrib['path'].replace(str_old,str_new)
         if uuid is None:
             # invalidate uuid so libvirt will regenerate
             del vmxml.uuid
