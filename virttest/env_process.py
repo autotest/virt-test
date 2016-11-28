@@ -805,6 +805,17 @@ def preprocess(test, params, env):
     # Preprocess all VMs and images
     if params.get("not_preprocess", "no") == "no":
         process(test, params, env, preprocess_image, preprocess_vm)
+        # Enable multi queue in guest
+        mq = test_setup.MultiQueueConfig(params)
+        if params.get("nic_model") == "virtio":
+            if params.get("setup_mq") == "yes" and params.get("queues"):
+                queues = int(params.get("queues", 1))
+                if queues == 1:
+                    logging.info("No need enable MQ feature for single queue")
+                elif queues > 1:
+                    for vm_name in params.get("vms").split():
+                        vm = env.get_vm(vm_name)
+                        mq.setup(queues, vm_name, vm)
 
     # Start the screendump thread
     if params.get("take_regular_screendumps") == "yes":

@@ -14,6 +14,7 @@ import data_dir
 import utils_misc
 import versionable_class
 import openvswitch
+from virttest import utils_net
 
 try:
     from virttest.staging import utils_memory
@@ -1754,3 +1755,62 @@ class EGDConfig(object):
             utils.wait_for(_all_killed, timeout=60)
         except OSError:
             logging.warn("egd.pl is running")
+
+
+class MultiQueueSetupError(Exception):
+
+    """
+    Raise when setup multi queue failed in guest.
+    """
+    pass
+
+
+class MultiQueueConfig(object):
+
+    """
+    Enable multi queue for virtio nics in guest if queues > 1.
+    """
+
+    def __init__(self, params):
+        """
+        :param params: Dict like object containing parameters for the test.
+        """
+        self.params = params
+
+    def enable_mq(self, queues, vm_name, vm):
+        """
+        Enable multi queue in guest
+        """
+        error.context("Login to guest\n")
+        session = vm.wait_for_login()
+        for i, nic in enumerate(vm.virtnet):
+            if "virtio" in nic['nic_model']:
+                ifname = utils_net.get_linux_ifname(session,
+                                                    vm.get_mac_address(i))
+                enable_mq_cmd = "ethtool -L %s combined %s" % (ifname, queues)
+                mq_show_cmd = "ethtool -l %s" % ifname
+                logging.debug("Enable multi queue for nic %s in %s:"
+                              % (ifname, vm_name))
+                show_nic_info = session.cmd(mq_show_cmd)
+                logging.info("Before MultiQueue Changed of nic %s is %s"
+                             % (ifname, show_nic_info))
+                try:
+                    if enable_mq_cmd:
+                        output = session.cmd_output(enable_mq_cmd, timeout=300)
+                except Exception:
+                    msg = "Enable multi queue in %s failed" % vm_name
+                    msg += "of nic" % ifname
+                    msg += "The error info is: %s" % output
+                    raise MultiQueueSetupError(msg)
+                show_nic_info = session.cmd(mq_show_cmd)
+                logging.info("After MultiQueue Changed of nic %s is %s"
+                             % (ifname, show_nic_info))
+        session.close()
+
+    def setup(self, queues, vm_name, vm):
+        """
+        :param queues: int, the number of queues.
+        :param vm_name: string, vm's name, especially for the multi vms.
+        :param vm: VM object.
+        """
+        self.enable_mq(queues, vm_name, vm)
