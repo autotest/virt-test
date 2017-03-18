@@ -24,6 +24,7 @@ import os
 import socket
 import threading
 import time
+import re
 
 from autotest.client import utils
 from autotest.client.shared import error
@@ -142,6 +143,32 @@ def clear_win_driver_verifier(session, vm, timeout=300):
                 timeout=timeout,
                 ignore_all_errors=True)
     return vm.reboot(session)
+
+
+def setup_runlevel(params, session):
+    """
+    Setup the runlevel in guest.
+
+    :param params: Dictionary with the test parameters.
+    :param session: VM session.
+    """
+    expect_runlevel = params.get("expect_runlevel", "3")
+    cmd = "runlevel"
+
+    if utils_misc.wait_for(lambda: session.cmd_status(cmd) == 0, 15):
+        ori_runlevel = session.cmd(cmd)
+    else:
+        ori_runlevel = "0" 
+
+    ori_runlevel = re.findall("\d+", str(ori_runlevel))[-1]
+    if ori_runlevel == expect_runlevel:
+        logging.info("Guest runlevel is the same as expect.")
+    else:
+        session.cmd("init %s" % expect_runlevel)
+        tmp_runlevel = session.cmd(cmd)
+        tmp_runlevel = re.findall("\d+", str(tmp_runlevel))[-1]
+        if tmp_runlevel != expect_runlevel:
+            logging.warn("Failed to setup runlevel for guest")
 
 
 def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
