@@ -653,6 +653,8 @@ class HumanMonitor(Monitor):
     def _get_supported_cmds(self):
         """
         Get supported human monitor cmds list.
+
+        :return self._supported_cmds: The supported human monitor cmds list.
         """
         cmds = self.cmd("help", debug=False)
         if cmds:
@@ -661,6 +663,8 @@ class HumanMonitor(Monitor):
 
         if not self._supported_cmds:
             logging.warn("Could not get supported monitor cmds list")
+
+        return self._supported_cmds
 
     def _log_response(self, cmd, resp, debug=True):
         """
@@ -1286,6 +1290,8 @@ class QMPMonitor(Monitor):
     def _get_supported_cmds(self):
         """
         Get supported qmp cmds list.
+
+        :return self._supported_cmds: The supported qmp monitor cmds list.
         """
         cmds = self.cmd("query-commands", debug=False)
         if cmds:
@@ -1295,9 +1301,13 @@ class QMPMonitor(Monitor):
         if not self._supported_cmds:
             logging.warn("Could not get supported monitor cmds list")
 
+        return self._supported_cmds
+
     def _get_supported_hmp_cmds(self):
         """
         Get supported human monitor cmds list.
+
+        :return self._supported_hmp_cmds: The supported human monitor cmds list
         """
         cmds = self.human_monitor_cmd("help", debug=False)
         if cmds:
@@ -1305,8 +1315,10 @@ class QMPMonitor(Monitor):
                 r"(?:^\w+\|(\w+)\s)|(?:^(\w+?)\s)", cmds, re.M)
             self._supported_hmp_cmds = [(i + j) for i, j in cmd_list if i or j]
 
-        if not self._supported_cmds:
+        if not self._supported_hmp_cmds:
             logging.warn("Could not get supported monitor cmds list")
+
+        return self._supported_hmp_cmds
 
     def _has_hmp_command(self, cmd):
         """
