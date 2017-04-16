@@ -177,7 +177,7 @@ class VirshSession(aexpect.ShellSession):
         if ssh_remote_auth or self.uri:
             # Handle ssh / password prompts
             remote.handle_prompts(self, self.remote_user, self.remote_pwd,
-                                  prompt, debug=True)
+                                  prompt, timeout=60, debug=True)
 
         # fail if libvirtd is not running
         if check_libvirtd:
