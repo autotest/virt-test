@@ -6,6 +6,8 @@ import aexpect
 import data_dir
 import hashlib
 import logging
+import shutil
+import commands
 
 
 class BuildError(Exception):
@@ -29,7 +31,8 @@ class Builder(object):
         """
         :param params: Dictionary with test parameters, used to get the default
                        values of all named parameters.
-        :param address: Remote host or guest address
+        :param address: Remote host or guest address. "localhost" will trigger
+                        only local operations.
         :param source: Directory containing the source on the machine
                        where this script is running
         :param shell_client: The client to use ('ssh', 'telnet' or 'nc')
@@ -68,6 +71,9 @@ class Builder(object):
                 return arg
 
         self.address = address
+        self.local = False
+        if address == "localhost":
+            self.local = True
         self.source = os.path.normpath(source)
         self.client = def_helper(shell_client, "shell_client", "ssh")
         self.port = def_helper(shell_port, "shell_port", "22")
@@ -186,14 +192,47 @@ class Builder(object):
 
             return result
 
-        remote_hashes = get_remote_hashes(self.full_build_path, self.session,
-                                          self.linesep)
-        local_hashes = get_local_hashes(self.source)
+        def remote_mkpaths(session, base, dirs):
+            """
+            :param session: Session to be used when creating the paths
+            :param base: Base directory to be created
+            :param dirs: Directories that will be created inside base
+            """
+            if dirs:
+                dirs_text = " ".join(dirs)
+                fmt_arg = (base, base, dirs_text)
+                cmd = 'mkdir -p %s && cd %s && mkdir -p %s' % fmt_arg
+            else:
+                cmd = 'mkdir -p %s' % base
+
+            status, output = session.cmd_status_output(cmd)
+            if not status == 0:
+                raise BuildError("Unable to create remote directories: '%s'"
+                                 % output)
+
+        def local_mkpaths(base, dirs):
+            """
+            :param base: Base directory to be created
+            :param dirs: Directories that will be created inside base
+            """
+            if not os.path.exists(base):
+                os.makedirs(base)
+            for d in dirs:
+                if not os.path.exists(d):
+                    os.makedirs(os.path.join(base, d))
+
+        if self.local:
+            target_hashes = get_local_hashes(self.full_build_path)
+        else:
+            target_hashes = get_remote_hashes(self.full_build_path,
+                                              self.session, self.linesep)
+
+        source_hashes = get_local_hashes(self.source)
 
         to_transfer = []
-        for rel_path in local_hashes.keys():
-            rhash = remote_hashes.get(rel_path)
-            if rhash is None or not rhash == local_hashes[rel_path]:
+        for rel_path in source_hashes.keys():
+            rhash = target_hashes.get(rel_path)
+            if rhash is None or not rhash == source_hashes[rel_path]:
                 to_transfer.append(rel_path)
 
         need_build = False
@@ -204,26 +243,23 @@ class Builder(object):
 
             # Create all directories
             dirs = list_recursive_dirnames(self.source)
-            if dirs:
-                dirs_text = " ".join(dirs)
-                fmt_arg = (self.full_build_path, self.full_build_path,
-                           dirs_text)
-                cmd = 'mkdir -p %s && cd %s && mkdir -p %s' % fmt_arg
+            if self.local:
+                local_mkpaths(self.full_build_path, dirs)
             else:
-                cmd = 'mkdir -p %s' % self.full_build_path
-            status, output = self.session.cmd_status_output(cmd)
-            if not status == 0:
-                raise BuildError("Unable to create remote directories: '%s'"
-                                 % output)
+                remote_mkpaths(self.session, self.full_build_path, dirs)
 
             # Copy files
             for file_name in to_transfer:
                 local_path = os.path.join(self.source, file_name)
                 remote_path = os.path.join(self.full_build_path, file_name)
-                remote.copy_files_to(self.address, self.file_transfer_client,
-                                     self.username, self.password,
-                                     self.file_transfer_port, local_path,
-                                     remote_path)
+                if self.local:
+                    shutil.copyfile(local_path, remote_path)
+                else:
+                    remote.copy_files_to(self.address,
+                                         self.file_transfer_client,
+                                         self.username, self.password,
+                                         self.file_transfer_port, local_path,
+                                         remote_path)
 
         else:
             logging.info("Directory %s on target already up-to-date" %
@@ -237,7 +273,10 @@ class Builder(object):
         """
         logging.info("Building in %s on target" % self.full_build_path)
         cmd = 'make -C %s %s' % (self.full_build_path, self.make_flags)
-        status, output = self.session.cmd_status_output(cmd)
+        if self.local:
+            status, output = commands.getstatusoutput(cmd)
+        else:
+            status, output = self.session.cmd_status_output(cmd)
         if not status == 0:
             raise BuildError("Unable to make: '%s'" % output)
 

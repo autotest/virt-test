@@ -73,3 +73,9 @@ above is:
 
 This pattern can be useful if you e.g. would like to add an additonal command
 to run before `builder.make()`, perhaps to install some extra dependencies.
+
+Despite its name, remote_build supports local builds as well. This support
+intended for small test applications that need to run both on host and on the
+guest, and is triggered by setting the `address` parameter to `"localhost"`.
+For any needs to build more complex applications host-side only, use
+`build_helper` instead.
