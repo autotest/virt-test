@@ -526,9 +526,6 @@ class VM(virt_vm.BaseVM):
             dev.set_param("name", "org.fedoraproject.anaconda.log.0")
             devices.insert(dev)
 
-        def add_mem(devices, mem):
-            return " -m %s" % mem
-
         def add_smp(devices):
             smp_str = " -smp %d" % self.cpuinfo.smp
             smp_pattern = "smp .*n\[,maxcpus=cpus\].*"
@@ -829,6 +826,26 @@ class VM(virt_vm.BaseVM):
                 rng_pci.set_param("rng", rng_dev.get_qid())
                 devices.insert(rng_pci)
 
+        def add_mem(devices, params):
+            """
+            Add memory controler by params
+
+            :param devices: VM devices container
+            """
+            options = []
+            params = params.object_params("mem")
+            if params.get("mem"):
+                options.append("%s" % params["mem"])
+            if params.get("slots") and params.get("maxmem"):
+                options.append("slots=%s" % params["slots"])
+                options.append("maxmem=%s" % params["maxmem"])
+            if options:
+                cmdline = "-m %s" % ",".join(options)
+                dev = StrDev("mem", cmdline=cmdline)
+                devices.insert(dev)
+                return True
+            return False
+
         def add_spice_rhel5(devices, spice_params, port_range=(3100, 3199)):
             """
             processes spice parameters on rhel5 host.
@@ -1122,7 +1139,8 @@ class VM(virt_vm.BaseVM):
 
             return sc_cmd
 
-        def add_numa_node(devices, mem=None, cpus=None, nodeid=None):
+        def add_numa_node(devices, mem=None, cpus=None,
+                          nodeid=None, memdev=None):
             """
             This function is used to add numa node to guest command line
             """
@@ -1132,9 +1150,13 @@ class VM(virt_vm.BaseVM):
             if mem is not None:
                 numa_cmd += ",mem=%s" % mem
             if cpus is not None:
-                numa_cmd += ",cpus=%s" % cpus
+                cpus = set(map(str.strip, cpus,split(',')))
+                for cpu in cpus:
+                    numa_cmd += ",cpus=%s" % cpu
             if nodeid is not None:
                 numa_cmd += ",nodeid=%s" % nodeid
+            if memdev is not None:
+                numa_cmd += ",memdev=%s" % memdev
             return numa_cmd
 
         def add_balloon(devices, devid=None, bus=None, use_old_format=None):
@@ -1616,9 +1638,16 @@ class VM(virt_vm.BaseVM):
                               pci_bus=pci_bus)
                 iov += 1
 
-        mem = params.get("mem")
-        if mem:
-            devices.insert(StrDev('mem', cmdline=add_mem(devices, mem)))
+        # Add Memory devices
+        if add_mem(devices, params):
+            dev_pairs = devices.memory_devices_define_by_params(params)
+            for dev_pair in dev_pairs:
+                mem, dimm = dev_pair
+                if not mem:
+                    continue
+                devices.insert(mem)
+                if dimm:
+                    devices.insert(dimm)
 
         smp = int(params.get("smp", 0))
         vcpu_maxcpus = int(params.get("vcpu_maxcpus", 0))
@@ -1672,11 +1701,16 @@ class VM(virt_vm.BaseVM):
             numa_mem = numa_params.get("numa_mem")
             numa_cpus = numa_params.get("numa_cpus")
             numa_nodeid = numa_params.get("numa_nodeid")
+            numa_memdev = numa_params.get("numa_memdev")
             if numa_mem is not None:
                 numa_total_mem += int(numa_mem)
             if numa_cpus is not None:
                 numa_total_cpus += len(utils_misc.cpu_str_to_list(numa_cpus))
-            devices.insert(StrDev('numa', cmdline=add_numa_node(devices)))
+            if numa_memdev is not None:
+                numa_memdev = "mem-%s" % numa_memdev
+            cmdline = add_numa_node(devices, numa_mem, numa_cpus,
+                                    numa_nodeid, numa_memdev)
+            devices.insert(StrDev('numa', cmdline=cmdline))
 
         if params.get("numa_consistency_check_cpu_mem", "no") == "yes":
             if (numa_total_cpus > int(smp) or numa_total_mem > int(mem) or
@@ -2120,8 +2154,6 @@ class VM(virt_vm.BaseVM):
                     output_params=(logfile,),
                     prompt=self.params.get("shell_prompt", "[\#\$]"))
                 return
-        if self.virtio_ports:
-            logging.warning("No virtio console created in VM. Virtio ports: %s", self.virtio_ports)
         self.virtio_console = None
 
     def update_system_dependent_devs(self):

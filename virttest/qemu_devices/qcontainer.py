@@ -13,7 +13,7 @@ import re
 
 # Autotest imports
 from autotest.client.shared import utils, error
-from virttest import arch, storage, data_dir, virt_vm
+from virttest import arch, storage, data_dir, virt_vm, utils_misc
 from utils import (DeviceError, DeviceHotplugError, DeviceInsertError,
                    DeviceRemoveError, DeviceUnplugError, none_or_int)
 import os
@@ -1598,3 +1598,44 @@ class DevContainer(object):
         return qdevices.QDevice(driver, {'id': name}, aobject=name,
                                 parent_bus=parent_bus,
                                 child_bus=bus)
+
+    def memory_object_define_by_params(self, name, params):
+        tag = "mem"
+        params = params.object_params(tag)
+        attrs = qdevices.Memory.__attributes__[:]
+        params = params.copy_from_keys(attrs)
+        if not params.get("backend"):
+            params["backend"] = "memory-backend-ram"
+        backend = params["backend"]
+        dev = qdevices.Memory(backend, params)
+        dev.set_param("id", "%s-%s" % (tag, name))
+        return dev
+
+    def dimm_device_define_by_params(self, name, params):
+        tag = "dimm"
+        params = params.object_params(tag)
+        attrs = qdevices.Dimm.__attributes__[:]
+        params = params.copy_from_keys(attrs)
+        dev = qdevices.Dimm(params=params)
+        dev.set_param("id", "%s-%s" % (tag, name))
+        return dev
+
+    def memory_devices_define_by_params(self, params, tag="mem_devs"):
+        """
+        Create memory devices by params
+        """
+        devices = []
+        if self.has_option("object"):
+            mem_objects = params.objects(tag)
+            for dev in mem_objects:
+                dev_params = params.object_params(dev)
+                memdev = self.memory_object_define_by_params(dev, dev_params)
+                if dev_params.get("use_mem", "yes") == "yes":
+                    dimm = self.dimm_device_define_by_params(dev, dev_params)
+                    dimm.set_param("memdev", memdev.get_qid())
+                else:
+                    dimm = None
+                devices.append((memdev, dimm))
+        else:
+            logging.warn("QOM does not support by your qemu")
+        return devices

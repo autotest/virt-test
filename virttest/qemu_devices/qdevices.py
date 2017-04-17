@@ -790,3 +790,163 @@ class QFloppy(QGlobal):
         elif option == 'unit':
             option = 'property'
         super(QFloppy, self).set_param(option, value, option_type)
+
+
+class QomObject(QCustomDevice):
+
+    """
+    Representation of the '-device' qemu object. It supports all methods.
+    :note: Use driver format in full form - 'driver' = '...' (usb-ehci, ide-hd)
+    """
+
+    def __init__(self, backend, params=None):
+        #params.update({'backend': backend})
+        args = ('object', params, None, None, None, 'backend')
+        super(QomObject, self).__init__(*args)
+        self.set_param('backend', backend)
+
+    def get_children(self):
+        """ Device bus should be removed too """
+        devices = super(QomObject, self).get_children()
+        if self.hook_drive_bus:
+            devices.append(self.hook_drive_bus)
+        return devices
+
+    def _get_alternative_name(self):
+        """ :return: alternative object name """
+        if self.get_param('backend'):
+            return self.params.get('backend')
+
+    def hotplug_hmp(self):
+        """ :return: the hotplug monitor command """
+        if self.params.get('backend'):
+            params = self.params.copy()
+            out = "object_add %s" % params.pop('backend')
+            params = _convert_args(params)
+            if params:
+                out += ",%s" % params
+        else:
+            out = "object_add %s" % _convert_args(self.params)
+        return out
+
+    def hotplug_qmp(self):
+        """ :return: the hotplug monitor command """
+        return "object-add", self.params
+
+    def hotplug_hmp_nd(self):
+        """ :return: the hotplug monitor command without dynamic parameters"""
+        if self.params.get('backend'):
+            params = self.params.copy()
+            out = "object_add %s" % params.pop('backend')
+            for key in self.dynamic_params:
+                params[key] = "DYN"
+            params = _convert_args(params)
+            if params:
+                out += ",%s" % params
+        else:
+            params = self.params.copy()
+            for key in self.dynamic_params:
+                params[key] = "DYN"
+            out = "object_add %s" % _convert_args(params)
+        return out
+
+    def hotplug_qmp_nd(self):
+        """ :return: the hotplug monitor command without dynamic parameters"""
+        params = self.params.copy()
+        for key in self.dynamic_params:
+            params[key] = "DYN"
+        return "object-add", params
+
+    def unplug_hmp(self):
+        """ :return: the unplug monitor command """
+        if self.get_qid():
+            return "object_del %s" % self.get_qid()
+        else:
+            raise DeviceError("Device has no qemu_id.")
+
+    def unplug_qmp(self):
+        """ :return: the unplug monitor command """
+        if self.get_qid():
+            return "object-del", {'id': self.get_qid()}
+        else:
+            raise DeviceError("Device has no qemu_id.")
+
+    def verify_unplug(self, out, monitor):
+        raise DeviceError("'verify_unplug' function unimplemented")
+
+    # pylint: disable=E0202
+    def verify_hotplug(self, out, monitor):
+        raise DeviceError("'verify_hotplug' function unimplemented")
+
+
+class Memory(QomObject):
+    """
+    Memory object, it will generate memory device command line like:
+        -object memory-backend-file/ram size=xx,id=xxx ...
+    """
+
+    __attributes__ = ["size", "mem-path",
+                      "backend", "policy",
+                      "host-nodes", "prealloc"]
+
+    def __init__(self, backend, params=None):
+        super(Memory, self).__init__(backend, params)
+
+    def hotplug_qmp(self):
+        """ :return: the hotplug monitor command """
+        params = self.params.copy()
+        backend = params.pop("backend")
+        convert_size = utils_misc.normalize_data_size
+        args = (params["size"], "B", 1024)
+        params["size"] = int(float(convert_size(*args)))
+        if params.get("host-nodes"):
+            host_nodes = map(int, params["host-nodes"].split())
+            params["host-nodes"] = host_nodes
+        args = {"qom-type": backend,
+                "id": params.pop("id"),
+                "props": dict(params)}
+        return "object-add", args
+
+    def verify_unplug(self, out, monitor):
+        out = monitor.info("memory-devices")
+        memdev = "/object/%s" % self.get_qid()
+        if memdev not in out:
+            return True
+        return False
+
+    def verify_hotplug(self, out, monitor):
+        out = monitor.info("memory-devices")
+        memdev = "/object/%s" % self.get_qid()
+        if memdev in out:
+            return True
+        return False
+
+
+class Dimm(QDevice):
+
+    __attributes__ = ["memdev", "slot", "addr", "node"]
+
+    def __init__(self, params=None):
+        driver = "pc-dimm"
+        super(Dimm, self).__init__(driver, params, None, None, None)
+        self.set_param("driver", driver)
+
+    def verify_hotplug(self, out, monitor):
+        out = monitor.info("memory-devices", debug=False)
+        if "unknown command" in out:       # Old qemu don't have info qtree
+            return out
+        dev_id_name = 'id "%s"' % self.get_qid()
+        if dev_id_name in out:
+            return True
+        else:
+            return False
+
+    def verify_unplug(self, dev_type, monitor):
+        out = monitor.info("memory-devices", debug=False)
+        if "unknown command" in out:       # Old qemu don't have info qtree
+            return out
+        dev_id_name = 'id "%s"' % self.get_qid()
+        if dev_id_name not in out:
+            return True
+        else:
+            return False
