@@ -361,6 +361,8 @@ def run_image_copy(test, params, env):
 
     src = params.get('images_good')
     asset_name = '%s' % (os.path.split(params['image_name'])[1])
+    if params.get("storage_type") == "iscsi":
+        asset_name = '%s' % (os.path.split(params['image_name_origin'])[1])
     image = '%s.%s' % (params['image_name'], params['image_format'])
     dst_path = storage.get_image_filename(params, data_dir.get_data_dir())
     image_dir = os.path.dirname(dst_path)
