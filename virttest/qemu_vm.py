@@ -446,6 +446,26 @@ class VM(virt_vm.BaseVM):
             cmd += _add_option("chardev", serial_id)
             return cmd
 
+        def add_chardev_device(devices, name, chardev, filename=None,
+                               device_id=None):
+            """
+            Appends chardev device to cmdline.
+
+            :param devices: devices container
+            :param name: name of the chardev device
+            :param filename: path to chardev filename
+            :param device_id: device id of the chardev
+            """
+            if not device_id:
+                device_id = "id_%s" % name
+            if chardev == "spicevmc":   # SPICE
+                cmd = " -chardev spicevmc"
+                cmd += ",id=%s,name=%s" % (device_id, name)
+            else:   # SOCKET
+                cmd = " -chardev socket"
+                cmd += ",id=%s,path=%s,server,nowait" % (device_id, filename)
+            return cmd
+
         def add_virtio_port(devices, name, bus, filename, porttype, chardev,
                             name_prefix=None, index=None, extra_params=""):
             """
@@ -1363,6 +1383,15 @@ class VM(virt_vm.BaseVM):
             serial_filename = vm.get_serial_console_filename(serial)
             cmd = add_serial(devices, serial, serial_filename)
             devices.insert(StrDev('SER-%s' % serial, cmdline=cmd))
+
+        # Adde chardev devices.
+        for chardev in params.objects("chardevs"):
+            chardev_params = params.object_params(chardev)
+            cmd = add_chardev_device(devices, chardev,
+                                     chardev_params.get("chardev_type"),
+                                     self.get_virtio_port_filename(chardev),
+                                     chardev_params.get("chardev_id"))
+            devices.insert(StrDev('CHARDEV-%s' % chardev, cmdline=cmd))
 
         # Add virtio_serial ports
         if not devices.has_option("virtconsole"):
