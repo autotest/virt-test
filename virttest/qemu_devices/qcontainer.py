@@ -1168,6 +1168,7 @@ class DevContainer(object):
             use_device = False
         if not fmt:
             use_device = False
+            fmt = None  # fmt == '' generates problems further in the code
         if fmt == 'floppy' and not self.has_option("global"):
             use_device = False
 
