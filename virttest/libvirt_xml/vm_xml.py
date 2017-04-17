@@ -1085,8 +1085,16 @@ class VMXML(VMXMLBase):
             try:
                 iftune_params['inbound'] = bandwidth.find(
                     'inbound').get('average')
+                iftune_params['inbound_peak'] = bandwidth.find(
+                    'inbound').get('peak')
+                iftune_params['inbound_burst'] = bandwidth.find(
+                    'inbound').get('burst')
                 iftune_params['outbound'] = bandwidth.find(
                     'outbound').get('average')
+                iftune_params['outbound_peak'] = bandwidth.find(
+                    'outbound').get('peak')
+                iftune_params['outbound_burst'] = bandwidth.find(
+                    'outbound').get('burst')
             except AttributeError:
                 logging.error("Can't find <inbound> or <outbound> element")
         except AttributeError:
