@@ -300,7 +300,12 @@ class HugePageConfig(object):
             raise HPNotSupportedError("System doesn't support hugepages")
         self.pool_path = "/sys/kernel/mm/hugepages"
         self.sys_node_path = "/sys/devices/system/node"
+        self.expected_hugepage_size = params.get("expected_hugepage_size")
+        # Unit is KB as default for hugepage size.
+        if self.expected_hugepage_size == "1048576":
+            self.check_1G_hugepage_support()
         self.hugepage_size = self.get_hugepage_size()
+        self.check_hugepage_size_as_expected()
         self.hugepage_force_allocate = params.get("hugepage_force_allocate",
                                                   "no")
         self.suggest_mem = None
@@ -313,6 +318,43 @@ class HugePageConfig(object):
             target_hugepages = int(target_hugepages)
 
         self.target_hugepages = target_hugepages
+
+    def check_1G_hugepage_support(self):
+        """
+        Check whether the host support 1G hugepage.
+        The flag in cpuinfo should be "pdpe1gb".
+        """
+        error.context("Check whether the host support 1G hugepage")
+        cpuinfo = file('/proc/cpuinfo').read()
+        cpu_flag = "pdpe1gb"
+        if cpu_flag not in cpuinfo:
+            raise error.TestFail("Host does not support 1G support,"
+                                 "no such %s flag in host." % cpu_flag)
+        self.check_1G_hugepage_kernel_cmdline()
+        return
+
+    def check_1G_hugepage_kernel_cmdline(self):
+        """
+        Check whether host kernel cmdline support 1G hugepage support.
+        Needs option "hugepagesz=1G" in kernel cmdline.
+        """
+        error.context("Check host kernel cmdline support 1G hugepage")
+        kernel_cmdline = file('/proc/cmdline').read()
+        if "hugepagesz=1G" not in kernel_cmdline:
+            raise error.TestFail("Please check whether the host kernel"
+                                 "cmdline has hugepagesz=1G option\n"
+                                 "Host kernel cmdline is %s" % kernel_cmdline)
+        return
+
+    def check_hugepage_size_as_expected(self):
+        """
+        Check whether the hugepage size as excepted
+        """
+        error.context("Check whether the hugepage size as excepted")
+        if self.hugepage_size != self.expected_hugepage_size:
+            raise error.TestFail("The current hugepage size on host does"
+                                 "not match the expected hugepage size.\n")
+        return
 
     def get_hugepage_size(self):
         """
